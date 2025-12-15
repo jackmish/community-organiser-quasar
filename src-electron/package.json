@@ -1,0 +1,9 @@
+{
+  "name": "community-organiser-quasar",
+  "version": "0.0.1",
+  "description": "Organise small organisations like your child's kindergarten society, small accounting, less stressfull automated reminders, family life or just own matters",
+  "productName": "Community Organiser",
+  "author": "Jacek Miszczuk",
+  "type": "module",
+  "private": true
+}
