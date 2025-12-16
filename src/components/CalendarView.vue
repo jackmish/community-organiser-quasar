@@ -146,6 +146,9 @@
                       >
                         TOMORROW
                       </div>
+                      <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
+                        {{ getHoliday(day)?.localName }}
+                      </div>
                       <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
                         {{ getWeekLabel(day) }}
                       </div>
@@ -172,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { format, addDays, startOfWeek } from "date-fns";
 
 const props = defineProps<{
@@ -187,6 +190,155 @@ const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
 const shownMonths = ref(new Set<string>());
 const shownYears = ref(new Set<string>());
+
+// Holidays state
+interface Holiday {
+  date: string;
+  localName: string;
+  name: string;
+}
+
+interface HolidayCache {
+  year: number;
+  holidays: Holiday[];
+  fetchedAt: number;
+}
+
+const holidays = ref<Map<string, Holiday>>(new Map());
+
+// Load holidays from localStorage
+function loadHolidaysFromCache(year: number): boolean {
+  try {
+    const cacheKey = `holidays_PL_${year}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (!cached) return false;
+
+    const data: HolidayCache = JSON.parse(cached);
+
+    // Check if cache is still valid (less than 30 days old)
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    const isExpired = Date.now() - data.fetchedAt > thirtyDaysMs;
+
+    if (isExpired) {
+      localStorage.removeItem(cacheKey);
+      return false;
+    }
+
+    // Load holidays into Map
+    data.holidays.forEach((holiday) => {
+      holidays.value.set(holiday.date, holiday);
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Failed to load holidays from cache:", error);
+    return false;
+  }
+}
+
+// Save holidays to localStorage
+function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
+  try {
+    const cacheKey = `holidays_PL_${year}`;
+    const cache: HolidayCache = {
+      year,
+      holidays: holidayList,
+      fetchedAt: Date.now(),
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cache));
+  } catch (error) {
+    console.error("Failed to save holidays to cache:", error);
+  }
+}
+
+// Fetch holidays for Poland from API
+async function fetchHolidays(year: number) {
+  // Try to load from cache first
+  if (loadHolidaysFromCache(year)) {
+    console.log(`Loaded holidays for ${year} from cache`);
+    return;
+  }
+
+  // Fetch from API if not in cache
+  try {
+    console.log(`Fetching holidays for ${year} from API...`);
+    const response = await fetch(
+      `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`,
+      {
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: Holiday[] = await response.json();
+
+    // Store holidays in Map for quick lookup
+    data.forEach((holiday) => {
+      holidays.value.set(holiday.date, holiday);
+    });
+
+    // Save to cache
+    saveHolidaysToCache(year, data);
+    console.log(`Cached ${data.length} holidays for ${year}`);
+  } catch (error) {
+    console.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
+    // Load fallback holidays
+    loadFallbackHolidays(year);
+  }
+}
+
+// Fallback Polish holidays (major ones that don't change)
+function loadFallbackHolidays(year: number) {
+  const fallbackHolidays: Holiday[] = [
+    { date: `${year}-01-01`, localName: "Nowy Rok", name: "New Year's Day" },
+    { date: `${year}-01-06`, localName: "Trzech Króli", name: "Epiphany" },
+    { date: `${year}-05-01`, localName: "Święto Pracy", name: "Labour Day" },
+    {
+      date: `${year}-05-03`,
+      localName: "Święto Konstytucji 3 Maja",
+      name: "Constitution Day",
+    },
+    {
+      date: `${year}-08-15`,
+      localName: "Wniebowzięcie Najświętszej Maryi Panny",
+      name: "Assumption of Mary",
+    },
+    { date: `${year}-11-01`, localName: "Wszystkich Świętych", name: "All Saints' Day" },
+    {
+      date: `${year}-11-11`,
+      localName: "Narodowe Święto Niepodległości",
+      name: "Independence Day",
+    },
+    { date: `${year}-12-25`, localName: "Boże Narodzenie", name: "Christmas Day" },
+    {
+      date: `${year}-12-26`,
+      localName: "Drugi dzień Bożego Narodzenia",
+      name: "Second Day of Christmas",
+    },
+  ];
+
+  fallbackHolidays.forEach((holiday) => {
+    holidays.value.set(holiday.date, holiday);
+  });
+
+  console.log(`Loaded ${fallbackHolidays.length} fallback holidays for ${year}`);
+}
+
+// Check if a date is a holiday
+function getHoliday(dateString: string): Holiday | undefined {
+  return holidays.value.get(dateString);
+}
+
+// Load holidays on mount
+onMounted(async () => {
+  const currentYear = new Date().getFullYear();
+  await fetchHolidays(currentYear);
+  await fetchHolidays(currentYear + 1); // Also fetch next year's holidays
+});
 
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
@@ -527,6 +679,21 @@ function isAfterFirstInRow(day: string, week: string[]) {
   background-color: #e0e0e0;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.calendar-holiday-label {
+  font-size: 0.75em;
+  color: white !important;
+  background-color: #d32f2f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-month-label-above {
