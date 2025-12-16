@@ -191,6 +191,9 @@ const calendarViewDays = ref(42);
 const shownMonths = ref(new Set<string>());
 const shownYears = ref(new Set<string>());
 
+// Online/offline detection
+const isOnline = ref(navigator.onLine);
+
 // Holidays state
 interface Holiday {
   date: string;
@@ -263,18 +266,27 @@ async function fetchHolidays(year: number) {
   // Fetch from API if not in cache
   try {
     console.log(`Fetching holidays for ${year} from API...`);
-    const response = await fetch(
-      `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`,
-      {
-        signal: AbortSignal.timeout(5000), // 5 second timeout
-      }
-    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data: Holiday[] = await response.json();
+    // Use XMLHttpRequest instead of fetch to avoid QUIC protocol issues in Electron
+    const data: Holiday[] = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.timeout = 5000;
+      xhr.open("GET", `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject(new Error("Failed to parse JSON"));
+          }
+        } else {
+          reject(new Error(`HTTP error! status: ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.ontimeout = () => reject(new Error("Request timeout"));
+      xhr.send();
+    });
 
     // Store holidays in Map for quick lookup
     data.forEach((holiday) => {
