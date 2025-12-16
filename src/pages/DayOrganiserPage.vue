@@ -1,39 +1,7 @@
 <template>
   <q-page class="q-pa-md">
+    <!-- Active Group Selector and Type Selector -->
     <div class="row justify-between items-center q-mb-md">
-      <h4 class="q-my-none">Day Organiser</h4>
-      <div class="row q-gutter-sm">
-        <q-btn flat icon="folder" @click="showGroupDialog = true" label="Groups" />
-        <q-btn flat icon="info" @click="showDataLocation" label="Data Location" />
-        <q-btn flat icon="file_download" @click="handleExport" label="Export" />
-        <q-btn flat icon="file_upload" @click="handleImport" label="Import">
-          <input
-            type="file"
-            accept=".json"
-            ref="fileInput"
-            style="display: none"
-            @change="onFileSelected"
-          />
-        </q-btn>
-      </div>
-    </div>
-
-    <!-- Date Navigation -->
-    <div class="row justify-center items-center q-mb-md q-gutter-sm">
-      <q-btn flat round icon="chevron_left" @click="prevDay" />
-      <q-btn flat @click="goToToday" label="Today" />
-      <q-input
-        v-model="currentDate"
-        type="date"
-        dense
-        outlined
-        @update:model-value="setCurrentDate"
-      />
-      <q-btn flat round icon="chevron_right" @click="nextDay" />
-    </div>
-
-    <!-- Active Group Selector -->
-    <div class="row justify-center q-mb-md">
       <q-select
         v-model="activeGroup"
         :options="activeGroupOptions"
@@ -48,6 +16,11 @@
           <q-icon name="folder_open" />
         </template>
       </q-select>
+
+      <TaskTypeSelector
+        :model-value="newTask.type_id"
+        @update:model-value="(value) => { if (newTask.type_id !== value) newTask.type_id = value; }"
+      />
     </div>
 
     <!-- Loading State -->
@@ -62,7 +35,7 @@
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
-              <div class="text-h6">Tasks for {{ formatDisplayDate(currentDate) }}</div>
+              <div class="text-h6">{{ formatDisplayDate(currentDate) }}</div>
             </q-card-section>
             <q-card-section v-if="currentDayData.tasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
@@ -117,16 +90,6 @@
               </q-item>
             </q-list>
           </q-card>
-          <!-- New Panel Below Daily Tasks -->
-          <q-card class="q-mt-md">
-            <q-card-section>
-              <div class="text-h6">New Panel</div>
-              <div>
-                <!-- Add your content here -->
-                This is a new panel below the daily tasks.
-              </div>
-            </q-card-section>
-          </q-card>
         </div>
 
         <!-- Right Column - Add Task & Notes -->
@@ -134,31 +97,18 @@
           <!-- Add Task Section -->
           <q-card class="q-mb-md">
             <q-card-section>
-              <div class="text-h6 row items-center q-gutter-sm">
-                <q-icon name="add_circle" color="positive" size="md" />
-                <span>Add New Task</span>
-              </div>
-            </q-card-section>
-            <q-card-section>
               <q-form @submit="handleAddTask" class="q-gutter-md">
-                <div>
-                  <div class="text-subtitle2 q-mb-sm">Type</div>
-                  <div class="row q-gutter-sm">
-                    <q-btn
-                      v-for="option in typeOptions"
-                      :key="option.value"
-                      :label="option.label"
-                      :icon="option.icon"
-                      :unelevated="newTask.type_id === option.value"
-                      :outline="newTask.type_id !== option.value"
-                      :color="newTask.type_id === option.value ? 'primary' : 'grey-7'"
-                      @click="newTask.type_id = option.value"
-                      no-caps
-                    />
-                  </div>
-                </div>
                 <div v-if="newTask.type_id === 'TimeEvent'">
-                  <!-- Separate Date Inputs -->
+                  <CalendarView
+                    :selected-date="newTask.eventDate"
+                    @update:selected-date="handleCalendarDateSelect"
+                  />
+                  <!-- Header below calendar -->
+                  <div class="text-h6 row items-center q-gutter-sm q-mb-md">
+                    <q-icon name="add_circle" color="positive" size="md" />
+                    <span>Add new thing</span>
+                  </div>
+                  <!-- Date, Hour, Year, Time Difference Panels -->
                   <div class="row q-gutter-sm q-mb-md">
                     <q-card flat bordered class="q-pa-sm">
                       <div class="text-caption text-grey-7 q-mb-xs">Date</div>
@@ -261,215 +211,6 @@
                       </div>
                     </q-card>
                   </div>
-                  <!-- Simple Calendar View -->
-                  <q-card class="q-mb-md bg-grey-1">
-                    <q-card-section>
-                      <div class="row items-center justify-between q-mb-sm">
-                        <div class="row items-center q-gutter-md">
-                          <div class="text-subtitle2">Calendar View</div>
-                          <q-option-group
-                            v-model="calendarViewDays"
-                            :options="[
-                              { label: '14 days', value: 14 },
-                              { label: '42 days', value: 42 },
-                              { label: '3 months', value: 84 },
-                            ]"
-                            color="primary"
-                            inline
-                            dense
-                            size="xs"
-                          />
-                          <q-separator vertical inset />
-                          <q-btn
-                            flat
-                            color="primary"
-                            size="sm"
-                            @click="setEventDateToToday"
-                          >
-                            Today
-                          </q-btn>
-                          <q-btn
-                            v-for="month in nextSixMonths"
-                            :key="month.value"
-                            flat
-                            color="primary"
-                            size="sm"
-                            @click="jumpToMonth(month.value)"
-                          >
-                            {{ month.label }}
-                          </q-btn>
-                        </div>
-                      </div>
-                      <div class="row items-center">
-                        <q-btn
-                          unelevated
-                          icon="chevron_left"
-                          label="Prev"
-                          color="primary"
-                          text-color="white"
-                          @click="previousCalendarWeeks"
-                          size="sm"
-                          class="q-mr-xs"
-                        />
-                        <div class="col">
-                          <table class="calendar-table">
-                            <thead>
-                              <tr>
-                                <th
-                                  v-for="day in calendarCurrentWeek"
-                                  :key="'header-' + day"
-                                  class="text-center text-weight-bold text-caption text-grey-7"
-                                >
-                                  {{
-                                    ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][
-                                      new Date(day).getDay()
-                                    ]
-                                  }}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr
-                                v-for="(week, weekIndex) in allCalendarWeeks"
-                                :key="'week-' + weekIndex"
-                                :class="{
-                                  'new-month-week': shouldWeekHaveMargin(
-                                    week,
-                                    weekIndex,
-                                    allCalendarWeeks
-                                  ),
-                                }"
-                              >
-                                <td
-                                  v-for="(day, index) in week"
-                                  :key="day"
-                                  class="calendar-cell"
-                                >
-                                  <div
-                                    :class="{
-                                      'new-month-start': isNewMonthStart(
-                                        day,
-                                        week,
-                                        weekIndex,
-                                        allCalendarWeeks
-                                      ),
-                                    }"
-                                  >
-                                    <div
-                                      v-if="
-                                        shouldShowMonth(
-                                          day,
-                                          index,
-                                          week,
-                                          weekIndex === 0
-                                        ) ||
-                                        shouldShowYear(day, index, week, weekIndex === 0)
-                                      "
-                                      class="calendar-month-label-above"
-                                    >
-                                      <span>
-                                        {{ getMonthAbbr(day, index, week) }}
-                                      </span>
-                                      <span
-                                        v-if="
-                                          shouldShowYear(
-                                            day,
-                                            index,
-                                            week,
-                                            weekIndex === 0
-                                          ) ||
-                                          new Date(day).getFullYear() !==
-                                            new Date().getFullYear()
-                                        "
-                                        class="calendar-year-inline"
-                                      >
-                                        {{ new Date(day).getFullYear() }}
-                                      </span>
-                                    </div>
-                                    <div v-else class="calendar-month-label-above">
-                                      &nbsp;
-                                    </div>
-                                  </div>
-                                  <q-btn
-                                    size="sm"
-                                    :color="
-                                      day === newTask.eventDate
-                                        ? 'primary'
-                                        : day < format(new Date(), 'yyyy-MM-dd')
-                                        ? 'grey-5'
-                                        : 'grey-7'
-                                    "
-                                    @click="newTask.eventDate = day"
-                                    :title="
-                                      new Date(day).toLocaleDateString('en-US', {
-                                        weekday: 'long',
-                                      })
-                                    "
-                                    :class="[
-                                      'calendar-day-btn',
-                                      { 'first-day-of-month': isFirstDayOfMonth(day) },
-                                      {
-                                        'after-first-in-row': isAfterFirstInRow(
-                                          day,
-                                          week
-                                        ),
-                                      },
-                                    ]"
-                                  >
-                                    <div class="calendar-day-content">
-                                      <div class="calendar-day-number">
-                                        {{ new Date(day).getDate() }}
-                                      </div>
-                                      <div
-                                        v-if="day === format(new Date(), 'yyyy-MM-dd')"
-                                        class="calendar-today-label calendar-green-label"
-                                      >
-                                        TODAY
-                                      </div>
-                                      <div
-                                        v-else-if="
-                                          day ===
-                                          format(addDays(new Date(), -1), 'yyyy-MM-dd')
-                                        "
-                                        class="calendar-today-label"
-                                      >
-                                        YESTERDAY
-                                      </div>
-                                      <div
-                                        v-else-if="
-                                          day ===
-                                          format(addDays(new Date(), 1), 'yyyy-MM-dd')
-                                        "
-                                        class="calendar-today-label calendar-green-label"
-                                      >
-                                        TOMORROW
-                                      </div>
-                                      <div
-                                        v-else-if="getWeekLabel(day)"
-                                        class="calendar-week-label"
-                                      >
-                                        {{ getWeekLabel(day) }}
-                                      </div>
-                                    </div>
-                                  </q-btn>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <q-btn
-                          unelevated
-                          icon-right="chevron_right"
-                          label="Next"
-                          color="primary"
-                          text-color="white"
-                          @click="nextCalendarWeeks"
-                          size="sm"
-                          class="q-ml-xs"
-                        />
-                      </div>
-                    </q-card-section>
-                  </q-card>
                 </div>
                 <div class="row" style="gap: 12px">
                   <q-input
@@ -685,19 +426,16 @@ const shouldShowMonth = (
   // Reset shown months when it's the first week and first day
   if (isFirstWeek && index === 0) {
     shownMonths.value = new Set();
-    console.log("Reset shownMonths at first week, first day");
   }
 
   // Check if month has already been shown
   if (shownMonths.value.has(monthYear)) {
-    console.log("Month already shown:", monthYear);
     return false;
   }
 
   // Show on first day of week
   if (index === 0) {
     shownMonths.value.add(monthYear);
-    console.log("Show month at index 0:", monthYear, "isFirstWeek:", isFirstWeek);
     return true;
   }
 
@@ -1085,11 +823,33 @@ function showInCalendar() {
   calendarBaseDate.value = selectedDate;
 }
 
-import { ref, computed, onMounted, watch } from "vue";
+function selectCalendarDate(dateString: string) {
+  // Block rapid clicks
+  if (isClickBlocked.value) return;
+
+  // Only update if the date is actually different
+  if (newTask.value.eventDate !== dateString) {
+    isClickBlocked.value = true;
+    newTask.value.eventDate = dateString;
+
+    // Unblock after a short delay
+    setTimeout(() => {
+      isClickBlocked.value = false;
+    }, 100);
+  }
+}
+
+function handleCalendarDateSelect(dateString: string) {
+  selectCalendarDate(dateString);
+}
+
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useQuasar } from "quasar";
 import { useDayOrganiser } from "../modules/day-organiser";
 import type { Task, TaskDuration, TaskGroup } from "../modules/day-organiser";
 import FirstRunDialog from "../components/FirstRunDialog.vue";
+import TaskTypeSelector from "../components/TaskTypeSelector.vue";
+import CalendarView from "../components/CalendarView.vue";
 
 const $q = useQuasar();
 
@@ -1131,100 +891,129 @@ const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
 const autoIncrementYear = ref(true);
 const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
+const isUpdatingDate = ref(false);
+const isClickBlocked = ref(false);
 
 // Computed properties for separate date inputs
 const eventDateYear = computed(() => {
-  if (!newTask.value.eventDate) return new Date().getFullYear();
-  return new Date(newTask.value.eventDate).getFullYear();
+  const dateStr = newTask.value.eventDate;
+  if (!dateStr) return new Date().getFullYear();
+  // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
+  const parts = dateStr.split('-');
+  return parseInt(parts[0] || '0', 10);
 });
 
 const eventDateMonth = computed(() => {
-  if (!newTask.value.eventDate) return new Date().getMonth() + 1;
-  return new Date(newTask.value.eventDate).getMonth() + 1;
+  const dateStr = newTask.value.eventDate;
+  if (!dateStr) return new Date().getMonth() + 1;
+  // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
+  const parts = dateStr.split('-');
+  return parseInt(parts[1] || '0', 10);
 });
 
 const eventDateDay = computed(() => {
-  if (!newTask.value.eventDate) return new Date().getDate();
-  return new Date(newTask.value.eventDate).getDate();
+  const dateStr = newTask.value.eventDate;
+  if (!dateStr) return new Date().getDate();
+  // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
+  const parts = dateStr.split('-');
+  return parseInt(parts[2] || '0', 10);
 });
 
 // Update functions for separate date inputs
 const updateEventDateMonth = (value: string | number | null) => {
-  if (!value) return;
-  const month = Number(value);
-  if (month < 1 || month > 12) return;
+  if (!value || isUpdatingDate.value) return;
+  isUpdatingDate.value = true;
 
-  let year = eventDateYear.value;
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  try {
+    const month = Number(value);
+    if (month < 1 || month > 12) return;
 
-  // Auto-adjust year if enabled
-  if (autoIncrementYear.value) {
-    const yearDifference = year - currentYear;
+    let year = eventDateYear.value;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
 
-    if (month >= currentMonth) {
-      // If month is same or higher, set to current year
-      year = currentYear;
-    } else if (yearDifference <= 1) {
-      // If month is lower and year difference is 1 or less, increment by 1
-      year = currentYear + 1;
+    // Auto-adjust year if enabled
+    if (autoIncrementYear.value) {
+      const yearDifference = year - currentYear;
+
+      if (month >= currentMonth) {
+        // If month is same or higher, set to current year
+        year = currentYear;
+      } else if (yearDifference <= 1) {
+        // If month is lower and year difference is 1 or less, increment by 1
+        year = currentYear + 1;
+      }
+      // Otherwise keep the year as is (if difference > 1)
     }
-    // Otherwise keep the year as is (if difference > 1)
-  }
 
-  const day = eventDateDay.value;
-  const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
-  newTask.value.eventDate = newDate;
+    const day = eventDateDay.value;
+    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    newTask.value.eventDate = newDate;
 
-  // Sync calendar view only if the date is not visible in current view
-  const allVisibleDays = allCalendarWeeks.value.flat();
-  if (!allVisibleDays.includes(newDate)) {
-    calendarBaseDate.value = new Date(year, month - 1, day);
-  }
+    // Sync calendar view only if the date is not visible in current view
+    const allVisibleDays = allCalendarWeeks.value.flat();
+    if (!allVisibleDays.includes(newDate)) {
+      calendarBaseDate.value = new Date(year, month - 1, day);
+    }
 
-  // Auto-focus to hour input after filling month (when month is 2 digits)
-  if (String(value).length >= 2) {
-    setTimeout(() => {
-      hourInput.value?.$el?.querySelector("input")?.focus();
-    }, 0);
+    // Auto-focus to hour input after filling month (when month is 2 digits)
+    if (String(value).length >= 2) {
+      setTimeout(() => {
+        hourInput.value?.$el?.querySelector("input")?.focus();
+      }, 0);
+    }
+  } finally {
+    isUpdatingDate.value = false;
   }
 };
 
 const updateEventDateYear = (value: string | number | null) => {
-  if (!value) return;
-  const year = Number(value);
-  const month = eventDateMonth.value;
-  const day = eventDateDay.value;
-  const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
-  newTask.value.eventDate = newDate;
+  if (!value || isUpdatingDate.value) return;
+  isUpdatingDate.value = true;
 
-  // Sync calendar view only if the date is not visible in current view
-  const allVisibleDays = allCalendarWeeks.value.flat();
-  if (!allVisibleDays.includes(newDate)) {
-    calendarBaseDate.value = new Date(year, month - 1, day);
+  try {
+    const year = Number(value);
+    const month = eventDateMonth.value;
+    const day = eventDateDay.value;
+    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    newTask.value.eventDate = newDate;
+
+    // Sync calendar view only if the date is not visible in current view
+    const allVisibleDays = allCalendarWeeks.value.flat();
+    if (!allVisibleDays.includes(newDate)) {
+      calendarBaseDate.value = new Date(year, month - 1, day);
+    }
+  } finally {
+    isUpdatingDate.value = false;
   }
 };
 
 const updateEventDateDay = (value: string | number | null) => {
-  if (!value) return;
-  const day = Number(value);
-  if (day < 1 || day > 31) return;
-  const year = eventDateYear.value;
-  const month = eventDateMonth.value;
-  const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
-  newTask.value.eventDate = newDate;
+  if (!value || isUpdatingDate.value) return;
+  isUpdatingDate.value = true;
 
-  // Sync calendar view only if the date is not visible in current view
-  const allVisibleDays = allCalendarWeeks.value.flat();
-  if (!allVisibleDays.includes(newDate)) {
-    calendarBaseDate.value = new Date(year, month - 1, day);
-  }
+  try {
+    const day = Number(value);
+    if (day < 1 || day > 31) return;
+    const year = eventDateYear.value;
+    const month = eventDateMonth.value;
+    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    newTask.value.eventDate = newDate;
 
-  // Auto-focus to month input after filling day (when day is 2 digits)
-  if (String(value).length >= 2) {
-    setTimeout(() => {
-      monthInput.value?.$el?.querySelector("input")?.focus();
-    }, 0);
+    // Sync calendar view only if the date is not visible in current view
+    const allVisibleDays = allCalendarWeeks.value.flat();
+    if (!allVisibleDays.includes(newDate)) {
+      calendarBaseDate.value = new Date(year, month - 1, day);
+    }
+
+    // Auto-focus to month input after filling day (when day is 2 digits)
+    if (String(value).length >= 2) {
+      setTimeout(() => {
+        monthInput.value?.$el?.querySelector("input")?.focus();
+      }, 0);
+    }
+  } finally {
+    isUpdatingDate.value = false;
   }
 };
 
@@ -1298,6 +1087,7 @@ const newTask = ref({
 });
 
 const typeOptions = [
+  { label: "Command center", value: "Command center", icon: "dashboard" },
   { label: "Note/Later", value: "Note/Later", icon: "note" },
   { label: "TimeEvent", value: "TimeEvent", icon: "event" },
   { label: "Replenishment", value: "Replenishment", icon: "shopping_cart" },
@@ -1412,12 +1202,12 @@ const groupTree = computed(() => {
 });
 
 const formatDisplayDate = (date: string) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const dateObj = new Date(date);
+  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString("en-US", { month: "long" });
+  const year = dateObj.getFullYear();
+  return `${day} ${month} ${year} | ${weekday}`;
 };
 
 const priorityColor = (priority: Task["priority"]) => {
