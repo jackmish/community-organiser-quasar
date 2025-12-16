@@ -122,6 +122,10 @@
                       {
                         'after-first-in-row': isAfterFirstInRow(day, week),
                       },
+                      { 'calendar-weekend': isWeekend(day) },
+                      { 'calendar-holiday': !!getHoliday(day) },
+                      { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
+                      { 'calendar-selected': day === selectedDate },
                     ]"
                   >
                     <div class="calendar-day-content">
@@ -615,6 +619,12 @@ function isAfterFirstInRow(day: string, week: string[]) {
   const prevDay = new Date(week[index - 1]!);
   return date.getMonth() !== prevDay.getMonth();
 }
+
+function isWeekend(day: string) {
+  const date = new Date(day);
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6; // Sunday (0) or Saturday (6)
+}
 </script>
 
 <style scoped>
@@ -645,6 +655,72 @@ function isAfterFirstInRow(day: string, week: string[]) {
   background-color: white !important;
   color: black !important;
   border: 2px solid #eee;
+  position: relative;
+}
+
+.calendar-day-btn.calendar-selected {
+  background-color: #1976d2 !important;
+  color: white !important;
+}
+
+.calendar-day-btn.calendar-selected .calendar-day-number {
+  color: white !important;
+}
+
+.calendar-day-btn.calendar-today {
+  border: 4px solid #1976d2 !important;
+  font-weight: bold;
+}
+
+.calendar-day-btn.calendar-weekend::before,
+.calendar-day-btn.calendar-holiday::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      #ddd 8px,
+      #ddd 9px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      #ddd 8px,
+      #ddd 9px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.calendar-day-btn.calendar-selected.calendar-weekend::before,
+.calendar-day-btn.calendar-selected.calendar-holiday::before {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      #0d47a1 8px,
+      #0d47a1 9px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      #0d47a1 8px,
+      #0d47a1 9px
+    );
+}
+
+.calendar-day-btn .calendar-day-content {
+  position: relative;
+  z-index: 1;
 }
 
 .calendar-day-content {
