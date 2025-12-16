@@ -213,47 +213,97 @@ interface HolidayCache {
 
 const holidays = ref<Map<string, Holiday>>(new Map());
 
-// Load holidays from localStorage
-function loadHolidaysFromCache(year: number): boolean {
+// Check if running in Electron
+const isElectron = !!(window as any).electronAPI;
+
+// Get holidays file path
+async function getHolidaysFilePath(year: number): Promise<string | null> {
+  if (!isElectron) return null;
+
+  const appDataPath = await (window as any).electronAPI.getAppDataPath();
+  return (window as any).electronAPI.joinPath(appDataPath, 'holidays', `holidays_PL_${year}.json`);
+}
+
+// Load holidays from APPDATA (Electron) or localStorage (browser)
+async function loadHolidaysFromCache(year: number): Promise<boolean> {
   try {
-    const cacheKey = `holidays_PL_${year}`;
-    const cached = localStorage.getItem(cacheKey);
+    if (isElectron) {
+      // Load from APPDATA file
+      const filePath = await getHolidaysFilePath(year);
+      if (!filePath) return false;
 
-    if (!cached) return false;
+      const exists = await (window as any).electronAPI.fileExists(filePath);
+      if (!exists) return false;
 
-    const data: HolidayCache = JSON.parse(cached);
+      const data: HolidayCache = await (window as any).electronAPI.readJsonFile(filePath);
 
-    // Check if cache is still valid (less than 30 days old)
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    const isExpired = Date.now() - data.fetchedAt > thirtyDaysMs;
+      // Load holidays into Map (no expiry check for APPDATA files)
+      data.holidays.forEach((holiday) => {
+        holidays.value.set(holiday.date, holiday);
+      });
 
-    if (isExpired) {
-      localStorage.removeItem(cacheKey);
-      return false;
+      console.log(`Loaded holidays for ${year} from APPDATA`);
+      return true;
+    } else {
+      // Load from localStorage
+      const cacheKey = `holidays_PL_${year}`;
+      const cached = localStorage.getItem(cacheKey);
+
+      if (!cached) return false;
+
+      const data: HolidayCache = JSON.parse(cached);
+
+      // Check if cache is still valid (less than 30 days old)
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const isExpired = Date.now() - data.fetchedAt > thirtyDaysMs;
+
+      if (isExpired) {
+        localStorage.removeItem(cacheKey);
+        return false;
+      }
+
+      // Load holidays into Map
+      data.holidays.forEach((holiday) => {
+        holidays.value.set(holiday.date, holiday);
+      });
+
+      return true;
     }
-
-    // Load holidays into Map
-    data.holidays.forEach((holiday) => {
-      holidays.value.set(holiday.date, holiday);
-    });
-
-    return true;
   } catch (error) {
     console.error("Failed to load holidays from cache:", error);
     return false;
   }
 }
 
-// Save holidays to localStorage
-function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
+// Save holidays to APPDATA (Electron) or localStorage (browser)
+async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
   try {
-    const cacheKey = `holidays_PL_${year}`;
     const cache: HolidayCache = {
       year,
       holidays: holidayList,
       fetchedAt: Date.now(),
     };
-    localStorage.setItem(cacheKey, JSON.stringify(cache));
+
+    if (isElectron) {
+      // Save to APPDATA file
+      const filePath = await getHolidaysFilePath(year);
+      if (!filePath) return;
+
+      // Ensure directory exists
+      const dirPath = (window as any).electronAPI.joinPath(
+        await (window as any).electronAPI.getAppDataPath(),
+        'holidays'
+      );
+      await (window as any).electronAPI.ensureDir(dirPath);
+
+      // Write file
+      await (window as any).electronAPI.writeJsonFile(filePath, cache);
+      console.log(`Saved holidays for ${year} to APPDATA`);
+    } else {
+      // Save to localStorage
+      const cacheKey = `holidays_PL_${year}`;
+      localStorage.setItem(cacheKey, JSON.stringify(cache));
+    }
   } catch (error) {
     console.error("Failed to save holidays to cache:", error);
   }
@@ -262,12 +312,23 @@ function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
 // Fetch holidays for Poland from API
 async function fetchHolidays(year: number) {
   // Try to load from cache first
-  if (loadHolidaysFromCache(year)) {
+  const loaded = await loadHolidaysFromCache(year);
+  if (loaded) {
     console.log(`Loaded holidays for ${year} from cache`);
     return;
   }
 
-  // Fetch from API if not in cache
+  // In Electron, don't connect to API - just use fallback
+  if (isElectron) {
+    console.log(`No cached holidays for ${year} in Electron, using fallback`);
+    loadFallbackHolidays(year);
+    // Save fallback to cache for next time
+    const fallbackList = Array.from(holidays.value.values()).filter(h => h.date.startsWith(`${year}-`));
+    await saveHolidaysToCache(year, fallbackList);
+    return;
+  }
+
+  // In browser, fetch from API if not in cache
   try {
     console.log(`Fetching holidays for ${year} from API...`);
 
@@ -298,7 +359,7 @@ async function fetchHolidays(year: number) {
     });
 
     // Save to cache
-    saveHolidaysToCache(year, data);
+    await saveHolidaysToCache(year, data);
     console.log(`Cached ${data.length} holidays for ${year}`);
   } catch (error) {
     console.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
