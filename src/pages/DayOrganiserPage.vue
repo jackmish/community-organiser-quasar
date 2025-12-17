@@ -19,7 +19,11 @@
 
       <TaskTypeSelector
         :model-value="newTask.type_id"
-        @update:model-value="(value) => { if (newTask.type_id !== value) newTask.type_id = value; }"
+        @update:model-value="
+          (value) => {
+            if (newTask.type_id !== value) newTask.type_id = value;
+          }
+        "
       />
     </div>
 
@@ -46,7 +50,9 @@
                 />
                 <div class="row items-center q-gutter-md">
                   <span>{{ formatDisplayDate(currentDate) }}</span>
-                  <span class="text-weight-bold">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                  <span class="text-weight-bold">{{
+                    getTimeDifferenceDisplay(currentDate)
+                  }}</span>
                 </div>
                 <q-btn
                   flat
@@ -117,8 +123,15 @@
               </template>
 
               <!-- Separator for tasks without time -->
-              <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" />
-              <q-item-label v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" header class="text-grey-7">
+              <q-separator
+                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
+                class="q-my-md"
+              />
+              <q-item-label
+                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
+                header
+                class="text-grey-7"
+              >
                 No Time Set
               </q-item-label>
 
@@ -179,238 +192,16 @@
         <!-- Right Column - Add Task & Notes -->
         <div class="col-12 col-md-6">
           <!-- Add Task Section -->
-          <q-card class="q-mb-md">
-            <q-card-section>
-              <q-form @submit="handleAddTask" class="q-gutter-md">
-                <div v-if="newTask.type_id === 'TimeEvent'">
-                  <CalendarView
-                    :selected-date="newTask.eventDate"
-                    @update:selected-date="handleCalendarDateSelect"
-                  />
-                  <!-- Header below calendar -->
-                  <div class="text-h6 row items-center q-gutter-sm q-mb-md">
-                    <q-icon name="add_circle" color="positive" size="md" />
-                    <span>Add new thing</span>
-                  </div>
-                  <!-- Date, Hour, Year, Time Difference Panels -->
-                  <div class="row q-gutter-sm q-mb-md">
-                    <q-card flat bordered class="q-pa-sm">
-                      <div class="text-caption text-grey-7 q-mb-xs">Date</div>
-                      <div class="row q-gutter-xs">
-                        <q-input
-                          ref="dayInput"
-                          :model-value="eventDateDay"
-                          @update:model-value="updateEventDateDay"
-                          @focus="(e: Event) => (e.target as HTMLInputElement)?.select()"
-                          type="number"
-                          label="Day"
-                          outlined
-                          dense
-                          min="1"
-                          max="31"
-                          style="max-width: 80px"
-                        />
-                        <q-input
-                          ref="monthInput"
-                          :model-value="eventDateMonth"
-                          @update:model-value="updateEventDateMonth"
-                          @focus="(e: Event) => (e.target as HTMLInputElement)?.select()"
-                          type="number"
-                          label="Month"
-                          outlined
-                          dense
-                          min="1"
-                          max="12"
-                          style="max-width: 80px"
-                        />
-                      </div>
-                    </q-card>
-                    <q-card flat bordered class="q-pa-sm">
-                      <q-option-group
-                        v-model="timeType"
-                        :options="[
-                          { label: 'Whole Day', value: 'wholeDay' },
-                          { label: 'Exact Hour', value: 'exactHour' },
-                        ]"
-                        color="primary"
-                        inline
-                        dense
-                        class="q-mb-sm"
-                      />
-                      <div class="row q-gutter-xs">
-                        <q-input
-                          ref="hourInput"
-                          :model-value="eventTimeHour"
-                          @update:model-value="updateEventTimeHour"
-                          @focus="(e: Event) => (e.target as HTMLInputElement)?.select()"
-                          type="number"
-                          label="Hour"
-                          outlined
-                          dense
-                          min="0"
-                          max="23"
-                          style="max-width: 80px"
-                        />
-                        <q-input
-                          ref="minuteInput"
-                          :model-value="eventTimeMinute"
-                          @update:model-value="updateEventTimeMinute"
-                          @focus="(e: Event) => (e.target as HTMLInputElement)?.select()"
-                          type="number"
-                          label="Minute"
-                          outlined
-                          dense
-                          min="0"
-                          max="59"
-                          style="max-width: 80px"
-                        />
-                      </div>
-                    </q-card>
-                    <q-card flat bordered class="q-pa-sm">
-                      <div class="row items-center justify-between q-mb-xs">
-                        <div class="text-caption text-grey-7">Year</div>
-                        <q-checkbox
-                          v-model="autoIncrementYear"
-                          dense
-                          size="xs"
-                          label="Auto"
-                        />
-                      </div>
-                      <q-input
-                        ref="yearInput"
-                        :model-value="eventDateYear"
-                        @update:model-value="updateEventDateYear"
-                        @focus="(e: Event) => (e.target as HTMLInputElement)?.select()"
-                        type="number"
-                        label="Year"
-                        outlined
-                        dense
-                        style="max-width: 100px"
-                      />
-                    </q-card>
-                    <q-card flat bordered class="q-pa-sm">
-                      <div class="text-caption text-grey-7 q-mb-xs">Time Difference</div>
-                      <div class="text-h6 text-primary text-weight-bold">
-                        {{ getTimeDifferenceDisplay(newTask.eventDate) }}
-                      </div>
-                    </q-card>
-                    <q-card flat bordered class="q-pa-sm">
-                      <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
-                      <div class="column q-gutter-xs">
-                        <div class="row q-gutter-xs">
-                          <q-btn
-                            v-for="option in priorityOptions.slice(0, 2)"
-                            :key="option.value"
-                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
-                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
-                            :icon="option.icon"
-                            :label="option.label"
-                            size="sm"
-                            @click="newTask.priority = option.value as Task['priority']"
-                            :unelevated="newTask.priority === option.value"
-                            :outline="newTask.priority !== option.value"
-                          />
-                        </div>
-                        <div class="row q-gutter-xs">
-                          <q-btn
-                            v-for="option in priorityOptions.slice(2, 4)"
-                            :key="option.value"
-                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
-                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
-                            :icon="option.icon"
-                            :label="option.label"
-                            size="sm"
-                            @click="newTask.priority = option.value as Task['priority']"
-                            :unelevated="newTask.priority === option.value"
-                            :outline="newTask.priority !== option.value"
-                          />
-                        </div>
-                      </div>
-                    </q-card>
-                  </div>
-                </div>
-                <div class="row" style="gap: 12px">
-                  <div class="col column" style="gap: 12px">
-                    <q-input
-                      :model-value="autoGeneratedName"
-                      label="Automatic name from description"
-                      outlined
-                      readonly
-                      bg-color="grey-2"
-                    />
-                    <q-input
-                      v-model="newTask.name"
-                      label="Own task name"
-                      outlined
-                      @update:model-value="(val) => { if (val && typeof val === 'string') newTask.name = val.charAt(0).toUpperCase() + val.slice(1); }"
-                    />
-                  </div>
-                  <q-input
-                    v-model="newTask.description"
-                    label="Description"
-                    outlined
-                    type="textarea"
-                    rows="4"
-                    class="col"
-                  />
-                </div>
-                <div class="row" style="gap: 12px">
-                  <q-select
-                    v-model="newTask.parent_id"
-                    :options="filteredParentOptions"
-                    label="Parent Task (optional)"
-                    outlined
-                    clearable
-                    use-input
-                    input-debounce="0"
-                    @filter="filterParentTasks"
-                    option-value="value"
-                    option-label="label"
-                    emit-value
-                    map-options
-                    class="col"
-                  >
-                    <template v-slot:option="scope">
-                      <q-item v-bind="scope.itemProps">
-                        <q-item-section avatar>
-                          <q-icon :name="scope.opt.icon" />
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label>{{ scope.opt.label }}</q-item-label>
-                        </q-item-section>
-                      </q-item>
-                    </template>
-                    <template v-slot:selected-item="scope">
-                      <q-chip
-                        removable
-                        @remove="newTask.parent_id = null"
-                        color="primary"
-                        text-color="white"
-                        :icon="scope.opt.icon"
-                      >
-                        {{ scope.opt.label }}
-                      </q-chip>
-                    </template>
-                  </q-select>
-                </div>
-                <div class="row items-center justify-center">
-                  <q-btn type="submit" color="primary" label="Add Task" />
-                  <div
-                    v-if="activeGroup && activeGroup.value"
-                    class="text-caption text-grey-7 q-ml-md"
-                  >
-                    <q-icon name="info" size="xs" class="q-mr-xs" />
-                    Task will be added to:
-                    <strong>{{ activeGroup.label.split(" (")[0] }}</strong>
-                  </div>
-                  <div v-else class="text-caption text-warning q-ml-md">
-                    <q-icon name="warning" size="xs" class="q-mr-xs" />
-                    Please select an active group (not "All Groups")
-                  </div>
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
+          <AddTaskForm
+            :new-task="newTask"
+            :auto-generated-name="autoGeneratedName"
+            :filtered-parent-options="filteredParentOptions"
+            :active-group="activeGroup"
+            @add-task="handleAddTask"
+            @calendar-date-select="handleCalendarDateSelect"
+            @filter-parent-tasks="filterParentTasks"
+            @update:newTask="(val) => (newTask = val)"
+          />
 
           <!-- Day Notes -->
           <q-card>
@@ -513,6 +304,8 @@
 
 <script setup lang="ts">
 import { format, addDays, startOfWeek } from "date-fns";
+
+import AddTaskForm from "../components/AddTaskForm.vue";
 
 const getWeekDays = (startDate: Date) => {
   return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), "yyyy-MM-dd"));
@@ -1009,24 +802,24 @@ const eventDateYear = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getFullYear();
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[0] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[0] || "0", 10);
 });
 
 const eventDateMonth = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getMonth() + 1;
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[1] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[1] || "0", 10);
 });
 
 const eventDateDay = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getDate();
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[2] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[2] || "0", 10);
 });
 
 // Update functions for separate date inputs
@@ -1204,10 +997,34 @@ const typeOptions = [
 ];
 
 const priorityOptions = [
-  { label: "Lo", value: "low", icon: "low_priority", color: "cyan-3", textColor: "grey-9" },
-  { label: "Med", value: "medium", icon: "drag_handle", color: "brown-7", textColor: "white" },
-  { label: "Hi", value: "high", icon: "priority_high", color: "orange", textColor: "white" },
-  { label: "Crit", value: "critical", icon: "warning", color: "negative", textColor: "white" },
+  {
+    label: "Lo",
+    value: "low",
+    icon: "low_priority",
+    color: "cyan-3",
+    textColor: "grey-9",
+  },
+  {
+    label: "Med",
+    value: "medium",
+    icon: "drag_handle",
+    color: "brown-7",
+    textColor: "white",
+  },
+  {
+    label: "Hi",
+    value: "high",
+    icon: "priority_high",
+    color: "orange",
+    textColor: "white",
+  },
+  {
+    label: "Crit",
+    value: "critical",
+    icon: "warning",
+    color: "negative",
+    textColor: "white",
+  },
 ];
 
 const parentTaskOptions = computed(() => {
@@ -1258,7 +1075,7 @@ const sortedTasks = computed(() => {
     const hasTimeB = !!b.eventTime;
 
     if (hasTimeA && !hasTimeB) return -1; // a has time, b doesn't - a comes first
-    if (!hasTimeA && hasTimeB) return 1;  // b has time, a doesn't - b comes first
+    if (!hasTimeA && hasTimeB) return 1; // b has time, a doesn't - b comes first
 
     if (hasTimeA && hasTimeB) {
       // Both have time - sort by time
@@ -1275,8 +1092,8 @@ const sortedTasks = computed(() => {
 });
 
 // Group tasks by whether they have time
-const tasksWithTime = computed(() => sortedTasks.value.filter(t => !!t.eventTime));
-const tasksWithoutTime = computed(() => sortedTasks.value.filter(t => !t.eventTime));
+const tasksWithTime = computed(() => sortedTasks.value.filter((t) => !!t.eventTime));
+const tasksWithoutTime = computed(() => sortedTasks.value.filter((t) => !t.eventTime));
 
 // Auto-generate name from description
 const autoGeneratedName = computed(() => {
