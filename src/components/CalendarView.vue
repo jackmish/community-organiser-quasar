@@ -1,16 +1,37 @@
 <template>
   <div>
+    <!-- Prev button and visible days per page option on the same line -->
+    <div class="row q-mb-md items-center">
+      <div class="col-auto">
+        <q-btn
+          unelevated
+          icon="chevron_left"
+          label="Prev"
+          color="primary"
+          text-color="white"
+          @click="previousCalendarWeeks"
+          size="sm"
+        />
+      </div>
+      <div class="col text-right">
+        <div class="row items-center justify-end q-gutter-md">
+          <div class="text-subtitle2">Calendar View</div>
+          <q-option-group
+            v-model="calendarViewDays"
+            :options="[
+              { label: '14 days', value: 14 },
+              { label: '42 days', value: 42 },
+              { label: '3 months', value: 84 },
+            ]"
+            color="primary"
+            inline
+            dense
+            size="xs"
+          />
+        </div>
+      </div>
+    </div>
     <div class="row items-center">
-      <q-btn
-        unelevated
-        icon="chevron_left"
-        label="Prev"
-        color="primary"
-        text-color="white"
-        @click="previousCalendarWeeks"
-        size="sm"
-        class="q-mr-xs"
-      />
       <div class="col">
         <table class="calendar-table">
           <thead>
@@ -127,19 +148,9 @@
           </tbody>
         </table>
       </div>
-      <q-btn
-        unelevated
-        icon-right="chevron_right"
-        label="Next"
-        color="primary"
-        text-color="white"
-        @click="nextCalendarWeeks"
-        size="sm"
-        class="q-ml-xs"
-      />
     </div>
-    <!-- Quick Date Buttons under the calendar -->
-    <div class="row q-gutter-sm q-mt-md q-mb-lg">
+    <!-- Quick Date Buttons and Next button under the calendar -->
+    <div class="row q-gutter-sm q-mt-md q-mb-lg items-center">
       <q-btn
         unelevated
         size="md"
@@ -169,6 +180,17 @@
           {{ month.label.toUpperCase() }}
         </template>
       </q-btn>
+      <div class="q-ml-auto">
+        <q-btn
+          unelevated
+          icon-right="chevron_right"
+          label="Next"
+          color="primary"
+          text-color="white"
+          @click="nextCalendarWeeks"
+          size="sm"
+        />
+      </div>
     </div>
   </div>
 </template>
