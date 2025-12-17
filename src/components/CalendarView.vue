@@ -1,6 +1,39 @@
 <template>
   <q-card class="q-mb-md bg-grey-1">
     <q-card-section>
+      <!-- Quick Date Buttons at the top -->
+      <div class="row q-gutter-sm q-mb-md">
+        <q-btn
+          unelevated
+          size="md"
+          color="green"
+          text-color="white"
+          @click="setEventDateToToday"
+          class="text-weight-bold"
+          style="font-size: 16px"
+        >
+          TODAY
+        </q-btn>
+        <q-btn
+          v-for="(month, index) in nextSixMonths"
+          :key="month.value"
+          unelevated
+          size="md"
+          :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
+          text-color="white"
+          @click="jumpToMonth(month.value)"
+          class="text-weight-bold"
+          style="font-size: 16px"
+        >
+          <template v-if="month.label.startsWith('Jan')">
+            {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
+          </template>
+          <template v-else>
+            {{ month.label.toUpperCase() }}
+          </template>
+        </q-btn>
+      </div>
+
       <div class="row items-center justify-between q-mb-sm">
         <div class="row items-center q-gutter-md">
           <div class="text-subtitle2">Calendar View</div>
@@ -16,20 +49,6 @@
             dense
             size="xs"
           />
-          <q-separator vertical inset />
-          <q-btn flat color="primary" size="sm" @click="setEventDateToToday">
-            Today
-          </q-btn>
-          <q-btn
-            v-for="month in nextSixMonths"
-            :key="month.value"
-            flat
-            color="primary"
-            size="sm"
-            @click="jumpToMonth(month.value)"
-          >
-            {{ month.label }}
-          </q-btn>
         </div>
       </div>
       <div class="row items-center">
@@ -830,19 +849,20 @@ function isWeekend(day: string) {
   border-radius: 4px;
 }
 
-.calendar-holiday-label {
-  font-size: 0.75em;
-  color: white !important;
-  background-color: #d32f2f;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-  letter-spacing: 0.3px;
-  text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  .calendar-holiday-label {
+    font-size: 0.75em;
+    color: white !important;
+    background-color: #d32f2f;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    word-wrap: break-word;
+    white-space: normal;
+    line-height: 1.2;
 }
 
 .calendar-month-label-above {

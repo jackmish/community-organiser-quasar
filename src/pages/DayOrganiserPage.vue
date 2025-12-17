@@ -35,7 +35,28 @@
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
-              <div class="text-h6">{{ formatDisplayDate(currentDate) }}</div>
+              <div class="text-h6 text-primary row items-center justify-between">
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="chevron_left"
+                  @click="prevDay"
+                  color="primary"
+                />
+                <div class="row items-center q-gutter-md">
+                  <span>{{ formatDisplayDate(currentDate) }}</span>
+                  <span class="text-weight-bold">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                </div>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="chevron_right"
+                  @click="nextDay"
+                  color="primary"
+                />
+              </div>
             </q-card-section>
             <q-card-section v-if="currentDayData.tasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
@@ -919,6 +940,7 @@ function selectCalendarDate(dateString: string) {
   if (newTask.value.eventDate !== dateString) {
     isClickBlocked.value = true;
     newTask.value.eventDate = dateString;
+    setCurrentDate(dateString); // Sync the date to the left list
 
     // Unblock after a short delay
     setTimeout(() => {
@@ -1201,6 +1223,13 @@ const filteredParentOptions = ref(parentTaskOptions.value);
 // Update filtered options when parent task options change
 watch(parentTaskOptions, (newOptions) => {
   filteredParentOptions.value = newOptions;
+});
+
+// Sync calendar date with current date when using arrow navigation
+watch(currentDate, (newDate) => {
+  if (newTask.value.eventDate !== newDate) {
+    newTask.value.eventDate = newDate;
+  }
 });
 
 const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
