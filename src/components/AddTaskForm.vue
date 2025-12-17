@@ -1,16 +1,5 @@
 <script setup lang="ts">
-function updateTaskField(field: string, value: any) {
-  if (field === "eventDateDay") eventDateDay.value = value;
-  else if (field === "eventDateMonth") eventDateMonth.value = value;
-  else if (field === "eventDateYear") eventDateYear.value = value;
-  else emit("update:newTask", { ...props.newTask, [field]: value });
-}
-function onCalendarDateSelect(date: string) {
-  emit("update:newTask", { ...props.newTask, eventDate: date });
-  emit("calendar-date-select", date);
-}
-import { computed } from "vue";
-import { defineProps, defineEmits } from "vue";
+import { computed, ref, nextTick, watch, defineProps, defineEmits } from "vue";
 import CalendarView from "./CalendarView.vue";
 
 const props = defineProps({
@@ -40,7 +29,6 @@ const emit = defineEmits([
   "update:newTask",
 ]);
 
-import { ref, nextTick } from "vue";
 // Input refs
 const dayInput = ref<any>(null);
 const monthInput = ref<any>(null);
@@ -49,6 +37,51 @@ const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
 // Auto-increment year checkbox state
 const autoIncrementYear = ref(false);
+
+// Time type radio (Whole Day / Exact Hour)
+const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
+
+// Computed for eventTime hour and minute
+const eventTimeHour = computed(() => {
+  if (!props.newTask.eventTime) return "";
+  return Number(props.newTask.eventTime.split(":")[0]);
+});
+const eventTimeMinute = computed(() => {
+  if (!props.newTask.eventTime) return "";
+  return Number(props.newTask.eventTime.split(":")[1]);
+});
+
+// Watch timeType to clear/restore time when toggling modes
+const cachedTime = ref<{ hour: string | number; minute: string | number }>({
+  hour: "",
+  minute: "",
+});
+watch(timeType, (newValue, oldValue) => {
+  if (newValue === "wholeDay") {
+    // Cache current values before clearing
+    cachedTime.value.hour = eventTimeHour.value;
+    cachedTime.value.minute = eventTimeMinute.value;
+    updateTaskField("eventTimeHour", "");
+    updateTaskField("eventTimeMinute", "");
+  } else if (oldValue === "wholeDay" && newValue === "exactHour") {
+    // Restore cached values
+    updateTaskField("eventTimeHour", cachedTime.value.hour);
+    updateTaskField("eventTimeMinute", cachedTime.value.minute);
+  }
+});
+
+function updateTaskField(field: string, value: any) {
+  if (field === "eventDateDay") eventDateDay.value = value;
+  else if (field === "eventDateMonth") eventDateMonth.value = value;
+  else if (field === "eventDateYear") eventDateYear.value = value;
+  else emit("update:newTask", { ...props.newTask, [field]: value });
+}
+
+function onCalendarDateSelect(date: string) {
+  emit("update:newTask", { ...props.newTask, eventDate: date });
+  emit("calendar-date-select", date);
+}
+// ...existing code continues...
 
 // Helper: format date as yyyy-MM-dd
 function formatDate(y: number, m: number, d: number) {
@@ -116,15 +149,30 @@ function updateEventDateYear(val: number | string | null) {
 
 function updateEventTimeHour(val: number | string | null) {
   if (val === null || val === "") return;
-  updateTaskField("eventTimeHour", val);
+  const hour = Number(val);
+  if (isNaN(hour) || hour < 0 || hour > 23) return;
+  timeType.value = "exactHour";
+  const minute = eventTimeMinute.value || 0;
+  // Update eventTime string in newTask
+  const eventTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  emit("update:newTask", { ...props.newTask, eventTime });
+  // Auto-focus to minute input after filling hour (when hour is 2 digits)
   if (String(val).length >= 2) {
-    nextTick(() => minuteInput.value?.$el?.querySelector("input")?.focus());
+    setTimeout(() => {
+      minuteInput.value?.$el?.querySelector("input")?.focus();
+    }, 0);
   }
 }
 
 function updateEventTimeMinute(val: number | string | null) {
   if (val === null || val === "") return;
-  updateTaskField("eventTimeMinute", val);
+  const minute = Number(val);
+  if (isNaN(minute) || minute < 0 || minute > 59) return;
+  timeType.value = "exactHour";
+  const hour = eventTimeHour.value || 0;
+  // Update eventTime string in newTask
+  const eventTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  emit("update:newTask", { ...props.newTask, eventTime });
 }
 
 // Returns a human-readable difference between the given date and today
@@ -313,10 +361,21 @@ function onSubmit(event: Event) {
               </div>
             </q-card>
             <q-card flat bordered class="q-pa-sm">
+              <q-option-group
+                v-model="timeType"
+                :options="[
+                  { label: 'Whole Day', value: 'wholeDay' },
+                  { label: 'Exact Hour', value: 'exactHour' },
+                ]"
+                color="primary"
+                inline
+                dense
+                class="q-mb-sm"
+              />
               <div class="row q-gutter-xs">
                 <q-input
                   ref="hourInput"
-                  :model-value="newTask.eventTimeHour"
+                  :model-value="eventTimeHour"
                   @update:model-value="updateEventTimeHour"
                   type="number"
                   label="Hour"
@@ -328,7 +387,7 @@ function onSubmit(event: Event) {
                 />
                 <q-input
                   ref="minuteInput"
-                  :model-value="newTask.eventTimeMinute"
+                  :model-value="eventTimeMinute"
                   @update:model-value="updateEventTimeMinute"
                   type="number"
                   label="Minute"
