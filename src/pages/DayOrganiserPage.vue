@@ -41,53 +41,116 @@
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
             <q-list v-else separator>
-              <q-item
-                v-for="task in sortedTasks"
-                :key="task.id"
-                class="q-pa-md"
-                :class="{ 'bg-grey-2': task.completed }"
-              >
-                <q-item-section side>
-                  <q-checkbox
-                    :model-value="task.completed"
-                    @update:model-value="handleToggleTask(task.id)"
-                  />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label :class="{ 'text-strike': task.completed }">
-                    <strong>{{ task.name }}</strong>
-                  </q-item-label>
-                  <q-item-label caption>{{ task.description }}</q-item-label>
-                  <q-item-label caption class="q-mt-xs">
-                    <q-chip
-                      :color="priorityColor(task.priority)"
-                      text-color="white"
-                      size="sm"
-                    >
-                      {{ task.priority }}
-                    </q-chip>
-                    <q-chip
-                      v-if="task.groupId"
-                      :style="{ backgroundColor: getGroupColor(task.groupId) }"
-                      text-color="white"
-                      size="sm"
-                      icon="folder"
-                    >
-                      {{ getGroupName(task.groupId) }}
-                    </q-chip>
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="delete"
-                    color="negative"
-                    @click="handleDeleteTask(task.id)"
-                  />
-                </q-item-section>
-              </q-item>
+              <!-- Tasks with time -->
+              <template v-if="tasksWithTime.length > 0">
+                <q-item
+                  v-for="task in tasksWithTime"
+                  :key="task.id"
+                  class="q-pa-md"
+                  :class="{ 'bg-grey-2': task.completed }"
+                >
+                  <q-item-section side style="min-width: 60px">
+                    <div class="text-bold text-primary">{{ task.eventTime }}</div>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-checkbox
+                      :model-value="task.completed"
+                      @update:model-value="handleToggleTask(task.id)"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label :class="{ 'text-strike': task.completed }">
+                      <strong>{{ task.name }}</strong>
+                    </q-item-label>
+                    <q-item-label caption>{{ task.description }}</q-item-label>
+                    <q-item-label caption class="q-mt-xs">
+                      <q-chip
+                        :color="priorityColor(task.priority)"
+                        text-color="white"
+                        size="sm"
+                      >
+                        {{ task.priority }}
+                      </q-chip>
+                      <q-chip
+                        v-if="task.groupId"
+                        :style="{ backgroundColor: getGroupColor(task.groupId) }"
+                        text-color="white"
+                        size="sm"
+                        icon="folder"
+                      >
+                        {{ getGroupName(task.groupId) }}
+                      </q-chip>
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="delete"
+                      color="negative"
+                      @click="handleDeleteTask(task.id)"
+                    />
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <!-- Separator for tasks without time -->
+              <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" />
+              <q-item-label v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" header class="text-grey-7">
+                No Time Set
+              </q-item-label>
+
+              <!-- Tasks without time -->
+              <template v-if="tasksWithoutTime.length > 0">
+                <q-item
+                  v-for="task in tasksWithoutTime"
+                  :key="task.id"
+                  class="q-pa-md"
+                  :class="{ 'bg-grey-2': task.completed }"
+                >
+                  <q-item-section side>
+                    <q-checkbox
+                      :model-value="task.completed"
+                      @update:model-value="handleToggleTask(task.id)"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label :class="{ 'text-strike': task.completed }">
+                      <strong>{{ task.name }}</strong>
+                    </q-item-label>
+                    <q-item-label caption>{{ task.description }}</q-item-label>
+                    <q-item-label caption class="q-mt-xs">
+                      <q-chip
+                        :color="priorityColor(task.priority)"
+                        text-color="white"
+                        size="sm"
+                      >
+                        {{ task.priority }}
+                      </q-chip>
+                      <q-chip
+                        v-if="task.groupId"
+                        :style="{ backgroundColor: getGroupColor(task.groupId) }"
+                        text-color="white"
+                        size="sm"
+                        icon="folder"
+                      >
+                        {{ getGroupName(task.groupId) }}
+                      </q-chip>
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="delete"
+                      color="negative"
+                      @click="handleDeleteTask(task.id)"
+                    />
+                  </q-item-section>
+                </q-item>
+              </template>
             </q-list>
           </q-card>
         </div>
@@ -210,31 +273,66 @@
                         {{ getTimeDifferenceDisplay(newTask.eventDate) }}
                       </div>
                     </q-card>
+                    <q-card flat bordered class="q-pa-sm">
+                      <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
+                      <div class="column q-gutter-xs">
+                        <div class="row q-gutter-xs">
+                          <q-btn
+                            v-for="option in priorityOptions.slice(0, 2)"
+                            :key="option.value"
+                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
+                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
+                            :icon="option.icon"
+                            :label="option.label"
+                            size="sm"
+                            @click="newTask.priority = option.value as Task['priority']"
+                            :unelevated="newTask.priority === option.value"
+                            :outline="newTask.priority !== option.value"
+                          />
+                        </div>
+                        <div class="row q-gutter-xs">
+                          <q-btn
+                            v-for="option in priorityOptions.slice(2, 4)"
+                            :key="option.value"
+                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
+                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
+                            :icon="option.icon"
+                            :label="option.label"
+                            size="sm"
+                            @click="newTask.priority = option.value as Task['priority']"
+                            :unelevated="newTask.priority === option.value"
+                            :outline="newTask.priority !== option.value"
+                          />
+                        </div>
+                      </div>
+                    </q-card>
                   </div>
                 </div>
                 <div class="row" style="gap: 12px">
+                  <div class="col column" style="gap: 12px">
+                    <q-input
+                      :model-value="autoGeneratedName"
+                      label="Automatic name from description"
+                      outlined
+                      readonly
+                      bg-color="grey-2"
+                    />
+                    <q-input
+                      v-model="newTask.name"
+                      label="Own task name"
+                      outlined
+                      @update:model-value="(val) => { if (val && typeof val === 'string') newTask.name = val.charAt(0).toUpperCase() + val.slice(1); }"
+                    />
+                  </div>
                   <q-input
-                    v-model="newTask.name"
-                    label="Own task name"
+                    v-model="newTask.description"
+                    label="Description"
                     outlined
+                    type="textarea"
+                    rows="4"
                     class="col"
-                  />
-                  <q-input
-                    :model-value="autoGeneratedName"
-                    label="Automatic name from description"
-                    outlined
-                    readonly
-                    class="col"
-                    bg-color="grey-2"
                   />
                 </div>
-                <q-input
-                  v-model="newTask.description"
-                  label="Description"
-                  outlined
-                  type="textarea"
-                  rows="2"
-                />
                 <div class="row" style="gap: 12px">
                   <q-select
                     v-model="newTask.parent_id"
@@ -273,16 +371,6 @@
                       </q-chip>
                     </template>
                   </q-select>
-                  <div class="col">
-                    <div class="text-subtitle2 q-mb-sm">Priority</div>
-                    <q-option-group
-                      v-model="newTask.priority"
-                      :options="priorityOptions"
-                      type="radio"
-                      color="primary"
-                      inline
-                    />
-                  </div>
                 </div>
                 <div class="row items-center justify-center">
                   <q-btn type="submit" color="primary" label="Add Task" />
@@ -1075,7 +1163,7 @@ watch(timeType, (newValue) => {
 const newTask = ref({
   name: "",
   description: "",
-  type_id: "Note/Later",
+  type_id: "TimeEvent",
   status_id: "",
   parent_id: null as string | null,
   created_by: "",
@@ -1094,9 +1182,10 @@ const typeOptions = [
 ];
 
 const priorityOptions = [
-  { label: "Low", value: "low" },
-  { label: "Medium", value: "medium" },
-  { label: "High", value: "high" },
+  { label: "Lo", value: "low", icon: "low_priority", color: "cyan-3", textColor: "grey-9" },
+  { label: "Med", value: "medium", icon: "drag_handle", color: "brown-7", textColor: "white" },
+  { label: "Hi", value: "high", icon: "priority_high", color: "orange", textColor: "white" },
+  { label: "Crit", value: "critical", icon: "warning", color: "negative", textColor: "white" },
 ];
 
 const parentTaskOptions = computed(() => {
@@ -1135,14 +1224,30 @@ const sortedTasks = computed(() => {
   }
 
   return [...tasksToSort].sort((a, b) => {
-    // Sort by priority first (high -> medium -> low)
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    // Tasks with time come first, sorted by time
+    const hasTimeA = !!a.eventTime;
+    const hasTimeB = !!b.eventTime;
+
+    if (hasTimeA && !hasTimeB) return -1; // a has time, b doesn't - a comes first
+    if (!hasTimeA && hasTimeB) return 1;  // b has time, a doesn't - b comes first
+
+    if (hasTimeA && hasTimeB) {
+      // Both have time - sort by time
+      return a.eventTime!.localeCompare(b.eventTime!);
+    }
+
+    // Neither has time - sort by priority
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     const priorityCompare = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityCompare !== 0) return priorityCompare;
-    // If priorities are equal, keep original order
+
     return 0;
   });
 });
+
+// Group tasks by whether they have time
+const tasksWithTime = computed(() => sortedTasks.value.filter(t => !!t.eventTime));
+const tasksWithoutTime = computed(() => sortedTasks.value.filter(t => !t.eventTime));
 
 // Auto-generate name from description
 const autoGeneratedName = computed(() => {
@@ -1151,10 +1256,15 @@ const autoGeneratedName = computed(() => {
   // Take first sentence or first 50 characters
   const desc = newTask.value.description.trim();
   const firstSentence = desc.split(/[.!?]/)[0] || "";
-  const name =
+  let name =
     firstSentence.length > 50 ? firstSentence.substring(0, 50) + "..." : firstSentence;
 
-  return name || desc.substring(0, 50) + (desc.length > 50 ? "..." : "");
+  if (!name) {
+    name = desc.substring(0, 50) + (desc.length > 50 ? "..." : "");
+  }
+
+  // Capitalize first letter
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : "";
 });
 
 // Group options for select
@@ -1212,9 +1322,10 @@ const formatDisplayDate = (date: string) => {
 
 const priorityColor = (priority: Task["priority"]) => {
   const colors = {
-    low: "blue",
-    medium: "orange",
-    high: "red",
+    low: "cyan-3",
+    medium: "brown-7",
+    high: "orange",
+    critical: "negative",
   };
   return colors[priority];
 };
@@ -1255,18 +1366,11 @@ const handleAddTask = async () => {
 
   await addTask(currentDate.value, taskData);
 
-  // Reset form
+  // Reset only title, description, and time fields (keep type, date, group, etc.)
   newTask.value = {
+    ...newTask.value,
     name: "",
     description: "",
-    type_id: "Note/Later",
-    status_id: "",
-    parent_id: null,
-    created_by: "",
-    priority: "medium",
-    completed: false,
-    groupId: undefined,
-    eventDate: format(new Date(), "yyyy-MM-dd"),
     eventTime: "",
   };
 };

@@ -14,10 +14,11 @@ export interface Task {
   description: string;
   date: string; // YYYY-MM-DD format
   category: 'work' | 'personal' | 'meeting' | 'other';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'critical';
   completed: boolean;
   groupId?: string; // Reference to TaskGroup
   tags?: string[];
+  eventTime?: string; // HH:mm format
   createdAt: string;
   updatedAt: string;
 }
