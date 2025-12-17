@@ -1,4 +1,14 @@
 <script setup lang="ts">
+function updateTaskField(field: string, value: any) {
+  if (field === "eventDateDay") eventDateDay.value = value;
+  else if (field === "eventDateMonth") eventDateMonth.value = value;
+  else if (field === "eventDateYear") eventDateYear.value = value;
+  else emit("update:newTask", { ...props.newTask, [field]: value });
+}
+function onCalendarDateSelect(date: string) {
+  emit("update:newTask", { ...props.newTask, eventDate: date });
+  emit("calendar-date-select", date);
+}
 import { computed } from "vue";
 import { defineProps, defineEmits } from "vue";
 import CalendarView from "./CalendarView.vue";
@@ -30,6 +40,70 @@ const emit = defineEmits([
   "update:newTask",
 ]);
 
+import { ref } from "vue";
+// Auto-increment year checkbox state
+const autoIncrementYear = ref(false);
+
+// Returns a human-readable difference between the given date and today
+const getTimeDifferenceDisplay = (dayDate: string) => {
+  if (!dayDate) return "Select a date";
+
+  const date = new Date(dayDate);
+  const todayDate = new Date();
+
+  // Normalize both dates to midnight for accurate day comparison
+  const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayNormalized = new Date(
+    todayDate.getFullYear(),
+    todayDate.getMonth(),
+    todayDate.getDate()
+  );
+
+  const daysDiff = Math.floor(
+    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysDiff === 0) return "TODAY";
+  if (daysDiff === 1) return "TOMORROW";
+  if (daysDiff === -1) return "YESTERDAY";
+
+  if (daysDiff > 0) {
+    // Future date
+    const weeksDiff = Math.floor(daysDiff / 7);
+
+    if (weeksDiff >= 1) {
+      const remainingDays = daysDiff % 7;
+      if (remainingDays > 0) {
+        const weekText = weeksDiff === 1 ? "week" : "weeks";
+        const dayText = remainingDays === 1 ? "day" : "days";
+        return `In ${weeksDiff} ${weekText} ${remainingDays} ${dayText}`;
+      }
+      const weekText = weeksDiff === 1 ? "week" : "weeks";
+      return `In ${weeksDiff} ${weekText}`;
+    }
+
+    const dayText = daysDiff === 1 ? "day" : "days";
+    return `In ${daysDiff} ${dayText}`;
+  } else {
+    // Past date
+    const absDaysDiff = Math.abs(daysDiff);
+    const weeksDiff = Math.floor(absDaysDiff / 7);
+
+    if (weeksDiff >= 1) {
+      const remainingDays = absDaysDiff % 7;
+      if (remainingDays > 0) {
+        const weekText = weeksDiff === 1 ? "week" : "weeks";
+        const dayText = remainingDays === 1 ? "day" : "days";
+        return `${weeksDiff} ${weekText} ${remainingDays} ${dayText} ago`;
+      }
+      const weekText = weeksDiff === 1 ? "week" : "weeks";
+      return `${weeksDiff} ${weekText} ago`;
+    }
+
+    const dayText = absDaysDiff === 1 ? "day" : "days";
+    return `${absDaysDiff} ${dayText} ago`;
+  }
+};
 // Computed for eventDate parts, always in sync with eventDate
 const eventDate = computed(() => props.newTask.eventDate || "");
 const eventDateParts = computed(() => eventDate.value.split("-"));
@@ -73,19 +147,6 @@ const eventDateDay = computed({
     }
   },
 });
-
-function updateTaskField(field: string, value: any) {
-  if (field === "eventDateDay") eventDateDay.value = value;
-  else if (field === "eventDateMonth") eventDateMonth.value = value;
-  else if (field === "eventDateYear") eventDateYear.value = value;
-  else emit("update:newTask", { ...props.newTask, [field]: value });
-}
-
-function onCalendarDateSelect(date: string) {
-  emit("update:newTask", { ...props.newTask, eventDate: date });
-  emit("calendar-date-select", date); // still notify parent if needed
-}
-
 const priorityOptions = [
   {
     label: "Lo",
@@ -144,6 +205,7 @@ function onSubmit(event: Event) {
                   ref="dayInput"
                   :model-value="eventDateDay"
                   @update:model-value="(val) => updateTaskField('eventDateDay', val)"
+                  @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
                   type="number"
                   label="Day"
                   outlined
@@ -156,6 +218,7 @@ function onSubmit(event: Event) {
                   ref="monthInput"
                   :model-value="eventDateMonth"
                   @update:model-value="(val) => updateTaskField('eventDateMonth', val)"
+                  @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
                   type="number"
                   label="Month"
                   outlined
@@ -197,13 +260,7 @@ function onSubmit(event: Event) {
             <q-card flat bordered class="q-pa-sm">
               <div class="row items-center justify-between q-mb-xs">
                 <div class="text-caption text-grey-7">Year</div>
-                <q-checkbox
-                  :model-value="newTask.autoIncrementYear"
-                  @update:model-value="(val) => updateTaskField('autoIncrementYear', val)"
-                  dense
-                  size="xs"
-                  label="Auto"
-                />
+                <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
               </div>
               <q-input
                 ref="yearInput"
@@ -219,7 +276,7 @@ function onSubmit(event: Event) {
             <q-card flat bordered class="q-pa-sm">
               <div class="text-caption text-grey-7 q-mb-xs">Time Difference</div>
               <div class="text-h6 text-primary text-weight-bold">
-                {{ newTask.timeDifferenceDisplay }}
+                {{ getTimeDifferenceDisplay(newTask.eventDate) }}
               </div>
             </q-card>
             <q-card flat bordered class="q-pa-sm">
