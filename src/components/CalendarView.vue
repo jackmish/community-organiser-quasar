@@ -1,200 +1,176 @@
 <template>
-  <q-card class="q-mb-md bg-grey-1">
-    <q-card-section>
-      <!-- Quick Date Buttons at the top -->
-      <div class="row q-gutter-sm q-mb-md">
-        <q-btn
-          unelevated
-          size="md"
-          color="green"
-          text-color="white"
-          @click="setEventDateToToday"
-          class="text-weight-bold"
-          style="font-size: 16px"
-        >
-          TODAY
-        </q-btn>
-        <q-btn
-          v-for="(month, index) in nextSixMonths"
-          :key="month.value"
-          unelevated
-          size="md"
-          :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
-          text-color="white"
-          @click="jumpToMonth(month.value)"
-          class="text-weight-bold"
-          style="font-size: 16px"
-        >
-          <template v-if="month.label.startsWith('Jan')">
-            {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
-          </template>
-          <template v-else>
-            {{ month.label.toUpperCase() }}
-          </template>
-        </q-btn>
-      </div>
-
-      <div class="row items-center justify-between q-mb-sm">
-        <div class="row items-center q-gutter-md">
-          <div class="text-subtitle2">Calendar View</div>
-          <q-option-group
-            v-model="calendarViewDays"
-            :options="[
-              { label: '14 days', value: 14 },
-              { label: '42 days', value: 42 },
-              { label: '3 months', value: 84 },
-            ]"
-            color="primary"
-            inline
-            dense
-            size="xs"
-          />
-        </div>
-      </div>
-      <div class="row items-center">
-        <q-btn
-          unelevated
-          icon="chevron_left"
-          label="Prev"
-          color="primary"
-          text-color="white"
-          @click="previousCalendarWeeks"
-          size="sm"
-          class="q-mr-xs"
-        />
-        <div class="col">
-          <table class="calendar-table">
-            <thead>
-              <tr>
-                <th
-                  v-for="day in calendarCurrentWeek"
-                  :key="'header-' + day"
-                  class="text-center text-weight-bold text-caption text-grey-7"
-                >
-                  {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(week, weekIndex) in allCalendarWeeks"
-                :key="'week-' + weekIndex"
-                :class="{
-                  'new-month-week': shouldWeekHaveMargin(
-                    week,
-                    weekIndex,
-                    allCalendarWeeks
-                  ),
-                }"
+  <div>
+    <div class="row items-center">
+      <q-btn
+        unelevated
+        icon="chevron_left"
+        label="Prev"
+        color="primary"
+        text-color="white"
+        @click="previousCalendarWeeks"
+        size="sm"
+        class="q-mr-xs"
+      />
+      <div class="col">
+        <table class="calendar-table">
+          <thead>
+            <tr>
+              <th
+                v-for="day in calendarCurrentWeek"
+                :key="'header-' + day"
+                class="text-center text-weight-bold text-caption text-grey-7"
               >
-                <td v-for="(day, index) in week" :key="day" class="calendar-cell">
+                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(week, weekIndex) in allCalendarWeeks"
+              :key="'week-' + weekIndex"
+              :class="{
+                'new-month-week': shouldWeekHaveMargin(week, weekIndex, allCalendarWeeks),
+              }"
+            >
+              <td v-for="(day, index) in week" :key="day" class="calendar-cell">
+                <div
+                  :class="{
+                    'new-month-start': isNewMonthStart(
+                      day,
+                      week,
+                      weekIndex,
+                      allCalendarWeeks
+                    ),
+                  }"
+                >
                   <div
-                    :class="{
-                      'new-month-start': isNewMonthStart(
-                        day,
-                        week,
-                        weekIndex,
-                        allCalendarWeeks
-                      ),
-                    }"
+                    v-if="
+                      shouldShowMonth(day, index, week, weekIndex === 0) ||
+                      shouldShowYear(day, index, week, weekIndex === 0)
+                    "
+                    class="calendar-month-label-above"
                   >
-                    <div
+                    <span>
+                      {{ getMonthAbbr(day, index, week) }}
+                    </span>
+                    <span
                       v-if="
-                        shouldShowMonth(day, index, week, weekIndex === 0) ||
-                        shouldShowYear(day, index, week, weekIndex === 0)
+                        shouldShowYear(day, index, week, weekIndex === 0) ||
+                        new Date(day).getFullYear() !== new Date().getFullYear()
                       "
-                      class="calendar-month-label-above"
+                      class="calendar-year-inline"
                     >
-                      <span>
-                        {{ getMonthAbbr(day, index, week) }}
-                      </span>
-                      <span
-                        v-if="
-                          shouldShowYear(day, index, week, weekIndex === 0) ||
-                          new Date(day).getFullYear() !== new Date().getFullYear()
-                        "
-                        class="calendar-year-inline"
-                      >
-                        {{ new Date(day).getFullYear() }}
-                      </span>
-                    </div>
-                    <div v-else class="calendar-month-label-above">&nbsp;</div>
+                      {{ new Date(day).getFullYear() }}
+                    </span>
                   </div>
-                  <q-btn
-                    size="sm"
-                    :color="
-                      day === selectedDate
-                        ? 'primary'
-                        : day < format(new Date(), 'yyyy-MM-dd')
-                        ? 'grey-5'
-                        : 'grey-7'
-                    "
-                    @click="handleDateSelect(day)"
-                    :title="
-                      new Date(day).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                      })
-                    "
-                    :class="[
-                      'calendar-day-btn',
-                      { 'first-day-of-month': isFirstDayOfMonth(day) },
-                      {
-                        'after-first-in-row': isAfterFirstInRow(day, week),
-                      },
-                      { 'calendar-weekend': isWeekend(day) },
-                      { 'calendar-holiday': !!getHoliday(day) },
-                      { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
-                      { 'calendar-selected': day === selectedDate },
-                    ]"
-                  >
-                    <div class="calendar-day-content">
-                      <div class="calendar-day-number">
-                        {{ new Date(day).getDate() }}
-                      </div>
-                      <div
-                        v-if="day === format(new Date(), 'yyyy-MM-dd')"
-                        class="calendar-today-label calendar-green-label"
-                      >
-                        TODAY
-                      </div>
-                      <div
-                        v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
-                        class="calendar-today-label"
-                      >
-                        YESTERDAY
-                      </div>
-                      <div
-                        v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
-                        class="calendar-today-label calendar-gray-label"
-                      >
-                        TOMORROW
-                      </div>
-                      <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
-                        {{ getHoliday(day)?.localName }}
-                      </div>
-                      <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
-                        {{ getWeekLabel(day) }}
-                      </div>
+                  <div v-else class="calendar-month-label-above">&nbsp;</div>
+                </div>
+                <q-btn
+                  size="sm"
+                  :color="
+                    day === selectedDate
+                      ? 'primary'
+                      : day < format(new Date(), 'yyyy-MM-dd')
+                      ? 'grey-5'
+                      : 'grey-7'
+                  "
+                  @click="handleDateSelect(day)"
+                  :title="
+                    new Date(day).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                    })
+                  "
+                  :class="[
+                    'calendar-day-btn',
+                    { 'first-day-of-month': isFirstDayOfMonth(day) },
+                    {
+                      'after-first-in-row': isAfterFirstInRow(day, week),
+                    },
+                    { 'calendar-weekend': isWeekend(day) },
+                    { 'calendar-holiday': !!getHoliday(day) },
+                    { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
+                    { 'calendar-selected': day === selectedDate },
+                  ]"
+                >
+                  <div class="calendar-day-content">
+                    <div class="calendar-day-number">
+                      {{ new Date(day).getDate() }}
                     </div>
-                  </q-btn>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <q-btn
-          unelevated
-          icon-right="chevron_right"
-          label="Next"
-          color="primary"
-          text-color="white"
-          @click="nextCalendarWeeks"
-          size="sm"
-          class="q-ml-xs"
-        />
+                    <div
+                      v-if="day === format(new Date(), 'yyyy-MM-dd')"
+                      class="calendar-today-label calendar-green-label"
+                    >
+                      TODAY
+                    </div>
+                    <div
+                      v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
+                      class="calendar-today-label"
+                    >
+                      YESTERDAY
+                    </div>
+                    <div
+                      v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
+                      class="calendar-today-label calendar-gray-label"
+                    >
+                      TOMORROW
+                    </div>
+                    <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
+                      {{ getHoliday(day)?.localName }}
+                    </div>
+                    <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
+                      {{ getWeekLabel(day) }}
+                    </div>
+                  </div>
+                </q-btn>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </q-card-section>
-  </q-card>
+      <q-btn
+        unelevated
+        icon-right="chevron_right"
+        label="Next"
+        color="primary"
+        text-color="white"
+        @click="nextCalendarWeeks"
+        size="sm"
+        class="q-ml-xs"
+      />
+    </div>
+    <!-- Quick Date Buttons under the calendar -->
+    <div class="row q-gutter-sm q-mt-md q-mb-lg">
+      <q-btn
+        unelevated
+        size="md"
+        color="green"
+        text-color="white"
+        @click="setEventDateToToday"
+        class="text-weight-bold"
+        style="font-size: 16px"
+      >
+        TODAY
+      </q-btn>
+      <q-btn
+        v-for="(month, index) in nextSixMonths"
+        :key="month.value"
+        unelevated
+        size="md"
+        :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
+        text-color="white"
+        @click="jumpToMonth(month.value)"
+        class="text-weight-bold"
+        style="font-size: 16px"
+      >
+        <template v-if="month.label.startsWith('Jan')">
+          {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
+        </template>
+        <template v-else>
+          {{ month.label.toUpperCase() }}
+        </template>
+      </q-btn>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
