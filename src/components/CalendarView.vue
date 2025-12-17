@@ -240,7 +240,11 @@ async function getHolidaysFilePath(year: number): Promise<string | null> {
   if (!isElectron) return null;
 
   const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(appDataPath, 'holidays', `holidays_PL_${year}.json`);
+  return (window as any).electronAPI.joinPath(
+    appDataPath,
+    "holidays",
+    `holidays_PL_${year}.json`
+  );
 }
 
 // Load holidays from APPDATA (Electron) or localStorage (browser)
@@ -311,7 +315,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       // Ensure directory exists
       const dirPath = (window as any).electronAPI.joinPath(
         await (window as any).electronAPI.getAppDataPath(),
-        'holidays'
+        "holidays"
       );
       await (window as any).electronAPI.ensureDir(dirPath);
 
@@ -342,7 +346,9 @@ async function fetchHolidays(year: number) {
     console.log(`No cached holidays for ${year} in Electron, using fallback`);
     loadFallbackHolidays(year);
     // Save fallback to cache for next time
-    const fallbackList = Array.from(holidays.value.values()).filter(h => h.date.startsWith(`${year}-`));
+    const fallbackList = Array.from(holidays.value.values()).filter((h) =>
+      h.date.startsWith(`${year}-`)
+    );
     await saveHolidaysToCache(year, fallbackList);
     return;
   }
@@ -754,35 +760,27 @@ function isWeekend(day: string) {
 
 .calendar-day-btn.calendar-weekend::before,
 .calendar-day-btn.calendar-holiday::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image:
-    repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
       45deg,
       transparent,
       transparent 8px,
       #ddd 8px,
       #ddd 9px
     ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 8px,
-      #ddd 8px,
-      #ddd 9px
-    );
+    repeating-linear-gradient(-45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px);
   pointer-events: none;
   z-index: 0;
 }
 
 .calendar-day-btn.calendar-selected.calendar-weekend::before,
 .calendar-day-btn.calendar-selected.calendar-holiday::before {
-  background-image:
-    repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
       45deg,
       transparent,
       transparent 8px,
@@ -849,20 +847,20 @@ function isWeekend(day: string) {
   border-radius: 4px;
 }
 
-  .calendar-holiday-label {
-    font-size: 0.75em;
-    color: white !important;
-    background-color: #d32f2f;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    text-align: center;
-    max-width: 70px;
-    overflow: hidden;
-    word-wrap: break-word;
-    white-space: normal;
-    line-height: 1.2;
+.calendar-holiday-label {
+  font-size: 0.75em;
+  color: white !important;
+  background-color: #d32f2f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-align: center;
+  max-width: 70px;
+  overflow: hidden;
+  word-wrap: break-word;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .calendar-month-label-above {
