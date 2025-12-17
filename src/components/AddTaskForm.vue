@@ -40,9 +40,70 @@ const emit = defineEmits([
   "update:newTask",
 ]);
 
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
+// Input refs
+const dayInput = ref<any>(null);
+const monthInput = ref<any>(null);
+const yearInput = ref<any>(null);
+const hourInput = ref<any>(null);
+const minuteInput = ref<any>(null);
 // Auto-increment year checkbox state
 const autoIncrementYear = ref(false);
+
+// Helper: format date as yyyy-MM-dd
+function formatDate(y: number, m: number, d: number) {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+// Update handlers with auto-advance and auto-increment logic
+
+function updateEventDateDay(val: number | string | null) {
+  if (val === null || val === "") return;
+  eventDateDay.value = Number(val);
+  // Auto-advance to month if 2 digits
+  if (String(val).length >= 2) {
+    nextTick(() => monthInput.value?.$el?.querySelector("input")?.focus());
+  }
+}
+
+function updateEventDateMonth(val: number | string | null) {
+  if (val === null || val === "") return;
+  const month = Number(val);
+  let year = eventDateYear.value;
+  // Auto-increment year if enabled and month < current month
+  if (autoIncrementYear.value) {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    if (month < currentMonth && year <= currentYear) {
+      year = currentYear + 1;
+      eventDateYear.value = year;
+    }
+  }
+  eventDateMonth.value = month;
+  // Auto-advance to hour if 2 digits
+  if (String(val).length >= 2) {
+    nextTick(() => hourInput.value?.$el?.querySelector("input")?.focus());
+  }
+}
+
+function updateEventDateYear(val: number | string | null) {
+  if (val === null || val === "") return;
+  eventDateYear.value = Number(val);
+}
+
+function updateEventTimeHour(val: number | string | null) {
+  if (val === null || val === "") return;
+  updateTaskField("eventTimeHour", val);
+  if (String(val).length >= 2) {
+    nextTick(() => minuteInput.value?.$el?.querySelector("input")?.focus());
+  }
+}
+
+function updateEventTimeMinute(val: number | string | null) {
+  if (val === null || val === "") return;
+  updateTaskField("eventTimeMinute", val);
+}
 
 // Returns a human-readable difference between the given date and today
 const getTimeDifferenceDisplay = (dayDate: string) => {
@@ -204,7 +265,7 @@ function onSubmit(event: Event) {
                 <q-input
                   ref="dayInput"
                   :model-value="eventDateDay"
-                  @update:model-value="(val) => updateTaskField('eventDateDay', val)"
+                  @update:model-value="updateEventDateDay"
                   @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
                   type="number"
                   label="Day"
@@ -217,7 +278,7 @@ function onSubmit(event: Event) {
                 <q-input
                   ref="monthInput"
                   :model-value="eventDateMonth"
-                  @update:model-value="(val) => updateTaskField('eventDateMonth', val)"
+                  @update:model-value="updateEventDateMonth"
                   @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
                   type="number"
                   label="Month"
@@ -234,7 +295,7 @@ function onSubmit(event: Event) {
                 <q-input
                   ref="hourInput"
                   :model-value="newTask.eventTimeHour"
-                  @update:model-value="(val) => updateTaskField('eventTimeHour', val)"
+                  @update:model-value="updateEventTimeHour"
                   type="number"
                   label="Hour"
                   outlined
@@ -246,7 +307,7 @@ function onSubmit(event: Event) {
                 <q-input
                   ref="minuteInput"
                   :model-value="newTask.eventTimeMinute"
-                  @update:model-value="(val) => updateTaskField('eventTimeMinute', val)"
+                  @update:model-value="updateEventTimeMinute"
                   type="number"
                   label="Minute"
                   outlined
@@ -265,7 +326,7 @@ function onSubmit(event: Event) {
               <q-input
                 ref="yearInput"
                 :model-value="eventDateYear"
-                @update:model-value="(val) => updateTaskField('eventDateYear', val)"
+                @update:model-value="updateEventDateYear"
                 type="number"
                 label="Year"
                 outlined
