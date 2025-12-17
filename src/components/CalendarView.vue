@@ -722,6 +722,18 @@ function isWeekend(day: string) {
 .calendar-table th {
   padding: 8px 4px;
   text-align: center;
+  border-left: 1px dashed #bbb;
+  border-right: 1px dashed #bbb;
+}
+
+.calendar-table th:first-child,
+.calendar-table td:first-child {
+  border-left: none !important;
+}
+
+.calendar-table th:last-child,
+.calendar-table td:last-child {
+  border-right: none !important;
 }
 
 .calendar-cell {
