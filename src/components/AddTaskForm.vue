@@ -56,34 +56,56 @@ function formatDate(y: number, m: number, d: number) {
 }
 
 // Update handlers with auto-advance and auto-increment logic
-
+const isUpdatingDate = ref(false);
 function updateEventDateDay(val: number | string | null) {
-  if (val === null || val === "") return;
-  eventDateDay.value = Number(val);
-  // Auto-advance to month if 2 digits
-  if (String(val).length >= 2) {
-    nextTick(() => monthInput.value?.$el?.querySelector("input")?.focus());
+  if (val === null || val === "" || isUpdatingDate.value) return;
+  isUpdatingDate.value = true;
+  try {
+    const day = Number(val);
+    if (isNaN(day) || day < 1 || day > 31) return;
+    const year = eventDateYear.value;
+    const month = eventDateMonth.value;
+    // Always update full date string
+    eventDateDay.value = day;
+    // Auto-focus to month input after filling day (when day is 2 digits)
+    if (String(val).length >= 2) {
+      setTimeout(() => {
+        monthInput.value?.$el?.querySelector("input")?.focus();
+      }, 0);
+    }
+  } finally {
+    isUpdatingDate.value = false;
   }
 }
 
 function updateEventDateMonth(val: number | string | null) {
-  if (val === null || val === "") return;
-  const month = Number(val);
-  let year = eventDateYear.value;
-  // Auto-increment year if enabled and month < current month
-  if (autoIncrementYear.value) {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    if (month < currentMonth && year <= currentYear) {
-      year = currentYear + 1;
-      eventDateYear.value = year;
+  if (val === null || val === "" || isUpdatingDate.value) return;
+  isUpdatingDate.value = true;
+  try {
+    const month = Number(val);
+    if (isNaN(month) || month < 1 || month > 12) return;
+    let year = eventDateYear.value;
+    const day = eventDateDay.value;
+    // Auto-increment year if enabled and month < current month
+    if (autoIncrementYear.value) {
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+      if (month < currentMonth && year <= currentYear) {
+        year = currentYear + 1;
+        eventDateYear.value = year;
+      }
     }
-  }
-  eventDateMonth.value = month;
-  // Auto-advance to hour if 2 digits
-  if (String(val).length >= 2) {
-    nextTick(() => hourInput.value?.$el?.querySelector("input")?.focus());
+    // Always update full date string
+    eventDateMonth.value = month;
+    // Auto-focus to hour input after filling month (when month is 2 digits)
+    if (String(val).length >= 2) {
+      setTimeout(() => {
+        hourInput.value?.$el?.querySelector("input")?.focus();
+      }, 0);
+    }
+  } finally {
+    isUpdatingDate.value = false;
   }
 }
 
