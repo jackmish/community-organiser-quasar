@@ -39,7 +39,7 @@
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
-              <div class="text-h6 text-primary row items-center justify-between">
+              <div class="text-h6 row items-center justify-between">
                 <q-btn
                   flat
                   dense
@@ -49,10 +49,15 @@
                   color="primary"
                 />
                 <div class="row items-center q-gutter-md">
-                  <span>{{ formatDisplayDate(currentDate) }}</span>
-                  <span class="text-weight-bold">{{
-                    getTimeDifferenceDisplay(currentDate)
-                  }}</span>
+                  <span class="text-white bg-grey-9 q-pa-sm q-px-md rounded-borders">{{ formatDisplayDate(currentDate) }}</span>
+                  <span class="text-weight-bold">
+                    <template v-if="getTimeDifferenceDisplay(currentDate) === 'TODAY'">
+                      <span class="text-blue">TODAY</span>
+                    </template>
+                    <template v-else>
+                      {{ getTimeDifferenceDisplay(currentDate) }}
+                    </template>
+                  </span>
                 </div>
                 <q-btn
                   flat

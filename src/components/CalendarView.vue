@@ -154,7 +154,7 @@
       <q-btn
         unelevated
         size="md"
-        color="green"
+        color="blue"
         text-color="white"
         @click="setEventDateToToday"
         class="text-weight-bold"
