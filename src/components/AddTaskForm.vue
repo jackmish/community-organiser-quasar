@@ -133,7 +133,10 @@ function updateEventDateMonth(val: number | string | null) {
       }
     }
     // Always update full date string using computed setter
-    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+      2,
+      "0"
+    )}`;
     emit("update:newTask", { ...props.newTask, eventDate: newDate });
     // Auto-focus to hour input after filling month (when month is 2 digits)
     if (String(val).length >= 2) {
