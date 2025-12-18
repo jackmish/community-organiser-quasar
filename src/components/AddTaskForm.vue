@@ -36,7 +36,7 @@ const yearInput = ref<any>(null);
 const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
 // Auto-increment year checkbox state
-const autoIncrementYear = ref(false);
+const autoIncrementYear = ref(true);
 
 // Time type radio (Whole Day / Exact Hour)
 const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
@@ -117,20 +117,24 @@ function updateEventDateMonth(val: number | string | null) {
   try {
     const month = Number(val);
     if (isNaN(month) || month < 1 || month > 12) return;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
     let year = eventDateYear.value;
     const day = eventDateDay.value;
     // Auto-increment year if enabled and month < current month
     if (autoIncrementYear.value) {
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-      if (month < currentMonth && year <= currentYear) {
+      if (month < currentMonth && year === currentYear) {
         year = currentYear + 1;
-        eventDateYear.value = year;
+      }
+      // If user corrects to month >= currentMonth and year was incremented, revert year
+      if (month >= currentMonth && year === currentYear + 1) {
+        year = currentYear;
       }
     }
-    // Always update full date string
-    eventDateMonth.value = month;
+    // Always update full date string using computed setter
+    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    emit("update:newTask", { ...props.newTask, eventDate: newDate });
     // Auto-focus to hour input after filling month (when month is 2 digits)
     if (String(val).length >= 2) {
       setTimeout(() => {
