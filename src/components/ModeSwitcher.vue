@@ -13,10 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import { toRef, watch } from 'vue';
+import { toRef } from 'vue';
 
 const props = defineProps<{ modelValue?: string }>();
 const emit = defineEmits(['update:modelValue']);
 
-const modelValue = props.modelValue;
+const modelValue = toRef(props, 'modelValue');
 </script>
