@@ -99,9 +99,9 @@ const modeLabel = computed(() => {
 
 // Type options for task type selector (local only)
 const typeOptions = [
-  { label: "Time Event", value: "TimeEvent" },
-  { label: "TODO", value: "Todo" },
-  { label: "Note/Later", value: "NoteLater" },
+  { label: "Time Event", value: "TimeEvent", icon: "event" },
+  { label: "TODO", value: "Todo", icon: "check_box" },
+  { label: "Note/Later", value: "NoteLater", icon: "description" },
 ];
 
 // When parent provides an initialTask, populate localNewTask
@@ -502,6 +502,19 @@ const priorityOptions = [
   },
 ];
 
+// Colors for task types (used to color type buttons when active)
+const typeColors: Record<string, string> = {
+  TimeEvent: "#2196f3", // blue
+  Todo: "#4caf50", // green
+  NoteLater: "#9e9e9e", // grey
+};
+
+const typeTextColors: Record<string, string> = {
+  TimeEvent: "white",
+  Todo: "white",
+  NoteLater: "white",
+};
+
 // Map checkbox to numeric status_id (0 = done, 1 = just created)
 const statusValue = computed<number>({
   get: () => (Number(localNewTask.value.status_id) === 0 ? 0 : 1),
@@ -581,174 +594,189 @@ function onSubmit(event: Event) {
   <q-card class="q-mb-md">
     <q-card-section>
       <q-form @submit="onSubmit" class="q-gutter-md">
-        <!-- Type selector moved out so it remains visible for all types -->
-        <div
-          class="text-h6 row items-center q-gutter-sm q-mb-md"
-          style="gap: 12px; align-items: center"
-        >
-          <div style="flex: 1" />
-          <q-btn-toggle
-            v-model="localNewTask.type_id"
-            :options="typeOptions"
-            size="sm"
-            toggle
-            unelevated
-          />
-        </div>
+        <!-- Type selector moved into Priority card below; header removed -->
 
-        <div v-if="localNewTask.type_id === 'TimeEvent'">
-          <CalendarView
-            v-if="showCalendar && localNewTask.type_id === 'TimeEvent'"
-            :selected-date="localNewTask.eventDate"
-            @update:selected-date="onCalendarDateSelect"
-          />
-          <div class="row q-gutter-sm q-mb-md">
-            <q-card flat bordered class="q-pa-sm">
-              <div class="text-caption text-grey-7 q-mb-xs">Date</div>
-              <div class="row q-gutter-xs">
-                <q-input
-                  ref="dayInput"
-                  :model-value="eventDateDay"
-                  @update:model-value="updateEventDateDay"
-                  @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
-                  type="number"
-                  label="Day"
-                  outlined
-                  dense
-                  min="1"
-                  max="31"
-                  style="max-width: 80px"
-                />
-                <q-input
-                  ref="monthInput"
-                  :model-value="eventDateMonth"
-                  @update:model-value="updateEventDateMonth"
-                  @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
-                  type="number"
-                  label="Month"
-                  outlined
-                  dense
-                  min="1"
-                  max="12"
-                  style="max-width: 80px"
-                />
-              </div>
-              <br />
-              <q-option-group
-                v-model="timeType"
-                :options="[
-                  { label: 'Whole Day', value: 'wholeDay' },
-                  { label: 'Exact Hour', value: 'exactHour' },
-                ]"
-                color="primary"
-                inline
-                dense
-                class="q-mb-sm"
-              />
-              <div class="row q-gutter-xs">
-                <q-input
-                  ref="hourInput"
-                  :model-value="eventTimeHour"
-                  @update:model-value="updateEventTimeHour"
-                  type="number"
-                  label="Hour"
-                  outlined
-                  dense
-                  min="0"
-                  max="23"
-                  style="max-width: 80px"
-                />
-                <q-input
-                  ref="minuteInput"
-                  :model-value="eventTimeMinute"
-                  @update:model-value="updateEventTimeMinute"
-                  type="number"
-                  label="Minute"
-                  outlined
-                  dense
-                  min="0"
-                  max="59"
-                  style="max-width: 80px"
-                />
-              </div>
-            </q-card>
-
-            <q-card flat bordered class="q-pa-sm">
-              <div class="row items-center justify-between q-mb-xs">
-                <div class="text-caption text-grey-7">Year</div>
-                <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
-              </div>
-              <q-input
-                ref="yearInput"
-                :model-value="eventDateYear"
-                @update:model-value="updateEventDateYear"
-                type="number"
-                label="Year"
-                outlined
-                dense
-                style="max-width: 100px"
-              />
-              <div class="text-caption text-grey-7 q-mb-xs">Time Difference</div>
-              <div class="text-h6 text-primary text-weight-bold">
-                {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
-              </div>
-            </q-card>
-
-            <q-card flat bordered class="q-pa-sm">
-              <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
-              <div class="column q-gutter-xs">
-                <div class="row q-gutter-xs">
-                  <q-btn
-                    v-for="option in priorityOptions.slice(0, 2)"
-                    :key="option.value"
-                    :color="
-                      localNewTask.priority === option.value ? option.color : 'grey-3'
-                    "
-                    :text-color="
-                      localNewTask.priority === option.value ? option.textColor : 'grey-7'
-                    "
-                    :icon="option.icon"
-                    :label="option.label"
-                    size="sm"
-                    @click="updateTaskField('priority', option.value)"
-                    :unelevated="localNewTask.priority === option.value"
-                    :outline="localNewTask.priority !== option.value"
-                  />
-                </div>
-                <div class="row q-gutter-xs">
-                  <q-btn
-                    v-for="option in priorityOptions.slice(2, 4)"
-                    :key="option.value"
-                    :color="
-                      localNewTask.priority === option.value ? option.color : 'grey-3'
-                    "
-                    :text-color="
-                      localNewTask.priority === option.value ? option.textColor : 'grey-7'
-                    "
-                    :icon="option.icon"
-                    :label="option.label"
-                    size="sm"
-                    @click="updateTaskField('priority', option.value)"
-                    :unelevated="localNewTask.priority === option.value"
-                    :outline="localNewTask.priority !== option.value"
-                  />
-                </div>
-              </div>
-            </q-card>
-          </div>
-        </div>
+        <!-- Date/time panels relocated into the description column below -->
+        <!-- Priority and Type moved into right column below so both remain visible -->
         <div class="row" style="gap: 12px">
-          <q-input
-            ref="descriptionInput"
-            :model-value="localNewTask.description"
-            label="Description"
-            outlined
-            type="textarea"
-            rows="1"
-            class="col"
-            @update:model-value="(val) => updateTaskField('description', val)"
-          />
           <div class="col column" style="gap: 12px">
+            <div v-if="localNewTask.type_id === 'TimeEvent'">
+              <CalendarView
+                v-if="showCalendar && localNewTask.type_id === 'TimeEvent'"
+                :selected-date="localNewTask.eventDate"
+                @update:selected-date="onCalendarDateSelect"
+              />
+              <div class="row q-gutter-sm q-mb-md">
+                <q-card flat bordered class="q-pa-sm col-auto">
+                  <div class="text-caption text-grey-7 q-mb-xs">Date</div>
+                  <div class="row q-gutter-xs">
+                    <q-input
+                      ref="dayInput"
+                      :model-value="eventDateDay"
+                      @update:model-value="updateEventDateDay"
+                      @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
+                      type="number"
+                      label="Day"
+                      outlined
+                      dense
+                      min="1"
+                      max="31"
+                      style="max-width: 80px"
+                    />
+                    <q-input
+                      ref="monthInput"
+                      :model-value="eventDateMonth"
+                      @update:model-value="updateEventDateMonth"
+                      @focus="(e) => (e.target as HTMLInputElement)?.select && (e.target as HTMLInputElement).select()"
+                      type="number"
+                      label="Month"
+                      outlined
+                      dense
+                      min="1"
+                      max="12"
+                      style="max-width: 80px"
+                    />
+                  </div>
+                  <br />
+                  <q-option-group
+                    v-model="timeType"
+                    :options="[
+                      { label: 'Whole Day', value: 'wholeDay' },
+                      { label: 'Exact Hour', value: 'exacthour' },
+                    ]"
+                    color="primary"
+                    inline
+                    dense
+                    class="q-mb-sm"
+                  />
+                  <div class="row q-gutter-xs">
+                    <q-input
+                      ref="hourInput"
+                      :model-value="eventTimeHour"
+                      @update:model-value="updateEventTimeHour"
+                      type="number"
+                      label="Hour"
+                      outlined
+                      dense
+                      min="0"
+                      max="23"
+                      style="max-width: 80px"
+                    />
+                    <q-input
+                      ref="minuteInput"
+                      :model-value="eventTimeMinute"
+                      @update:model-value="updateEventTimeMinute"
+                      type="number"
+                      label="Minute"
+                      outlined
+                      dense
+                      min="0"
+                      max="59"
+                      style="max-width: 80px"
+                    />
+                  </div>
+                </q-card>
+
+                <q-card flat bordered class="q-pa-sm col-auto">
+                  <div class="row items-center justify-between q-mb-xs">
+                    <div class="text-caption text-grey-7">Year</div>
+                    <q-checkbox
+                      v-model="autoIncrementYear"
+                      dense
+                      size="xs"
+                      label="Auto"
+                    />
+                  </div>
+                  <q-input
+                    ref="yearInput"
+                    :model-value="eventDateYear"
+                    @update:model-value="updateEventDateYear"
+                    type="number"
+                    label="Year"
+                    outlined
+                    dense
+                    style="max-width: 100px"
+                  />
+                  <div class="text-caption text-grey-7 q-mb-xs">Time Difference</div>
+                  <div class="text-h6 text-primary text-weight-bold">
+                    {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
+                  </div>
+                </q-card>
+              </div>
+            </div>
+
+            <q-input
+              ref="descriptionInput"
+              :model-value="localNewTask.description"
+              label="Description"
+              outlined
+              type="textarea"
+              rows="1"
+              class="col"
+              @update:model-value="(val) => updateTaskField('description', val)"
+            />
+          </div>
+          <div class="col column" style="gap: 12px">
+            <div class="row q-gutter-sm" style="align-items: flex-start">
+              <q-card flat bordered class="q-pa-sm col" style="min-width: 160px">
+                <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
+                <div class="column q-gutter-xs">
+                  <q-btn
+                    v-for="option in priorityOptions"
+                    :key="option.value"
+                    :color="
+                      localNewTask.priority === option.value ? option.color : 'grey-3'
+                    "
+                    :text-color="
+                      localNewTask.priority === option.value ? option.textColor : 'grey-7'
+                    "
+                    :icon="option.icon"
+                    :label="option.label"
+                    size="sm"
+                    class="full-width"
+                    @click="updateTaskField('priority', option.value)"
+                    :unelevated="localNewTask.priority === option.value"
+                    :outline="localNewTask.priority !== option.value"
+                    :style="{
+                      backgroundColor:
+                        localNewTask.priority === option.value ? option.color : undefined,
+                      color:
+                        localNewTask.priority === option.value
+                          ? option.textColor
+                          : undefined,
+                    }"
+                  />
+                </div>
+              </q-card>
+
+              <q-card flat bordered class="q-pa-sm col" style="min-width: 160px">
+                <div class="text-caption text-grey-7 q-mb-xs">Type</div>
+                <div class="column q-gutter-xs">
+                  <q-btn
+                    v-for="opt in typeOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :icon="opt.icon"
+                    size="sm"
+                    class="full-width"
+                    :outline="localNewTask.type_id !== opt.value"
+                    :unelevated="localNewTask.type_id === opt.value"
+                    @click="localNewTask.type_id = opt.value"
+                    :style="{
+                      backgroundColor:
+                        localNewTask.type_id === opt.value
+                          ? typeColors[opt.value]
+                          : undefined,
+                      color:
+                        localNewTask.type_id === opt.value
+                          ? typeTextColors[opt.value]
+                          : undefined,
+                    }"
+                  />
+                </div>
+              </q-card>
+            </div>
+
             <div class="row items-center" style="gap: 8px">
               <q-checkbox v-model="autoTitleEnabled" dense label="Auto" />
               <q-input
@@ -811,51 +839,8 @@ function onSubmit(event: Event) {
                 Task will be added to:
                 <strong>{{ activeGroup.label.split(" (")[0] }}</strong>
               </div>
-              <div v-else class="text-caption text-warning q-ml-md">
-                <q-icon name="warning" size="xs" class="q-mr-xs" />
-                Please select an active group (not "All Groups")
-              </div>
             </div>
           </div>
-
-          <q-select
-            :model-value="localNewTask.parent_id"
-            :options="filteredParentOptions"
-            label="Parent Task (optional)"
-            outlined
-            clearable
-            use-input
-            input-debounce="0"
-            @filter="$emit('filter-parent-tasks', $event)"
-            @update:model-value="(val) => updateTaskField('parent_id', val)"
-            option-value="value"
-            option-label="label"
-            emit-value
-            map-options
-            class="col"
-          >
-            <template v-slot:option="scope">
-              <q-item v-bind="scope.itemProps">
-                <q-item-section avatar>
-                  <q-icon :name="scope.opt.icon" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ scope.opt.label }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </template>
-            <template v-slot:selected-item="scope">
-              <q-chip
-                removable
-                @remove="updateTaskField('parent_id', null)"
-                color="primary"
-                text-color="white"
-                :icon="scope.opt.icon"
-              >
-                {{ scope.opt.label }}
-              </q-chip>
-            </template>
-          </q-select>
         </div>
       </q-form>
     </q-card-section>
