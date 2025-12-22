@@ -683,8 +683,7 @@ function selectCalendarDate(dateString: string) {
 }
 
 function handleCalendarDateSelect(dateString: string) {
-  // TODO UNCOMMENT | Sync calendar with left panel date
-  // selectCalendarDate(dateString);
+  selectCalendarDate(dateString);
 }
 
 import { ref, computed, onMounted, watch, nextTick } from "vue";
