@@ -27,9 +27,34 @@ export function useDayOrganiser() {
     isLoading.value = true;
     try {
       const data = await storage.loadData();
-      organiserData.value = data;
+
+      // If storage returned groups with tasks, reconstruct days mapping
+      const daysMap: Record<string, DayData> = {};
+      if (Array.isArray((data as any).groups)) {
+        for (const grp of (data as any).groups) {
+          if (Array.isArray(grp.tasks)) {
+            for (const t of grp.tasks) {
+              // Prefer explicit date field, fall back to eventDate if present
+              const dateKey = t.date || t.eventDate || formatDate(new Date());
+              if (!daysMap[dateKey]) {
+                daysMap[dateKey] = { date: dateKey, tasks: [], notes: '' };
+              }
+              // Ensure task has groupId set
+              if (!t.groupId) t.groupId = grp.id;
+              daysMap[dateKey].tasks.push(t);
+            }
+          }
+        }
+      }
+
+      organiserData.value = {
+        days: Object.keys(daysMap).length ? daysMap : (data as any).days || {},
+        groups: (data as any).groups || [],
+        lastModified: (data as any).lastModified || new Date().toISOString(),
+      };
+
       const dirPath = await storage.getDataFilePathPublic();
-      console.log('Loaded organiser data:', data);
+      console.log('Loaded organiser data:', organiserData.value);
       console.log('Loaded from directory:', dirPath);
     } catch (error) {
       console.error('Failed to load data:', error);
