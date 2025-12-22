@@ -71,17 +71,18 @@
             <q-card-section v-if="currentDayData.tasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
-            <q-list v-else separator>
+            <div class="task-list" v-else>
               <!-- Tasks with time -->
               <template v-if="tasksWithTime.length > 0">
                 <q-item
                   v-for="task in tasksWithTime"
                   :key="task.id"
-                  class="q-pa-md"
+                  class="q-pa-md task-card"
                   :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
                   :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
+                  style="width: 320px"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
@@ -96,7 +97,7 @@
                     <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
-                    <q-item-label caption>{{ task.description }}</q-item-label>
+                    <q-item-label v-if="getDisplayDescription(task)" caption>{{ getDisplayDescription(task) }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
@@ -174,11 +175,12 @@
                 <q-item
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
-                  class="q-pa-md"
+                  class="q-pa-md task-card"
                   :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
                   :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
+                  style="width: 320px"
                 >
                   <q-item-section side>
                     <q-checkbox
@@ -190,7 +192,7 @@
                     <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
-                    <q-item-label caption>{{ task.description }}</q-item-label>
+                    <q-item-label v-if="getDisplayDescription(task)" caption>{{ getDisplayDescription(task) }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
@@ -249,7 +251,7 @@
                   </q-item-section>
                 </q-item>
               </template>
-            </q-list>
+            </div>
           </q-card>
         </div>
       </div>
@@ -1230,6 +1232,24 @@ const getGroupColor = (groupId?: string): string => {
   return group?.color || "#1976d2";
 };
 
+const getDisplayDescription = (task: Task): string => {
+  const desc = (task.description || "").trim();
+  const name = (task.name || "").trim();
+  if (!desc) return "";
+  if (!name) return desc;
+
+  // If description equals the name exactly, hide it
+  if (desc === name) return "";
+
+  // If description starts with the name followed by separators, strip the leading name
+  if (desc.startsWith(name)) {
+    const remainder = desc.slice(name.length).replace(/^[\s\-:\u2013\u2014]+/, "").trim();
+    return remainder || "";
+  }
+
+  return desc;
+};
+
 const handleAddTask = async (taskPayload: any) => {
   // Check if active group is selected (and not "All Groups")
   if (!activeGroup.value || activeGroup.value.value === null) {
@@ -1414,6 +1434,19 @@ onMounted(async () => {
   border-radius: 6px;
   background-color: rgba(25, 118, 210, 0.06);
   box-shadow: 0 2px 8px rgba(25,118,210,0.06);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.task-card {
+  min-width: 280px;
+  max-width: 360px;
 }
 </style>
 
