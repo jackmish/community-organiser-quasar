@@ -1134,7 +1134,7 @@ const getGroupColor = (groupId: string): string => {
   return group?.color || "#1976d2";
 };
 
-const handleAddTask = async () => {
+const handleAddTask = async (taskPayload: any) => {
   // Check if active group is selected (and not "All Groups")
   if (!activeGroup.value || activeGroup.value.value === null) {
     $q.notify({
@@ -1144,22 +1144,18 @@ const handleAddTask = async () => {
     });
     return;
   }
-  // Use only the custom name (auto-generated name now handled in AddTaskForm if needed)
-  if (!newTask.value.name) return;
+
+  // Validate payload
+  if (!taskPayload || !taskPayload.name) return;
+
+  // Build task data and add to the currently displayed day
   const taskData: any = {
-    ...newTask.value,
+    ...taskPayload,
     date: currentDate.value,
-    // Auto-assign to active group
     groupId: activeGroup.value.value,
   };
+
   await addTask(currentDate.value, taskData);
-  // Reset only title, description, and time fields (keep type, date, group, etc.)
-  newTask.value = {
-    ...newTask.value,
-    name: "",
-    description: "",
-    eventTime: "",
-  };
 };
 
 const handleDeleteTask = async (taskId: string) => {

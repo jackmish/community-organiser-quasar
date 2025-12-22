@@ -79,6 +79,29 @@ export function useDayOrganiser() {
     const dayData = getDayData(date);
     dayData.tasks.push(task);
 
+    // Also associate task with its group file (if groupId provided)
+    try {
+      if (task.groupId) {
+        const group = organiserData.value.groups.find((g: any) => g.id === task.groupId);
+        if (group) {
+          // Ensure group has tasks array
+          if (!Array.isArray((group as any).tasks)) (group as any).tasks = [];
+          (group as any).tasks.push(task);
+        } else {
+          // If group doesn't exist, create a lightweight group entry so it can be persisted
+          const newGroup: any = {
+            id: task.groupId,
+            name: 'Unknown',
+            tasks: [task],
+            createdAt: now,
+          };
+          organiserData.value.groups.push(newGroup);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to attach task to group file structure:', err);
+    }
+
     await saveData();
     return task;
   };
