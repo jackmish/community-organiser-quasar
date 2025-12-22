@@ -78,7 +78,10 @@
                   v-for="task in tasksWithTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                  :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
+                  :class="{
+                    'bg-grey-2': Number(task.status_id) === 0,
+                    'selected-task': selectedTaskId === task.id,
+                  }"
                   :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
@@ -94,10 +97,14 @@
                     />
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                    <q-item-label
+                      :class="{ 'text-strike': Number(task.status_id) === 0 }"
+                    >
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
-                    <q-item-label v-if="getDisplayDescription(task)" caption>{{ getDisplayDescription(task) }}</q-item-label>
+                    <q-item-label v-if="getDisplayDescription(task)" caption>{{
+                      getDisplayDescription(task)
+                    }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
@@ -150,7 +157,12 @@
                           label="Yes"
                           @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+                        <q-btn
+                          flat
+                          dense
+                          label="No"
+                          @click.stop="openDeleteMenu = null"
+                        />
                       </div>
                     </div>
                   </q-item-section>
@@ -176,23 +188,24 @@
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                  :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
+                  :class="{
+                    'bg-grey-2': Number(task.status_id) === 0,
+                    'selected-task': selectedTaskId === task.id,
+                  }"
                   :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
                   style="width: 320px"
                 >
-                  <q-item-section side>
-                    <q-checkbox
-                      :model-value="Number(task.status_id) === 0"
-                      @click.stop="toggleStatus(task)"
-                    />
-                  </q-item-section>
                   <q-item-section>
-                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                    <q-item-label
+                      :class="{ 'text-strike': Number(task.status_id) === 0 }"
+                    >
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
-                    <q-item-label v-if="getDisplayDescription(task)" caption>{{ getDisplayDescription(task) }}</q-item-label>
+                    <q-item-label v-if="getDisplayDescription(task)" caption>{{
+                      getDisplayDescription(task)
+                    }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
@@ -245,8 +258,21 @@
                           label="Yes"
                           @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+                        <q-btn
+                          flat
+                          dense
+                          label="No"
+                          @click.stop="openDeleteMenu = null"
+                        />
                       </div>
+                    </div>
+                    <div class="row">
+                      <q-item-section side>
+                        <q-checkbox
+                          :model-value="Number(task.status_id) === 0"
+                          @click.stop="toggleStatus(task)"
+                        />
+                      </q-item-section>
                     </div>
                   </q-item-section>
                 </q-item>
@@ -272,7 +298,11 @@
             <TaskPreview
               :task="taskToEdit"
               :group-name="getGroupName(taskToEdit.groupId)"
-              @edit="() => { mode = 'edit' }"
+              @edit="
+                () => {
+                  mode = 'edit';
+                }
+              "
               @close="clearTaskToEdit"
             />
           </div>
@@ -307,7 +337,13 @@
           <q-card-section class="q-pt-sm">
             <q-form @submit.prevent="handleAddGroup" class="q-mb-md">
               <div class="row q-gutter-sm items-end">
-                <q-input v-model="newGroupName" label="Group Name" outlined dense class="col" />
+                <q-input
+                  v-model="newGroupName"
+                  label="Group Name"
+                  outlined
+                  dense
+                  class="col"
+                />
 
                 <q-select
                   v-model="newGroupParent"
@@ -319,9 +355,19 @@
                   style="min-width: 180px"
                 />
 
-                <q-input v-model="newGroupColor" label="Color" outlined dense style="max-width: 120px">
+                <q-input
+                  v-model="newGroupColor"
+                  label="Color"
+                  outlined
+                  dense
+                  style="max-width: 120px"
+                >
                   <template #append>
-                    <input v-model="newGroupColor" type="color" style="width: 40px; height: 30px; border: none; cursor: pointer"/>
+                    <input
+                      v-model="newGroupColor"
+                      type="color"
+                      style="width: 40px; height: 30px; border: none; cursor: pointer"
+                    />
                   </template>
                 </q-input>
 
@@ -333,10 +379,21 @@
           <q-tree :nodes="groupTree" node-key="id" default-expand-all>
             <template #default-header="prop">
               <div class="row items-center full-width">
-                <q-icon :name="prop.node.icon || 'folder'" :color="prop.node.color" class="q-mr-sm" />
+                <q-icon
+                  :name="prop.node.icon || 'folder'"
+                  :color="prop.node.color"
+                  class="q-mr-sm"
+                />
                 <span>{{ prop.node.label }}</span>
                 <q-space />
-                <q-btn flat dense round icon="delete" size="sm" @click.stop="handleDeleteGroup(prop.node.id)" />
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="delete"
+                  size="sm"
+                  @click.stop="handleDeleteGroup(prop.node.id)"
+                />
               </div>
             </template>
           </q-tree>
@@ -784,19 +841,19 @@ const defaultGroupId = ref<string | undefined>(undefined);
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
-const mode = ref<'add' | 'edit' | 'preview'>('add');
+const mode = ref<"add" | "edit" | "preview">("add");
 const selectedTaskId = ref<string | null>(null);
 
 function setTaskToEdit(task: Task) {
   taskToEdit.value = task;
   // show preview when a task is clicked
-  mode.value = 'preview';
+  mode.value = "preview";
   selectedTaskId.value = task.id;
 }
 
 function clearTaskToEdit() {
   taskToEdit.value = null;
-  mode.value = 'add';
+  mode.value = "add";
   selectedTaskId.value = null;
 }
 
@@ -1243,7 +1300,10 @@ const getDisplayDescription = (task: Task): string => {
 
   // If description starts with the name followed by separators, strip the leading name
   if (desc.startsWith(name)) {
-    const remainder = desc.slice(name.length).replace(/^[\s\-:\u2013\u2014]+/, "").trim();
+    const remainder = desc
+      .slice(name.length)
+      .replace(/^[\s\-:\u2013\u2014]+/, "")
+      .trim();
     return remainder || "";
   }
 
@@ -1433,7 +1493,7 @@ onMounted(async () => {
   border: 2px solid var(--q-primary, #1976d2);
   border-radius: 6px;
   background-color: rgba(25, 118, 210, 0.06);
-  box-shadow: 0 2px 8px rgba(25,118,210,0.06);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.06);
 }
 
 .task-list {
