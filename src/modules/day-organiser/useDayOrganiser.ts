@@ -155,6 +155,18 @@ export function useDayOrganiser() {
   const deleteTask = async (date: string, taskId: string): Promise<void> => {
     const dayData = getDayData(date);
     dayData.tasks = dayData.tasks.filter((t) => t.id !== taskId);
+
+    // Also remove the task from any group tasks arrays so saved group files don't contain the deleted task
+    try {
+      organiserData.value.groups.forEach((grp: any) => {
+        if (Array.isArray(grp.tasks)) {
+          grp.tasks = grp.tasks.filter((t: any) => t.id !== taskId);
+        }
+      });
+    } catch (err) {
+      console.error('Failed to remove task from group structures:', err);
+    }
+
     await saveData();
   };
 
