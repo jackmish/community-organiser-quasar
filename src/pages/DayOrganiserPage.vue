@@ -35,8 +35,8 @@
     <!-- Day View -->
     <div v-else>
       <div class="row q-col-gutter-md">
-        <!-- Left Column - Tasks List -->
-        <div class="col-12 col-md-6">
+        <!-- Full-width Tasks Panel -->
+        <div class="col-12 left-panel">
           <q-card>
             <q-card-section>
               <div class="text-h6 text-primary row items-center justify-between">
@@ -188,13 +188,20 @@
             </q-list>
           </q-card>
         </div>
+      </div>
 
-        <!-- Right Column - Add Task & Notes -->
+      <div class="row q-col-gutter-md q-mt-md">
         <div class="col-12 col-md-6">
-          <!-- Add Task Section -->
+          <CalendarView
+            :selected-date="newTask.eventDate"
+            @update:selected-date="handleCalendarDateSelect"
+          />
+        </div>
+        <div class="col-12 col-md-6">
           <AddTaskForm
             :filtered-parent-options="filteredParentOptions"
             :active-group="activeGroup"
+            :show-calendar="false"
             @add-task="handleAddTask"
             @calendar-date-select="handleCalendarDateSelect"
             @filter-parent-tasks="filterParentTasks"
@@ -303,6 +310,7 @@
 import { format, addDays, startOfWeek } from "date-fns";
 
 import AddTaskForm from "../components/AddTaskForm.vue";
+import CalendarView from "../components/CalendarView.vue";
 
 const getWeekDays = (startDate: Date) => {
   return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), "yyyy-MM-dd"));
@@ -1142,30 +1150,30 @@ const getGroupColor = (groupId: string): string => {
 
 const handleAddTask = async () => {
   // Check if active group is selected (and not "All Groups")
-  // if (!activeGroup.value || activeGroup.value.value === null) {
-  //   $q.notify({
-  //     type: "warning",
-  //     message: 'Please select an active group first (not "All Groups")',
-  //     position: "top",
-  //   });
-  //   return;
-  // }
-  // // Use only the custom name (auto-generated name now handled in AddTaskForm if needed)
-  // if (!newTask.value.name) return;
-  // const taskData: any = {
-  //   ...newTask.value,
-  //   date: currentDate.value,
-  //   // Auto-assign to active group
-  //   groupId: activeGroup.value.value,
-  // };
-  // await addTask(currentDate.value, taskData);
-  // // Reset only title, description, and time fields (keep type, date, group, etc.)
-  // newTask.value = {
-  //   ...newTask.value,
-  //   name: "",
-  //   description: "",
-  //   eventTime: "",
-  // };
+  if (!activeGroup.value || activeGroup.value.value === null) {
+    $q.notify({
+      type: "warning",
+      message: 'Please select an active group first (not "All Groups")',
+      position: "top",
+    });
+    return;
+  }
+  // Use only the custom name (auto-generated name now handled in AddTaskForm if needed)
+  if (!newTask.value.name) return;
+  const taskData: any = {
+    ...newTask.value,
+    date: currentDate.value,
+    // Auto-assign to active group
+    groupId: activeGroup.value.value,
+  };
+  await addTask(currentDate.value, taskData);
+  // Reset only title, description, and time fields (keep type, date, group, etc.)
+  newTask.value = {
+    ...newTask.value,
+    name: "",
+    description: "",
+    eventTime: "",
+  };
 };
 
 const handleDeleteTask = async (taskId: string) => {

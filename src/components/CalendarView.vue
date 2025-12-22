@@ -209,14 +209,89 @@ const emit = defineEmits<{
 
 const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
-const shownMonths = ref(new Set<string>());
-const shownYears = ref(new Set<string>());
 
-// Reset shown month/year state whenever the base date or view size changes
-watch([calendarBaseDate, calendarViewDays], () => {
-  shownMonths.value = new Set();
-  shownYears.value = new Set();
-});
+// Manager to handle month/year display state (keeps internal mutable sets
+// outside of render-time reactive mutations to avoid recursive updates)
+class CalendarDisplayManager {
+  shownMonths: Set<string>;
+  shownYears: Set<string>;
+
+  constructor() {
+    this.shownMonths = new Set();
+    this.shownYears = new Set();
+  }
+
+  reset() {
+    this.shownMonths = new Set();
+    this.shownYears = new Set();
+  }
+
+  shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
+    const date = new Date(day);
+    const monthYear = format(date, "yyyy-MM");
+
+    if (isFirstWeek && index === 0) {
+      this.shownMonths = new Set();
+    }
+
+    if (this.shownMonths.has(monthYear)) return false;
+
+    if (index === 0) {
+      this.shownMonths.add(monthYear);
+      return true;
+    }
+
+    const previousDay = week[index - 1];
+    if (!previousDay) return false;
+
+    const currentMonth = date.getMonth();
+    const currentYear = date.getFullYear();
+    const previousMonth = new Date(previousDay).getMonth();
+    const previousYear = new Date(previousDay).getFullYear();
+
+    if (currentMonth !== previousMonth || currentYear !== previousYear) {
+      this.shownMonths.add(monthYear);
+      return true;
+    }
+
+    return false;
+  }
+
+  shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
+    const date = new Date(day);
+    const year = format(date, "yyyy");
+    const todayYear = format(new Date(), "yyyy");
+
+    if (isFirstWeek && index === 0) {
+      this.shownYears = new Set();
+    }
+
+    if (this.shownYears.has(year)) return false;
+
+    if (index === 0 && year !== todayYear) {
+      this.shownYears.add(year);
+      return true;
+    }
+
+    const previousDay = week[index - 1];
+    if (!previousDay) return false;
+
+    const currentYear = date.getFullYear();
+    const previousYear = new Date(previousDay).getFullYear();
+
+    if (currentYear !== previousYear) {
+      this.shownYears.add(year);
+      return true;
+    }
+
+    return false;
+  }
+}
+
+const displayManager = new CalendarDisplayManager();
+
+// Reset manager when calendar base or view size changes
+watch([calendarBaseDate, calendarViewDays], () => displayManager.reset());
 
 // Online/offline detection
 const isOnline = ref(navigator.onLine);
@@ -485,14 +560,12 @@ const nextSixMonths = computed(() => {
 
 function previousCalendarWeeks() {
   calendarBaseDate.value = addDays(calendarBaseDate.value, -calendarViewDays.value);
-  shownMonths.value = new Set();
-  shownYears.value = new Set();
+  displayManager.reset();
 }
 
 function nextCalendarWeeks() {
   calendarBaseDate.value = addDays(calendarBaseDate.value, calendarViewDays.value);
-  shownMonths.value = new Set();
-  shownYears.value = new Set();
+  displayManager.reset();
 }
 
 function setEventDateToToday() {
@@ -508,8 +581,7 @@ function jumpToMonth(dateString: string) {
   const targetMonth = targetDate.getMonth();
   const targetYear = targetDate.getFullYear();
   calendarBaseDate.value = new Date(targetYear, targetMonth, 1);
-  shownMonths.value = new Set();
-  shownYears.value = new Set();
+  displayManager.reset();
 }
 
 function handleDateSelect(dateString: string) {
@@ -601,38 +673,7 @@ function shouldShowMonth(
   week: string[],
   isFirstWeek: boolean
 ) {
-  const date = new Date(day);
-  const monthYear = format(date, "yyyy-MM");
-
-  // Do not mutate reactive state during render; shownMonths is reset by watcher
-
-  // Check if month has already been shown
-  if (shownMonths.value.has(monthYear)) {
-    return false;
-  }
-
-  // Show on first day of week
-  if (index === 0) {
-    shownMonths.value.add(monthYear);
-    return true;
-  }
-
-  // Show when month changes from previous day within the same week
-  const previousDay = week[index - 1];
-  if (!previousDay) return false;
-
-  const currentMonth = date.getMonth();
-  const currentYear = date.getFullYear();
-  const previousMonth = new Date(previousDay).getMonth();
-  const previousYear = new Date(previousDay).getFullYear();
-
-  // Show if month or year changed
-  if (currentMonth !== previousMonth || currentYear !== previousYear) {
-    shownMonths.value.add(monthYear);
-    return true;
-  }
-
-  return false;
+  return displayManager.shouldShowMonth(day, index, week, isFirstWeek);
 }
 
 function shouldShowYear(
@@ -641,36 +682,7 @@ function shouldShowYear(
   week: string[],
   isFirstWeek: boolean
 ) {
-  const date = new Date(day);
-  const year = format(date, "yyyy");
-  const todayYear = format(new Date(), "yyyy");
-
-  // Do not mutate reactive state during render; shownYears is reset by watcher
-
-  // Check if year has already been shown
-  if (shownYears.value.has(year)) {
-    return false;
-  }
-
-  // Show on first day of week if it's not the current year
-  if (index === 0 && year !== todayYear) {
-    shownYears.value.add(year);
-    return true;
-  }
-
-  // Show when year changes from previous day within the same week
-  const previousDay = week[index - 1];
-  if (!previousDay) return false;
-
-  const currentYear = date.getFullYear();
-  const previousYear = new Date(previousDay).getFullYear();
-
-  if (currentYear !== previousYear) {
-    shownYears.value.add(year);
-    return true;
-  }
-
-  return false;
+  return displayManager.shouldShowYear(day, index, week, isFirstWeek);
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {

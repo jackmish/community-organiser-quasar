@@ -11,6 +11,10 @@ const props = defineProps({
     type: Object as () => { label: string; value: string | null } | null,
     default: null,
   },
+  showCalendar: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["add-task", "calendar-date-select", "filter-parent-tasks"]);
@@ -388,6 +392,7 @@ function onSubmit(event: Event) {
       <q-form @submit="onSubmit" class="q-gutter-md">
         <div v-if="localNewTask.type_id === 'TimeEvent'">
           <CalendarView
+            v-if="showCalendar && localNewTask.type_id === 'TimeEvent'"
             :selected-date="localNewTask.eventDate"
             @update:selected-date="onCalendarDateSelect"
           />
