@@ -79,6 +79,8 @@
                   :key="task.id"
                   class="q-pa-md"
                   :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
+                  clickable
+                  @click="setTaskToEdit(task)"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
@@ -86,7 +88,7 @@
                   <q-item-section side>
                     <q-checkbox
                       :model-value="Number(task.status_id) === 0"
-                      @click="toggleStatus(task)"
+                      @click.stop="toggleStatus(task)"
                     />
                   </q-item-section>
                   <q-item-section>
@@ -119,9 +121,17 @@
                         flat
                         round
                         dense
+                        icon="edit"
+                        color="primary"
+                        @click.stop="setTaskToEdit(task)"
+                      />
+                      <q-btn
+                        flat
+                        round
+                        dense
                         icon="delete"
                         color="negative"
-                        @click="
+                        @click.stop="
                           openDeleteMenu = openDeleteMenu === task.id ? null : task.id
                         "
                       />
@@ -136,9 +146,9 @@
                           dense
                           color="negative"
                           label="Yes"
-                          @click="handleDeleteTask(task.id)"
+                          @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn flat dense label="No" @click="openDeleteMenu = null" />
+                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
                       </div>
                     </div>
                   </q-item-section>
@@ -165,11 +175,13 @@
                   :key="task.id"
                   class="q-pa-md"
                   :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
+                  clickable
+                  @click="setTaskToEdit(task)"
                 >
                   <q-item-section side>
                     <q-checkbox
                       :model-value="Number(task.status_id) === 0"
-                      @click="toggleStatus(task)"
+                      @click.stop="toggleStatus(task)"
                     />
                   </q-item-section>
                   <q-item-section>
@@ -198,6 +210,14 @@
                   </q-item-section>
                   <q-item-section side>
                     <div class="row items-center" style="gap: 8px">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="edit"
+                        color="primary"
+                        @click="() => setTaskToEdit(task)"
+                      />
                       <q-btn
                         flat
                         round
@@ -245,7 +265,10 @@
             :active-group="activeGroup"
             :show-calendar="false"
             :selected-date="newTask.eventDate"
+            :initial-task="taskToEdit"
             @add-task="handleAddTask"
+            @update-task="handleUpdateTask"
+            @cancel-edit="() => clearTaskToEdit()"
             @calendar-date-select="handleCalendarDateSelect"
             @filter-parent-tasks="filterParentTasks"
           />
@@ -260,64 +283,40 @@
       <q-card style="min-width: 500px">
         <q-card-section>
           <div class="text-h6">Manage Groups</div>
-        </q-card-section>
 
-        <q-card-section>
-          <q-form @submit.prevent="handleAddGroup" class="q-mb-md">
-            <div class="row q-gutter-sm">
-              <q-input
-                v-model="newGroupName"
-                label="Group Name"
-                outlined
-                dense
-                class="col"
-              />
-              <q-select
-                v-model="newGroupParent"
-                :options="groupOptions"
-                label="Parent Group (optional)"
-                outlined
-                dense
-                clearable
-                class="col"
-              />
-              <q-input
-                v-model="newGroupColor"
-                label="Color"
-                outlined
-                dense
-                style="max-width: 80px"
-              >
-                <template #append>
-                  <input
-                    v-model="newGroupColor"
-                    type="color"
-                    style="width: 40px; height: 30px; border: none; cursor: pointer"
-                  />
-                </template>
-              </q-input>
-              <q-btn type="submit" color="primary" icon="add" dense />
-            </div>
-          </q-form>
+          <q-card-section class="q-pt-sm">
+            <q-form @submit.prevent="handleAddGroup" class="q-mb-md">
+              <div class="row q-gutter-sm items-end">
+                <q-input v-model="newGroupName" label="Group Name" outlined dense class="col" />
+
+                <q-select
+                  v-model="newGroupParent"
+                  :options="groupOptions"
+                  label="Parent Group (optional)"
+                  outlined
+                  dense
+                  clearable
+                  style="min-width: 180px"
+                />
+
+                <q-input v-model="newGroupColor" label="Color" outlined dense style="max-width: 120px">
+                  <template #append>
+                    <input v-model="newGroupColor" type="color" style="width: 40px; height: 30px; border: none; cursor: pointer"/>
+                  </template>
+                </q-input>
+
+                <q-btn type="submit" color="primary" icon="add" dense />
+              </div>
+            </q-form>
+          </q-card-section>
 
           <q-tree :nodes="groupTree" node-key="id" default-expand-all>
             <template #default-header="prop">
               <div class="row items-center full-width">
-                <q-icon
-                  :name="prop.node.icon || 'folder'"
-                  :color="prop.node.color"
-                  class="q-mr-sm"
-                />
+                <q-icon :name="prop.node.icon || 'folder'" :color="prop.node.color" class="q-mr-sm" />
                 <span>{{ prop.node.label }}</span>
                 <q-space />
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="delete"
-                  size="sm"
-                  @click.stop="handleDeleteGroup(prop.node.id)"
-                />
+                <q-btn flat dense round icon="delete" size="sm" @click.stop="handleDeleteGroup(prop.node.id)" />
               </div>
             </template>
           </q-tree>
@@ -762,6 +761,15 @@ const newGroupColor = ref("#1976d2");
 const defaultGroupId = ref<string | undefined>(undefined);
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 const openDeleteMenu = ref<string | null>(null);
+const taskToEdit = ref<Task | null>(null);
+
+function setTaskToEdit(task: Task) {
+  taskToEdit.value = task;
+}
+
+function clearTaskToEdit() {
+  taskToEdit.value = null;
+}
 
 // Refs for date inputs
 const dayInput = ref<any>(null);
@@ -1215,6 +1223,13 @@ const handleAddTask = async (taskPayload: any) => {
   };
 
   await addTask(currentDate.value, taskData);
+};
+
+const handleUpdateTask = async (updatedTask: any) => {
+  if (!updatedTask || !updatedTask.id) return;
+  const { id, ...rest } = updatedTask;
+  await updateTask(currentDate.value, id, rest);
+  taskToEdit.value = null;
 };
 
 const handleDeleteTask = async (taskId: string) => {
