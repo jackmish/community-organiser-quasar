@@ -78,7 +78,8 @@
                   v-for="task in tasksWithTime"
                   :key="task.id"
                   class="q-pa-md"
-                  :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
+                  :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
+                  :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
                 >
@@ -174,7 +175,8 @@
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
                   class="q-pa-md"
-                  :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
+                  :class="{ 'bg-grey-2': Number(task.status_id) === 0, 'selected-task': selectedTaskId === task.id }"
+                  :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
                 >
@@ -216,7 +218,7 @@
                         dense
                         icon="edit"
                         color="primary"
-                        @click="() => setTaskToEdit(task)"
+                        @click.stop="() => setTaskToEdit(task)"
                       />
                       <q-btn
                         flat
@@ -224,7 +226,7 @@
                         dense
                         icon="delete"
                         color="negative"
-                        @click="
+                        @click.stop="
                           openDeleteMenu = openDeleteMenu === task.id ? null : task.id
                         "
                       />
@@ -239,9 +241,9 @@
                           dense
                           color="negative"
                           label="Yes"
-                          @click="handleDeleteTask(task.id)"
+                          @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn flat dense label="No" @click="openDeleteMenu = null" />
+                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
                       </div>
                     </div>
                   </q-item-section>
@@ -260,18 +262,34 @@
           />
         </div>
         <div class="col-12 col-md-6">
-          <AddTaskForm
-            :filtered-parent-options="filteredParentOptions"
-            :active-group="activeGroup"
-            :show-calendar="false"
-            :selected-date="newTask.eventDate"
-            :initial-task="taskToEdit"
-            @add-task="handleAddTask"
-            @update-task="handleUpdateTask"
-            @cancel-edit="() => clearTaskToEdit()"
-            @calendar-date-select="handleCalendarDateSelect"
-            @filter-parent-tasks="filterParentTasks"
-          />
+          <div class="q-mb-sm">
+            <ModeSwitcher v-model="mode" />
+          </div>
+
+          <div v-if="mode === 'preview' && taskToEdit">
+            <TaskPreview
+              :task="taskToEdit"
+              :group-name="getGroupName(taskToEdit.groupId)"
+              @edit="() => { mode = 'edit' }"
+              @close="clearTaskToEdit"
+            />
+          </div>
+          <div v-else>
+            <AddTaskForm
+              :filtered-parent-options="filteredParentOptions"
+              :active-group="activeGroup"
+              :show-calendar="false"
+              :selected-date="newTask.eventDate"
+              :initial-task="taskToEdit"
+              :mode="mode"
+              @update:mode="(v) => (mode = v)"
+              @add-task="handleAddTask"
+              @update-task="handleUpdateTask"
+              @cancel-edit="() => clearTaskToEdit()"
+              @calendar-date-select="handleCalendarDateSelect"
+              @filter-parent-tasks="filterParentTasks"
+            />
+          </div>
 
           <!-- Notes removed per layout update -->
         </div>
@@ -337,6 +355,8 @@
 import { format, addDays, startOfWeek } from "date-fns";
 
 import AddTaskForm from "../components/AddTaskForm.vue";
+import TaskPreview from "../components/TaskPreview.vue";
+import ModeSwitcher from "../components/ModeSwitcher.vue";
 import CalendarView from "../components/CalendarView.vue";
 
 const getWeekDays = (startDate: Date) => {
@@ -762,13 +782,20 @@ const defaultGroupId = ref<string | undefined>(undefined);
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
+const mode = ref<'add' | 'edit' | 'preview'>('add');
+const selectedTaskId = ref<string | null>(null);
 
 function setTaskToEdit(task: Task) {
   taskToEdit.value = task;
+  // show preview when a task is clicked
+  mode.value = 'preview';
+  selectedTaskId.value = task.id;
 }
 
 function clearTaskToEdit() {
   taskToEdit.value = null;
+  mode.value = 'add';
+  selectedTaskId.value = null;
 }
 
 // Refs for date inputs
@@ -1191,12 +1218,14 @@ const priorityColor = (priority: Task["priority"]) => {
   return colors[priority];
 };
 
-const getGroupName = (groupId: string): string => {
+const getGroupName = (groupId?: string): string => {
+  if (!groupId) return "Unknown";
   const group = groups.value.find((g) => g.id === groupId);
   return group ? group.name : "Unknown";
 };
 
-const getGroupColor = (groupId: string): string => {
+const getGroupColor = (groupId?: string): string => {
+  if (!groupId) return "#1976d2";
   const group = groups.value.find((g) => g.id === groupId);
   return group?.color || "#1976d2";
 };
@@ -1378,6 +1407,15 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.selected-task {
+  border: 2px solid var(--q-primary, #1976d2);
+  border-radius: 6px;
+  background-color: rgba(25, 118, 210, 0.06);
+  box-shadow: 0 2px 8px rgba(25,118,210,0.06);
+}
+</style>
 
 <style scoped>
 .calendar-table {
