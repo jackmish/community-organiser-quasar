@@ -132,7 +132,7 @@
                         dense
                         icon="edit"
                         color="primary"
-                        @click.stop="setTaskToEdit(task)"
+                        @click.stop="editTask(task)"
                       />
                       <q-btn
                         flat
@@ -233,7 +233,7 @@
                         dense
                         icon="edit"
                         color="primary"
-                        @click.stop="() => setTaskToEdit(task)"
+                        @click.stop="() => editTask(task)"
                       />
                       <q-btn
                         flat
@@ -848,6 +848,12 @@ function setTaskToEdit(task: Task) {
   taskToEdit.value = task;
   // show preview when a task is clicked
   mode.value = "preview";
+  selectedTaskId.value = task.id;
+}
+
+function editTask(task: Task) {
+  taskToEdit.value = task;
+  mode.value = "edit";
   selectedTaskId.value = task.id;
 }
 
