@@ -291,7 +291,7 @@
         </div>
         <div class="col-12 col-md-6">
           <div class="q-mb-sm">
-            <ModeSwitcher v-model="mode" />
+            <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
           </div>
 
           <div v-if="mode === 'preview' && taskToEdit">
@@ -844,6 +844,18 @@ const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
 const mode = ref<"add" | "edit" | "preview">("add");
 const selectedTaskId = ref<string | null>(null);
+
+// Allowed modes depend on whether a task is selected
+const allowedModes = computed(() =>
+  taskToEdit.value ? ["add", "edit", "preview"] : ["add"]
+);
+
+// Ensure we return to 'add' mode when no task is selected
+watch(taskToEdit, (val) => {
+  if (!val && mode.value !== "add") {
+    mode.value = "add";
+  }
+});
 
 function setTaskToEdit(task: Task) {
   taskToEdit.value = task;
