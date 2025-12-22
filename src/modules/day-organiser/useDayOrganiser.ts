@@ -176,7 +176,13 @@ export function useDayOrganiser() {
     const task = dayData.tasks.find((t) => t.id === taskId);
 
     if (task) {
-      task.completed = !task.completed;
+      // Flip status_id between 0 (done) and 1 (just created)
+      try {
+        const cur = Number((task as any).status_id);
+        (task as any).status_id = cur === 0 ? 1 : 0;
+      } catch (e) {
+        (task as any).status_id = 1;
+      }
       task.updatedAt = new Date().toISOString();
       await saveData();
     }

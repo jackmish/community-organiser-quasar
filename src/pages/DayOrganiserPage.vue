@@ -78,19 +78,19 @@
                   v-for="task in tasksWithTime"
                   :key="task.id"
                   class="q-pa-md"
-                  :class="{ 'bg-grey-2': task.completed }"
+                  :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
                   </q-item-section>
                   <q-item-section side>
                     <q-checkbox
-                      :model-value="task.completed"
-                      @update:model-value="handleToggleTask(task.id)"
+                      :model-value="Number(task.status_id) === 0"
+                      @click="toggleStatus(task)"
                     />
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label :class="{ 'text-strike': task.completed }">
+                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
                     <q-item-label caption>{{ task.description }}</q-item-label>
@@ -164,16 +164,16 @@
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
                   class="q-pa-md"
-                  :class="{ 'bg-grey-2': task.completed }"
+                  :class="{ 'bg-grey-2': Number(task.status_id) === 0 }"
                 >
                   <q-item-section side>
                     <q-checkbox
-                      :model-value="task.completed"
-                      @update:model-value="handleToggleTask(task.id)"
+                      :model-value="Number(task.status_id) === 0"
+                      @click="toggleStatus(task)"
                     />
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label :class="{ 'text-strike': task.completed }">
+                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
                     <q-item-label caption>{{ task.description }}</q-item-label>
@@ -739,6 +739,7 @@ const {
   addTask,
   deleteTask,
   toggleTaskComplete,
+  updateTask,
   updateDayNotes,
   exportData,
   importData,
@@ -1221,8 +1222,9 @@ const handleDeleteTask = async (taskId: string) => {
   openDeleteMenu.value = null;
 };
 
-const handleToggleTask = async (taskId: string) => {
-  await toggleTaskComplete(currentDate.value, taskId);
+const toggleStatus = async (task: any) => {
+  const status = Number(task.status_id) === 0 ? 1 : 0;
+  await updateTask(currentDate.value, task.id, { status_id: status });
 };
 
 const handleActiveGroupChange = (

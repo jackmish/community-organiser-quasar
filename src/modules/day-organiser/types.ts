@@ -15,7 +15,10 @@ export interface Task {
   date: string; // YYYY-MM-DD format
   category: 'work' | 'personal' | 'meeting' | 'other';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  completed: boolean;
+  // Numeric status code for the task lifecycle (e.g. 0 = done, 1 = just created)
+  status_id?: number | string;
+  // `completed` kept for backward compatibility but will be deprecated
+  completed?: boolean;
   groupId?: string; // Reference to TaskGroup
   tags?: string[];
   eventTime?: string; // HH:mm format

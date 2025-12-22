@@ -42,11 +42,10 @@ type TaskType = {
   name: string;
   description: string;
   type_id: string;
-  status_id: string;
+  status_id: number | string;
   parent_id: string | null;
   created_by: string;
   priority: string;
-  completed: boolean;
   groupId: string | undefined;
   eventDate: string;
   eventTime: string;
@@ -56,11 +55,12 @@ const localNewTask = ref<TaskType>({
   name: "",
   description: "",
   type_id: "TimeEvent",
-  status_id: "",
+  // default to '1' = just created
+  // default to 1 = just created (use numeric codes, not boolean)
+  status_id: 1,
   parent_id: null,
   created_by: "",
   priority: "medium",
-  completed: false,
   groupId: undefined,
   eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(
     today.getDate()
@@ -393,6 +393,15 @@ const priorityOptions = [
   },
 ];
 
+// Map checkbox to numeric status_id (0 = done, 1 = just created)
+const statusValue = computed<number>({
+  get: () => (Number(localNewTask.value.status_id) === 0 ? 0 : 1),
+  set: (val: number) => {
+    // ensure numeric storage; other parts may accept string too
+    localNewTask.value.status_id = val;
+  },
+});
+
 function onSubmit(event: Event) {
   event.preventDefault();
   // Ensure a name exists: prefer explicit name, otherwise use auto-generated name
@@ -405,6 +414,14 @@ function onSubmit(event: Event) {
   emit("add-task", { ...localNewTask.value });
   // Clear the description textarea after adding the task
   localNewTask.value.description = "";
+  // Reset status checkbox to '1' (just created) and mark not completed
+  try {
+    // writable computed ref
+    (statusValue as any).value = 1;
+  } catch (e) {
+    // fallback: set directly
+    localNewTask.value.status_id = 1;
+  }
 }
 </script>
 
@@ -590,9 +607,20 @@ function onSubmit(event: Event) {
         </div>
         <div class="row" style="gap: 12px; align-items: center">
           <div class="col-auto">
-            <div class="row items-center" style="gap:12px">
+            <div class="row items-center" style="gap: 12px">
               <q-btn type="submit" color="primary" label="Add Task" />
-              <div v-if="activeGroup && activeGroup.value" class="text-caption text-grey-7 q-ml-md">
+              <q-checkbox
+                v-model="statusValue"
+                :true-value="0"
+                :false-value="1"
+                dense
+                label="Done"
+                class="q-ml-sm"
+              />
+              <div
+                v-if="activeGroup && activeGroup.value"
+                class="text-caption text-grey-7 q-ml-md"
+              >
                 <q-icon name="info" size="xs" class="q-mr-xs" />
                 Task will be added to:
                 <strong>{{ activeGroup.label.split(" (")[0] }}</strong>
