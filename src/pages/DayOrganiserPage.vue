@@ -304,6 +304,7 @@
                 }
               "
               @close="clearTaskToEdit"
+              @toggle-status="(t) => toggleStatus(t)"
             />
           </div>
           <div v-else>
