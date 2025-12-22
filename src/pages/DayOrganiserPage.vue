@@ -202,6 +202,7 @@
             :filtered-parent-options="filteredParentOptions"
             :active-group="activeGroup"
             :show-calendar="false"
+            :selected-date="newTask.eventDate"
             @add-task="handleAddTask"
             @calendar-date-select="handleCalendarDateSelect"
             @filter-parent-tasks="filterParentTasks"
