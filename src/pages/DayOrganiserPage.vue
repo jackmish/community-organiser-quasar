@@ -1375,7 +1375,17 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         lines[lineIndex] = `${prefix}[x] ${content}`;
       }
       const newDesc = lines.join("\n");
-      await updateTask(currentDate.value, task.id, { description: newDesc });
+      // optimistic update so UI reflects change immediately
+      try {
+        task.description = newDesc;
+        if (taskToEdit.value && taskToEdit.value.id === task.id) {
+          taskToEdit.value.description = newDesc;
+        }
+      } catch (e) {
+        // ignore
+      }
+      const targetDate = task.date || task.eventDate || currentDate.value;
+      await updateTask(targetDate, task.id, { description: newDesc });
       return;
     }
 
@@ -1390,7 +1400,16 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         lines[lineIndex] = `${prefix}[x] ${content}`;
       }
       const newDesc = lines.join("\n");
-      await updateTask(currentDate.value, task.id, { description: newDesc });
+      try {
+        task.description = newDesc;
+        if (taskToEdit.value && taskToEdit.value.id === task.id) {
+          taskToEdit.value.description = newDesc;
+        }
+      } catch (e) {
+        // ignore
+      }
+      const targetDate = task.date || task.eventDate || currentDate.value;
+      await updateTask(targetDate, task.id, { description: newDesc });
       return;
     }
     // Not a list-like line: fall through to toggling whole task
@@ -1398,7 +1417,17 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 
   // Toggle entire task status (existing behavior)
   const status = Number(task.status_id) === 0 ? 1 : 0;
-  await updateTask(currentDate.value, task.id, { status_id: status });
+  // optimistic update
+  try {
+    task.status_id = status;
+    if (taskToEdit.value && taskToEdit.value.id === task.id) {
+      taskToEdit.value.status_id = status;
+    }
+  } catch (e) {
+    // ignore
+  }
+  const targetDate = task.date || task.eventDate || currentDate.value;
+  await updateTask(targetDate, task.id, { status_id: status });
 };
 
 const handleActiveGroupChange = (

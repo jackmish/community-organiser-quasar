@@ -148,6 +148,21 @@ export function useDayOrganiser() {
       updatedAt: new Date().toISOString(),
     });
 
+    // Also update the task inside any group file so saved group data remains in sync
+    try {
+      if (task.groupId) {
+        const group: any = organiserData.value.groups.find((g: any) => g.id === task.groupId);
+        if (group && Array.isArray(group.tasks)) {
+          const idx = group.tasks.findIndex((t: any) => t.id === taskId);
+          if (idx !== -1) {
+            Object.assign(group.tasks[idx], task);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to sync updated task to group:', err);
+    }
+
     await saveData();
   };
 
