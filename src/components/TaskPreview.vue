@@ -68,7 +68,9 @@ function escapeHtml(s = '') {
 
 const renderedDescription = computed(() => {
   const d = props.task?.description || '';
-  let escaped = escapeHtml(d);
+  // If the description begins with the title, strip that prefix for preview clarity
+  const stripped = stripTitleFrom(d, props.task?.name || '');
+  let escaped = escapeHtml(stripped);
   escaped = escaped.replace(/\[x\]/gi, '✅');
   escaped = escaped.replace(/\n/g, '<br/>');
   return escaped;
@@ -81,7 +83,11 @@ const parsedLines = computed(() => {
   const d = props.task?.description || '';
   if (!d) return [] as Array<{ type: string; raw: string; html: string; checked?: boolean }>;
   const lines = d.split(/\r?\n/);
-  return lines.map((ln) => {
+  return lines.map((ln, lineIndex) => {
+    // For the very first line, remove a leading title duplicate if present
+    if (lineIndex === 0 && props.task?.name) {
+      ln = stripTitleFrom(ln, props.task.name);
+    }
     const dashMatch = ln.match(/^\s*-\s*(.*)$/);
     const numMatch = ln.match(/^\s*(\d+)[.)]\s*(.*)$/);
     if (dashMatch) {
@@ -108,4 +114,20 @@ const parsedLines = computed(() => {
     return { type: 'text', raw: ln, html };
   });
 });
+
+/**
+ * If `text` begins with `title` (ignoring case and surrounding whitespace),
+ * remove the title and any common separators that follow it (e.g. " - ", ": ", "—", newline).
+ */
+function stripTitleFrom(text = '', title = '') {
+  if (!text || !title) return text;
+  const t = title.trim();
+  if (!t) return text;
+  const pattern = new RegExp('^\\s*' + escapeRegExp(t) + "(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?", 'i');
+  return text.replace(pattern, '');
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 </script>
