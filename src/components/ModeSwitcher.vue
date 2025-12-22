@@ -3,7 +3,7 @@
     :model-value="modelValue"
     @update:model-value="(v) => emit('update:modelValue', v)"
     :options="options"
-    size="sm"
+    size="md"
     unelevated
   />
 </template>
@@ -22,10 +22,20 @@ const labelMap: Record<string, string> = {
   preview: 'Preview',
 };
 
+const iconMap: Record<string, string> = {
+  add: 'add',
+  edit: 'edit',
+  preview: 'visibility',
+};
+
 const defaultModes = ['add', 'edit', 'preview'];
 
 const options = computed(() => {
   const modes = props.allowedModes && props.allowedModes.length ? props.allowedModes : defaultModes;
-  return modes.map((m) => ({ label: labelMap[m] || m, value: m }));
+  return modes.map((m) => ({
+    label: labelMap[m] || m,
+    value: m,
+    icon: iconMap[m] || "",
+  }));
 });
 </script>
