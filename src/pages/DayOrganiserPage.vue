@@ -207,22 +207,7 @@
             @filter-parent-tasks="filterParentTasks"
           />
 
-          <!-- Day Notes -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6">Notes</div>
-            </q-card-section>
-            <q-card-section>
-              <q-input
-                :model-value="currentDayData.notes"
-                @update:model-value="handleUpdateNotes"
-                type="textarea"
-                outlined
-                rows="4"
-                placeholder="Add notes for this day..."
-              />
-            </q-card-section>
-          </q-card>
+          <!-- Notes removed per layout update -->
         </div>
       </div>
     </div>
