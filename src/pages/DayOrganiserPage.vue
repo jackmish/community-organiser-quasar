@@ -110,14 +110,33 @@
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      icon="delete"
-                      color="negative"
-                      @click="handleDeleteTask(task.id)"
-                    />
+                    <div class="row items-center" style="gap: 8px">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="delete"
+                        color="negative"
+                        @click="
+                          openDeleteMenu = openDeleteMenu === task.id ? null : task.id
+                        "
+                      />
+                      <div
+                        v-if="openDeleteMenu === task.id"
+                        class="row items-center"
+                        style="gap: 8px"
+                      >
+                        <div>Delete?</div>
+                        <q-btn
+                          flat
+                          dense
+                          color="negative"
+                          label="Yes"
+                          @click="handleDeleteTask(task.id)"
+                        />
+                        <q-btn flat dense label="No" @click="openDeleteMenu = null" />
+                      </div>
+                    </div>
                   </q-item-section>
                 </q-item>
               </template>
@@ -174,14 +193,33 @@
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      icon="delete"
-                      color="negative"
-                      @click="handleDeleteTask(task.id)"
-                    />
+                    <div class="row items-center" style="gap: 8px">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="delete"
+                        color="negative"
+                        @click="
+                          openDeleteMenu = openDeleteMenu === task.id ? null : task.id
+                        "
+                      />
+                      <div
+                        v-if="openDeleteMenu === task.id"
+                        class="row items-center"
+                        style="gap: 8px"
+                      >
+                        <div>Delete?</div>
+                        <q-btn
+                          flat
+                          dense
+                          color="negative"
+                          label="Yes"
+                          @click="handleDeleteTask(task.id)"
+                        />
+                        <q-btn flat dense label="No" @click="openDeleteMenu = null" />
+                      </div>
+                    </div>
                   </q-item-section>
                 </q-item>
               </template>
@@ -718,6 +756,7 @@ const newGroupParent = ref<string | undefined>(undefined);
 const newGroupColor = ref("#1976d2");
 const defaultGroupId = ref<string | undefined>(undefined);
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
+const openDeleteMenu = ref<string | null>(null);
 
 // Refs for date inputs
 const dayInput = ref<any>(null);
@@ -1160,6 +1199,7 @@ const handleAddTask = async (taskPayload: any) => {
 
 const handleDeleteTask = async (taskId: string) => {
   await deleteTask(currentDate.value, taskId);
+  openDeleteMenu.value = null;
 };
 
 const handleToggleTask = async (taskId: string) => {
