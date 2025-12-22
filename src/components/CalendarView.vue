@@ -196,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { format, addDays, startOfWeek } from "date-fns";
 
 const props = defineProps<{
@@ -211,6 +211,12 @@ const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
 const shownMonths = ref(new Set<string>());
 const shownYears = ref(new Set<string>());
+
+// Reset shown month/year state whenever the base date or view size changes
+watch([calendarBaseDate, calendarViewDays], () => {
+  shownMonths.value = new Set();
+  shownYears.value = new Set();
+});
 
 // Online/offline detection
 const isOnline = ref(navigator.onLine);
@@ -442,17 +448,23 @@ onMounted(async () => {
 
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  return Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), "yyyy-MM-dd"));
+  const result = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(weekStart, i), "yyyy-MM-dd")
+  );
+  console.log("[computed] calendarCurrentWeek", result);
+  return result;
 });
 
 const allCalendarWeeks = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const numWeeks = Math.ceil(calendarViewDays.value / 7);
-  return Array.from({ length: numWeeks }, (_, weekIndex) =>
+  const result = Array.from({ length: numWeeks }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) =>
       format(addDays(weekStart, weekIndex * 7 + dayIndex), "yyyy-MM-dd")
     )
   );
+  console.log("[computed] allCalendarWeeks", result);
+  return result;
 });
 
 const nextSixMonths = computed(() => {
@@ -467,6 +479,7 @@ const nextSixMonths = computed(() => {
     });
   }
 
+  console.log("[computed] nextSixMonths", months);
   return months;
 });
 
@@ -485,7 +498,9 @@ function nextCalendarWeeks() {
 function setEventDateToToday() {
   const today = new Date();
   calendarBaseDate.value = new Date();
-  emit("update:selectedDate", format(today, "yyyy-MM-dd"));
+  const formatted = format(today, "yyyy-MM-dd");
+  console.log("[emit] update:selectedDate", formatted);
+  emit("update:selectedDate", formatted);
 }
 
 function jumpToMonth(dateString: string) {
@@ -498,6 +513,7 @@ function jumpToMonth(dateString: string) {
 }
 
 function handleDateSelect(dateString: string) {
+  console.log("[emit] update:selectedDate", dateString);
   emit("update:selectedDate", dateString);
 }
 
@@ -588,10 +604,7 @@ function shouldShowMonth(
   const date = new Date(day);
   const monthYear = format(date, "yyyy-MM");
 
-  // Reset shown months when it's the first week and first day
-  if (isFirstWeek && index === 0) {
-    shownMonths.value = new Set();
-  }
+  // Do not mutate reactive state during render; shownMonths is reset by watcher
 
   // Check if month has already been shown
   if (shownMonths.value.has(monthYear)) {
@@ -632,10 +645,7 @@ function shouldShowYear(
   const year = format(date, "yyyy");
   const todayYear = format(new Date(), "yyyy");
 
-  // Reset shown years when it's the first week and first day
-  if (isFirstWeek && index === 0) {
-    shownYears.value = new Set();
-  }
+  // Do not mutate reactive state during render; shownYears is reset by watcher
 
   // Check if year has already been shown
   if (shownYears.value.has(year)) {

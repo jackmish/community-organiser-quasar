@@ -15,14 +15,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from "vue";
 
 const props = defineProps<{
   modelValue: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void;
+  (e: "update:modelValue", value: string): void;
 }>();
 
 const typeOptions = [
@@ -35,16 +35,8 @@ const typeOptions = [
 const isClickBlocked = ref(false);
 
 function handleSelect(value: string) {
-  if (isClickBlocked.value) return;
-
   if (props.modelValue !== value) {
-    isClickBlocked.value = true;
-    emit('update:modelValue', value);
-
-    // Unblock after a short delay
-    setTimeout(() => {
-      isClickBlocked.value = false;
-    }, 150);
+    emit("update:modelValue", value);
   }
 }
 </script>

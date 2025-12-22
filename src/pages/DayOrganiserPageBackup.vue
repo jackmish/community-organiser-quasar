@@ -19,7 +19,11 @@
 
       <TaskTypeSelector
         :model-value="newTask.type_id"
-        @update:model-value="(value) => { if (newTask.type_id !== value) newTask.type_id = value; }"
+        @update:model-value="
+          (value) => {
+            if (newTask.type_id !== value) newTask.type_id = value;
+          }
+        "
       />
     </div>
 
@@ -46,7 +50,9 @@
                 />
                 <div class="row items-center q-gutter-md">
                   <span>{{ formatDisplayDate(currentDate) }}</span>
-                  <span class="text-weight-bold">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                  <span class="text-weight-bold">{{
+                    getTimeDifferenceDisplay(currentDate)
+                  }}</span>
                 </div>
                 <q-btn
                   flat
@@ -117,8 +123,15 @@
               </template>
 
               <!-- Separator for tasks without time -->
-              <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" />
-              <q-item-label v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" header class="text-grey-7">
+              <q-separator
+                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
+                class="q-my-md"
+              />
+              <q-item-label
+                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
+                header
+                class="text-grey-7"
+              >
                 No Time Set
               </q-item-label>
 
@@ -301,8 +314,14 @@
                           <q-btn
                             v-for="option in priorityOptions.slice(0, 2)"
                             :key="option.value"
-                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
-                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
+                            :color="
+                              newTask.priority === option.value ? option.color : 'grey-3'
+                            "
+                            :text-color="
+                              newTask.priority === option.value
+                                ? option.textColor
+                                : 'grey-7'
+                            "
                             :icon="option.icon"
                             :label="option.label"
                             size="sm"
@@ -315,8 +334,14 @@
                           <q-btn
                             v-for="option in priorityOptions.slice(2, 4)"
                             :key="option.value"
-                            :color="newTask.priority === option.value ? option.color : 'grey-3'"
-                            :text-color="newTask.priority === option.value ? option.textColor : 'grey-7'"
+                            :color="
+                              newTask.priority === option.value ? option.color : 'grey-3'
+                            "
+                            :text-color="
+                              newTask.priority === option.value
+                                ? option.textColor
+                                : 'grey-7'
+                            "
                             :icon="option.icon"
                             :label="option.label"
                             size="sm"
@@ -342,7 +367,12 @@
                       v-model="newTask.name"
                       label="Own task name"
                       outlined
-                      @update:model-value="(val) => { if (val && typeof val === 'string') newTask.name = val.charAt(0).toUpperCase() + val.slice(1); }"
+                      @update:model-value="
+                        (val) => {
+                          if (val && typeof val === 'string')
+                            newTask.name = val.charAt(0).toUpperCase() + val.slice(1);
+                        }
+                      "
                     />
                   </div>
                   <q-input
@@ -924,14 +954,6 @@ function jumpToMonth(dateString: string) {
   shownYears.value = new Set();
 }
 
-function showInCalendar() {
-  if (!newTask.value.eventDate) return;
-
-  // Simply set the calendar to display the selected date
-  const selectedDate = new Date(newTask.value.eventDate);
-  calendarBaseDate.value = selectedDate;
-}
-
 function selectCalendarDate(dateString: string) {
   // Block rapid clicks
   if (isClickBlocked.value) return;
@@ -1009,24 +1031,24 @@ const eventDateYear = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getFullYear();
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[0] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[0] || "0", 10);
 });
 
 const eventDateMonth = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getMonth() + 1;
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[1] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[1] || "0", 10);
 });
 
 const eventDateDay = computed(() => {
   const dateStr = newTask.value.eventDate;
   if (!dateStr) return new Date().getDate();
   // Parse date string directly to avoid timezone issues (format: YYYY-MM-DD)
-  const parts = dateStr.split('-');
-  return parseInt(parts[2] || '0', 10);
+  const parts = dateStr.split("-");
+  return parseInt(parts[2] || "0", 10);
 });
 
 // Update functions for separate date inputs
@@ -1204,10 +1226,34 @@ const typeOptions = [
 ];
 
 const priorityOptions = [
-  { label: "Lo", value: "low", icon: "low_priority", color: "cyan-3", textColor: "grey-9" },
-  { label: "Med", value: "medium", icon: "drag_handle", color: "brown-7", textColor: "white" },
-  { label: "Hi", value: "high", icon: "priority_high", color: "orange", textColor: "white" },
-  { label: "Crit", value: "critical", icon: "warning", color: "negative", textColor: "white" },
+  {
+    label: "Lo",
+    value: "low",
+    icon: "low_priority",
+    color: "cyan-3",
+    textColor: "grey-9",
+  },
+  {
+    label: "Med",
+    value: "medium",
+    icon: "drag_handle",
+    color: "brown-7",
+    textColor: "white",
+  },
+  {
+    label: "Hi",
+    value: "high",
+    icon: "priority_high",
+    color: "orange",
+    textColor: "white",
+  },
+  {
+    label: "Crit",
+    value: "critical",
+    icon: "warning",
+    color: "negative",
+    textColor: "white",
+  },
 ];
 
 const parentTaskOptions = computed(() => {
@@ -1258,7 +1304,7 @@ const sortedTasks = computed(() => {
     const hasTimeB = !!b.eventTime;
 
     if (hasTimeA && !hasTimeB) return -1; // a has time, b doesn't - a comes first
-    if (!hasTimeA && hasTimeB) return 1;  // b has time, a doesn't - b comes first
+    if (!hasTimeA && hasTimeB) return 1; // b has time, a doesn't - b comes first
 
     if (hasTimeA && hasTimeB) {
       // Both have time - sort by time
@@ -1275,8 +1321,8 @@ const sortedTasks = computed(() => {
 });
 
 // Group tasks by whether they have time
-const tasksWithTime = computed(() => sortedTasks.value.filter(t => !!t.eventTime));
-const tasksWithoutTime = computed(() => sortedTasks.value.filter(t => !t.eventTime));
+const tasksWithTime = computed(() => sortedTasks.value.filter((t) => !!t.eventTime));
+const tasksWithoutTime = computed(() => sortedTasks.value.filter((t) => !t.eventTime));
 
 // Auto-generate name from description
 const autoGeneratedName = computed(() => {
