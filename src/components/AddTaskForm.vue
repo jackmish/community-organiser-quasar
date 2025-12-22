@@ -586,8 +586,6 @@ function onSubmit(event: Event) {
           class="text-h6 row items-center q-gutter-sm q-mb-md"
           style="gap: 12px; align-items: center"
         >
-          <q-icon name="add_circle" color="positive" size="md" />
-          <div class="text-subtitle1">{{ modeLabel }}</div>
           <div style="flex: 1" />
           <q-btn-toggle
             v-model="localNewTask.type_id"

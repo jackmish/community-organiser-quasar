@@ -32,10 +32,6 @@ const defaultModes = ['add', 'edit', 'preview'];
 
 const options = computed(() => {
   const modes = props.allowedModes && props.allowedModes.length ? props.allowedModes : defaultModes;
-  return modes.map((m) => ({
-    label: labelMap[m] || m,
-    value: m,
-    icon: iconMap[m] || "",
-  }));
+  return modes.map((m) => ({ label: labelMap[m] || m, value: m, icon: iconMap[m] || '' }));
 });
 </script>
