@@ -1,13 +1,7 @@
 <template>
   <q-card class="q-mb-md">
     <q-card-section>
-      <div class="row items-center justify-between">
-        <div class="text-h6">Preview</div>
-        <div>
-          <q-btn flat dense label="Edit" color="primary" @click="$emit('edit')" />
-          <q-btn flat dense label="Close" color="secondary" @click="$emit('close')" />
-        </div>
-      </div>
+      <!-- header removed: preview renders content only -->
           <div class="q-mt-md">
             <div class="text-h5">{{ task.name }}</div>
             <div class="text-caption text-grey-7 q-mb-sm">{{ task.date }} {{ task.eventTime || '' }}</div>
