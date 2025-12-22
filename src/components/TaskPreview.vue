@@ -1,8 +1,11 @@
 <template>
   <q-card class="q-mb-md">
     <q-card-section>
-      <!-- header removed: preview renders content only -->
-          <div class="q-mt-md">
+        <!-- header removed: preview renders content only -->
+        <div class="row items-start justify-end q-mb-sm">
+          <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
+        </div>
+            <div class="q-mt-md">
             <div class="text-h5">{{ task.name }}</div>
             <div class="text-caption text-grey-7 q-mb-sm">{{ task.date }} {{ task.eventTime || '' }}</div>
 
@@ -32,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, toRaw } from 'vue';
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string }>();
@@ -123,5 +126,94 @@ function stripTitleFrom(text = '', title = '') {
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Copy helper functions
+async function copyStyledTask() {
+  const t = toRaw(props.task || {} as any);
+  const html = buildHtmlForEmail(t);
+  const text = buildPlainText(t);
+  try {
+    const nav: any = navigator as any;
+    if (nav.clipboard && nav.clipboard.write && typeof ClipboardItem !== 'undefined') {
+      const blobHtml = new Blob([html], { type: 'text/html' });
+      const blobText = new Blob([text], { type: 'text/plain' });
+      await nav.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]);
+    } else if (nav.clipboard && nav.clipboard.writeText) {
+      await nav.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    console.log('Copied styled task to clipboard');
+  } catch (err) {
+    console.error('Copy failed', err);
+  }
+}
+
+function buildPlainText(task: any) {
+  const lines: string[] = [];
+  lines.push(task.name || '');
+  if (task.date || task.eventTime) lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
+  const desc = task.description || '';
+  lines.push('');
+  lines.push(...(desc.split(/\r?\n/)));
+  lines.push('');
+  lines.push(`Priority: ${task.priority || ''}`);
+  if (task.groupId) lines.push(`Group: ${props.groupName || ''}`);
+  return lines.join('\n');
+}
+
+function buildHtmlForEmail(task: any) {
+  const esc = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const priorityColors: Record<string,string> = {
+    low: '#26c6da',
+    medium: '#6d4c41',
+    high: '#ff9800',
+    critical: '#f44336',
+  };
+  const parts: string[] = [];
+  parts.push('<div style="font-family: Arial, Helvetica, sans-serif; color: #222;">');
+  parts.push(`<h2 style="margin:0 0 6px 0;">${esc(task.name || '')}</h2>`);
+  if (task.date || task.eventTime) {
+    parts.push(`<div style="color:#666;font-size:0.95em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
+  }
+  const desc = task.description || '';
+  const lines = desc.split(/\r?\n/);
+  const isList = lines.some((l: string) => /^\s*[-\d]/.test(l));
+  if (isList) {
+    parts.push('<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;">');
+    for (const ln of lines) {
+      const m = ln.match(/^\s*[-*]\s*(.*)$/) || ln.match(/^\s*(\d+)[.)]\s*(.*)$/);
+      if (m) {
+        let content = m[1] || m[2] || '';
+        const checked = /^\s*\[x\]\s*/i.test(content);
+        content = content.replace(/^\s*\[[xX]\]\s*/,'');
+        parts.push(`<li style="margin-bottom:4px;">${checked? '&#x2705; ' : ''}${esc(content)}</li>`);
+      } else {
+        if (ln.trim()) parts.push(`<li style="margin-bottom:4px;">${esc(ln)}</li>`);
+      }
+    }
+    parts.push('</ul>');
+  } else {
+    for (const ln of lines) {
+      if (!ln.trim()) continue;
+      parts.push(`<p style="margin:0 0 6px 0;">${esc(ln)}</p>`);
+    }
+  }
+  const p = task.priority || '';
+  const pColor = priorityColors[p] || '#9e9e9e';
+  parts.push(`<div style="margin-top:8px;">`);
+  parts.push(`<span style="display:inline-block;padding:6px 8px;border-radius:12px;background:${pColor};color:#fff;font-size:0.85em;">Priority: ${esc(p)}</span>`);
+  if (task.groupId) {
+    parts.push(`<span style="display:inline-block;padding:6px 8px;border-radius:12px;background:#eee;color:#333;font-size:0.85em;margin-left:8px;">${esc(props.groupName||'')}</span>`);
+  }
+  parts.push('</div>');
+  parts.push('</div>');
+  return parts.join('');
 }
 </script>
