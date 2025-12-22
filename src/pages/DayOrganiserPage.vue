@@ -864,6 +864,14 @@ function clearTaskToEdit() {
   selectedTaskId.value = null;
 }
 
+// When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
+watch(mode, (val) => {
+  if (val === "add") {
+    taskToEdit.value = null;
+    selectedTaskId.value = null;
+  }
+});
+
 // Refs for date inputs
 const dayInput = ref<any>(null);
 const monthInput = ref<any>(null);
