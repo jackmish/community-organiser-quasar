@@ -403,6 +403,8 @@ function onSubmit(event: Event) {
 
   console.log("[emit] add-task", { ...localNewTask.value });
   emit("add-task", { ...localNewTask.value });
+  // Clear the description textarea after adding the task
+  localNewTask.value.description = "";
 }
 </script>
 
@@ -586,7 +588,22 @@ function onSubmit(event: Event) {
             />
           </div>
         </div>
-        <div class="row" style="gap: 12px">
+        <div class="row" style="gap: 12px; align-items: center">
+          <div class="col-auto">
+            <div class="row items-center" style="gap:12px">
+              <q-btn type="submit" color="primary" label="Add Task" />
+              <div v-if="activeGroup && activeGroup.value" class="text-caption text-grey-7 q-ml-md">
+                <q-icon name="info" size="xs" class="q-mr-xs" />
+                Task will be added to:
+                <strong>{{ activeGroup.label.split(" (")[0] }}</strong>
+              </div>
+              <div v-else class="text-caption text-warning q-ml-md">
+                <q-icon name="warning" size="xs" class="q-mr-xs" />
+                Please select an active group (not "All Groups")
+              </div>
+            </div>
+          </div>
+
           <q-select
             :model-value="localNewTask.parent_id"
             :options="filteredParentOptions"
@@ -625,21 +642,6 @@ function onSubmit(event: Event) {
               </q-chip>
             </template>
           </q-select>
-        </div>
-        <div class="row items-center justify-center">
-          <q-btn type="submit" color="primary" label="Add Task" />
-          <div
-            v-if="activeGroup && activeGroup.value"
-            class="text-caption text-grey-7 q-ml-md"
-          >
-            <q-icon name="info" size="xs" class="q-mr-xs" />
-            Task will be added to:
-            <strong>{{ activeGroup.label.split(" (")[0] }}</strong>
-          </div>
-          <div v-else class="text-caption text-warning q-ml-md">
-            <q-icon name="warning" size="xs" class="q-mr-xs" />
-            Please select an active group (not "All Groups")
-          </div>
         </div>
       </q-form>
     </q-card-section>
