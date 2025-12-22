@@ -49,7 +49,11 @@
                   color="primary"
                 />
                 <div class="row items-center q-gutter-md">
-                  <span>{{ formatDisplayDate(currentDate) }}</span>
+                  <span>
+                    <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
+                    <span>&nbsp;|&nbsp;</span>
+                    <span>{{ formatWeekday(currentDate) }}</span>
+                  </span>
                   <span class="text-weight-bold">{{
                     getTimeDifferenceDisplay(currentDate)
                   }}</span>
@@ -1153,6 +1157,21 @@ const formatDisplayDate = (date: string) => {
   return `${day} ${month} ${year} | ${weekday}`;
 };
 
+// Return just the date portion (e.g., "22 December 2025")
+const formatDateOnly = (date: string) => {
+  const dateObj = new Date(date);
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString("en-US", { month: "long" });
+  const year = dateObj.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+// Return weekday (e.g., "Monday")
+const formatWeekday = (date: string) => {
+  const dateObj = new Date(date);
+  return dateObj.toLocaleDateString("en-US", { weekday: "long" });
+};
+
 const priorityColor = (priority: Task["priority"]) => {
   const colors = {
     low: "cyan-3",
@@ -1433,5 +1452,9 @@ onMounted(async () => {
 
 .new-month-start {
   padding-top: 48px;
+}
+
+.date-black {
+  color: black !important;
 }
 </style>
