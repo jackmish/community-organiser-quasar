@@ -304,7 +304,7 @@
                 }
               "
               @close="clearTaskToEdit"
-              @toggle-status="(t) => toggleStatus(t)"
+              @toggle-status="(t, i) => toggleStatus(t, i)"
             />
           </div>
           <div v-else>
@@ -1353,7 +1353,50 @@ const handleDeleteTask = async (taskId: string) => {
   openDeleteMenu.value = null;
 };
 
-const toggleStatus = async (task: any) => {
+const toggleStatus = async (task: any, lineIndex?: number) => {
+  // If a line index is provided, toggle only that line's checked marker inside the description
+  if (typeof lineIndex === "number" && task && typeof task.description === "string") {
+    const lines = task.description.split(/\r?\n/);
+    const ln = lines[lineIndex] ?? "";
+
+    const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
+    const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/);
+
+    if (dashMatch) {
+      const prefix = dashMatch[1];
+      const marker = dashMatch[2] || "";
+      const content = dashMatch[3] || "";
+      const checked = /^\s*\[[xX]\]\s*/.test(marker);
+      if (checked) {
+        // remove marker
+        lines[lineIndex] = `${prefix}${content}`;
+      } else {
+        // add marker after the dash prefix
+        lines[lineIndex] = `${prefix}[x] ${content}`;
+      }
+      const newDesc = lines.join("\n");
+      await updateTask(currentDate.value, task.id, { description: newDesc });
+      return;
+    }
+
+    if (numMatch) {
+      const prefix = numMatch[1];
+      const marker = numMatch[2] || "";
+      const content = numMatch[3] || "";
+      const checked = /^\s*\[[xX]\]\s*/.test(marker);
+      if (checked) {
+        lines[lineIndex] = `${prefix}${content}`;
+      } else {
+        lines[lineIndex] = `${prefix}[x] ${content}`;
+      }
+      const newDesc = lines.join("\n");
+      await updateTask(currentDate.value, task.id, { description: newDesc });
+      return;
+    }
+    // Not a list-like line: fall through to toggling whole task
+  }
+
+  // Toggle entire task status (existing behavior)
   const status = Number(task.status_id) === 0 ? 1 : 0;
   await updateTask(currentDate.value, task.id, { status_id: status });
 };

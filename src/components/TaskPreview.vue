@@ -12,19 +12,21 @@
             <div class="text-h5">{{ task.name }}</div>
             <div class="text-caption text-grey-7 q-mb-sm">{{ task.date }} {{ task.eventTime || '' }}</div>
 
-            <div v-if="isListItem" class="row items-start">
-              <q-btn
-                dense
-                flat
-                round
-                :icon="isDone ? 'check_circle' : 'radio_button_unchecked'"
-                :color="isDone ? 'green' : 'grey-6'"
-                @click="$emit('toggle-status', task)"
-              />
-              <div class="q-ml-sm" v-html="renderedListText"></div>
+            <div>
+              <div v-for="(line, idx) in parsedLines" :key="idx">
+                <div v-if="line.type === 'list'">
+                  <q-item clickable class="q-pa-none" @click.stop="$emit('toggle-status', task, idx)">
+                    <q-item-section side>
+                      <q-icon :name="line.checked ? 'check_circle' : 'radio_button_unchecked'" :color="line.checked ? 'green' : 'grey-6'" />
+                    </q-item-section>
+                    <q-item-section>
+                      <div v-html="line.html"></div>
+                    </q-item-section>
+                  </q-item>
+                </div>
+                <div v-else class="q-mb-xs" v-html="line.html"></div>
+              </div>
             </div>
-
-            <div v-else v-html="renderedDescription"></div>
 
             <div class="q-mt-md">
               <q-chip size="sm" :color="priorityColor(task.priority)" text-color="white">{{ task.priority }}</q-chip>
@@ -55,7 +57,7 @@ const priorityColor = (p?: string) => {
 const groupName = computed(() => props.groupName || '');
 
 // Rendered description with simple replacements:
-// - replace '-vv' with a check emoji
+// - replace '[x]' with a check emoji
 // - escape HTML, then convert newlines to <br>
 function escapeHtml(s = '') {
   return s
@@ -67,28 +69,43 @@ function escapeHtml(s = '') {
 const renderedDescription = computed(() => {
   const d = props.task?.description || '';
   let escaped = escapeHtml(d);
-  escaped = escaped.replace(/-vv/g, '✅');
+  escaped = escaped.replace(/\[x\]/gi, '✅');
   escaped = escaped.replace(/\n/g, '<br/>');
   return escaped;
 });
 
-// Detect leading numbered list item, e.g. "1. text" or "1) text"
-const listItemMatch = computed(() => {
-  const d = props.task?.description || '';
-  const m = d.match(/^\s*(\d+)[.)]\s+(.*)$/s);
-  return m ? { index: m[1], text: m[2] } : null;
-});
-
-const isListItem = computed(() => !!listItemMatch.value);
+// Parse description into lines and detect list lines (dash or numbered)
 const isDone = computed(() => Number(props.task?.status_id) === 0);
 
-const renderedListText = computed(() => {
-  if (!listItemMatch.value) return '';
-  const txt = listItemMatch.value.text || '';
-  let escaped = escapeHtml(txt);
-  escaped = escaped.replace(/-vv/g, '✅');
-  escaped = escaped.replace(/\n/g, '<br/>');
-  // prepend the numeric marker (with dot) for clarity
-  return `${listItemMatch.value.index}. ${escaped}`;
+const parsedLines = computed(() => {
+  const d = props.task?.description || '';
+  if (!d) return [] as Array<{ type: string; raw: string; html: string; checked?: boolean }>;
+  const lines = d.split(/\r?\n/);
+  return lines.map((ln) => {
+    const dashMatch = ln.match(/^\s*-\s*(.*)$/);
+    const numMatch = ln.match(/^\s*(\d+)[.)]\s*(.*)$/);
+    if (dashMatch) {
+      const content = dashMatch[1] || '';
+      // detect [x] marker at start of the captured content and remove it from displayed text
+      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
+      const checked = !!markerMatch;
+      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      const html = escapeHtml(clean).replace(/\n/g, '<br/>');
+      return { type: 'list', raw: ln, html, checked };
+    }
+    if (numMatch) {
+      const idx = numMatch[1];
+      const content = numMatch[2] || '';
+      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
+      const checked = !!markerMatch;
+      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      let html = escapeHtml(clean).replace(/\n/g, '<br/>');
+      html = `${idx}. ${html}`;
+      return { type: 'list', raw: ln, html, checked };
+    }
+    // regular text line
+    const html = escapeHtml(ln).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
+    return { type: 'text', raw: ln, html };
+  });
 });
 </script>
