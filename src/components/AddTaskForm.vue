@@ -88,14 +88,21 @@ const localNewTask = ref<TaskType>({
 // Mode is controlled by parent via prop `mode` and `update:mode` emit
 import { toRef } from "vue";
 const modeRef = toRef(props, "mode") as any;
-// Friendly label for current mode
+// Friendly label for current mode (match ModeSwitcher labels)
 const modeLabel = computed(() => {
   return props.mode === "add"
-    ? "Adding new task"
+    ? "Add new thing"
     : props.mode === "edit"
-    ? "Editing task"
+    ? "Edit thing"
     : "Preview";
 });
+
+// Type options for task type selector (local only)
+const typeOptions = [
+  { label: "Time Event", value: "TimeEvent" },
+  { label: "TODO", value: "Todo" },
+  { label: "Note/Later", value: "NoteLater" },
+];
 
 // When parent provides an initialTask, populate localNewTask
 watch(
@@ -533,18 +540,29 @@ function onSubmit(event: Event) {
   <q-card class="q-mb-md">
     <q-card-section>
       <q-form @submit="onSubmit" class="q-gutter-md">
+        <!-- Type selector moved out so it remains visible for all types -->
+        <div
+          class="text-h6 row items-center q-gutter-sm q-mb-md"
+          style="gap: 12px; align-items: center"
+        >
+          <q-icon name="add_circle" color="positive" size="md" />
+          <div class="text-subtitle1">{{ modeLabel }}</div>
+          <div style="flex: 1" />
+          <q-btn-toggle
+            v-model="localNewTask.type_id"
+            :options="typeOptions"
+            size="sm"
+            toggle
+            unelevated
+          />
+        </div>
+
         <div v-if="localNewTask.type_id === 'TimeEvent'">
           <CalendarView
             v-if="showCalendar && localNewTask.type_id === 'TimeEvent'"
             :selected-date="localNewTask.eventDate"
             @update:selected-date="onCalendarDateSelect"
           />
-          <div class="text-h6 row items-center q-gutter-sm q-mb-md">
-            <q-icon name="add_circle" color="positive" size="md" />
-            <div class="text-subtitle1">
-              {{ modeLabel }}
-            </div>
-          </div>
           <div class="row q-gutter-sm q-mb-md">
             <q-card flat bordered class="q-pa-sm">
               <div class="text-caption text-grey-7 q-mb-xs">Date</div>
