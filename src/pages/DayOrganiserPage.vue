@@ -2,20 +2,35 @@
   <q-page class="q-pa-md">
     <!-- Active Group Selector and Type Selector -->
     <div class="row justify-between items-center q-mb-md">
-      <q-select
-        v-model="activeGroup"
-        :options="activeGroupOptions"
-        label="Active Group"
-        outlined
-        dense
-        style="min-width: 300px"
-        @update:model-value="handleActiveGroupChange"
-        :rules="[(val) => !!val || 'Please select an active group']"
-      >
-        <template #prepend>
-          <q-icon name="folder_open" />
-        </template>
-      </q-select>
+      <div class="row items-center" style="gap:12px">
+        <q-select
+          v-model="activeGroup"
+          :options="activeGroupOptions"
+          label="Active Group"
+          outlined
+          dense
+          style="min-width: 300px"
+          @update:model-value="handleActiveGroupChange"
+          :rules="[(val) => !!val || 'Please select an active group']"
+        >
+          <template #prepend>
+            <q-icon name="folder_open" />
+          </template>
+        </q-select>
+
+        <div
+          class="row items-center"
+          style="background:#0f1724;color:#2196f3;padding:8px 12px;border-radius:6px;align-items:center"
+        >
+          <div class="text-caption" style="color:#90caf9;margin-right:8px">
+            Today is <span style="color:#90caf9">{{ currentDateWeekday }},&nbsp;</span>
+            <span style="color:#ffffff">{{ currentDateShort }}</span>
+          </div>
+          <div class="text-caption" style="color:#90caf9;margin-left:8px">
+            |&nbsp;Its <span style="color:#ffffff">{{ currentTimeDisplay }}</span> now
+          </div>
+        </div>
+      </div>
 
       <TaskTypeSelector
         :model-value="newTask.type_id"
@@ -49,14 +64,9 @@
                   color="primary"
                 />
                 <div class="row items-center q-gutter-md">
-                  <span>
-                    <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
-                    <span>&nbsp;|&nbsp;</span>
-                    <span>{{ formatWeekday(currentDate) }}</span>
-                  </span>
-                  <span class="text-weight-bold">{{
-                    getTimeDifferenceDisplay(currentDate)
-                  }}</span>
+                  <span class="text-weight-bold">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                  <span>&nbsp;|&nbsp;</span>
+                  <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
                 </div>
                 <q-btn
                   flat
@@ -421,6 +431,7 @@ import TaskPreview from "../components/TaskPreview.vue";
 import ModeSwitcher from "../components/ModeSwitcher.vue";
 import CalendarView from "../components/CalendarView.vue";
 
+
 const getWeekDays = (startDate: Date) => {
   return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), "yyyy-MM-dd"));
 };
@@ -783,6 +794,27 @@ const calendarCurrentWeek = computed(() => {
   console.log("[computed] calendarCurrentWeek", val);
   return val;
 });
+
+// Current clock for top-right display
+const now = ref(new Date());
+let clockTimer: any = null;
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    now.value = new Date();
+  }, 1000);
+});
+onBeforeUnmount(() => {
+  if (clockTimer) clearInterval(clockTimer);
+});
+
+const currentDateDisplay = computed(() => {
+  return format(now.value, "EEEE, dd.MM.yyyy");
+});
+const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
+const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
+const currentTimeDisplay = computed(() => {
+  return format(now.value, "HH:mm");
+});
 const calendarNextWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const nextWeekStart = addDays(weekStart, 7);
@@ -827,7 +859,7 @@ function handleCalendarDateSelect(dateString: string) {
   selectCalendarDate(dateString);
 }
 
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useQuasar } from "quasar";
 import { useDayOrganiser } from "../modules/day-organiser";
 import type { Task, TaskDuration, TaskGroup } from "../modules/day-organiser";
@@ -1335,13 +1367,13 @@ const formatDisplayDate = (date: string) => {
   return `${day} ${month} ${year} | ${weekday}`;
 };
 
-// Return just the date portion (e.g., "22 December 2025")
+// Return weekday and compact date (e.g., "Tuesday, 23.12.2025")
 const formatDateOnly = (date: string) => {
-  const dateObj = new Date(date);
-  const day = dateObj.getDate();
-  const month = dateObj.toLocaleDateString("en-US", { month: "long" });
-  const year = dateObj.getFullYear();
-  return `${day} ${month} ${year}`;
+  try {
+    return format(new Date(date), "EEEE, dd.MM.yyyy");
+  } catch (e) {
+    return date;
+  }
 };
 
 // Return weekday (e.g., "Monday")

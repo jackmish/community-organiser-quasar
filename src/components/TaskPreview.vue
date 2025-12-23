@@ -8,7 +8,7 @@
             <div class="q-mt-md">
             <div class="text-h5">{{ task.name }}</div>
             <div class="text-caption text-grey-7 q-mb-sm">
-              {{ task.date }} {{ task.eventTime || '' }}
+              {{ displayDate }} {{ task.eventTime || '' }}
               <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
             </div>
 
@@ -39,6 +39,7 @@
 
 <script setup lang="ts">
 import { computed, toRaw } from 'vue';
+import { format } from 'date-fns';
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string }>();
@@ -115,6 +116,17 @@ const parsedLines = computed(() => {
   });
 });
 
+const displayDate = computed(() => {
+  const task = props.task || ({} as any);
+  const dateStr = (task.date || task.eventDate || '').toString();
+  if (!dateStr) return '';
+  try {
+    return format(new Date(dateStr), 'EEEE, dd.MM.yyyy');
+  } catch (e) {
+    return dateStr;
+  }
+});
+
 /**
  * If `text` begins with `title` (ignoring case and surrounding whitespace),
  * remove the title and any common separators that follow it (e.g. " - ", ": ", "—", newline).
@@ -185,8 +197,16 @@ async function copyStyledTask() {
 
 function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const lines: string[] = [];
-  // omit title per user request; include date/time only
-  if (task.date || task.eventTime) lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
+  // omit title per user request; include date/time only (formatted)
+  if (task.date || task.eventTime) {
+    try {
+      const d = task.date || task.eventDate || '';
+      const disp = d ? format(new Date(d), 'EEEE, dd.MM.yyyy') : '';
+      lines.push(`${disp} ${task.eventTime || ''}`.trim());
+    } catch (e) {
+      lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
+    }
+  }
   lines.push('');
   for (const item of parsed) {
     if (item.type === 'list') {
@@ -217,7 +237,13 @@ function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: st
   parts.push('<div style="font-family: Arial, Helvetica, sans-serif; color: #222;">');
   // include only date/time (no title)
   if (task.date || task.eventTime) {
-    parts.push(`<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
+    try {
+      const d = task.date || task.eventDate || '';
+      const disp = d ? format(new Date(d), 'EEEE, dd.MM.yyyy') : '';
+      parts.push(`<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(disp)} ${esc(task.eventTime || '')}</div>`);
+    } catch (e) {
+      parts.push(`<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
+    }
   }
   // Render content using parsed lines; lists get smaller font
   const listItems = parsed.filter(p => p.type === 'list');
