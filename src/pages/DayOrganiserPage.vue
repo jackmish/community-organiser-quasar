@@ -1437,39 +1437,32 @@ const getGroupColor = (groupId?: string): string => {
 
 // Replenish color sets grouped by family (4 tones each), ordered dark->bright
 const replenishColorSets = [
-  // Reds (dark -> bright)
+  // Reds (dark -> bright) - removed 2nd swatch
   { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
-  { id: 'set-2', bg: '#ef5350', text: '#ffffff' },
   { id: 'set-4', bg: '#ff5252', text: '#000000' },
   { id: 'set-3', bg: '#ff8a80', text: '#000000' },
-  // Yellows (dark -> bright)
+  // Yellows (dark -> bright) - removed 2nd swatch
   { id: 'set-5', bg: '#fdd835', text: '#000000' },
-  { id: 'set-7', bg: '#ffd54f', text: '#000000' },
-  { id: 'set-6', bg: '#fff176', text: '#000000' },
   { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
-  // Greens (dark -> bright)
+  { id: 'set-6', bg: '#fff176', text: '#000000' },
+  // Greens (dark -> bright) - removed 2nd swatch
   { id: 'set-9', bg: '#2e7d32', text: '#ffffff' },
-  { id: 'set-10', bg: '#66bb6a', text: '#000000' },
   { id: 'set-11', bg: '#9ccc65', text: '#000000' },
   { id: 'set-12', bg: '#a5d6a7', text: '#000000' },
-  // Azures / Cyans (dark -> bright)
+  // Azures / Cyans (dark -> bright) - removed 2nd swatch
   { id: 'set-13', bg: '#00acc1', text: '#ffffff' },
-  { id: 'set-14', bg: '#26c6da', text: '#000000' },
   { id: 'set-15', bg: '#80deea', text: '#000000' },
   { id: 'set-16', bg: '#b2ebf2', text: '#000000' },
-  // Blues (dark -> bright)
+  // Blues (dark -> bright) - removed 2nd swatch
   { id: 'set-17', bg: '#0d47a1', text: '#ffffff' },
   { id: 'set-18', bg: '#1976d2', text: '#ffffff' },
-  { id: 'set-19', bg: '#5c6bc0', text: '#ffffff' },
   { id: 'set-20', bg: '#90caf9', text: '#000000' },
-  // Violets (dark -> bright)
+  // Violets (dark -> bright) - removed 2nd swatch
   { id: 'set-21', bg: '#6a1b9a', text: '#ffffff' },
-  { id: 'set-22', bg: '#8e24aa', text: '#ffffff' },
   { id: 'set-23', bg: '#ab47bc', text: '#ffffff' },
   { id: 'set-24', bg: '#ce93d8', text: '#000000' },
-  // Black / Gray / White (dark -> bright)
+  // Black / Gray / White (dark -> bright) - removed 2nd swatch
   { id: 'set-25', bg: '#000000', text: '#ffffff' },
-  { id: 'set-26', bg: '#37474f', text: '#ffffff' },
   { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
   { id: 'set-28', bg: '#ffffff', text: '#000000' },
 ];
