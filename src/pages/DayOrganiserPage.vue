@@ -822,6 +822,7 @@ const {
   updateDayNotes,
   exportData,
   importData,
+  getTasksInRange,
   setCurrentDate,
   goToToday,
   nextDay,
@@ -1180,7 +1181,27 @@ const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
 
 const sortedTasks = computed(() => {
   // Filter tasks by active group (unless "All Groups" is selected)
-  let tasksToSort = currentDayData.value.tasks;
+  // Start with tasks for the currently selected date
+  let tasksToSort = currentDayData.value.tasks.slice();
+
+  // If we're viewing Today, also include any tasks of type `Todo` from other days
+  // so they appear in today's list. They should not show when viewing other days.
+  try {
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (currentDate.value === todayStr && typeof getTasksInRange === "function") {
+      const allTasks = getTasksInRange("1970-01-01", "9999-12-31");
+      const todoExtras = allTasks.filter((t) => t.type_id === "Todo");
+      // Merge without duplicating tasks already present for today
+      for (const t of todoExtras) {
+        if (!tasksToSort.some((existing) => existing.id === t.id)) {
+          tasksToSort.push(t);
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
+    console.warn('Failed to include Todo extras for today', err);
+  }
   if (activeGroup.value && activeGroup.value.value !== null) {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
   }
