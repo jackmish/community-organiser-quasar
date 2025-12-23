@@ -287,6 +287,25 @@
                   </q-item-section>
                 </q-item>
               </template>
+              <!-- Replenishment section (separate list at end) -->
+              <q-separator v-if="replenishTasks.length > 0" class="q-my-md" />
+              <q-item-label v-if="replenishTasks.length > 0" header class="text-grey-7">
+                Replenishment
+              </q-item-label>
+              <div v-if="replenishTasks.length > 0">
+                <q-card flat class="q-pa-sm">
+                  <q-list dense>
+                    <q-item v-for="r in replenishTasks" :key="r.id" clickable @click="toggleStatus(r)" class="replenish-item">
+                      <q-item-section side>
+                        <q-checkbox :model-value="Number(r.status_id) === 0" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label :class="{ 'text-strike': Number(r.status_id) === 0 }"><strong>{{ r.name }}</strong></q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-card>
+              </div>
             </div>
           </q-card>
         </div>
@@ -1279,13 +1298,19 @@ const handleReplenishRestore = async (taskId: string) => {
 };
 
 // Group tasks by whether they have time
+const replenishTasks = computed(() => {
+  const val = sortedTasks.value.filter((t) => t.type_id === "Replenish");
+  console.log("[computed] replenishTasks", val);
+  return val;
+});
+
 const tasksWithTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !!t.eventTime);
+  const val = sortedTasks.value.filter((t) => !!t.eventTime && t.type_id !== "Replenish");
   console.log("[computed] tasksWithTime", val);
   return val;
 });
 const tasksWithoutTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !t.eventTime);
+  const val = sortedTasks.value.filter((t) => !t.eventTime && t.type_id !== "Replenish");
   console.log("[computed] tasksWithoutTime", val);
   return val;
 });
