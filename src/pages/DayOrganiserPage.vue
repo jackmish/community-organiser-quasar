@@ -1210,7 +1210,7 @@ const sortedTasks = computed(() => {
     }
   } catch (err) {
     // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
-    console.warn('Failed to include Todo extras for today', err);
+    console.warn("Failed to include Todo extras for today", err);
   }
   if (activeGroup.value && activeGroup.value.value !== null) {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
