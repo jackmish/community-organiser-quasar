@@ -106,6 +106,7 @@ const modeLabel = computed(() => {
 const typeOptions = [
   { label: "Time Event", value: "TimeEvent", icon: "event" },
   { label: "TODO", value: "Todo", icon: "check_box" },
+  { label: "Replenish", value: "Replenish", icon: "autorenew" },
   { label: "Note/Later", value: "NoteLater", icon: "description" },
 ];
 
@@ -495,18 +496,11 @@ const eventDateDay = computed({
 });
 const priorityOptions = [
   {
-    label: "Lo",
-    value: "low",
-    icon: "low_priority",
-    background: themePriorityColors.low,
-    textColor: themePriorityTextColor("low"),
-  },
-  {
-    label: "Med",
-    value: "medium",
-    icon: "drag_handle",
-    background: themePriorityColors.medium,
-    textColor: themePriorityTextColor("medium"),
+    label: "Crit",
+    value: "critical",
+    icon: "warning",
+    background: themePriorityColors.critical,
+    textColor: themePriorityTextColor("critical"),
   },
   {
     label: "Hi",
@@ -516,11 +510,18 @@ const priorityOptions = [
     textColor: themePriorityTextColor("high"),
   },
   {
-    label: "Crit",
-    value: "critical",
-    icon: "warning",
-    background: themePriorityColors.critical,
-    textColor: themePriorityTextColor("critical"),
+    label: "Med",
+    value: "medium",
+    icon: "drag_handle",
+    background: themePriorityColors.medium,
+    textColor: themePriorityTextColor("medium"),
+  },
+  {
+    label: "Lo",
+    value: "low",
+    icon: "low_priority",
+    background: themePriorityColors.low,
+    textColor: themePriorityTextColor("low"),
   },
 ];
 
@@ -529,12 +530,14 @@ const typeColors: Record<string, string> = {
   TimeEvent: "#2196f3", // blue
   Todo: "#4caf50", // green
   NoteLater: "#9e9e9e", // grey
+  Replenish: "#ffb300", // amber
 };
 
 const typeTextColors: Record<string, string> = {
   TimeEvent: "white",
   Todo: "white",
   NoteLater: "white",
+  Replenish: "white",
 };
 
 // Map checkbox to numeric status_id (0 = done, 1 = just created)

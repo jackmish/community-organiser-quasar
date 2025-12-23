@@ -28,9 +28,9 @@ const emit = defineEmits<{
 
 const typeOptions = [
   { label: "Command center", value: "Command center", icon: "dashboard" },
+  { label: "Replenish", value: "Replenish", icon: "autorenew" },
   { label: "Note/Later", value: "Note/Later", icon: "note" },
   { label: "TimeEvent", value: "TimeEvent", icon: "event" },
-  { label: "Replenishment", value: "Replenishment", icon: "shopping_cart" },
 ];
 
 const isClickBlocked = ref(false);
