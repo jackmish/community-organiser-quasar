@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
 
 export const priorityColors: Record<string, string> = {
-  low: '#81d4fa',
-  medium: '#26c6da',
+  low: '#c7e3ef',
+  medium: '#80deea',
   high: '#ff9800',
   critical: '#f44336',
 };
