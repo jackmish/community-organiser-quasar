@@ -26,6 +26,8 @@ export interface Task {
   groupId?: string; // Reference to TaskGroup
   tags?: string[];
   eventTime?: string; // HH:mm format
+  // Optional per-task chosen color set id (e.g. 'set-1'..'set-12')
+  color_set?: string | null;
   createdAt: string;
   updatedAt: string;
 }

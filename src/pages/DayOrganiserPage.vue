@@ -303,9 +303,10 @@
                 @pointercancel="cancelLongPress"
                 @pointerleave="cancelLongPress"
                 @click="handleReplenishClick(r)"
+                :style="{ background: getReplenishBg(r) }"
               >
                 <div class="row items-center justify-between" style="gap:8px">
-                  <div :class="{ 'text-strike': Number(r.status_id) === 0 }">{{ r.name }}</div>
+                  <div :class="{ 'text-strike': Number(r.status_id) === 0 }" :style="{ color: getReplenishText(r) }">{{ r.name }}</div>
                   <q-checkbox :model-value="Number(r.status_id) === 0" />
                 </div>
               </div>
@@ -1434,6 +1435,53 @@ const getGroupColor = (groupId?: string): string => {
   return group?.color || "#1976d2";
 };
 
+// 12 default color sets for Replenishment tasks
+const replenishColorSets = [
+  { id: 'set-1', bg: '#FFD54F', text: '#BF360C' },
+  { id: 'set-2', bg: '#66BB6A', text: '#1B5E20' },
+  { id: 'set-3', bg: '#42A5F5', text: '#0D47A1' },
+  { id: 'set-4', bg: '#AB47BC', text: '#4A148C' },
+  { id: 'set-5', bg: '#EF5350', text: '#B71C1C' },
+  { id: 'set-6', bg: '#FFA726', text: '#E65100' },
+  { id: 'set-7', bg: '#26A69A', text: '#004D40' },
+  { id: 'set-8', bg: '#9CCC65', text: '#33691E' },
+  { id: 'set-9', bg: '#FF8A65', text: '#BF360C' },
+  { id: 'set-10', bg: '#7E57C2', text: '#311B92' },
+  { id: 'set-11', bg: '#5C6BC0', text: '#1A237E' },
+  { id: 'set-12', bg: '#FFF176', text: '#827717' },
+  { id: 'set-13', bg: '#000000', text: '#ffffff' },
+  { id: 'set-14', bg: '#37474F', text: '#ECEFF1' },
+  { id: 'set-15', bg: '#9E9E9E', text: '#212121' },
+  { id: 'set-16', bg: '#ffffff', text: '#000000' },
+];
+
+const findColorSet = (id?: string | null) => {
+  if (!id) return null;
+  return replenishColorSets.find((s) => s.id === id) || null;
+};
+
+const getReplenishBg = (task: any) => {
+  const s = findColorSet(task.color_set);
+  return s ? s.bg : 'transparent';
+};
+
+const getReplenishText = (task: any) => {
+  const s = findColorSet(task.color_set);
+  return s ? s.text : 'inherit';
+};
+
+const setReplenishColor = async (task: any, colorId: string | null) => {
+  const targetDate = task.date || task.eventDate || currentDate.value;
+  try {
+    // optimistic UI
+    task.color_set = colorId;
+    if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.color_set = colorId;
+    await updateTask(targetDate, task.id, { color_set: colorId });
+  } catch (e) {
+    console.error('Failed to set replenish color', e);
+  }
+};
+
 const getDisplayDescription = (task: Task): string => {
   const desc = (task.description || "").trim();
   const name = (task.name || "").trim();
@@ -1744,6 +1792,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* Layout helpers to let the replenish column size automatically */

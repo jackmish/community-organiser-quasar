@@ -116,6 +116,26 @@ const typeOptions = [
   { label: "Note/Later", value: "NoteLater", icon: "description" },
 ];
 
+// Local copy of the 12 default replenish color sets (same as DayOrganiserPage)
+const replenishColorSets = [
+  { id: 'set-1', bg: '#FFD54F', text: '#BF360C' },
+  { id: 'set-2', bg: '#66BB6A', text: '#1B5E20' },
+  { id: 'set-3', bg: '#42A5F5', text: '#0D47A1' },
+  { id: 'set-4', bg: '#AB47BC', text: '#4A148C' },
+  { id: 'set-5', bg: '#EF5350', text: '#B71C1C' },
+  { id: 'set-6', bg: '#FFA726', text: '#E65100' },
+  { id: 'set-7', bg: '#26A69A', text: '#004D40' },
+  { id: 'set-8', bg: '#9CCC65', text: '#33691E' },
+  { id: 'set-9', bg: '#FF8A65', text: '#BF360C' },
+  { id: 'set-10', bg: '#7E57C2', text: '#311B92' },
+  { id: 'set-11', bg: '#5C6BC0', text: '#1A237E' },
+  { id: 'set-12', bg: '#FFF176', text: '#827717' },
+  { id: 'set-13', bg: '#000000', text: '#ffffff' },
+  { id: 'set-14', bg: '#37474F', text: '#ECEFF1' },
+  { id: 'set-15', bg: '#9E9E9E', text: '#212121' },
+  { id: 'set-16', bg: '#ffffff', text: '#000000' },
+];
+
 // Replenish helper state
 const replenishQuery = ref("");
 const selectedReplenishId = ref<string | null>(null);
@@ -940,6 +960,20 @@ function onSubmit(event: Event) {
               class="col"
               @update:model-value="(val) => updateTaskField('description', val)"
             />
+            <!-- Color chooser for Replenish tasks (below description) -->
+            <div v-if="localNewTask.type_id === 'Replenish' && (props.mode === 'add' || props.mode === 'edit')" class="q-pa-sm col">
+              <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
+              <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap">
+                <div v-for="cs in replenishColorSets" :key="cs.id" class="row items-center" style="gap:6px">
+                  <div
+                    class="color-swatch"
+                    :style="{ background: cs.bg, border: cs.id === (localNewTask as any).color_set ? '2px solid #000' : '1px solid rgba(0,0,0,0.08)' }"
+                    @click.stop="(localNewTask as any).color_set = cs.id"
+                  ></div>
+                </div>
+                <q-btn flat dense round icon="clear" @click.stop="() => { (localNewTask as any).color_set = null }" title="Use default" />
+              </div>
+            </div>
           </div>
           <div class="col column" style="gap: 12px">
             <div class="row q-gutter-sm" style="align-items: flex-start">
@@ -1032,6 +1066,21 @@ function onSubmit(event: Event) {
                 "
               />
             </div>
+
+            <!-- Color chooser for Replenish when editing the task (moved from list) -->
+            <div v-if="localNewTask.type_id === 'Replenish' && props.mode === 'edit'" class="q-pa-sm">
+              <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
+              <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap">
+                <div v-for="cs in replenishColorSets" :key="cs.id" class="row items-center" style="gap:6px">
+                  <div
+                    class="color-swatch"
+                    :style="{ background: cs.bg, border: cs.id === (localNewTask as any).color_set ? '2px solid #000' : '1px solid rgba(0,0,0,0.08)' }"
+                    @click.stop="(localNewTask as any).color_set = cs.id"
+                  ></div>
+                </div>
+                <q-btn flat dense round icon="clear" @click.stop="() => { (localNewTask as any).color_set = null }" title="Use default" />
+              </div>
+            </div>
           </div>
         </div>
         <div class="row" style="gap: 12px; align-items: center">
@@ -1079,3 +1128,12 @@ function onSubmit(event: Event) {
     </q-card-section>
   </q-card>
 </template>
+
+<style scoped>
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+</style>
