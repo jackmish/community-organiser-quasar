@@ -5,6 +5,7 @@
       :key="option.value"
       :label="option.label"
       :icon="option.icon"
+      size="md"
       :unelevated="modelValue === option.value"
       :outline="modelValue !== option.value"
       :color="modelValue === option.value ? 'primary' : 'grey-7'"
