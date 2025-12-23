@@ -314,7 +314,7 @@ const displayManager = new CalendarDisplayManager();
 // Map priority values to colors (hex) for calendar event backgrounds
 const priorityColors: Record<string, string> = {
   low: '#26c6da',
-  medium: '#6d4c41',
+  medium: '#1976d2',
   high: '#ff9800',
   critical: '#f44336',
 };

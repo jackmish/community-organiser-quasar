@@ -1398,7 +1398,7 @@ const formatDisplayDate = (date: string) => {
 const priorityColor = (priority: Task["priority"]) => {
   const colors = {
     low: "cyan-3",
-    medium: "brown-7",
+    medium: "blue",
     high: "orange",
     critical: "negative",
   };

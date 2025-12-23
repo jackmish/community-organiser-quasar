@@ -44,7 +44,7 @@ const emit = defineEmits(['edit', 'close', 'toggle-status']);
 const priorityColor = (p?: string) => {
   const colors: Record<string, string> = {
     low: 'cyan-3',
-    medium: 'brown-7',
+    medium: 'blue',
     high: 'orange',
     critical: 'negative',
   };
@@ -180,7 +180,7 @@ function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: st
   const esc = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const priorityColors: Record<string,string> = {
     low: '#26c6da',
-    medium: '#6d4c41',
+    medium: '#1976d2',
     high: '#ff9800',
     critical: '#f44336',
   };
