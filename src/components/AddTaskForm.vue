@@ -755,7 +755,9 @@ function onSubmit(event: Event) {
                     v-for="option in priorityOptions"
                     :key="option.value"
                     :color="
-                      localNewTask.priority === option.value ? option.background : 'grey-3'
+                      localNewTask.priority === option.value
+                        ? option.background
+                        : 'grey-3'
                     "
                     :text-color="
                       localNewTask.priority === option.value ? option.textColor : 'grey-7'
@@ -769,7 +771,9 @@ function onSubmit(event: Event) {
                     :outline="localNewTask.priority !== option.value"
                     :style="{
                       backgroundColor:
-                        localNewTask.priority === option.value ? option.background : undefined,
+                        localNewTask.priority === option.value
+                          ? option.background
+                          : undefined,
                       color:
                         localNewTask.priority === option.value
                           ? option.textColor
