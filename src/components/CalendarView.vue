@@ -1,7 +1,7 @@
 <template>
   <div>
-    <!-- Prev button and visible days per page option on the same line -->
-    <div class="row q-mb-md items-center">
+    <!-- Quick Date Buttons and Next button (moved to top) -->
+    <div class="row q-gutter-sm q-mt-md q-mb-lg items-center">
       <div class="col-auto">
         <q-btn
           unelevated
@@ -14,21 +14,35 @@
         />
       </div>
       <div class="col text-right">
-        <div class="row items-center justify-end q-gutter-md">
-          <div class="text-subtitle2">Calendar View</div>
-          <q-option-group
-            v-model="calendarViewDays"
-            :options="[
-              { label: '14 days', value: 14 },
-              { label: '42 days', value: 42 },
-              { label: '3 months', value: 84 },
-            ]"
-            color="primary"
-            inline
-            dense
-            size="xs"
-          />
-        </div>
+        <q-btn
+          unelevated
+          size="md"
+          color="blue"
+          text-color="white"
+          @click="setEventDateToToday"
+          class="text-weight-bold today-jump-btn"
+          style="font-size: 16px"
+        >
+          TODAY
+        </q-btn>
+        <q-btn
+          v-for="(month, index) in nextSixMonths"
+          :key="month.value"
+          unelevated
+          size="md"
+          :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
+          text-color="white"
+          @click="jumpToMonth(month.value)"
+          :class="['text-weight-bold', { 'first-month-btn': index === 0 }]"
+          style="font-size: 16px"
+        >
+          <template v-if="month.label.startsWith('Jan')">
+            {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
+          </template>
+          <template v-else>
+            {{ month.label.toUpperCase() }}
+          </template>
+        </q-btn>
       </div>
     </div>
     <div class="row items-center">
@@ -166,38 +180,26 @@
         </table>
       </div>
     </div>
-    <!-- Quick Date Buttons and Next button under the calendar -->
-    <div class="row q-gutter-sm q-mt-md q-mb-lg items-center">
-      <q-btn
-        unelevated
-        size="md"
-        color="blue"
-        text-color="white"
-        @click="setEventDateToToday"
-        class="text-weight-bold"
-        style="font-size: 16px"
-      >
-        TODAY
-      </q-btn>
-      <q-btn
-        v-for="(month, index) in nextSixMonths"
-        :key="month.value"
-        unelevated
-        size="md"
-        :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
-        text-color="white"
-        @click="jumpToMonth(month.value)"
-        class="text-weight-bold"
-        style="font-size: 16px"
-      >
-        <template v-if="month.label.startsWith('Jan')">
-          {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
-        </template>
-        <template v-else>
-          {{ month.label.toUpperCase() }}
-        </template>
-      </q-btn>
-      <div class="q-ml-auto">
+    <!-- Prev button and visible days per page option (moved to bottom) -->
+    <div class="row q-mb-md items-center">
+      <div class="col">
+        <div class="row items-center q-gutter-md">
+          <div class="text-subtitle2">Calendar View</div>
+          <q-option-group
+            v-model="calendarViewDays"
+            :options="[
+              { label: '14 days', value: 14 },
+              { label: '42 days', value: 42 },
+              { label: '3 months', value: 84 },
+            ]"
+            color="primary"
+            inline
+            dense
+            size="xs"
+          />
+        </div>
+      </div>
+      <div class="col text-right">
         <q-btn
           unelevated
           icon-right="chevron_right"
@@ -996,6 +998,13 @@ function isWeekend(day: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.today-jump-btn {
+  margin-right: 18px;
+}
+.first-month-btn {
+  background-color: #66bb6a !important; /* warm green */
+  color: #fff !important;
 }
 .calendar-event-pill .event-time {
   font-weight: 600;
