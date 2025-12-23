@@ -157,15 +157,14 @@ async function copyStyledTask() {
 
 function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const lines: string[] = [];
-  lines.push(task.name || '');
+  // omit title per user request; include date/time only
   if (task.date || task.eventTime) lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
   lines.push('');
   for (const item of parsed) {
     if (item.type === 'list') {
-      // raw contains original line; remove leading markers and [x]
       let raw = item.raw || '';
       raw = raw.replace(/^\s*[-*]\s*/, '').replace(/^\s*\d+[.)]\s*/, '');
-      const checked = item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
+      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
       const clean = raw.replace(/^\s*\[[xX]\]\s*/, '').trim();
       lines.push(`${checked ? '✔' : '-'} ${clean}`);
     } else {
@@ -173,9 +172,7 @@ function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; htm
       if (text) lines.push(text);
     }
   }
-  lines.push('');
-  lines.push(`Priority: ${task.priority || ''}`);
-  if (task.groupId) lines.push(`Group: ${props.groupName || ''}`);
+  // omit priority/group per user request
   return lines.join('\n');
 }
 
@@ -188,37 +185,29 @@ function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: st
     critical: '#f44336',
   };
   const parts: string[] = [];
+  // overall container; use default font for title (omitted) and smaller font for content
   parts.push('<div style="font-family: Arial, Helvetica, sans-serif; color: #222;">');
-  parts.push(`<h2 style="margin:0 0 6px 0;">${esc(task.name || '')}</h2>`);
+  // include only date/time (no title)
   if (task.date || task.eventTime) {
-    parts.push(`<div style="color:#666;font-size:0.95em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
+    parts.push(`<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
   }
-  // If parsed contains list items, render as UL using parsed entries
+  // Render content using parsed lines; lists get smaller font
   const listItems = parsed.filter(p => p.type === 'list');
   if (listItems.length > 0) {
-    parts.push('<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;">');
+    parts.push('<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;font-size:13px;line-height:1.4;font-weight:normal;">');
     for (const item of listItems) {
-      const checked = item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
-      // item.html is already escaped HTML for content
-      parts.push(`<li style="margin-bottom:4px;">${checked? '&#x2705; ' : ''}${item.html}</li>`);
+      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
+      parts.push(`<li style="margin-bottom:4px;font-weight:normal;">${checked? '&#x2705; ' : ''}${item.html}</li>`);
     }
     parts.push('</ul>');
   } else {
-    // fallback: render paragraphs from parsed text entries
     for (const item of parsed) {
       if (item.type === 'text' && item.html && item.html.trim()) {
-        parts.push(`<p style="margin:0 0 6px 0;">${item.html}</p>`);
+        parts.push(`<p style="margin:0 0 6px 0;font-size:13px;line-height:1.4;font-weight:normal;">${item.html}</p>`);
       }
     }
   }
-  const p = task.priority || '';
-  const pColor = priorityColors[p] || '#9e9e9e';
-  parts.push(`<div style="margin-top:8px;">`);
-  parts.push(`<span style="display:inline-block;padding:6px 8px;border-radius:12px;background:${pColor};color:#fff;font-size:0.85em;">Priority: ${esc(p)}</span>`);
-  if (task.groupId) {
-    parts.push(`<span style="display:inline-block;padding:6px 8px;border-radius:12px;background:#eee;color:#333;font-size:0.85em;margin-left:8px;">${esc(props.groupName||'')}</span>`);
-  }
-  parts.push('</div>');
+  // omit priority/group per user request
   parts.push('</div>');
   return parts.join('');
 }
