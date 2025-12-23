@@ -49,34 +49,22 @@
 
     <!-- Day View -->
     <div v-else>
-      <div class="row q-col-gutter-md">
-        <!-- Full-width Tasks Panel -->
-        <div class="col-12 left-panel">
+      <div class="row q-col-gutter-md tasks-row">
+        <!-- Tasks column (left) and Replenishment column (right) -->
+        <div class="col-12 left-panel tasks-column">
           <q-card>
             <q-card-section>
-              <div class="text-h6 text-primary row items-center justify-between">
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="chevron_left"
-                  @click="prevDay"
-                  color="primary"
-                />
-                <div class="row items-center q-gutter-md">
-                  <span class="text-caption text-primary q-mr-sm">Task list:</span>
-                  <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{ getTimeDifferenceDisplay(currentDate) }}</span>
-                  <span>&nbsp;|&nbsp;</span>
-                  <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
+              <div class="text-h6 text-primary">
+                <div>Task list:</div>
+                <div class="row items-center justify-between" style="align-items:center; margin-top:6px">
+                  <div class="row items-center" style="gap:8px">
+                    <q-btn flat dense round icon="chevron_left" @click="prevDay" color="primary" />
+                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                    <span class="q-mx-sm">|</span>
+                    <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
+                    <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
+                  </div>
                 </div>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="chevron_right"
-                  @click="nextDay"
-                  color="primary"
-                />
               </div>
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
@@ -89,14 +77,13 @@
                   v-for="task in tasksWithTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                  :class="{
+                    :class="{
                     'bg-grey-2': Number(task.status_id) === 0,
                     'selected-task': selectedTaskId === task.id,
                   }"
-                  :active="selectedTaskId === task.id"
-                  clickable
-                  @click="setTaskToEdit(task)"
-                  style="width: 320px"
+                    :active="selectedTaskId === task.id"
+                    clickable
+                    @click="setTaskToEdit(task)"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
@@ -206,7 +193,6 @@
                   :active="selectedTaskId === task.id"
                   clickable
                   @click="setTaskToEdit(task)"
-                  style="width: 320px"
                 >
                   <q-item-section>
                     <q-item-label
@@ -287,24 +273,29 @@
                   </q-item-section>
                 </q-item>
               </template>
-              <!-- Replenishment section (separate list at end) -->
-              <q-separator v-if="replenishTasks.length > 0" class="q-my-md" />
-              <q-item-label v-if="replenishTasks.length > 0" header class="text-grey-7">
-                Replenishment
-              </q-item-label>
-              <div v-if="replenishTasks.length > 0">
-                <q-card flat class="q-pa-sm">
-                  <q-list dense>
-                    <q-item v-for="r in replenishTasks" :key="r.id" clickable @click="toggleStatus(r)" class="replenish-item">
-                      <q-item-section side>
-                        <q-checkbox :model-value="Number(r.status_id) === 0" />
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label :class="{ 'text-strike': Number(r.status_id) === 0 }"><strong>{{ r.name }}</strong></q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-card>
+
+            </div>
+          </q-card>
+        </div>
+        <!-- Right column for Replenishment list -->
+        <div class="col-12 replenish-column">
+          <q-card flat class="q-pa-sm q-mb-md" style="background:#e8f5ff; border-radius:8px;">
+            <div class="row items-center" style="gap:8px">
+              <q-icon name="shopping_cart" color="primary" />
+              <div class="text-subtitle2 text-primary"><strong>Replenishment</strong></div>
+            </div>
+            <div class="replenish-grid q-mt-sm">
+              <div
+                v-for="r in replenishTasks"
+                :key="r.id"
+                class="replenish-item card q-pa-sm"
+                @click="toggleStatus(r)"
+                role="button"
+              >
+                <div class="row items-center justify-between" style="gap:8px">
+                  <div :class="{ 'text-strike': Number(r.status_id) === 0 }">{{ r.name }}</div>
+                  <q-checkbox :model-value="Number(r.status_id) === 0" />
+                </div>
               </div>
             </div>
           </q-card>
@@ -323,6 +314,8 @@
           <div class="q-mb-sm">
             <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
           </div>
+
+          <!-- Replenishment items are rendered with other tasks (no separate right-column panel) -->
 
           <div v-if="mode === 'preview' && taskToEdit">
             <TaskPreview
@@ -355,6 +348,8 @@
               @filter-parent-tasks="filterParentTasks"
             />
           </div>
+
+          <!-- duplicate replenishment card removed (now in tasks row right column) -->
 
           <!-- Notes removed per layout update -->
         </div>
@@ -1680,6 +1675,46 @@ onMounted(async () => {
 .task-card {
   min-width: 280px;
   max-width: 360px;
+  flex: 0 0 320px;
+}
+
+.replenish-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.replenish-item {
+  cursor: pointer;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.6);
+  padding: 8px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Layout helpers to let the replenish column size automatically */
+.tasks-row {
+  align-items: flex-start;
+}
+.tasks-column {
+  flex: 1 1 0;
+}
+.replenish-column {
+  flex: 0 0 auto;
+  width: auto;
+  /* keep it from growing too large on wide screens */
+  max-width: 420px;
+  min-width: 220px;
+}
+
+@media (max-width: 767px) {
+  .replenish-column {
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 </style>
 
