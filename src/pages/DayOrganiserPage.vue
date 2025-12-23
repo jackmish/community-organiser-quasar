@@ -89,6 +89,7 @@
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
+                    <div v-if="getEventHoursDisplay(task)" class="text-caption text-grey-7 q-mt-xs">{{ getEventHoursDisplay(task) }}</div>
                   </q-item-section>
                   <q-item-section side>
                     <q-checkbox
@@ -746,6 +747,30 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
     const dayText = absDaysDiff === 1 ? "day" : "days";
     return `${absDaysDiff} ${dayText} ago`;
   }
+};
+
+// Return a short display for hours difference when a task has exact time
+const getEventHoursDisplay = (task: any) => {
+  const dateStr = task?.date || task?.eventDate || '';
+  const timeStr = task?.eventTime || '';
+  if (!dateStr || !timeStr) return '';
+  const dt = new Date(`${dateStr}T${timeStr}:00`);
+  if (isNaN(dt.getTime())) return '';
+  const now = new Date();
+  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const sign = diffHours >= 0 ? 1 : -1;
+  const abs = Math.abs(diffHours);
+  const hours = Math.floor(abs);
+  const minutes = Math.round((abs - hours) * 60);
+  let str = '';
+  if (hours === 0) {
+    str = `${minutes}m`;
+  } else if (minutes === 0) {
+    str = `${hours}h`;
+  } else {
+    str = `${hours}h ${minutes}m`;
+  }
+  return sign >= 0 ? `In ${str}` : `${str} ago`;
 };
 
 const today = new Date();

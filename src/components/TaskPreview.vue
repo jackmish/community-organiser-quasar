@@ -7,7 +7,10 @@
         </div>
             <div class="q-mt-md">
             <div class="text-h5">{{ task.name }}</div>
-            <div class="text-caption text-grey-7 q-mb-sm">{{ task.date }} {{ task.eventTime || '' }}</div>
+            <div class="text-caption text-grey-7 q-mb-sm">
+              {{ task.date }} {{ task.eventTime || '' }}
+              <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
+            </div>
 
             <div>
               <div v-for="(line, idx) in parsedLines" :key="idx">
@@ -127,6 +130,31 @@ function stripTitleFrom(text = '', title = '') {
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+// Compute hours diff for preview display when task has exact time
+const eventTimeHoursDisplay = computed(() => {
+  const task = props.task || ({} as any);
+  const dateStr = (task.date || task.eventDate || '').toString();
+  const timeStr = task.eventTime || '';
+  if (!dateStr || !timeStr) return '';
+  const dt = new Date(`${dateStr}T${timeStr}:00`);
+  if (isNaN(dt.getTime())) return '';
+  const now = new Date();
+  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const sign = diffHours >= 0 ? 1 : -1;
+  const abs = Math.abs(diffHours);
+  const hours = Math.floor(abs);
+  const minutes = Math.round((abs - hours) * 60);
+  let str = '';
+  if (hours === 0) {
+    str = `${minutes}m`;
+  } else if (minutes === 0) {
+    str = `${hours}h`;
+  } else {
+    str = `${hours}h ${minutes}m`;
+  }
+  return sign >= 0 ? `In ${str}` : `${str} ago`;
+});
 
 // Copy helper functions
 async function copyStyledTask() {

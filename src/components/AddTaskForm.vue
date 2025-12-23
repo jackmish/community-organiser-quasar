@@ -210,6 +210,37 @@ const eventTimeMinute = computed(() => {
   return val;
 });
 
+// Compute hour difference between now and the full event datetime when exact hour is set
+const eventDateTimeHoursDiff = computed<number | null>(() => {
+  const dateStr = localNewTask.value.eventDate;
+  const timeStr = localNewTask.value.eventTime; // expected "HH:MM"
+  if (!dateStr || !timeStr) return null;
+  // Construct a local datetime string
+  const dt = new Date(`${dateStr}T${timeStr}:00`);
+  if (isNaN(dt.getTime())) return null;
+  const now = new Date();
+  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return diffHours;
+});
+
+const eventTimeHoursDisplay = computed(() => {
+  const h = eventDateTimeHoursDiff.value;
+  if (h === null) return "";
+  const sign = h >= 0 ? 1 : -1;
+  const abs = Math.abs(h);
+  const hours = Math.floor(abs);
+  const minutes = Math.round((abs - hours) * 60);
+  let str = "";
+  if (hours === 0) {
+    str = `${minutes}m`;
+  } else if (minutes === 0) {
+    str = `${hours}h`;
+  } else {
+    str = `${hours}h ${minutes}m`;
+  }
+  return sign >= 0 ? `In ${str}` : `${str} ago`;
+});
+
 // Watch timeType to clear/restore time when toggling modes
 const cachedTime = ref<{ hour: string | number; minute: string | number }>({
   hour: "",
@@ -642,7 +673,7 @@ function onSubmit(event: Event) {
                     v-model="timeType"
                     :options="[
                       { label: 'Whole Day', value: 'wholeDay' },
-                      { label: 'Exact Hour', value: 'exacthour' },
+                      { label: 'Exact Hour', value: 'exactHour' },
                     ]"
                     color="primary"
                     inline
@@ -650,18 +681,26 @@ function onSubmit(event: Event) {
                     class="q-mb-sm"
                   />
                   <div class="row q-gutter-xs">
-                    <q-input
-                      ref="hourInput"
-                      :model-value="eventTimeHour"
-                      @update:model-value="updateEventTimeHour"
-                      type="number"
-                      label="Hour"
-                      outlined
-                      dense
-                      min="0"
-                      max="23"
-                      style="max-width: 80px"
-                    />
+                    <div class="column" style="max-width: 80px">
+                      <q-input
+                        ref="hourInput"
+                        :model-value="eventTimeHour"
+                        @update:model-value="updateEventTimeHour"
+                        type="number"
+                        label="Hour"
+                        outlined
+                        dense
+                        min="0"
+                        max="23"
+                        style="max-width: 80px"
+                      />
+                      <div
+                        v-if="eventTimeHoursDisplay"
+                        class="text-caption text-grey-7 q-mt-xs"
+                      >
+                        {{ eventTimeHoursDisplay }}
+                      </div>
+                    </div>
                     <q-input
                       ref="minuteInput"
                       :model-value="eventTimeMinute"
