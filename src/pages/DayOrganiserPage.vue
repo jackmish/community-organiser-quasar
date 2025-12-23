@@ -168,6 +168,9 @@
                       </div>
                     </div>
                   </q-item-section>
+
+                  <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
+                  <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
                 </q-item>
               </template>
 
@@ -279,6 +282,7 @@
                       </q-item-section>
                     </div>
                   </q-item-section>
+
                 </q-item>
               </template>
 
@@ -307,7 +311,22 @@
               >
                 <div class="row items-center justify-between" style="gap:8px">
                   <div :class="{ 'text-strike': Number(r.status_id) === 0 }" :style="{ color: getReplenishText(r) }">{{ r.name }}</div>
-                  <q-checkbox :model-value="Number(r.status_id) === 0" />
+
+                </div>
+              </div>
+            </div>
+            <q-separator class="q-mt-sm" />
+            <div class="q-mt-sm">
+              <div class="row items-center" style="gap:8px">
+                <q-icon name="check" color="grey-7" />
+                <div class="text-subtitle2"><strong>Done</strong></div>
+              </div>
+              <div class="q-mt-sm">
+                <div v-for="d in doneTasks" :key="d.id" class="done-item" @click="toggleStatus(d)">
+                  <div class="row items-center justify-between" style="gap:8px">
+                    <div :class="{ 'text-strike': Number(d.status_id) === 0 }" style="color: rgba(0,0,0,0.45)">{{ d.name }}</div>
+                    <q-icon name="done" size="18px" color="grey-6" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1346,18 +1365,23 @@ const handleReplenishRestore = async (taskId: string) => {
 
 // Group tasks by whether they have time
 const replenishTasks = computed(() => {
-  const val = sortedTasks.value.filter((t) => t.type_id === "Replenish");
-  console.log("[computed] replenishTasks", val);
+  // only show replenish tasks that are not done
+  const val = sortedTasks.value.filter((t) => t.type_id === "Replenish" && Number(t.status_id) !== 0);
   return val;
 });
 
+// Tasks that are marked done (status_id === 0)
+const doneTasks = computed(() => {
+  return sortedTasks.value.filter((t) => Number(t.status_id) === 0);
+});
+
 const tasksWithTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !!t.eventTime && t.type_id !== "Replenish");
+  const val = sortedTasks.value.filter((t) => !!t.eventTime && t.type_id !== "Replenish" && Number(t.status_id) !== 0);
   console.log("[computed] tasksWithTime", val);
   return val;
 });
 const tasksWithoutTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !t.eventTime && t.type_id !== "Replenish");
+  const val = sortedTasks.value.filter((t) => !t.eventTime && t.type_id !== "Replenish" && Number(t.status_id) !== 0);
   console.log("[computed] tasksWithoutTime", val);
   return val;
 });
@@ -1804,6 +1828,29 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.task-card, .replenish-item {
+  position: relative;
+}
+
+.done-floating {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  pointer-events: none;
+  color: inherit;
+}
+
+.done-item {
+  filter: grayscale(100%);
+  opacity: 0.55;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
 }
 
 .color-swatch {
