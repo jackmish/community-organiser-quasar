@@ -286,6 +286,7 @@
         <div class="col-12 col-md-6">
           <CalendarView
             :selected-date="newTask.eventDate"
+            :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
           />
         </div>
@@ -832,6 +833,15 @@ const {
   deleteGroup,
   getGroupsByParent,
 } = useDayOrganiser();
+
+// All tasks across days — used to render calendar events
+const allTasks = computed(() => {
+  try {
+    return getTasksInRange("1970-01-01", "9999-12-31");
+  } catch (e) {
+    return [] as Task[];
+  }
+});
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const showGroupDialog = ref(false);

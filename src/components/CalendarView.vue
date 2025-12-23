@@ -114,32 +114,49 @@
                   ]"
                 >
                   <div class="calendar-day-content">
-                    <div class="calendar-day-number">
-                      {{ new Date(day).getDate() }}
+                    <div class="calendar-top">
+                      <div class="calendar-day-number">
+                        {{ new Date(day).getDate() }}
+                      </div>
+                      <div
+                        v-if="day === format(new Date(), 'yyyy-MM-dd')"
+                        class="calendar-today-label calendar-green-label"
+                      >
+                        TODAY
+                      </div>
+                      <div
+                        v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
+                        class="calendar-today-label"
+                      >
+                        YESTERDAY
+                      </div>
+                      <div
+                        v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
+                        class="calendar-today-label calendar-gray-label"
+                      >
+                        TOMORROW
+                      </div>
+                      <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
+                        {{ getHoliday(day)?.localName }}
+                      </div>
+                      <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
+                        {{ getWeekLabel(day) }}
+                      </div>
                     </div>
-                    <div
-                      v-if="day === format(new Date(), 'yyyy-MM-dd')"
-                      class="calendar-today-label calendar-green-label"
-                    >
-                      TODAY
-                    </div>
-                    <div
-                      v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
-                      class="calendar-today-label"
-                    >
-                      YESTERDAY
-                    </div>
-                    <div
-                      v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
-                      class="calendar-today-label calendar-gray-label"
-                    >
-                      TOMORROW
-                    </div>
-                    <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
-                      {{ getHoliday(day)?.localName }}
-                    </div>
-                    <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
-                      {{ getWeekLabel(day) }}
+                    <!-- Render events for this day (TimeEvent tasks) -->
+                    <div class="calendar-events">
+                      <template v-if="props.tasks && props.tasks.length">
+                        <div
+                          v-for="ev in (props.tasks.filter(t => (t.type_id === 'TimeEvent') && ((t.date || t.eventDate) === day)))"
+                          :key="ev.id"
+                          class="calendar-event-pill q-pa-xs"
+                          :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
+                          :style="{ backgroundColor: priorityColors[ev.priority] || '#888', color: '#fff' }"
+                        >
+                          <span class="event-time" v-if="ev.eventTime">{{ ev.eventTime }} </span>
+                          <span class="event-title">{{ ev.name }}</span>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </q-btn>
@@ -201,6 +218,8 @@ import { format, addDays, startOfWeek } from "date-fns";
 
 const props = defineProps<{
   selectedDate?: string;
+  // Optional list of tasks so the calendar can render events
+  tasks?: Array<any>;
 }>();
 
 const emit = defineEmits<{
@@ -289,6 +308,14 @@ class CalendarDisplayManager {
 }
 
 const displayManager = new CalendarDisplayManager();
+
+// Map priority values to colors (hex) for calendar event backgrounds
+const priorityColors: Record<string, string> = {
+  low: '#26c6da',
+  medium: '#6d4c41',
+  high: '#ff9800',
+  critical: '#f44336',
+};
 
 // Reset manager when calendar base or view size changes
 watch([calendarBaseDate, calendarViewDays], () => displayManager.reset());
@@ -836,8 +863,15 @@ function isWeekend(day: string) {
 .calendar-day-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  align-items: stretch;
+  gap: 6px;
+  height: 100%;
+}
+
+.calendar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .calendar-day-number {
@@ -866,6 +900,14 @@ function isWeekend(day: string) {
 }
 
 .calendar-green-label {
+
+/* Make the calendar button a column flex container so events can be auto-pushed */
+.calendar-day-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 86px; /* give some vertical space so events can sit at bottom */
+}
   color: white !important;
   background-color: #1976d2 !important;
   padding: 2px 6px;
@@ -929,5 +971,37 @@ function isWeekend(day: string) {
 
 .calendar-day-btn.after-first-in-row {
   border-top: 5px solid #1976d2 !important;
+}
+
+.calendar-events {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Ensure day content stacks labels above events and pushes events to the bottom */
+.calendar-day-content {
+  display: flex;
+  flex-direction: column;
+}
+.calendar-event-pill {
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.calendar-event-pill .event-time {
+  font-weight: 600;
+  opacity: 0.95;
+}
+.calendar-event-pill .event-title {
+  font-weight: 600;
 }
 </style>
