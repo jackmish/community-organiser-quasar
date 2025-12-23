@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, watch, defineProps, defineEmits, onMounted } from "vue";
+import { computed, ref, nextTick, watch, defineProps, defineEmits, onMounted, onBeforeUnmount } from "vue";
 import CalendarView from "./CalendarView.vue";
 import {
   priorityColors as themePriorityColors,
@@ -54,6 +54,7 @@ const monthInput = ref<any>(null);
 const yearInput = ref<any>(null);
 const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
+const replenishInput = ref<any>(null);
 // Auto-increment year checkbox state
 const autoIncrementYear = ref(true);
 
@@ -118,6 +119,8 @@ const typeOptions = [
 // Replenish helper state
 const replenishQuery = ref("");
 const selectedReplenishId = ref<string | null>(null);
+const showReplenishList = ref(false);
+const replenishListStyle = ref<any>({ display: "none" });
 
 const replenishMatches = computed<any[]>(() => {
   const q = (replenishQuery.value || "").toLowerCase().trim();
@@ -135,6 +138,7 @@ function selectReplenishMatch(t: any) {
   // clear selection/input after restore
   selectedReplenishId.value = null;
   replenishQuery.value = "";
+  showReplenishList.value = false;
 }
 
 function createReplenishFromInput() {
@@ -149,7 +153,104 @@ function createReplenishFromInput() {
   replenishQuery.value = "";
   selectedReplenishId.value = null;
   localNewTask.value.description = "";
+  showReplenishList.value = false;
 }
+
+// Auto-capitalize first letter typed into the replenish search box
+watch(replenishQuery, (val) => {
+  if (typeof val !== "string") return;
+  if (!val) return;
+  const corrected = val.charAt(0).toUpperCase() + val.slice(1);
+  if (corrected !== val) replenishQuery.value = corrected;
+});
+
+function onReplenishInput(val: string | number | null) {
+  // coerce to string safely (Quasar may emit number|null)
+  const s = val == null ? "" : String(val);
+  // show list only when there's non-empty input
+  showReplenishList.value = !!(s && s.trim());
+  if (showReplenishList.value) {
+    nextTick(positionReplenishList);
+  } else {
+    replenishListStyle.value = { display: "none" };
+  }
+}
+
+function onReplenishFocus() {
+  // only show list on focus when there's content in the input
+  if (replenishQuery.value && replenishQuery.value.trim()) {
+    showReplenishList.value = true;
+    nextTick(positionReplenishList);
+  } else {
+    showReplenishList.value = false;
+  }
+}
+
+function positionReplenishList() {
+  try {
+    const inputEl = replenishInput.value?.$el || replenishInput.value;
+    const input = inputEl?.querySelector ? inputEl.querySelector("input") : inputEl;
+    if (!input) {
+      replenishListStyle.value = { display: "none" };
+      return;
+    }
+    const rect = input.getBoundingClientRect();
+    const left = rect.left + (window.scrollX || window.pageXOffset || 0);
+    const top = rect.bottom + (window.scrollY || window.pageYOffset || 0) + 6;
+    const width = rect.width || input.offsetWidth || 280;
+    replenishListStyle.value = {
+      position: "fixed",
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${width}px`,
+      background: "#fff",
+      borderRadius: "8px",
+      boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+      padding: "8px",
+      zIndex: 4000,
+      maxHeight: "260px",
+      overflow: "auto",
+      display: "block",
+    };
+  } catch (e) {
+    replenishListStyle.value = { display: "none" };
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("resize", positionReplenishList);
+  window.addEventListener("scroll", positionReplenishList, true);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", positionReplenishList);
+  window.removeEventListener("scroll", positionReplenishList, true);
+});
+
+// When user switches type to Replenish while in add mode, focus the search input
+watch(
+  () => localNewTask.value.type_id,
+  (val) => {
+    if (val === "Replenish" && props.mode === "add") {
+      nextTick(() => {
+        try {
+          // prefer Quasar focus API
+          if (replenishInput.value && typeof replenishInput.value.focus === "function") {
+            replenishInput.value.focus();
+            return;
+          }
+          const el = replenishInput.value?.$el || replenishInput.value;
+          const input = el?.querySelector ? el.querySelector("input") : null;
+          if (input && typeof input.focus === "function") {
+            input.focus();
+          }
+        } catch (e) {
+          // ignore
+        }
+      });
+    }
+  }
+);
 
 // When parent provides an initialTask, populate localNewTask
 watch(
@@ -794,28 +895,35 @@ function onSubmit(event: Event) {
             <div
               v-if="localNewTask.type_id === 'Replenish' && mode === 'add'"
               class="q-pa-sm col"
+              style="position:relative"
             >
               <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
               <q-input
+                ref="replenishInput"
                 v-model="replenishQuery"
+                @update:model-value="onReplenishInput"
+                @focus="onReplenishFocus"
                 label="Search existing Replenish or type a new title"
                 outlined
                 dense
                 class="col"
               />
-              <div v-if="replenishMatches.length" class="q-mt-sm">
-                <q-list dense>
+                <div
+                  v-if="showReplenishList && (replenishQuery && replenishQuery.trim()) && replenishMatches.length"
+                  class="q-mt-sm"
+                  :style="replenishListStyle"
+                >
+                  <q-list dense separator>
                   <q-item
                     v-for="m in replenishMatches"
                     :key="m.id"
                     clickable
                     @click="selectReplenishMatch(m)"
+                    class="q-pa-sm bg-white"
+                    style="border-radius:6px; margin-bottom:6px"
                   >
                     <q-item-section>
-                      <div>{{ m.name }}</div>
-                      <div class="text-caption text-grey-6">
-                        {{ m.date || m.eventDate || "" }}
-                      </div>
+                      <div class="text-body1">{{ m.name }}</div>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -898,7 +1006,11 @@ function onSubmit(event: Event) {
               </q-card>
             </div>
 
-            <div class="row items-center" style="gap: 8px">
+            <div
+              v-if="!(localNewTask.type_id === 'Replenish' && props.mode === 'add')"
+              class="row items-center"
+              style="gap: 8px"
+            >
               <q-checkbox v-model="autoTitleEnabled" dense label="Auto" />
               <q-input
                 v-model="localNewTask.name"
