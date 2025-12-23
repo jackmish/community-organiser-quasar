@@ -1435,24 +1435,43 @@ const getGroupColor = (groupId?: string): string => {
   return group?.color || "#1976d2";
 };
 
-// 12 default color sets for Replenishment tasks
+// Replenish color sets grouped by family (4 tones each), ordered dark->bright
 const replenishColorSets = [
-  { id: 'set-1', bg: '#FFD54F', text: '#BF360C' },
-  { id: 'set-2', bg: '#66BB6A', text: '#1B5E20' },
-  { id: 'set-3', bg: '#42A5F5', text: '#0D47A1' },
-  { id: 'set-4', bg: '#AB47BC', text: '#4A148C' },
-  { id: 'set-5', bg: '#EF5350', text: '#B71C1C' },
-  { id: 'set-6', bg: '#FFA726', text: '#E65100' },
-  { id: 'set-7', bg: '#26A69A', text: '#004D40' },
-  { id: 'set-8', bg: '#9CCC65', text: '#33691E' },
-  { id: 'set-9', bg: '#FF8A65', text: '#BF360C' },
-  { id: 'set-10', bg: '#7E57C2', text: '#311B92' },
-  { id: 'set-11', bg: '#5C6BC0', text: '#1A237E' },
-  { id: 'set-12', bg: '#FFF176', text: '#827717' },
-  { id: 'set-13', bg: '#000000', text: '#ffffff' },
-  { id: 'set-14', bg: '#37474F', text: '#ECEFF1' },
-  { id: 'set-15', bg: '#9E9E9E', text: '#212121' },
-  { id: 'set-16', bg: '#ffffff', text: '#000000' },
+  // Reds (dark -> bright)
+  { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
+  { id: 'set-2', bg: '#ef5350', text: '#ffffff' },
+  { id: 'set-4', bg: '#ff5252', text: '#000000' },
+  { id: 'set-3', bg: '#ff8a80', text: '#000000' },
+  // Yellows (dark -> bright)
+  { id: 'set-5', bg: '#fdd835', text: '#000000' },
+  { id: 'set-7', bg: '#ffd54f', text: '#000000' },
+  { id: 'set-6', bg: '#fff176', text: '#000000' },
+  { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
+  // Greens (dark -> bright)
+  { id: 'set-9', bg: '#2e7d32', text: '#ffffff' },
+  { id: 'set-10', bg: '#66bb6a', text: '#000000' },
+  { id: 'set-11', bg: '#9ccc65', text: '#000000' },
+  { id: 'set-12', bg: '#a5d6a7', text: '#000000' },
+  // Azures / Cyans (dark -> bright)
+  { id: 'set-13', bg: '#00acc1', text: '#ffffff' },
+  { id: 'set-14', bg: '#26c6da', text: '#000000' },
+  { id: 'set-15', bg: '#80deea', text: '#000000' },
+  { id: 'set-16', bg: '#b2ebf2', text: '#000000' },
+  // Blues (dark -> bright)
+  { id: 'set-17', bg: '#0d47a1', text: '#ffffff' },
+  { id: 'set-18', bg: '#1976d2', text: '#ffffff' },
+  { id: 'set-19', bg: '#5c6bc0', text: '#ffffff' },
+  { id: 'set-20', bg: '#90caf9', text: '#000000' },
+  // Violets (dark -> bright)
+  { id: 'set-21', bg: '#6a1b9a', text: '#ffffff' },
+  { id: 'set-22', bg: '#8e24aa', text: '#ffffff' },
+  { id: 'set-23', bg: '#ab47bc', text: '#ffffff' },
+  { id: 'set-24', bg: '#ce93d8', text: '#000000' },
+  // Black / Gray / White (dark -> bright)
+  { id: 'set-25', bg: '#000000', text: '#ffffff' },
+  { id: 'set-26', bg: '#37474f', text: '#ffffff' },
+  { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
+  { id: 'set-28', bg: '#ffffff', text: '#000000' },
 ];
 
 const findColorSet = (id?: string | null) => {
