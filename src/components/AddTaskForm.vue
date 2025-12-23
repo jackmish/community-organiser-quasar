@@ -498,28 +498,28 @@ const priorityOptions = [
     label: "Lo",
     value: "low",
     icon: "low_priority",
-    color: themePriorityColors.low,
+    background: themePriorityColors.low,
     textColor: themePriorityTextColor("low"),
   },
   {
     label: "Med",
     value: "medium",
     icon: "drag_handle",
-    color: themePriorityColors.medium,
+    background: themePriorityColors.medium,
     textColor: themePriorityTextColor("medium"),
   },
   {
     label: "Hi",
     value: "high",
     icon: "priority_high",
-    color: themePriorityColors.high,
+    background: themePriorityColors.high,
     textColor: themePriorityTextColor("high"),
   },
   {
     label: "Crit",
     value: "critical",
     icon: "warning",
-    color: themePriorityColors.critical,
+    background: themePriorityColors.critical,
     textColor: themePriorityTextColor("critical"),
   },
 ];
@@ -755,7 +755,7 @@ function onSubmit(event: Event) {
                     v-for="option in priorityOptions"
                     :key="option.value"
                     :color="
-                      localNewTask.priority === option.value ? option.color : 'grey-3'
+                      localNewTask.priority === option.value ? option.background : 'grey-3'
                     "
                     :text-color="
                       localNewTask.priority === option.value ? option.textColor : 'grey-7'
@@ -769,7 +769,7 @@ function onSubmit(event: Event) {
                     :outline="localNewTask.priority !== option.value"
                     :style="{
                       backgroundColor:
-                        localNewTask.priority === option.value ? option.color : undefined,
+                        localNewTask.priority === option.value ? option.background : undefined,
                       color:
                         localNewTask.priority === option.value
                           ? option.textColor
