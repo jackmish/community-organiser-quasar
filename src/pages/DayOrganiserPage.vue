@@ -68,7 +68,7 @@
                 />
               </div>
             </q-card-section>
-            <q-card-section v-if="currentDayData.tasks.length === 0">
+            <q-card-section v-if="sortedTasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
             <div class="task-list" v-else>
