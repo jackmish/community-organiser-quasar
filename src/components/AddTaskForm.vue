@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, defineProps, defineEmits, onMounted } from "vue";
 import CalendarView from "./CalendarView.vue";
+import {
+  priorityColors as themePriorityColors,
+  priorityTextColor as themePriorityTextColor,
+  formatEventHoursDiff,
+} from "./theme";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -224,21 +229,7 @@ const eventDateTimeHoursDiff = computed<number | null>(() => {
 });
 
 const eventTimeHoursDisplay = computed(() => {
-  const h = eventDateTimeHoursDiff.value;
-  if (h === null) return "";
-  const sign = h >= 0 ? 1 : -1;
-  const abs = Math.abs(h);
-  const hours = Math.floor(abs);
-  const minutes = Math.round((abs - hours) * 60);
-  let str = "";
-  if (hours === 0) {
-    str = `${minutes}m`;
-  } else if (minutes === 0) {
-    str = `${hours}h`;
-  } else {
-    str = `${hours}h ${minutes}m`;
-  }
-  return sign >= 0 ? `In ${str}` : `${str} ago`;
+  return formatEventHoursDiff(localNewTask.value.eventDate, localNewTask.value.eventTime);
 });
 
 // Watch timeType to clear/restore time when toggling modes
@@ -507,29 +498,29 @@ const priorityOptions = [
     label: "Lo",
     value: "low",
     icon: "low_priority",
-    color: "cyan-3",
-    textColor: "grey-9",
+    color: themePriorityColors.low,
+    textColor: themePriorityTextColor("low"),
   },
   {
     label: "Med",
     value: "medium",
     icon: "drag_handle",
-    color: "brown-7",
-    textColor: "white",
+    color: themePriorityColors.medium,
+    textColor: themePriorityTextColor("medium"),
   },
   {
     label: "Hi",
     value: "high",
     icon: "priority_high",
-    color: "orange",
-    textColor: "white",
+    color: themePriorityColors.high,
+    textColor: themePriorityTextColor("high"),
   },
   {
     label: "Crit",
     value: "critical",
     icon: "warning",
-    color: "negative",
-    textColor: "white",
+    color: themePriorityColors.critical,
+    textColor: themePriorityTextColor("critical"),
   },
 ];
 

@@ -64,7 +64,8 @@
                   color="primary"
                 />
                 <div class="row items-center q-gutter-md">
-                  <span class="text-weight-bold">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                  <span class="text-caption text-primary q-mr-sm">Task list:</span>
+                  <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{ getTimeDifferenceDisplay(currentDate) }}</span>
                   <span>&nbsp;|&nbsp;</span>
                   <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
                 </div>
@@ -119,7 +120,7 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
-                        text-color="white"
+                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
                       >
                         {{ task.priority }}
@@ -220,7 +221,7 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
-                        text-color="white"
+                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
                       >
                         {{ task.priority }}
@@ -427,6 +428,7 @@
 import { format, addDays, startOfWeek } from "date-fns";
 
 import AddTaskForm from "../components/AddTaskForm.vue";
+import { priorityColors as themePriorityColors, priorityTextColor as themePriorityTextColor, timeDiffClassFor, formatDisplayDate, formatEventHoursDiff } from '../components/theme';
 import TaskPreview from "../components/TaskPreview.vue";
 import ModeSwitcher from "../components/ModeSwitcher.vue";
 import CalendarView from "../components/CalendarView.vue";
@@ -760,28 +762,14 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
   }
 };
 
+// Return a CSS class for the time-diff label: delegate to shared helper
+const getTimeDiffClass = (dayDate: string) => timeDiffClassFor(getTimeDifferenceDisplay(dayDate));
+
 // Return a short display for hours difference when a task has exact time
 const getEventHoursDisplay = (task: any) => {
   const dateStr = task?.date || task?.eventDate || '';
   const timeStr = task?.eventTime || '';
-  if (!dateStr || !timeStr) return '';
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  if (isNaN(dt.getTime())) return '';
-  const now = new Date();
-  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  const sign = diffHours >= 0 ? 1 : -1;
-  const abs = Math.abs(diffHours);
-  const hours = Math.floor(abs);
-  const minutes = Math.round((abs - hours) * 60);
-  let str = '';
-  if (hours === 0) {
-    str = `${minutes}m`;
-  } else if (minutes === 0) {
-    str = `${hours}h`;
-  } else {
-    str = `${hours}h ${minutes}m`;
-  }
-  return sign >= 0 ? `In ${str}` : `${str} ago`;
+  return formatEventHoursDiff(dateStr, timeStr);
 };
 
 const today = new Date();
@@ -1183,15 +1171,15 @@ const priorityOptions = [
     label: "Lo",
     value: "low",
     icon: "low_priority",
-    color: "cyan-3",
+    color: "#81d4fa",
     textColor: "grey-9",
   },
   {
     label: "Med",
     value: "medium",
     icon: "drag_handle",
-    color: "brown-7",
-    textColor: "white",
+    color: "#26c6da",
+    textColor: "grey-9",
   },
   {
     label: "Hi",
@@ -1358,23 +1346,8 @@ const groupTree = computed(() => {
   return val;
 });
 
-const formatDisplayDate = (date: string) => {
-  const dateObj = new Date(date);
-  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-  const day = dateObj.getDate();
-  const month = dateObj.toLocaleDateString("en-US", { month: "long" });
-  const year = dateObj.getFullYear();
-  return `${day} ${month} ${year} | ${weekday}`;
-};
-
 // Return weekday and compact date (e.g., "Tuesday, 23.12.2025")
-const formatDateOnly = (date: string) => {
-  try {
-    return format(new Date(date), "EEEE, dd.MM.yyyy");
-  } catch (e) {
-    return date;
-  }
-};
+const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 // Return weekday (e.g., "Monday")
 const formatWeekday = (date: string) => {
@@ -1382,15 +1355,8 @@ const formatWeekday = (date: string) => {
   return dateObj.toLocaleDateString("en-US", { weekday: "long" });
 };
 
-const priorityColor = (priority: Task["priority"]) => {
-  const colors = {
-    low: "cyan-3",
-    medium: "blue",
-    high: "orange",
-    critical: "negative",
-  };
-  return colors[priority];
-};
+const priorityColor = (priority: Task["priority"]) => themePriorityColors[priority];
+const priorityTextColor = (priority: Task["priority"]) => themePriorityTextColor(priority);
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return "Unknown";

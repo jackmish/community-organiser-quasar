@@ -29,7 +29,7 @@
             </div>
 
             <div class="q-mt-md">
-              <q-chip size="sm" :color="priorityColor(task.priority)" text-color="white">{{ task.priority }}</q-chip>
+              <q-chip size="sm" :color="priorityColor(task.priority)" :text-color="priorityTextColor(task.priority)">{{ task.priority }}</q-chip>
               <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{ groupName }}</q-chip>
             </div>
           </div>
@@ -40,22 +40,18 @@
 <script setup lang="ts">
 import { computed, toRaw } from 'vue';
 import { format } from 'date-fns';
+import { priorityColors, priorityTextColor, formatDisplayDate, formatEventHoursDiff } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string }>();
 const emit = defineEmits(['edit', 'close', 'toggle-status']);
 
 const priorityColor = (p?: string) => {
-  const colors: Record<string, string> = {
-    low: 'cyan-3',
-    medium: 'blue',
-    high: 'orange',
-    critical: 'negative',
-  };
-  return p ? colors[p] || 'grey-4' : 'grey-4';
+  return p ? priorityColors[p] || 'grey-4' : 'grey-4';
 };
 
 const groupName = computed(() => props.groupName || '');
+
 
 // Rendered description with simple replacements:
 // - replace '[x]' with a check emoji
@@ -120,11 +116,7 @@ const displayDate = computed(() => {
   const task = props.task || ({} as any);
   const dateStr = (task.date || task.eventDate || '').toString();
   if (!dateStr) return '';
-  try {
-    return format(new Date(dateStr), 'EEEE, dd.MM.yyyy');
-  } catch (e) {
-    return dateStr;
-  }
+  return formatDisplayDate(dateStr);
 });
 
 /**
@@ -148,24 +140,7 @@ const eventTimeHoursDisplay = computed(() => {
   const task = props.task || ({} as any);
   const dateStr = (task.date || task.eventDate || '').toString();
   const timeStr = task.eventTime || '';
-  if (!dateStr || !timeStr) return '';
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  if (isNaN(dt.getTime())) return '';
-  const now = new Date();
-  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  const sign = diffHours >= 0 ? 1 : -1;
-  const abs = Math.abs(diffHours);
-  const hours = Math.floor(abs);
-  const minutes = Math.round((abs - hours) * 60);
-  let str = '';
-  if (hours === 0) {
-    str = `${minutes}m`;
-  } else if (minutes === 0) {
-    str = `${hours}h`;
-  } else {
-    str = `${hours}h ${minutes}m`;
-  }
-  return sign >= 0 ? `In ${str}` : `${str} ago`;
+  return formatEventHoursDiff(dateStr, timeStr);
 });
 
 // Copy helper functions
@@ -227,8 +202,8 @@ function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; htm
 function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const esc = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const priorityColors: Record<string,string> = {
-    low: '#26c6da',
-    medium: '#1976d2',
+    low: '#81d4fa',
+    medium: '#26c6da',
     high: '#ff9800',
     critical: '#f44336',
   };

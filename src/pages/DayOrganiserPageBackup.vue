@@ -93,7 +93,7 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
-                        text-color="white"
+                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
                       >
                         {{ task.priority }}
@@ -157,7 +157,7 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         :color="priorityColor(task.priority)"
-                        text-color="white"
+                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
                       >
                         {{ task.priority }}
@@ -1230,15 +1230,15 @@ const priorityOptions = [
     label: "Lo",
     value: "low",
     icon: "low_priority",
-    color: "cyan-3",
+    color: "#81d4fa",
     textColor: "grey-9",
   },
   {
     label: "Med",
     value: "medium",
     icon: "drag_handle",
-    color: "brown-7",
-    textColor: "white",
+    color: "#26c6da",
+    textColor: "grey-9",
   },
   {
     label: "Hi",
@@ -1397,12 +1397,18 @@ const formatDisplayDate = (date: string) => {
 
 const priorityColor = (priority: Task["priority"]) => {
   const colors = {
-    low: "cyan-3",
-    medium: "blue",
+    low: "#81d4fa",
+    medium: "#26c6da",
     high: "orange",
     critical: "negative",
   };
   return colors[priority];
+};
+
+const priorityTextColor = (priority: Task["priority"]) => {
+  if (!priority) return 'white';
+  if (priority === 'low' || priority === 'medium') return 'grey-9';
+  return 'white';
 };
 
 const getGroupName = (groupId: string): string => {
