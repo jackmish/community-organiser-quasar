@@ -78,12 +78,16 @@
                   :key="task.id"
                   class="q-pa-md task-card"
                     :class="{
-                    'bg-grey-2': Number(task.status_id) === 0,
-                    'selected-task': selectedTaskId === task.id,
-                  }"
+                      'bg-grey-2': Number(task.status_id) === 0,
+                      'selected-task': selectedTaskId === task.id,
+                    }"
                     :active="selectedTaskId === task.id"
                     clickable
-                    @click="setTaskToEdit(task)"
+                    @pointerdown="() => startLongPress(task)"
+                    @pointerup="cancelLongPress"
+                    @pointercancel="cancelLongPress"
+                    @pointerleave="cancelLongPress"
+                    @click="handleTaskClick(task)"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
@@ -186,13 +190,17 @@
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                  :class="{
-                    'bg-grey-2': Number(task.status_id) === 0,
-                    'selected-task': selectedTaskId === task.id,
-                  }"
-                  :active="selectedTaskId === task.id"
-                  clickable
-                  @click="setTaskToEdit(task)"
+                    :class="{
+                      'bg-grey-2': Number(task.status_id) === 0,
+                      'selected-task': selectedTaskId === task.id,
+                    }"
+                    :active="selectedTaskId === task.id"
+                    clickable
+                    @pointerdown="() => startLongPress(task)"
+                    @pointerup="cancelLongPress"
+                    @pointercancel="cancelLongPress"
+                    @pointerleave="cancelLongPress"
+                    @click="handleTaskClick(task)"
                 >
                   <q-item-section>
                     <q-item-label
@@ -289,8 +297,12 @@
                 v-for="r in replenishTasks"
                 :key="r.id"
                 class="replenish-item card q-pa-sm"
-                @click="toggleStatus(r)"
                 role="button"
+                @pointerdown="() => startLongPress(r)"
+                @pointerup="cancelLongPress"
+                @pointercancel="cancelLongPress"
+                @pointerleave="cancelLongPress"
+                @click="handleReplenishClick(r)"
               >
                 <div class="row items-center justify-between" style="gap:8px">
                   <div :class="{ 'text-strike': Number(r.status_id) === 0 }">{{ r.name }}</div>
@@ -964,6 +976,45 @@ const autoIncrementYear = ref(true);
 const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
 const isUpdatingDate = ref(false);
 const isClickBlocked = ref(false);
+// Long-press handling
+const longPressTimer = ref<number | null>(null);
+const longPressTriggered = ref(false);
+const LONG_PRESS_MS = 600;
+
+function startLongPress(task: Task, ev?: Event) {
+  cancelLongPress();
+  longPressTriggered.value = false;
+  // start timer
+  longPressTimer.value = window.setTimeout(() => {
+    longPressTriggered.value = true;
+    // long-press => open edit directly
+    editTask(task);
+  }, LONG_PRESS_MS) as unknown as number;
+}
+
+function cancelLongPress() {
+  if (longPressTimer.value !== null) {
+    clearTimeout(longPressTimer.value as unknown as number);
+    longPressTimer.value = null;
+  }
+}
+
+function handleTaskClick(task: Task) {
+  if (longPressTriggered.value) {
+    // consumed by long-press; reset flag and do nothing
+    longPressTriggered.value = false;
+    return;
+  }
+  setTaskToEdit(task);
+}
+
+function handleReplenishClick(task: Task) {
+  if (longPressTriggered.value) {
+    longPressTriggered.value = false;
+    return;
+  }
+  toggleStatus(task);
+}
 
 // Computed properties for separate date inputs
 const eventDateYear = computed(() => {
