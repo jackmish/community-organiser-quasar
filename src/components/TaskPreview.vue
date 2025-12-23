@@ -131,8 +131,8 @@ function escapeRegExp(string: string) {
 // Copy helper functions
 async function copyStyledTask() {
   const t = toRaw(props.task || {} as any);
-  const html = buildHtmlForEmail(t);
-  const text = buildPlainText(t);
+  const html = buildHtmlFromParsed(parsedLines.value, t);
+  const text = buildPlainTextFromParsed(parsedLines.value, t);
   try {
     const nav: any = navigator as any;
     if (nav.clipboard && nav.clipboard.write && typeof ClipboardItem !== 'undefined') {
@@ -155,20 +155,31 @@ async function copyStyledTask() {
   }
 }
 
-function buildPlainText(task: any) {
+function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const lines: string[] = [];
   lines.push(task.name || '');
   if (task.date || task.eventTime) lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
-  const desc = task.description || '';
   lines.push('');
-  lines.push(...(desc.split(/\r?\n/)));
+  for (const item of parsed) {
+    if (item.type === 'list') {
+      // raw contains original line; remove leading markers and [x]
+      let raw = item.raw || '';
+      raw = raw.replace(/^\s*[-*]\s*/, '').replace(/^\s*\d+[.)]\s*/, '');
+      const checked = item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
+      const clean = raw.replace(/^\s*\[[xX]\]\s*/, '').trim();
+      lines.push(`${checked ? '✔' : '-'} ${clean}`);
+    } else {
+      const text = (item.raw || '').trim();
+      if (text) lines.push(text);
+    }
+  }
   lines.push('');
   lines.push(`Priority: ${task.priority || ''}`);
   if (task.groupId) lines.push(`Group: ${props.groupName || ''}`);
   return lines.join('\n');
 }
 
-function buildHtmlForEmail(task: any) {
+function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const esc = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const priorityColors: Record<string,string> = {
     low: '#26c6da',
@@ -182,27 +193,22 @@ function buildHtmlForEmail(task: any) {
   if (task.date || task.eventTime) {
     parts.push(`<div style="color:#666;font-size:0.95em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`);
   }
-  const desc = task.description || '';
-  const lines = desc.split(/\r?\n/);
-  const isList = lines.some((l: string) => /^\s*[-\d]/.test(l));
-  if (isList) {
+  // If parsed contains list items, render as UL using parsed entries
+  const listItems = parsed.filter(p => p.type === 'list');
+  if (listItems.length > 0) {
     parts.push('<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;">');
-    for (const ln of lines) {
-      const m = ln.match(/^\s*[-*]\s*(.*)$/) || ln.match(/^\s*(\d+)[.)]\s*(.*)$/);
-      if (m) {
-        let content = m[1] || m[2] || '';
-        const checked = /^\s*\[x\]\s*/i.test(content);
-        content = content.replace(/^\s*\[[xX]\]\s*/,'');
-        parts.push(`<li style="margin-bottom:4px;">${checked? '&#x2705; ' : ''}${esc(content)}</li>`);
-      } else {
-        if (ln.trim()) parts.push(`<li style="margin-bottom:4px;">${esc(ln)}</li>`);
-      }
+    for (const item of listItems) {
+      const checked = item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
+      // item.html is already escaped HTML for content
+      parts.push(`<li style="margin-bottom:4px;">${checked? '&#x2705; ' : ''}${item.html}</li>`);
     }
     parts.push('</ul>');
   } else {
-    for (const ln of lines) {
-      if (!ln.trim()) continue;
-      parts.push(`<p style="margin:0 0 6px 0;">${esc(ln)}</p>`);
+    // fallback: render paragraphs from parsed text entries
+    for (const item of parsed) {
+      if (item.type === 'text' && item.html && item.html.trim()) {
+        parts.push(`<p style="margin:0 0 6px 0;">${item.html}</p>`);
+      }
     }
   }
   const p = task.priority || '';
