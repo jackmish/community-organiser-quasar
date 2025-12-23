@@ -1370,9 +1370,17 @@ const replenishTasks = computed(() => {
   return val;
 });
 
-// Tasks that are marked done (status_id === 0)
+// Tasks that are marked done (status_id === 0) - newest completed first
 const doneTasks = computed(() => {
-  return sortedTasks.value.filter((t) => Number(t.status_id) === 0);
+  const done = sortedTasks.value.filter((t) => Number(t.status_id) === 0);
+  return [...done].sort((a, b) => {
+    const getTime = (task: any) => {
+      // prefer updatedAt, then createdAt, then fallback to 0
+      const ts = task.updatedAt ?? task.createdAt ?? task.updated_at ?? task.created_at ?? null;
+      return ts ? new Date(ts).getTime() : 0;
+    };
+    return getTime(b) - getTime(a);
+  });
 });
 
 const tasksWithTime = computed(() => {
