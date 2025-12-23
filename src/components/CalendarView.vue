@@ -36,12 +36,7 @@
           :class="['text-weight-bold', { 'first-month-btn': index === 0 }]"
           style="font-size: 16px"
         >
-          <template v-if="month.label.startsWith('Jan')">
-            {{ month.label.toUpperCase() }} {{ month.value.slice(0, 4) }}
-          </template>
-          <template v-else>
-            {{ month.label.toUpperCase() }}
-          </template>
+          {{ String(new Date(month.value).getMonth() + 1).padStart(2, '0') }}.{{ month.label.toUpperCase() }}{{ index === 0 ? ' ' + month.value.slice(0,4) : '' }}
         </q-btn>
       </div>
     </div>
