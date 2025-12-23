@@ -1392,7 +1392,9 @@ const handleAddTask = async (taskPayload: any) => {
 const handleUpdateTask = async (updatedTask: any) => {
   if (!updatedTask || !updatedTask.id) return;
   const { id, ...rest } = updatedTask;
-  await updateTask(currentDate.value, id, rest);
+  // Determine which date bucket the task belongs to: prefer explicit `date`, then `eventDate`, otherwise current view
+  const targetDate = (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
+  await updateTask(targetDate, id, rest);
   taskToEdit.value = null;
 };
 

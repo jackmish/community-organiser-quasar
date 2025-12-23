@@ -1,16 +1,16 @@
 <template>
   <q-card class="q-mb-md">
     <q-card-section>
-        <!-- header removed: preview renders content only -->
-        <div class="row items-start justify-end q-mb-sm">
+        <!-- header: title on left, copy on right -->
+        <div class="row items-center justify-between q-mb-sm">
+          <div class="text-h5">{{ task.name }}</div>
           <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
         </div>
-            <div class="q-mt-md">
-            <div class="text-h5">{{ task.name }}</div>
-            <div class="text-caption text-grey-7 q-mb-sm">
-              {{ displayDate }} {{ task.eventTime || '' }}
-              <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
-            </div>
+        <div>
+          <div class="text-caption text-grey-7 q-mb-sm">
+            {{ displayDate }} {{ task.eventTime || '' }}
+            <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
+          </div>
 
             <div>
               <div v-for="(line, idx) in parsedLines" :key="idx">
