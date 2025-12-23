@@ -24,6 +24,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  allTasks: {
+    type: Array,
+    default: () => [],
+  },
   // initialTask: when provided, the form will enter edit mode and pre-fill fields
   initialTask: {
     type: Object as () => any,
@@ -41,6 +45,7 @@ const emit = defineEmits([
   "calendar-date-select",
   "filter-parent-tasks",
   "update:mode",
+  "replenish-restore",
 ]);
 
 // Input refs
@@ -109,6 +114,38 @@ const typeOptions = [
   { label: "Replenish", value: "Replenish", icon: "autorenew" },
   { label: "Note/Later", value: "NoteLater", icon: "description" },
 ];
+
+// Replenish helper state
+const replenishQuery = ref("");
+const selectedReplenishId = ref<string | null>(null);
+
+const replenishMatches = computed<any[]>(() => {
+  const q = (replenishQuery.value || "").toLowerCase().trim();
+  if (!q) return (props.allTasks || []).filter((t: any) => t.type_id === "Replenish");
+  return (props.allTasks || [])
+    .filter((t: any) => t.type_id === "Replenish")
+    .filter((t: any) => (t.name || "").toLowerCase().indexOf(q) !== -1);
+});
+
+function selectReplenishMatch(t: any) {
+  selectedReplenishId.value = t.id;
+  replenishQuery.value = t.name || "";
+}
+
+function restoreSelectedReplenish() {
+  if (!selectedReplenishId.value) return;
+  emit("replenish-restore", selectedReplenishId.value);
+}
+
+function createReplenishFromInput() {
+  const name = (replenishQuery.value || "").trim();
+  if (!name) return;
+  // set name and emit add-task like normal submit
+  localNewTask.value.name = name;
+  emit("add-task", { ...localNewTask.value });
+  // reset some fields similar to onSubmit
+  localNewTask.value.description = "";
+}
 
 // When parent provides an initialTask, populate localNewTask
 watch(
@@ -785,6 +822,50 @@ function onSubmit(event: Event) {
                   />
                 </div>
               </q-card>
+              <!-- Replenish special field: search existing or create new -->
+              <div
+                v-if="localNewTask.type_id === 'Replenish' && mode === 'add'"
+                class="q-pa-sm col"
+              >
+                <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
+                <q-input
+                  v-model="replenishQuery"
+                  label="Search existing Replenish or type a new title"
+                  outlined
+                  dense
+                  class="col"
+                />
+                <div v-if="replenishMatches.length" class="q-mt-sm">
+                  <q-list dense>
+                    <q-item
+                      v-for="m in replenishMatches"
+                      :key="m.id"
+                      clickable
+                      @click="selectReplenishMatch(m)"
+                    >
+                      <q-item-section>
+                        <div>{{ m.name }}</div>
+                        <div class="text-caption text-grey-6">
+                          {{ m.date || m.eventDate || "" }}
+                        </div>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </div>
+                <div class="row q-gutter-sm q-mt-sm">
+                  <q-btn
+                    label="Restore selected"
+                    color="orange"
+                    :disable="!selectedReplenishId"
+                    @click="restoreSelectedReplenish"
+                  />
+                  <q-btn
+                    label="Create new from input"
+                    color="positive"
+                    @click="createReplenishFromInput"
+                  />
+                </div>
+              </div>
 
               <q-card flat bordered class="q-pa-sm col" style="min-width: 160px">
                 <div class="text-caption text-grey-7 q-mb-xs">Type</div>

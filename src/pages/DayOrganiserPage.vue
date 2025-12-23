@@ -323,12 +323,14 @@
               :filtered-parent-options="filteredParentOptions"
               :active-group="activeGroup"
               :show-calendar="false"
-              :selected-date="newTask.eventDate"
+                :selected-date="newTask.eventDate"
+                :all-tasks="allTasks"
               :initial-task="taskToEdit"
               :mode="mode"
               @update:mode="(v) => (mode = v)"
               @add-task="handleAddTask"
               @update-task="handleUpdateTask"
+                @replenish-restore="handleReplenishRestore"
               @cancel-edit="() => clearTaskToEdit()"
               @calendar-date-select="handleCalendarDateSelect"
               @filter-parent-tasks="filterParentTasks"
@@ -1258,6 +1260,23 @@ const sortedTasks = computed(() => {
   console.log("[computed] sortedTasks", val);
   return val;
 });
+
+// Handler to restore a Replenish task to undone status
+const handleReplenishRestore = async (taskId: string) => {
+  if (!taskId) return;
+  // Find the task across all tasks
+  const tasks = allTasks?.value || [];
+  const t = tasks.find((x: any) => x.id === taskId);
+  if (!t) return;
+  const targetDate = t.date || t.eventDate || currentDate.value;
+  try {
+    await updateTask(targetDate, taskId, { status_id: 1 });
+    // If currently in preview/edit mode, ensure the UI refreshes
+    taskToEdit.value = null;
+  } catch (e) {
+    console.error('Failed to restore replenish task', e);
+  }
+};
 
 // Group tasks by whether they have time
 const tasksWithTime = computed(() => {
