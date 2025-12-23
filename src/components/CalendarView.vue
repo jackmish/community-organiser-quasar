@@ -165,7 +165,7 @@
                           :key="ev.id"
                           class="calendar-event-pill q-pa-xs"
                           :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
-                           :style="{ backgroundColor: themePriorityColors[ev.priority] || '#888', color: '#fff' }"
+                           :style="{ backgroundColor: themePriorityColors[ev.priority] || '#888', color: (themePriorityTextColor ? themePriorityTextColor(ev.priority) : '#fff') }"
                         >
                           <span class="event-time" v-if="ev.eventTime">{{ ev.eventTime }} </span>
                           <span class="event-title">{{ ev.name }}</span>
@@ -217,7 +217,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { format, addDays, startOfWeek } from "date-fns";
-import { priorityColors as themePriorityColors } from './theme';
+import { priorityColors as themePriorityColors, priorityTextColor as themePriorityTextColor } from './theme';
 
 const props = defineProps<{
   selectedDate?: string;

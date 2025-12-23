@@ -119,9 +119,8 @@
                     }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
-                        :color="priorityColor(task.priority)"
-                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
+                        :style="{ backgroundColor: priorityColor(task.priority), color: priorityTextColor(task.priority) }"
                       >
                         {{ task.priority }}
                       </q-chip>
@@ -220,9 +219,8 @@
                     }}</q-item-label>
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
-                        :color="priorityColor(task.priority)"
-                        :text-color="priorityTextColor(task.priority)"
                         size="sm"
+                        :style="{ backgroundColor: priorityColor(task.priority), color: priorityTextColor(task.priority) }"
                       >
                         {{ task.priority }}
                       </q-chip>
@@ -1167,34 +1165,10 @@ const typeOptions = [
 ];
 
 const priorityOptions = [
-  {
-    label: "Lo",
-    value: "low",
-    icon: "low_priority",
-    color: "#81d4fa",
-    textColor: "grey-9",
-  },
-  {
-    label: "Med",
-    value: "medium",
-    icon: "drag_handle",
-    color: "#26c6da",
-    textColor: "grey-9",
-  },
-  {
-    label: "Hi",
-    value: "high",
-    icon: "priority_high",
-    color: "orange",
-    textColor: "white",
-  },
-  {
-    label: "Crit",
-    value: "critical",
-    icon: "warning",
-    color: "negative",
-    textColor: "white",
-  },
+  { label: 'Lo', value: 'low', icon: 'low_priority', color: themePriorityColors.low, textColor: themePriorityTextColor('low') },
+  { label: 'Med', value: 'medium', icon: 'drag_handle', color: themePriorityColors.medium, textColor: themePriorityTextColor('medium') },
+  { label: 'Hi', value: 'high', icon: 'priority_high', color: themePriorityColors.high, textColor: themePriorityTextColor('high') },
+  { label: 'Crit', value: 'critical', icon: 'warning', color: themePriorityColors.critical, textColor: themePriorityTextColor('critical') },
 ];
 
 const parentTaskOptions = computed(() => {

@@ -29,7 +29,7 @@
             </div>
 
             <div class="q-mt-md">
-              <q-chip size="sm" :color="priorityColor(task.priority)" :text-color="priorityTextColor(task.priority)">{{ task.priority }}</q-chip>
+              <q-chip size="sm" :style="{ backgroundColor: priorityColor(task.priority), color: priorityTextColor(task.priority) }">{{ task.priority }}</q-chip>
               <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{ groupName }}</q-chip>
             </div>
           </div>
@@ -201,12 +201,7 @@ function buildPlainTextFromParsed(parsed: Array<{ type: string; raw: string; htm
 
 function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>, task: any) {
   const esc = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const priorityColors: Record<string,string> = {
-    low: '#81d4fa',
-    medium: '#26c6da',
-    high: '#ff9800',
-    critical: '#f44336',
-  };
+  // use shared `priorityColors` imported from theme
   const parts: string[] = [];
   // overall container; use default font for title (omitted) and smaller font for content
   parts.push('<div style="font-family: Arial, Helvetica, sans-serif; color: #222;">');
