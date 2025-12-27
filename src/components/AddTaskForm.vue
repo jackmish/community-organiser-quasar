@@ -72,6 +72,13 @@ const autoIncrementYear = ref(true);
 // Time type radio (Whole Day / Exact Hour)
 const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
 
+// Repeat mode for events: one-time or cyclic
+const repeatMode = ref<'oneTime' | 'cyclic'>('oneTime');
+const repeatOptions = [
+  { label: 'One time', value: 'oneTime', icon: 'event' },
+  { label: 'Cyclic', value: 'cyclic', icon: 'repeat' },
+];
+
 // Local newTask state, default to today
 const today = new Date();
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -826,7 +833,23 @@ function onSubmit(event: Event) {
                       bordered
                       class="q-pa-sm bg-blue-1"
                     >
-                      <div class="text-caption text-grey-7 q-mb-xs">Date</div>
+                      <div class="row items-center q-mb-xs" style="gap: 8px; align-items: center">
+                        <div class="text-caption text-grey-7">Date</div>
+                        <div class="col-auto">
+                          <q-btn-toggle
+                            v-model="repeatMode"
+                            :options="repeatOptions"
+                            dense
+                            inline
+                            rounded
+                            class="time-toggle"
+                          />
+                        </div>
+                        <div class="col-auto">
+                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
+                        </div>
+
+                      </div>
                       <div class="row q-gutter-xs items-center" style="align-items: center">
                         <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
                           <q-input
@@ -880,9 +903,7 @@ function onSubmit(event: Event) {
                           />
                         </div>
                         <div class="col"></div>
-                        <div class="col-auto" style="display: flex; align-items: center">
-                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
-                        </div>
+                        
                       </div>
                       <div class="row items-center q-gutter-xs q-mb-sm">
                         <div class="row q-gutter-xs" style="gap: 8px">
@@ -1297,4 +1318,5 @@ function onSubmit(event: Event) {
   width: 12px !important;
   height: 12px !important;
 }
+/* repeat toggle uses the same styles as .time-toggle */
 </style>
