@@ -20,6 +20,8 @@ const organiserData = ref<OrganiserData>({
 
 const isLoading = ref(false);
 const currentDate = ref(formatDate(new Date()));
+// Optional preview request: a component can request a task preview by id
+const previewTaskId = ref<string | null>(null);
 
 export function useDayOrganiser() {
   // Load data from storage
@@ -339,6 +341,12 @@ export function useDayOrganiser() {
     goToToday,
     nextDay,
     prevDay,
+
+    // Preview helper
+    previewTaskId: computed(() => previewTaskId.value),
+    setPreviewTask: (id: string | null) => {
+      previewTaskId.value = id;
+    },
 
     // Utils
     formatDate,

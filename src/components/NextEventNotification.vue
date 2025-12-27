@@ -3,6 +3,9 @@
     v-if="nextEvent"
     class="q-ml-md next-event"
     :style="{ backgroundColor: priorityColorValue || 'transparent', color: priorityTextValue }"
+    @click.prevent.stop="onClickNotification"
+    role="button"
+    tabindex="0"
   >
     <q-icon :name="iconName" size="18" />
     <div class="next-event-text">
@@ -17,7 +20,7 @@ import { computed } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
 import { priorityColors, priorityTextColor, typeIcons, priorityIcons } from './theme';
 
-const { organiserData } = useDayOrganiser();
+const { organiserData, setCurrentDate, setPreviewTask } = useDayOrganiser();
 
 function formatDateLabel(dateStr: string) {
   const dt = new Date(dateStr + 'T00:00:00');
@@ -95,6 +98,21 @@ const iconName = computed(() => {
   if (ev.type_id && typeIcons[ev.type_id]) return typeIcons[ev.type_id];
   return 'notifications';
 });
+
+function onClickNotification() {
+  const ev = nextEvent.value;
+  if (!ev) return;
+  try {
+    setCurrentDate(ev._date || ev.date || ev.eventDate || null);
+  } catch (e) {
+    // ignore
+  }
+  try {
+    setPreviewTask(ev.id || null);
+  } catch (e) {
+    // ignore
+  }
+}
 </script>
 
 <style scoped>
@@ -105,6 +123,9 @@ const iconName = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  transition: border-color 120ms ease, filter 120ms ease;
+  border: 1px solid transparent;
 }
 .next-event-title {
   font-weight: 600;
@@ -121,5 +142,16 @@ const iconName = computed(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.next-event:hover {
+  border-color: rgba(0,0,0,0.12);
+  /* Inverted effect: slightly darken the notification on hover for stronger contrast */
+  filter: brightness(0.94);
+}
+
+.next-event:focus {
+  outline: none;
+  border-color: rgba(0,0,0,0.14);
 }
 </style>

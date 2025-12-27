@@ -916,6 +916,8 @@ const {
   addGroup,
   deleteGroup,
   getGroupsByParent,
+  previewTaskId,
+  setPreviewTask,
 } = useDayOrganiser();
 
 // All tasks across days — used to render calendar events
@@ -976,6 +978,39 @@ watch(mode, (val) => {
     selectedTaskId.value = null;
   }
 });
+
+// Respond to preview requests coming from other parts of the app
+watch(
+  () => previewTaskId && (previewTaskId as any).value,
+  (id) => {
+    if (!id) return;
+    // find task by id using the precomputed allTasks list (avoids awkward any/never types)
+    let found: Task | null = null;
+    try {
+      const sid = String(id);
+      found = (allTasks.value || []).find((t) => t.id === sid) || null;
+    } catch (e) {
+      found = null;
+    }
+    if (found) {
+      taskToEdit.value = found;
+      mode.value = 'preview';
+      selectedTaskId.value = found.id;
+      // also ensure the calendar/date syncs to the task date
+      try {
+        setCurrentDate(found.date || found.eventDate || null);
+      } catch (e) {
+        // ignore
+      }
+    }
+    // clear preview request after handling
+    try {
+      setPreviewTask(null);
+    } catch (e) {
+      // ignore
+    }
+  },
+);
 
 // Refs for date inputs
 const dayInput = ref<any>(null);
