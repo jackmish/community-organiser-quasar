@@ -848,7 +848,6 @@ function onSubmit(event: Event) {
                         <div class="col-auto">
                           <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
                         </div>
-
                       </div>
                       <div class="row q-gutter-xs items-center" style="align-items: center">
                         <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
@@ -903,7 +902,6 @@ function onSubmit(event: Event) {
                           />
                         </div>
                         <div class="col"></div>
-                        
                       </div>
                       <div class="row items-center q-gutter-xs q-mb-sm">
                         <div class="row q-gutter-xs" style="gap: 8px">
