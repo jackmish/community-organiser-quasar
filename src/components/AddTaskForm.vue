@@ -117,13 +117,14 @@ const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
 const isReplenish = computed(() => (localNewTask.value.type_id || '') === 'Replenish');
 const showPriorityLabel = computed(() => $q.screen.gt.md);
+const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
 // Type options for task type selector (local only)
 const typeOptions = [
-  { label: 'Time Event', value: 'TimeEvent', icon: 'event' },
-  { label: 'TODO', value: 'Todo', icon: 'check_box' },
-  { label: 'Replenish', value: 'Replenish', icon: 'autorenew' },
-  { label: 'Note/Later', value: 'NoteLater', icon: 'description' },
+  { label: 'Time Event', shortLabel: 'Time', value: 'TimeEvent', icon: 'event' },
+  { label: 'TODO', shortLabel: 'Todo', value: 'Todo', icon: 'check_box' },
+  { label: 'Replenish', shortLabel: 'Repl', value: 'Replenish', icon: 'autorenew' },
+  { label: 'Note/Later', shortLabel: 'Note', value: 'NoteLater', icon: 'description' },
 ];
 
 // Local replenish color sets grouped by family (4 tones each), ordered dark->bright
@@ -987,7 +988,8 @@ function onSubmit(event: Event) {
                       <q-btn
                         v-for="opt in typeOptions"
                         :key="opt.value"
-                        :label="opt.label"
+                        :label="showFullTypeLabel ? opt.label : opt.shortLabel || opt.label"
+                        :aria-label="opt.label"
                         :icon="opt.icon"
                         :size="btnSize"
                         class="full-width priority-btn"
