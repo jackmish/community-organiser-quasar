@@ -1108,6 +1108,32 @@ function onSubmit(event: Event) {
                 </div>
                 <!-- Priority and Type column to the right of date/time -->
                 <div class="col-12 col-md-4">
+                  <q-card flat bordered class="q-pa-sm q-mt-sm">
+                    <div class="text-caption text-grey-7 q-mb-xs">Type</div>
+                    <div class="column q-gutter-xs">
+                      <q-btn
+                        v-for="opt in typeOptions"
+                        :key="opt.value"
+                        :label="showFullTypeLabel ? opt.label : opt.shortLabel || opt.label"
+                        :aria-label="opt.label"
+                        :icon="opt.icon"
+                        :size="btnSize"
+                        class="full-width priority-btn"
+                        :outline="localNewTask.type_id !== opt.value"
+                        :unelevated="localNewTask.type_id === opt.value"
+                        @click="localNewTask.type_id = opt.value"
+                        :style="{
+                          backgroundColor:
+                            localNewTask.type_id === opt.value ? typeColors[opt.value] : undefined,
+                          color:
+                            localNewTask.type_id === opt.value
+                              ? typeTextColors[opt.value]
+                              : undefined,
+                        }"
+                      />
+                    </div>
+                  </q-card>
+
                   <q-card flat bordered class="q-pa-sm">
                     <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
                     <div class="priority-grid">
@@ -1141,32 +1167,6 @@ function onSubmit(event: Event) {
                           }"
                         />
                       </div>
-                    </div>
-                  </q-card>
-
-                  <q-card flat bordered class="q-pa-sm q-mt-sm">
-                    <div class="text-caption text-grey-7 q-mb-xs">Type</div>
-                    <div class="column q-gutter-xs">
-                      <q-btn
-                        v-for="opt in typeOptions"
-                        :key="opt.value"
-                        :label="showFullTypeLabel ? opt.label : opt.shortLabel || opt.label"
-                        :aria-label="opt.label"
-                        :icon="opt.icon"
-                        :size="btnSize"
-                        class="full-width priority-btn"
-                        :outline="localNewTask.type_id !== opt.value"
-                        :unelevated="localNewTask.type_id === opt.value"
-                        @click="localNewTask.type_id = opt.value"
-                        :style="{
-                          backgroundColor:
-                            localNewTask.type_id === opt.value ? typeColors[opt.value] : undefined,
-                          color:
-                            localNewTask.type_id === opt.value
-                              ? typeTextColors[opt.value]
-                              : undefined,
-                        }"
-                      />
                     </div>
                   </q-card>
                 </div>
