@@ -47,3 +47,18 @@ export function formatEventHoursDiff(dateStr: string, timeStr: string, now = new
   }
   return sign >= 0 ? `In ${str}` : `${str} ago`;
 }
+
+// Shared icon mappings for task types and priorities
+export const typeIcons: Record<string, string> = {
+  TimeEvent: 'event',
+  Todo: 'check_box',
+  Replenish: 'autorenew',
+  NoteLater: 'description',
+};
+
+export const priorityIcons: Record<string, string> = {
+  critical: 'warning',
+  high: 'priority_high',
+  medium: 'drag_handle',
+  low: 'low_priority',
+};

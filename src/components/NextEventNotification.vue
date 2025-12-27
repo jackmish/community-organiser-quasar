@@ -1,9 +1,12 @@
 <template>
-  <div v-if="nextEvent" class="q-ml-md next-event" style="display:flex;align-items:center;gap:8px">
-    <q-icon name="notifications" size="18" />
+  <div
+    v-if="nextEvent"
+    class="q-ml-md next-event"
+    :style="{ backgroundColor: priorityColorValue || 'transparent', color: priorityTextValue }">
+    <q-icon :name="iconName" size="18" />
     <div class="next-event-text">
       <div class="next-event-title">{{ nextEvent.name }}</div>
-      <div class="next-event-meta text-caption text-grey-6">{{ nextEventDisplay }}</div>
+      <div class="next-event-meta text-caption">{{ nextEventDisplay }}</div>
     </div>
   </div>
 </template>
@@ -11,6 +14,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
+import {
+  priorityColors,
+  priorityTextColor,
+  typeIcons,
+  priorityIcons,
+} from './theme';
 
 const { organiserData } = useDayOrganiser();
 
@@ -63,11 +72,43 @@ const nextEventDisplay = computed(() => {
   const timePart = ev.eventTime ? ` • ${ev.eventTime}` : '';
   return `${dateLabel}${timePart}`;
 });
+
+const priorityColorValue = computed(() => {
+  const ev = nextEvent.value;
+  if (!ev) return '';
+  return priorityColors[String(ev.priority)] || '';
+});
+
+const priorityTextValue = computed(() => {
+  const ev = nextEvent.value;
+  if (!ev) return 'white';
+  return priorityTextColor(ev.priority);
+});
+
+const priorityLabel = computed(() => {
+  const ev = nextEvent.value;
+  if (!ev || !ev.priority) return '';
+  return String(ev.priority).charAt(0).toUpperCase();
+});
+
+const iconName = computed(() => {
+  const ev = nextEvent.value;
+  if (!ev) return 'notifications';
+  // prefer priority icon, fall back to type icon, else notifications
+  if (ev.priority && priorityIcons[String(ev.priority)]) return priorityIcons[String(ev.priority)];
+  if (ev.type_id && typeIcons[ev.type_id]) return typeIcons[ev.type_id];
+  return 'notifications';
+});
 </script>
 
 <style scoped>
 .next-event {
   max-width: 360px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .next-event-title {
   font-weight: 600;
@@ -79,4 +120,11 @@ const nextEventDisplay = computed(() => {
 .next-event-meta {
   line-height: 1;
 }
+
+.next-event-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 </style>
