@@ -825,8 +825,14 @@ function onSubmit(event: Event) {
     if (generated) localNewTask.value.name = generated;
   }
   if (props.mode === 'add') {
-    console.log('[emit] add-task', { ...localNewTask.value });
-    emit('add-task', { ...localNewTask.value });
+    const payload: any = { ...localNewTask.value };
+    if (repeatMode.value === 'cyclic') {
+      payload.repeatMode = repeatMode.value;
+      payload.repeatCycleType = repeatCycleType.value;
+      payload.repeatDays = Array.isArray(repeatDays.value) ? [...repeatDays.value] : [];
+    }
+    console.log('[emit] add-task', payload);
+    emit('add-task', payload);
     // Clear the description textarea after adding the task
     localNewTask.value.description = '';
     // Reset status checkbox to '1' (just created)

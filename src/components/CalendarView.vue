@@ -36,7 +36,9 @@
           :class="['text-weight-bold', { 'first-month-btn': index === 0 }]"
           style="font-size: 16px"
         >
-          {{ String(new Date(month.value).getMonth() + 1).padStart(2, '0') }}.{{ month.label.toUpperCase() }}{{ index === 0 ? ' ' + month.value.slice(0,4) : '' }}
+          {{ String(new Date(month.value).getMonth() + 1).padStart(2, '0') }}.{{
+            month.label.toUpperCase()
+          }}{{ index === 0 ? ' ' + month.value.slice(0, 4) : '' }}
         </q-btn>
       </div>
     </div>
@@ -50,7 +52,7 @@
                 :key="'header-' + day"
                 class="text-center text-weight-bold text-caption text-grey-7"
               >
-                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
+                {{ ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][new Date(day).getDay()] }}
               </th>
             </tr>
           </thead>
@@ -65,12 +67,7 @@
               <td v-for="(day, index) in week" :key="day" class="calendar-cell">
                 <div
                   :class="{
-                    'new-month-start': isNewMonthStart(
-                      day,
-                      week,
-                      weekIndex,
-                      allCalendarWeeks
-                    ),
+                    'new-month-start': isNewMonthStart(day, week, weekIndex, allCalendarWeeks),
                   }"
                 >
                   <div
@@ -101,8 +98,8 @@
                     day === selectedDate
                       ? 'primary'
                       : day < format(new Date(), 'yyyy-MM-dd')
-                      ? 'grey-5'
-                      : 'grey-7'
+                        ? 'grey-5'
+                        : 'grey-7'
                   "
                   @click="handleDateSelect(day)"
                   :title="
@@ -152,15 +149,20 @@
                         {{ getWeekLabel(day) }}
                       </div>
                     </div>
-                    <!-- Render events for this day (TimeEvent tasks) -->
+                    <!-- Render events for this day (including cyclic repeats) -->
                     <div class="calendar-events">
                       <template v-if="props.tasks && props.tasks.length">
                         <div
-                          v-for="ev in (props.tasks.filter(t => (t.type_id === 'TimeEvent') && ((t.date || t.eventDate) === day)))"
-                          :key="ev.id"
+                          v-for="ev in getEventsForDay(day)"
+                          :key="ev.id + '-' + (ev.eventTime || '')"
                           class="calendar-event-pill q-pa-xs"
                           :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
-                           :style="{ backgroundColor: themePriorityColors[ev.priority] || '#888', color: (themePriorityTextColor ? themePriorityTextColor(ev.priority) : '#fff') }"
+                          :style="{
+                            backgroundColor: themePriorityColors[ev.priority] || '#888',
+                            color: themePriorityTextColor
+                              ? themePriorityTextColor(ev.priority)
+                              : '#fff',
+                          }"
                         >
                           <span class="event-time" v-if="ev.eventTime">{{ ev.eventTime }} </span>
                           <span class="event-title">{{ ev.name }}</span>
@@ -210,9 +212,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { format, addDays, startOfWeek } from "date-fns";
-import { priorityColors as themePriorityColors, priorityTextColor as themePriorityTextColor } from './theme';
+import { ref, computed, onMounted, watch } from 'vue';
+import { format, addDays, startOfWeek } from 'date-fns';
+import {
+  priorityColors as themePriorityColors,
+  priorityTextColor as themePriorityTextColor,
+} from './theme';
 
 const props = defineProps<{
   selectedDate?: string;
@@ -221,7 +226,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "update:selectedDate", value: string): void;
+  (e: 'update:selectedDate', value: string): void;
 }>();
 
 const calendarBaseDate = ref(new Date());
@@ -245,7 +250,7 @@ class CalendarDisplayManager {
 
   shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
     const date = new Date(day);
-    const monthYear = format(date, "yyyy-MM");
+    const monthYear = format(date, 'yyyy-MM');
 
     if (isFirstWeek && index === 0) {
       this.shownMonths = new Set();
@@ -276,8 +281,8 @@ class CalendarDisplayManager {
 
   shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
     const date = new Date(day);
-    const year = format(date, "yyyy");
-    const todayYear = format(new Date(), "yyyy");
+    const year = format(date, 'yyyy');
+    const todayYear = format(new Date(), 'yyyy');
 
     if (isFirstWeek && index === 0) {
       this.shownYears = new Set();
@@ -338,11 +343,7 @@ async function getHolidaysFilePath(year: number): Promise<string | null> {
   if (!isElectron) return null;
 
   const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(
-    appDataPath,
-    "holidays",
-    `holidays_PL_${year}.json`
-  );
+  return (window as any).electronAPI.joinPath(appDataPath, 'holidays', `holidays_PL_${year}.json`);
 }
 
 // Load holidays from APPDATA (Electron) or localStorage (browser)
@@ -391,7 +392,7 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    console.error("Failed to load holidays from cache:", error);
+    console.error('Failed to load holidays from cache:', error);
     return false;
   }
 }
@@ -413,7 +414,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       // Ensure directory exists
       const dirPath = (window as any).electronAPI.joinPath(
         await (window as any).electronAPI.getAppDataPath(),
-        "holidays"
+        'holidays',
       );
       await (window as any).electronAPI.ensureDir(dirPath);
 
@@ -426,7 +427,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       localStorage.setItem(cacheKey, JSON.stringify(cache));
     }
   } catch (error) {
-    console.error("Failed to save holidays to cache:", error);
+    console.error('Failed to save holidays to cache:', error);
   }
 }
 
@@ -445,7 +446,7 @@ async function fetchHolidays(year: number) {
     loadFallbackHolidays(year);
     // Save fallback to cache for next time
     const fallbackList = Array.from(holidays.value.values()).filter((h) =>
-      h.date.startsWith(`${year}-`)
+      h.date.startsWith(`${year}-`),
     );
     await saveHolidaysToCache(year, fallbackList);
     return;
@@ -459,20 +460,20 @@ async function fetchHolidays(year: number) {
     const data: Holiday[] = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.timeout = 5000;
-      xhr.open("GET", `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
+      xhr.open('GET', `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             resolve(JSON.parse(xhr.responseText));
           } catch (e) {
-            reject(new Error("Failed to parse JSON"));
+            reject(new Error('Failed to parse JSON'));
           }
         } else {
           reject(new Error(`HTTP error! status: ${xhr.status}`));
         }
       };
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.ontimeout = () => reject(new Error("Request timeout"));
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.ontimeout = () => reject(new Error('Request timeout'));
       xhr.send();
     });
 
@@ -494,30 +495,30 @@ async function fetchHolidays(year: number) {
 // Fallback Polish holidays (major ones that don't change)
 function loadFallbackHolidays(year: number) {
   const fallbackHolidays: Holiday[] = [
-    { date: `${year}-01-01`, localName: "Nowy Rok", name: "New Year's Day" },
-    { date: `${year}-01-06`, localName: "Trzech Króli", name: "Epiphany" },
-    { date: `${year}-05-01`, localName: "Święto Pracy", name: "Labour Day" },
+    { date: `${year}-01-01`, localName: 'Nowy Rok', name: "New Year's Day" },
+    { date: `${year}-01-06`, localName: 'Trzech Króli', name: 'Epiphany' },
+    { date: `${year}-05-01`, localName: 'Święto Pracy', name: 'Labour Day' },
     {
       date: `${year}-05-03`,
-      localName: "Święto Konstytucji 3 Maja",
-      name: "Constitution Day",
+      localName: 'Święto Konstytucji 3 Maja',
+      name: 'Constitution Day',
     },
     {
       date: `${year}-08-15`,
-      localName: "Wniebowzięcie Najświętszej Maryi Panny",
-      name: "Assumption of Mary",
+      localName: 'Wniebowzięcie Najświętszej Maryi Panny',
+      name: 'Assumption of Mary',
     },
-    { date: `${year}-11-01`, localName: "Wszystkich Świętych", name: "All Saints' Day" },
+    { date: `${year}-11-01`, localName: 'Wszystkich Świętych', name: "All Saints' Day" },
     {
       date: `${year}-11-11`,
-      localName: "Narodowe Święto Niepodległości",
-      name: "Independence Day",
+      localName: 'Narodowe Święto Niepodległości',
+      name: 'Independence Day',
     },
-    { date: `${year}-12-25`, localName: "Boże Narodzenie", name: "Christmas Day" },
+    { date: `${year}-12-25`, localName: 'Boże Narodzenie', name: 'Christmas Day' },
     {
       date: `${year}-12-26`,
-      localName: "Drugi dzień Bożego Narodzenia",
-      name: "Second Day of Christmas",
+      localName: 'Drugi dzień Bożego Narodzenia',
+      name: 'Second Day of Christmas',
     },
   ];
 
@@ -542,10 +543,8 @@ onMounted(async () => {
 
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  const result = Array.from({ length: 7 }, (_, i) =>
-    format(addDays(weekStart, i), "yyyy-MM-dd")
-  );
-  console.log("[computed] calendarCurrentWeek", result);
+  const result = Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), 'yyyy-MM-dd'));
+  console.log('[computed] calendarCurrentWeek', result);
   return result;
 });
 
@@ -554,10 +553,10 @@ const allCalendarWeeks = computed(() => {
   const numWeeks = Math.ceil(calendarViewDays.value / 7);
   const result = Array.from({ length: numWeeks }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) =>
-      format(addDays(weekStart, weekIndex * 7 + dayIndex), "yyyy-MM-dd")
-    )
+      format(addDays(weekStart, weekIndex * 7 + dayIndex), 'yyyy-MM-dd'),
+    ),
   );
-  console.log("[computed] allCalendarWeeks", result);
+  console.log('[computed] allCalendarWeeks', result);
   return result;
 });
 
@@ -568,12 +567,12 @@ const nextSixMonths = computed(() => {
   for (let i = 1; i <= 6; i++) {
     const futureDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
     months.push({
-      label: futureDate.toLocaleDateString("en-US", { month: "short" }),
-      value: format(futureDate, "yyyy-MM-dd"),
+      label: futureDate.toLocaleDateString('en-US', { month: 'short' }),
+      value: format(futureDate, 'yyyy-MM-dd'),
     });
   }
 
-  console.log("[computed] nextSixMonths", months);
+  console.log('[computed] nextSixMonths', months);
   return months;
 });
 
@@ -590,9 +589,9 @@ function nextCalendarWeeks() {
 function setEventDateToToday() {
   const today = new Date();
   calendarBaseDate.value = new Date();
-  const formatted = format(today, "yyyy-MM-dd");
-  console.log("[emit] update:selectedDate", formatted);
-  emit("update:selectedDate", formatted);
+  const formatted = format(today, 'yyyy-MM-dd');
+  console.log('[emit] update:selectedDate', formatted);
+  emit('update:selectedDate', formatted);
 }
 
 function jumpToMonth(dateString: string) {
@@ -604,8 +603,8 @@ function jumpToMonth(dateString: string) {
 }
 
 function handleDateSelect(dateString: string) {
-  console.log("[emit] update:selectedDate", dateString);
-  emit("update:selectedDate", dateString);
+  console.log('[emit] update:selectedDate', dateString);
+  emit('update:selectedDate', dateString);
 }
 
 // Helper functions
@@ -617,11 +616,11 @@ function getWeekLabel(dayDate: string) {
   const todayNormalized = new Date(
     todayDate.getFullYear(),
     todayDate.getMonth(),
-    todayDate.getDate()
+    todayDate.getDate(),
   );
 
   const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
+    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (daysDiff > 0) {
@@ -648,12 +647,7 @@ function shouldWeekHaveMargin(week: string[], weekIndex: number, allWeeks: strin
   return firstDayOfWeek.getMonth() !== lastDayOfPrevWeek.getMonth();
 }
 
-function isNewMonthStart(
-  day: string,
-  week: string[],
-  weekIndex: number,
-  allWeeks: string[][]
-) {
+function isNewMonthStart(day: string, week: string[], weekIndex: number, allWeeks: string[][]) {
   const dayDate = new Date(day);
   const dayOfMonth = dayDate.getDate();
 
@@ -662,7 +656,7 @@ function isNewMonthStart(
 
   // Check if day 1 of this month is in the current week
   const firstDayOfMonth = week.some(
-    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth()
+    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth(),
   );
 
   // Only apply padding if day 1 is in THIS week (not in a previous week)
@@ -679,33 +673,21 @@ function isNewMonthStart(
   if (!previousWeek) return false;
 
   const currentMonth = dayDate.getMonth();
-  const hasPreviousMonth = previousWeek.some(
-    (d) => new Date(d).getMonth() !== currentMonth
-  );
+  const hasPreviousMonth = previousWeek.some((d) => new Date(d).getMonth() !== currentMonth);
 
   return hasPreviousMonth;
 }
 
-function shouldShowMonth(
-  day: string,
-  index: number,
-  week: string[],
-  isFirstWeek: boolean
-) {
+function shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
   return displayManager.shouldShowMonth(day, index, week, isFirstWeek);
 }
 
-function shouldShowYear(
-  day: string,
-  index: number,
-  week: string[],
-  isFirstWeek: boolean
-) {
+function shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
   return displayManager.shouldShowYear(day, index, week, isFirstWeek);
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {
-  const monthName = format(new Date(day), "MMMM");
+  const monthName = format(new Date(day), 'MMMM');
 
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
   const dayOfMonth = new Date(day).getDate();
@@ -749,6 +731,54 @@ function isWeekend(day: string) {
   const date = new Date(day);
   const dayOfWeek = date.getDay();
   return dayOfWeek === 0 || dayOfWeek === 6; // Sunday (0) or Saturday (6)
+}
+
+// Determine whether a given task occurs on the provided day string (yyyy-MM-dd).
+function occursOnDay(task: any, day: string): boolean {
+  // Exact-dated TimeEvent (or any task with a date)
+  const taskDate = task.date || task.eventDate;
+  if (taskDate === day) return true;
+
+  // Cyclic repeat handling
+  if (task.repeatMode === 'cyclic') {
+    const cycle = task.repeatCycleType || 'dayWeek';
+    const target = new Date(day);
+
+    if (cycle === 'dayWeek') {
+      const dow = target.getDay(); // 0 = Sun, 1 = Mon ...
+      const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const key = map[dow];
+      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      return days.indexOf(key) !== -1;
+    }
+
+    if (cycle === 'month') {
+      // Occurs every month on the same day-of-month as the seed eventDate
+      if (!task.eventDate) return false;
+      const seed = new Date(task.eventDate);
+      return seed.getDate() === target.getDate();
+    }
+
+    if (cycle === 'year') {
+      // Occurs every year on the same month+day as the seed eventDate
+      if (!task.eventDate) return false;
+      const seed = new Date(task.eventDate);
+      return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
+    }
+
+    // other cycle types not supported yet
+    return false;
+  }
+
+  return false;
+}
+
+function getEventsForDay(day: string) {
+  if (!props.tasks || !props.tasks.length) return [];
+  return props.tasks.filter((t: any) => {
+    // Include explicit-dated events (TimeEvent) and any tasks that occur cyclically on this day
+    return occursOnDay(t, day);
+  });
 }
 </script>
 
@@ -811,19 +841,14 @@ function isWeekend(day: string) {
 
 .calendar-day-btn.calendar-weekend::before,
 .calendar-day-btn.calendar-holiday::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 8px,
-      #ddd 8px,
-      #ddd 9px
-    ),
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px),
     repeating-linear-gradient(-45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px);
   pointer-events: none;
   z-index: 0;
@@ -831,20 +856,9 @@ function isWeekend(day: string) {
 
 .calendar-day-btn.calendar-selected.calendar-weekend::before,
 .calendar-day-btn.calendar-selected.calendar-holiday::before {
-  background-image: repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 8px,
-      #0d47a1 8px,
-      #0d47a1 9px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 8px,
-      #0d47a1 8px,
-      #0d47a1 9px
-    );
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 8px, #0d47a1 8px, #0d47a1 9px),
+    repeating-linear-gradient(-45deg, transparent, transparent 8px, #0d47a1 8px, #0d47a1 9px);
 }
 
 .calendar-day-btn .calendar-day-content {
@@ -892,14 +906,13 @@ function isWeekend(day: string) {
 }
 
 .calendar-green-label {
-
-/* Make the calendar button a column flex container so events can be auto-pushed */
-.calendar-day-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  min-height: 86px; /* give some vertical space so events can sit at bottom */
-}
+  /* Make the calendar button a column flex container so events can be auto-pushed */
+  .calendar-day-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 86px; /* give some vertical space so events can sit at bottom */
+  }
   color: white !important;
   background-color: #1976d2 !important;
   padding: 2px 6px;
