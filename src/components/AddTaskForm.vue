@@ -922,7 +922,11 @@ function onSubmit(event: Event) {
                         </div>
                       </div>
 
-                      <div class="row q-gutter-xs items-center" style="align-items: center">
+                      <div
+                        v-if="!(repeatMode === 'cyclic' && repeatCycleType === 'dayWeek')"
+                        class="row q-gutter-xs items-center"
+                        style="align-items: center"
+                      >
                         <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
                           <q-input
                             ref="dayInput"
