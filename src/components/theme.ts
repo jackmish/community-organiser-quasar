@@ -32,19 +32,20 @@ export function formatEventHoursDiff(dateStr: string, timeStr: string, now = new
   if (!dateStr || !timeStr) return '';
   const dt = new Date(`${dateStr}T${timeStr}:00`);
   if (isNaN(dt.getTime())) return '';
-  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  const sign = diffHours >= 0 ? 1 : -1;
-  const abs = Math.abs(diffHours);
-  const hours = Math.floor(abs);
-  const minutes = Math.round((abs - hours) * 60);
-  let str = '';
-  if (hours === 0) {
-    str = `${minutes}m`;
-  } else if (minutes === 0) {
-    str = `${hours}h`;
-  } else {
-    str = `${hours}h ${minutes}m`;
-  }
+  const diffMinutes = Math.round((dt.getTime() - now.getTime()) / (1000 * 60));
+  const sign = diffMinutes >= 0 ? 1 : -1;
+  const absMinutes = Math.abs(diffMinutes);
+  const days = Math.floor(absMinutes / (60 * 24));
+  const remAfterDays = absMinutes - days * 24 * 60;
+  const hours = Math.floor(remAfterDays / 60);
+  const minutes = remAfterDays % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+
+  const str = parts.join(' ');
   return sign >= 0 ? `In ${str}` : `${str} ago`;
 }
 

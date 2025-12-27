@@ -7,8 +7,9 @@
           <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
         </div>
         <div>
-          <div class="text-caption text-grey-7 q-mb-sm">
-            {{ displayDate }} {{ task.eventTime || '' }}
+          <div class="text-caption text-grey-7 q-mb-sm preview-datetime">
+            <span class="preview-date">{{ displayDate }}</span>
+            <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
             <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
           </div>
 
@@ -236,3 +237,10 @@ function buildHtmlFromParsed(parsed: Array<{ type: string; raw: string; html: st
   return parts.join('');
 }
 </script>
+
+<style scoped>
+/* Date larger and blue, time green */
+.preview-datetime { display:flex; align-items:baseline; gap:8px; }
+.preview-date { color: #1976d2; font-size: 1.05rem; font-weight: 600; }
+.preview-time { color: #2e7d32; font-size: 1.05rem; font-weight: 600; margin-left: 4px; }
+</style>
