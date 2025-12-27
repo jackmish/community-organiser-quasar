@@ -1069,7 +1069,12 @@ function onSubmit(event: Event) {
                             class="row"
                             style="gap: 8px; align-items: center; margin-bottom: 6px"
                           >
-                            <div v-for="cs in row" :key="cs.id" class="row items-center" style="gap: 6px">
+                            <div
+                              v-for="cs in row"
+                              :key="cs.id"
+                              class="row items-center"
+                              style="gap: 6px"
+                            >
                               <div
                                 class="color-swatch"
                                 :style="{
