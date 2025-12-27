@@ -735,11 +735,9 @@ function isWeekend(day: string) {
 
 // Determine whether a given task occurs on the provided day string (yyyy-MM-dd).
 function occursOnDay(task: any, day: string): boolean {
-  // Exact-dated TimeEvent (or any task with a date)
-  const taskDate = task.date || task.eventDate;
-  if (taskDate === day) return true;
+  if (!task) return false;
 
-  // Cyclic repeat handling
+  // If cyclic, evaluate repeat rules (ignore explicit date seed)
   if (task.repeatMode === 'cyclic') {
     const cycle = task.repeatCycleType || 'dayWeek';
     const target = new Date(day);
@@ -753,24 +751,23 @@ function occursOnDay(task: any, day: string): boolean {
     }
 
     if (cycle === 'month') {
-      // Occurs every month on the same day-of-month as the seed eventDate
       if (!task.eventDate) return false;
       const seed = new Date(task.eventDate);
       return seed.getDate() === target.getDate();
     }
 
     if (cycle === 'year') {
-      // Occurs every year on the same month+day as the seed eventDate
       if (!task.eventDate) return false;
       const seed = new Date(task.eventDate);
       return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
     }
 
-    // other cycle types not supported yet
     return false;
   }
 
-  return false;
+  // Non-cyclic: match explicit-dated events by exact date
+  const taskDate = task.date || task.eventDate;
+  return taskDate === day;
 }
 
 function getEventsForDay(day: string) {

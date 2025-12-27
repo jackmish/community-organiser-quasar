@@ -1366,6 +1366,64 @@ const sortedTasks = computed(() => {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
   }
 
+  // Include cyclic occurrences: find tasks across allTasks whose repeat rules make them occur
+  // on the currently selected date, and merge them in (avoid duplicates).
+  try {
+    const full = allTasks.value || [];
+    const day = currentDate.value;
+    // helper to check occurrence (supports dayWeek, month, year)
+    const occursOnDay = (task: any, dayStr: string) => {
+      if (!task) return false;
+      // If this task is cyclic, evaluate repeat rules first (ignore explicit date seed)
+      if (task.repeatMode === 'cyclic') {
+        const cycle = task.repeatCycleType || 'dayWeek';
+        const target = new Date(dayStr);
+
+        if (cycle === 'dayWeek') {
+          const dow = target.getDay();
+          const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+          const key = map[dow];
+          const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+          return days.indexOf(key) !== -1;
+        }
+
+        if (cycle === 'month') {
+          if (!task.eventDate) return false;
+          const seed = new Date(task.eventDate);
+          return seed.getDate() === target.getDate();
+        }
+
+        if (cycle === 'year') {
+          if (!task.eventDate) return false;
+          const seed = new Date(task.eventDate);
+          return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
+        }
+
+        return false;
+      }
+
+      // Non-cyclic: match explicit-dated tasks by exact date
+      const explicit = task.date || task.eventDate;
+      return explicit === dayStr;
+    };
+
+    for (const t of full) {
+      if (Number(t.status_id) === 0) continue; // skip done
+      if (t.type_id === 'Replenish') continue;
+      if (occursOnDay(t, day)) {
+        // avoid duplicates: if task with same id already present, skip
+        if (!tasksToSort.some((existing) => existing.id === t.id)) {
+          const clone = { ...t, eventDate: day };
+          // mark as generated instance so UI can show it differently if needed
+          (clone as any).__isCyclicInstance = true;
+          tasksToSort.push(clone);
+        }
+      }
+    }
+  } catch (e) {
+    // ignore errors here
+  }
+
   const val = [...tasksToSort].sort((a, b) => {
     // Tasks with time come first, sorted by time
     const hasTimeA = !!a.eventTime;
