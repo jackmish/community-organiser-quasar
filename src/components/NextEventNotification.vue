@@ -2,7 +2,8 @@
   <div
     v-if="nextEvent"
     class="q-ml-md next-event"
-    :style="{ backgroundColor: priorityColorValue || 'transparent', color: priorityTextValue }">
+    :style="{ backgroundColor: priorityColorValue || 'transparent', color: priorityTextValue }"
+  >
     <q-icon :name="iconName" size="18" />
     <div class="next-event-text">
       <div class="next-event-title">{{ nextEvent.name }}</div>
@@ -14,12 +15,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
-import {
-  priorityColors,
-  priorityTextColor,
-  typeIcons,
-  priorityIcons,
-} from './theme';
+import { priorityColors, priorityTextColor, typeIcons, priorityIcons } from './theme';
 
 const { organiserData } = useDayOrganiser();
 
@@ -126,5 +122,4 @@ const iconName = computed(() => {
   flex-direction: column;
   min-width: 0;
 }
-
 </style>
