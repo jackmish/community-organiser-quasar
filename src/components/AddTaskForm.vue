@@ -1010,6 +1010,96 @@ function onSubmit(event: Event) {
                         "
                       />
                     </div>
+
+                    <!-- Replenish special field: search existing or create new (moved above submit buttons) -->
+                    <div
+                      v-if="isReplenish && mode === 'add'"
+                      class="q-pa-sm col"
+                      style="position: relative"
+                    >
+                      <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
+                      <q-input
+                        ref="replenishInput"
+                        v-model="replenishQuery"
+                        @update:model-value="onReplenishInput"
+                        @focus="onReplenishFocus"
+                        label="Search existing Replenish or type a new title"
+                        outlined
+                        dense
+                        class="col"
+                      />
+                      <div
+                        v-if="
+                          showReplenishList &&
+                          replenishQuery &&
+                          replenishQuery.trim() &&
+                          replenishMatches.length
+                        "
+                        class="q-mt-sm"
+                        :style="replenishListStyle"
+                      >
+                        <q-list dense separator>
+                          <q-item
+                            v-for="m in replenishMatches"
+                            :key="m.id"
+                            clickable
+                            @click="selectReplenishMatch(m)"
+                            class="q-pa-sm bg-white"
+                            style="border-radius: 6px; margin-bottom: 6px"
+                          >
+                            <q-item-section>
+                              <div class="text-body1">{{ m.name }}</div>
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </div>
+                    </div>
+
+                    <!-- Color chooser for Replenish tasks (moved above submit buttons) -->
+                    <div
+                      v-if="isReplenish && (props.mode === 'add' || props.mode === 'edit')"
+                      class="q-pa-sm col"
+                    >
+                      <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
+                      <div class="row" style="gap: 8px; align-items: center">
+                        <div style="flex: 0 1 auto">
+                          <div
+                            v-for="(row, ridx) in replenishColorRows"
+                            :key="ridx"
+                            class="row"
+                            style="gap: 8px; align-items: center; margin-bottom: 6px"
+                          >
+                            <div v-for="cs in row" :key="cs.id" class="row items-center" style="gap: 6px">
+                              <div
+                                class="color-swatch"
+                                :style="{
+                                  background: cs.bg,
+                                  border:
+                                    cs.id === (localNewTask as any).color_set
+                                      ? '2px solid #000'
+                                      : '1px solid rgba(0,0,0,0.08)',
+                                }"
+                                @click.stop="(localNewTask as any).color_set = cs.id"
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style="flex: 0 0 auto">
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="clear"
+                            @click.stop="
+                              () => {
+                                (localNewTask as any).color_set = null;
+                              }
+                            "
+                            title="Use default"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <br />
@@ -1122,95 +1212,7 @@ function onSubmit(event: Event) {
               </div>
             </div>
 
-            <!-- Replenish special field: search existing or create new -->
-            <div
-              v-if="isReplenish && mode === 'add'"
-              class="q-pa-sm col"
-              style="position: relative"
-            >
-              <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
-              <q-input
-                ref="replenishInput"
-                v-model="replenishQuery"
-                @update:model-value="onReplenishInput"
-                @focus="onReplenishFocus"
-                label="Search existing Replenish or type a new title"
-                outlined
-                dense
-                class="col"
-              />
-              <div
-                v-if="
-                  showReplenishList &&
-                  replenishQuery &&
-                  replenishQuery.trim() &&
-                  replenishMatches.length
-                "
-                class="q-mt-sm"
-                :style="replenishListStyle"
-              >
-                <q-list dense separator>
-                  <q-item
-                    v-for="m in replenishMatches"
-                    :key="m.id"
-                    clickable
-                    @click="selectReplenishMatch(m)"
-                    class="q-pa-sm bg-white"
-                    style="border-radius: 6px; margin-bottom: 6px"
-                  >
-                    <q-item-section>
-                      <div class="text-body1">{{ m.name }}</div>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </div>
-            </div>
-
-            <!-- Color chooser for Replenish tasks (below description) -->
-            <div
-              v-if="isReplenish && (props.mode === 'add' || props.mode === 'edit')"
-              class="q-pa-sm col"
-            >
-              <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
-              <div class="row" style="gap: 8px; align-items: center">
-                <div style="flex: 0 1 auto">
-                  <div
-                    v-for="(row, ridx) in replenishColorRows"
-                    :key="ridx"
-                    class="row"
-                    style="gap: 8px; align-items: center; margin-bottom: 6px"
-                  >
-                    <div v-for="cs in row" :key="cs.id" class="row items-center" style="gap: 6px">
-                      <div
-                        class="color-swatch"
-                        :style="{
-                          background: cs.bg,
-                          border:
-                            cs.id === (localNewTask as any).color_set
-                              ? '2px solid #000'
-                              : '1px solid rgba(0,0,0,0.08)',
-                        }"
-                        @click.stop="(localNewTask as any).color_set = cs.id"
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-                <div style="flex: 0 0 auto">
-                  <q-btn
-                    flat
-                    dense
-                    round
-                    icon="clear"
-                    @click.stop="
-                      () => {
-                        (localNewTask as any).color_set = null;
-                      }
-                    "
-                    title="Use default"
-                  />
-                </div>
-              </div>
-            </div>
+            <!-- Replenish inputs moved above submit buttons -->
           </div>
         </div>
       </q-form>
