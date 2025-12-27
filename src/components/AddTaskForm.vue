@@ -883,40 +883,42 @@ function onSubmit(event: Event) {
                           <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
                         </div>
                       </div>
-                      <div v-if="repeatMode === 'cyclic'" class="q-mb-sm">
-                        <q-btn-toggle
-                          v-model="repeatCycleType"
-                          :options="repeatCycleOptions"
-                          dense
-                          inline
-                          rounded
-                          class="time-toggle"
-                        />
-                      </div>
-
-                      <div v-if="repeatCycleType === 'dayWeek'" class="q-mt-sm">
-                        <div
-                          class="row items-center weekday-row"
-                          style="gap: 0px; flex-wrap: nowrap; overflow-x: auto"
-                        >
-                          <q-btn
-                            v-for="opt in weekDayOptions"
-                            :key="opt.value"
+                      <div v-if="repeatMode === 'cyclic'">
+                        <div class="q-mb-sm">
+                          <q-btn-toggle
+                            v-model="repeatCycleType"
+                            :options="repeatCycleOptions"
                             dense
-                            size="sm"
-                            :label="opt.label"
-                            :outline="repeatDays.indexOf(opt.value) === -1"
-                            :unelevated="repeatDays.indexOf(opt.value) !== -1"
-                            @click="toggleDay(opt.value)"
-                            class="weekday-btn q-ma-none"
-                            :class="{
-                              'weekday-btn-selected': repeatDays.indexOf(opt.value) !== -1,
-                            }"
+                            inline
+                            rounded
+                            class="time-toggle"
                           />
                         </div>
-                        <div class="row" style="gap: 8px; margin-top: 6px; align-items: center">
-                          <q-btn dense flat size="sm" label="Check all" @click="checkAllDays" />
-                          <q-btn dense flat size="sm" label="Clear" @click="clearDays" />
+
+                        <div v-if="repeatCycleType === 'dayWeek'" class="q-mt-sm">
+                          <div
+                            class="row items-center weekday-row"
+                            style="gap: 0px; flex-wrap: nowrap; overflow-x: auto"
+                          >
+                            <q-btn
+                              v-for="opt in weekDayOptions"
+                              :key="opt.value"
+                              dense
+                              size="sm"
+                              :label="opt.label"
+                              :outline="repeatDays.indexOf(opt.value) === -1"
+                              :unelevated="repeatDays.indexOf(opt.value) !== -1"
+                              @click="toggleDay(opt.value)"
+                              class="weekday-btn q-ma-none"
+                              :class="{
+                                'weekday-btn-selected': repeatDays.indexOf(opt.value) !== -1,
+                              }"
+                            />
+                          </div>
+                          <div class="row" style="gap: 8px; margin-top: 6px; align-items: center">
+                            <q-btn dense flat size="sm" label="Check all" @click="checkAllDays" />
+                            <q-btn dense flat size="sm" label="Clear" @click="clearDays" />
+                          </div>
                         </div>
                       </div>
 
