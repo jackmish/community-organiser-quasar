@@ -79,6 +79,15 @@ const repeatOptions = [
   { label: 'Cyclic', value: 'cyclic', icon: 'repeat' },
 ];
 
+// When cyclic, choose period
+const repeatCycleType = ref<'dayWeek' | 'month' | 'year' | 'other'>('dayWeek');
+const repeatCycleOptions = [
+  { label: 'Day/Week', value: 'dayWeek', icon: 'today' },
+  { label: 'Month', value: 'month', icon: 'date_range' },
+  { label: 'Year', value: 'year', icon: 'event' },
+  { label: 'Other', value: 'other', icon: 'more_horiz' },
+];
+
 // Local newTask state, default to today
 const today = new Date();
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -849,6 +858,17 @@ function onSubmit(event: Event) {
                           <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
                         </div>
                       </div>
+                      <div v-if="repeatMode === 'cyclic'" class="q-mb-sm">
+                        <q-btn-toggle
+                          v-model="repeatCycleType"
+                          :options="repeatCycleOptions"
+                          dense
+                          inline
+                          rounded
+                          class="time-toggle"
+                        />
+                      </div>
+
                       <div class="row q-gutter-xs items-center" style="align-items: center">
                         <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
                           <q-input
