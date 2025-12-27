@@ -2,7 +2,7 @@
   <q-page class="q-pa-md">
     <!-- Active Group Selector and Type Selector -->
     <div class="row justify-between items-center q-mb-md">
-      <div class="row items-center" style="gap:12px">
+      <div class="row items-center" style="gap: 12px">
         <q-select
           v-model="activeGroup"
           :options="activeGroupOptions"
@@ -20,14 +20,20 @@
 
         <div
           class="row items-center"
-          style="background:#0f1724;color:#2196f3;padding:8px 12px;border-radius:6px;align-items:center"
+          style="
+            background: #0f1724;
+            color: #2196f3;
+            padding: 8px 12px;
+            border-radius: 6px;
+            align-items: center;
+          "
         >
-          <div class="text-caption" style="color:#90caf9;margin-right:8px">
-            Today is <span style="color:#90caf9">{{ currentDateWeekday }},&nbsp;</span>
-            <span style="color:#ffffff">{{ currentDateShort }}</span>
+          <div class="text-caption" style="color: #90caf9; margin-right: 8px">
+            Today is <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
+            <span style="color: #ffffff">{{ currentDateShort }}</span>
           </div>
-          <div class="text-caption" style="color:#90caf9;margin-left:8px">
-            |&nbsp;Its <span style="color:#ffffff">{{ currentTimeDisplay }}</span> now
+          <div class="text-caption" style="color: #90caf9; margin-left: 8px">
+            |&nbsp;Its <span style="color: #ffffff">{{ currentTimeDisplay }}</span> now
           </div>
         </div>
       </div>
@@ -55,11 +61,15 @@
           <q-card>
             <q-card-section>
               <div class="text-h6 text-primary">
-                <div>Task list:</div>
-                <div class="row items-center justify-between" style="align-items:center; margin-top:6px">
-                  <div class="row items-center" style="gap:8px">
+                <div
+                  class="row items-center justify-between"
+                  style="align-items: center; margin-top: 6px"
+                >
+                  <div class="row items-center" style="gap: 8px">
                     <q-btn flat dense round icon="chevron_left" @click="prevDay" color="primary" />
-                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{
+                      getTimeDifferenceDisplay(currentDate)
+                    }}</span>
                     <span class="q-mx-sm">|</span>
                     <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
                     <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
@@ -77,21 +87,23 @@
                   v-for="task in tasksWithTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                    :class="{
-                      'bg-grey-2': Number(task.status_id) === 0,
-                      'selected-task': selectedTaskId === task.id,
-                    }"
-                    :active="selectedTaskId === task.id"
-                    clickable
-                    @pointerdown="() => startLongPress(task)"
-                    @pointerup="cancelLongPress"
-                    @pointercancel="cancelLongPress"
-                    @pointerleave="cancelLongPress"
-                    @click="handleTaskClick(task)"
+                  :class="{
+                    'bg-grey-2': Number(task.status_id) === 0,
+                    'selected-task': selectedTaskId === task.id,
+                  }"
+                  :active="selectedTaskId === task.id"
+                  clickable
+                  @pointerdown="() => startLongPress(task)"
+                  @pointerup="cancelLongPress"
+                  @pointercancel="cancelLongPress"
+                  @pointerleave="cancelLongPress"
+                  @click="handleTaskClick(task)"
                 >
                   <q-item-section side style="min-width: 60px">
                     <div class="text-bold text-primary">{{ task.eventTime }}</div>
-                    <div v-if="getEventHoursDisplay(task)" class="text-caption text-grey-7 q-mt-xs">{{ getEventHoursDisplay(task) }}</div>
+                    <div v-if="getEventHoursDisplay(task)" class="text-caption text-grey-7 q-mt-xs">
+                      {{ getEventHoursDisplay(task) }}
+                    </div>
                   </q-item-section>
                   <q-item-section side>
                     <q-checkbox
@@ -100,9 +112,7 @@
                     />
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label
-                      :class="{ 'text-strike': Number(task.status_id) === 0 }"
-                    >
+                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
                     <q-item-label v-if="getDisplayDescription(task)" caption>{{
@@ -111,7 +121,10 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         size="sm"
-                        :style="{ backgroundColor: priorityColor(task.priority), color: priorityTextColor(task.priority) }"
+                        :style="{
+                          backgroundColor: priorityColor(task.priority),
+                          color: priorityTextColor(task.priority),
+                        }"
                       >
                         {{ task.priority }}
                       </q-chip>
@@ -142,9 +155,7 @@
                         dense
                         icon="delete"
                         color="negative"
-                        @click.stop="
-                          openDeleteMenu = openDeleteMenu === task.id ? null : task.id
-                        "
+                        @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
                       />
                       <div
                         v-if="openDeleteMenu === task.id"
@@ -159,12 +170,7 @@
                           label="Yes"
                           @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn
-                          flat
-                          dense
-                          label="No"
-                          @click.stop="openDeleteMenu = null"
-                        />
+                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
                       </div>
                     </div>
                   </q-item-section>
@@ -193,22 +199,20 @@
                   v-for="task in tasksWithoutTime"
                   :key="task.id"
                   class="q-pa-md task-card"
-                    :class="{
-                      'bg-grey-2': Number(task.status_id) === 0,
-                      'selected-task': selectedTaskId === task.id,
-                    }"
-                    :active="selectedTaskId === task.id"
-                    clickable
-                    @pointerdown="() => startLongPress(task)"
-                    @pointerup="cancelLongPress"
-                    @pointercancel="cancelLongPress"
-                    @pointerleave="cancelLongPress"
-                    @click="handleTaskClick(task)"
+                  :class="{
+                    'bg-grey-2': Number(task.status_id) === 0,
+                    'selected-task': selectedTaskId === task.id,
+                  }"
+                  :active="selectedTaskId === task.id"
+                  clickable
+                  @pointerdown="() => startLongPress(task)"
+                  @pointerup="cancelLongPress"
+                  @pointercancel="cancelLongPress"
+                  @pointerleave="cancelLongPress"
+                  @click="handleTaskClick(task)"
                 >
                   <q-item-section>
-                    <q-item-label
-                      :class="{ 'text-strike': Number(task.status_id) === 0 }"
-                    >
+                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
                       <strong>{{ task.name }}</strong>
                     </q-item-label>
                     <q-item-label v-if="getDisplayDescription(task)" caption>{{
@@ -217,7 +221,10 @@
                     <q-item-label caption class="q-mt-xs">
                       <q-chip
                         size="sm"
-                        :style="{ backgroundColor: priorityColor(task.priority), color: priorityTextColor(task.priority) }"
+                        :style="{
+                          backgroundColor: priorityColor(task.priority),
+                          color: priorityTextColor(task.priority),
+                        }"
                       >
                         {{ task.priority }}
                       </q-chip>
@@ -248,9 +255,7 @@
                         dense
                         icon="delete"
                         color="negative"
-                        @click.stop="
-                          openDeleteMenu = openDeleteMenu === task.id ? null : task.id
-                        "
+                        @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
                       />
                       <div
                         v-if="openDeleteMenu === task.id"
@@ -265,12 +270,7 @@
                           label="Yes"
                           @click.stop="handleDeleteTask(task.id)"
                         />
-                        <q-btn
-                          flat
-                          dense
-                          label="No"
-                          @click.stop="openDeleteMenu = null"
-                        />
+                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
                       </div>
                     </div>
                     <div class="row">
@@ -282,17 +282,15 @@
                       </q-item-section>
                     </div>
                   </q-item-section>
-
                 </q-item>
               </template>
-
             </div>
           </q-card>
         </div>
         <!-- Right column for Replenishment list -->
         <div class="col-12 replenish-column">
-          <q-card flat class="q-pa-sm q-mb-md" style="background:#e8f5ff; border-radius:8px;">
-            <div class="row items-center" style="gap:8px">
+          <q-card flat class="q-pa-sm q-mb-md" style="background: #e8f5ff; border-radius: 8px">
+            <div class="row items-center" style="gap: 8px">
               <q-icon name="shopping_cart" color="primary" />
               <div class="text-subtitle2 text-primary"><strong>Replenishment</strong></div>
             </div>
@@ -309,22 +307,31 @@
                 @click="handleReplenishClick(r)"
                 :style="{ background: getReplenishBg(r) }"
               >
-                <div class="row items-center justify-between" style="gap:8px">
-                  <div :class="{ 'text-strike': Number(r.status_id) === 0 }" :style="{ color: getReplenishText(r) }">{{ r.name }}</div>
-
+                <div class="row items-center justify-between" style="gap: 8px">
+                  <div
+                    :class="{ 'text-strike': Number(r.status_id) === 0 }"
+                    :style="{ color: getReplenishText(r) }"
+                  >
+                    {{ r.name }}
+                  </div>
                 </div>
               </div>
             </div>
             <q-separator class="q-mt-sm" />
             <div class="q-mt-sm">
-              <div class="row items-center" style="gap:8px">
+              <div class="row items-center" style="gap: 8px">
                 <q-icon name="check" color="grey-7" />
                 <div class="text-subtitle2"><strong>Done</strong></div>
               </div>
               <div class="q-mt-sm">
                 <div v-for="d in doneTasks" :key="d.id" class="done-item" @click="toggleStatus(d)">
-                  <div class="row items-center justify-between" style="gap:8px">
-                    <div :class="{ 'text-strike': Number(d.status_id) === 0 }" style="color: rgba(0,0,0,0.45)">{{ d.name }}</div>
+                  <div class="row items-center justify-between" style="gap: 8px">
+                    <div
+                      :class="{ 'text-strike': Number(d.status_id) === 0 }"
+                      style="color: rgba(0, 0, 0, 0.45)"
+                    >
+                      {{ d.name }}
+                    </div>
                     <q-icon name="done" size="18px" color="grey-6" />
                   </div>
                 </div>
@@ -335,14 +342,14 @@
       </div>
 
       <div class="row q-col-gutter-md q-mt-md">
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-8">
           <CalendarView
             :selected-date="newTask.eventDate"
             :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
           />
         </div>
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-4">
           <div class="q-mb-sm">
             <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
           </div>
@@ -367,14 +374,14 @@
               :filtered-parent-options="filteredParentOptions"
               :active-group="activeGroup"
               :show-calendar="false"
-                :selected-date="newTask.eventDate"
-                :all-tasks="allTasks"
+              :selected-date="newTask.eventDate"
+              :all-tasks="allTasks"
               :initial-task="taskToEdit"
               :mode="mode"
               @update:mode="(v) => (mode = v)"
               @add-task="handleAddTask"
               @update-task="handleUpdateTask"
-                @replenish-restore="handleReplenishRestore"
+              @replenish-restore="handleReplenishRestore"
               @cancel-edit="() => clearTaskToEdit()"
               @calendar-date-select="handleCalendarDateSelect"
               @filter-parent-tasks="filterParentTasks"
@@ -397,13 +404,7 @@
           <q-card-section class="q-pt-sm">
             <q-form @submit.prevent="handleAddGroup" class="q-mb-md">
               <div class="row q-gutter-sm items-end">
-                <q-input
-                  v-model="newGroupName"
-                  label="Group Name"
-                  outlined
-                  dense
-                  class="col"
-                />
+                <q-input v-model="newGroupName" label="Group Name" outlined dense class="col" />
 
                 <q-select
                   v-model="newGroupParent"
@@ -471,17 +472,22 @@
 </template>
 
 <script setup lang="ts">
-import { format, addDays, startOfWeek } from "date-fns";
+import { format, addDays, startOfWeek } from 'date-fns';
 
-import AddTaskForm from "../components/AddTaskForm.vue";
-import { priorityColors as themePriorityColors, priorityTextColor as themePriorityTextColor, timeDiffClassFor, formatDisplayDate, formatEventHoursDiff } from '../components/theme';
-import TaskPreview from "../components/TaskPreview.vue";
-import ModeSwitcher from "../components/ModeSwitcher.vue";
-import CalendarView from "../components/CalendarView.vue";
-
+import AddTaskForm from '../components/AddTaskForm.vue';
+import {
+  priorityColors as themePriorityColors,
+  priorityTextColor as themePriorityTextColor,
+  timeDiffClassFor,
+  formatDisplayDate,
+  formatEventHoursDiff,
+} from '../components/theme';
+import TaskPreview from '../components/TaskPreview.vue';
+import ModeSwitcher from '../components/ModeSwitcher.vue';
+import CalendarView from '../components/CalendarView.vue';
 
 const getWeekDays = (startDate: Date) => {
-  return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), "yyyy-MM-dd"));
+  return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), 'yyyy-MM-dd'));
 };
 
 // Track which months have been shown in the calendar
@@ -492,11 +498,11 @@ const shouldShowMonth = (
   dayDate: string | undefined,
   index: number,
   weekDays: string[],
-  isFirstWeek: boolean
+  isFirstWeek: boolean,
 ) => {
   if (!dayDate) return false;
 
-  const monthYear = format(new Date(dayDate), "yyyy-MM");
+  const monthYear = format(new Date(dayDate), 'yyyy-MM');
 
   // Reset shown months when it's the first week and first day
   if (isFirstWeek && index === 0) {
@@ -534,8 +540,8 @@ const shouldShowMonth = (
 
 // Helper to get full month name
 const getMonthAbbr = (dayDate: string | undefined, index: number, weekDays: string[]) => {
-  if (!dayDate) return "";
-  const monthName = format(new Date(dayDate), "MMMM");
+  if (!dayDate) return '';
+  const monthName = format(new Date(dayDate), 'MMMM');
 
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
   const dayOfMonth = new Date(dayDate).getDate();
@@ -571,12 +577,12 @@ const shouldShowYear = (
   dayDate: string | undefined,
   index: number,
   weekDays: string[],
-  isFirstWeek: boolean
+  isFirstWeek: boolean,
 ) => {
   if (!dayDate) return false;
 
-  const year = format(new Date(dayDate), "yyyy");
-  const todayYear = format(new Date(), "yyyy");
+  const year = format(new Date(dayDate), 'yyyy');
+  const todayYear = format(new Date(), 'yyyy');
 
   // Reset shown years when it's the first week and first day
   if (isFirstWeek && index === 0) {
@@ -634,11 +640,11 @@ const getWeekLabel = (dayDate: string) => {
   const todayNormalized = new Date(
     todayDate.getFullYear(),
     todayDate.getMonth(),
-    todayDate.getDate()
+    todayDate.getDate(),
   );
 
   const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
+    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (daysDiff > 0) {
@@ -663,11 +669,7 @@ const getWeekLabel = (dayDate: string) => {
 };
 
 // Helper to check if a week should have margin-top (new month started in this week)
-const shouldWeekHaveMargin = (
-  week: string[],
-  weekIndex: number,
-  allWeeks: string[][]
-) => {
+const shouldWeekHaveMargin = (week: string[], weekIndex: number, allWeeks: string[][]) => {
   if (weekIndex === 0) return false; // First week never has margin
 
   // Check if this week contains the 1st of a month
@@ -685,20 +687,13 @@ const shouldWeekHaveMargin = (
   const newMonth = new Date(firstDayOfMonth).getMonth();
 
   // If any day in previous week is from a different month, add margin
-  const hasDifferentMonth = previousWeek.some(
-    (day) => new Date(day).getMonth() !== newMonth
-  );
+  const hasDifferentMonth = previousWeek.some((day) => new Date(day).getMonth() !== newMonth);
 
   return hasDifferentMonth;
 };
 
 // Helper to check if day is 1-7 of month AND month started in previous week
-const isNewMonthStart = (
-  day: string,
-  week: string[],
-  weekIndex: number,
-  allWeeks: string[][]
-) => {
+const isNewMonthStart = (day: string, week: string[], weekIndex: number, allWeeks: string[][]) => {
   const dayDate = new Date(day);
   const dayOfMonth = dayDate.getDate();
 
@@ -707,7 +702,7 @@ const isNewMonthStart = (
 
   // Check if day 1 of this month is in the current week
   const firstDayOfMonth = week.some(
-    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth()
+    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth(),
   );
 
   // Only apply padding if day 1 is in THIS week (not in a previous week)
@@ -724,9 +719,7 @@ const isNewMonthStart = (
   if (!previousWeek) return false;
 
   const currentMonth = dayDate.getMonth();
-  const hasPreviousMonth = previousWeek.some(
-    (d) => new Date(d).getMonth() !== currentMonth
-  );
+  const hasPreviousMonth = previousWeek.some((d) => new Date(d).getMonth() !== currentMonth);
 
   return hasPreviousMonth;
 };
@@ -749,7 +742,7 @@ const isAfterFirstInRow = (day: string, week: string[]) => {
 
 // Helper to get time difference display for the year input area
 const getTimeDifferenceDisplay = (dayDate: string) => {
-  if (!dayDate) return "Select a date";
+  if (!dayDate) return 'Select a date';
 
   const date = new Date(dayDate);
   const todayDate = new Date();
@@ -759,16 +752,16 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
   const todayNormalized = new Date(
     todayDate.getFullYear(),
     todayDate.getMonth(),
-    todayDate.getDate()
+    todayDate.getDate(),
   );
 
   const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
+    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (daysDiff === 0) return "TODAY";
-  if (daysDiff === 1) return "TOMORROW";
-  if (daysDiff === -1) return "YESTERDAY";
+  if (daysDiff === 0) return 'TODAY';
+  if (daysDiff === 1) return 'TOMORROW';
+  if (daysDiff === -1) return 'YESTERDAY';
 
   if (daysDiff > 0) {
     // Future date
@@ -777,15 +770,15 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
     if (weeksDiff >= 1) {
       const remainingDays = daysDiff % 7;
       if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? "week" : "weeks";
-        const dayText = remainingDays === 1 ? "day" : "days";
+        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
+        const dayText = remainingDays === 1 ? 'day' : 'days';
         return `In ${weeksDiff} ${weekText} ${remainingDays} ${dayText}`;
       }
-      const weekText = weeksDiff === 1 ? "week" : "weeks";
+      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
       return `In ${weeksDiff} ${weekText}`;
     }
 
-    const dayText = daysDiff === 1 ? "day" : "days";
+    const dayText = daysDiff === 1 ? 'day' : 'days';
     return `In ${daysDiff} ${dayText}`;
   } else {
     // Past date
@@ -795,15 +788,15 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
     if (weeksDiff >= 1) {
       const remainingDays = absDaysDiff % 7;
       if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? "week" : "weeks";
-        const dayText = remainingDays === 1 ? "day" : "days";
+        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
+        const dayText = remainingDays === 1 ? 'day' : 'days';
         return `${weeksDiff} ${weekText} ${remainingDays} ${dayText} ago`;
       }
-      const weekText = weeksDiff === 1 ? "week" : "weeks";
+      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
       return `${weeksDiff} ${weekText} ago`;
     }
 
-    const dayText = absDaysDiff === 1 ? "day" : "days";
+    const dayText = absDaysDiff === 1 ? 'day' : 'days';
     return `${absDaysDiff} ${dayText} ago`;
   }
 };
@@ -825,7 +818,7 @@ const calendarViewDays = ref(42); // Default to 42 days view
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const val = getWeekDays(weekStart);
-  console.log("[computed] calendarCurrentWeek", val);
+  console.log('[computed] calendarCurrentWeek', val);
   return val;
 });
 
@@ -842,18 +835,18 @@ onBeforeUnmount(() => {
 });
 
 const currentDateDisplay = computed(() => {
-  return format(now.value, "EEEE, dd.MM.yyyy");
+  return format(now.value, 'EEEE, dd.MM.yyyy');
 });
 const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
 const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
 const currentTimeDisplay = computed(() => {
-  return format(now.value, "HH:mm");
+  return format(now.value, 'HH:mm');
 });
 const calendarNextWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const nextWeekStart = addDays(weekStart, 7);
   const val = getWeekDays(nextWeekStart);
-  console.log("[computed] calendarNextWeek", val);
+  console.log('[computed] calendarNextWeek', val);
   return val;
 });
 
@@ -868,7 +861,7 @@ const allCalendarWeeks = computed(() => {
     weeks.push(getWeekDays(weekStartDate));
   }
 
-  console.log("[computed] allCalendarWeeks", weeks);
+  console.log('[computed] allCalendarWeeks', weeks);
   return weeks;
 });
 
@@ -893,12 +886,12 @@ function handleCalendarDateSelect(dateString: string) {
   selectCalendarDate(dateString);
 }
 
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
-import { useQuasar } from "quasar";
-import { useDayOrganiser } from "../modules/day-organiser";
-import type { Task, TaskDuration, TaskGroup } from "../modules/day-organiser";
-import FirstRunDialog from "../components/FirstRunDialog.vue";
-import TaskTypeSelector from "../components/TaskTypeSelector.vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { useQuasar } from 'quasar';
+import { useDayOrganiser } from '../modules/day-organiser';
+import type { Task, TaskDuration, TaskGroup } from '../modules/day-organiser';
+import FirstRunDialog from '../components/FirstRunDialog.vue';
+import TaskTypeSelector from '../components/TaskTypeSelector.vue';
 
 const $q = useQuasar();
 
@@ -928,7 +921,7 @@ const {
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => {
   try {
-    return getTasksInRange("1970-01-01", "9999-12-31");
+    return getTasksInRange('1970-01-01', '9999-12-31');
   } catch (e) {
     return [] as Task[];
   }
@@ -937,50 +930,48 @@ const allTasks = computed(() => {
 const fileInput = ref<HTMLInputElement | null>(null);
 const showGroupDialog = ref(false);
 const showFirstRunDialog = ref(false);
-const newGroupName = ref("");
+const newGroupName = ref('');
 const newGroupParent = ref<string | undefined>(undefined);
-const newGroupColor = ref("#1976d2");
+const newGroupColor = ref('#1976d2');
 const defaultGroupId = ref<string | undefined>(undefined);
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
-const mode = ref<"add" | "edit" | "preview">("add");
+const mode = ref<'add' | 'edit' | 'preview'>('add');
 const selectedTaskId = ref<string | null>(null);
 
 // Allowed modes depend on whether a task is selected
-const allowedModes = computed(() =>
-  taskToEdit.value ? ["add", "edit", "preview"] : ["add"]
-);
+const allowedModes = computed(() => (taskToEdit.value ? ['add', 'edit', 'preview'] : ['add']));
 
 // Ensure we return to 'add' mode when no task is selected
 watch(taskToEdit, (val) => {
-  if (!val && mode.value !== "add") {
-    mode.value = "add";
+  if (!val && mode.value !== 'add') {
+    mode.value = 'add';
   }
 });
 
 function setTaskToEdit(task: Task) {
   taskToEdit.value = task;
   // show preview when a task is clicked
-  mode.value = "preview";
+  mode.value = 'preview';
   selectedTaskId.value = task.id;
 }
 
 function editTask(task: Task) {
   taskToEdit.value = task;
-  mode.value = "edit";
+  mode.value = 'edit';
   selectedTaskId.value = task.id;
 }
 
 function clearTaskToEdit() {
   taskToEdit.value = null;
-  mode.value = "add";
+  mode.value = 'add';
   selectedTaskId.value = null;
 }
 
 // When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
 watch(mode, (val) => {
-  if (val === "add") {
+  if (val === 'add') {
     taskToEdit.value = null;
     selectedTaskId.value = null;
   }
@@ -993,7 +984,7 @@ const yearInput = ref<any>(null);
 const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
 const autoIncrementYear = ref(true);
-const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
+const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
 const isUpdatingDate = ref(false);
 const isClickBlocked = ref(false);
 // Long-press handling
@@ -1042,10 +1033,10 @@ const eventDateYear = computed(() => {
   let val;
   if (!dateStr) val = new Date().getFullYear();
   else {
-    const parts = dateStr.split("-");
-    val = parseInt(parts[0] || "0", 10);
+    const parts = dateStr.split('-');
+    val = parseInt(parts[0] || '0', 10);
   }
-  console.log("[computed] eventDateYear", val);
+  console.log('[computed] eventDateYear', val);
   return val;
 });
 
@@ -1054,10 +1045,10 @@ const eventDateMonth = computed(() => {
   let val;
   if (!dateStr) val = new Date().getMonth() + 1;
   else {
-    const parts = dateStr.split("-");
-    val = parseInt(parts[1] || "0", 10);
+    const parts = dateStr.split('-');
+    val = parseInt(parts[1] || '0', 10);
   }
-  console.log("[computed] eventDateMonth", val);
+  console.log('[computed] eventDateMonth', val);
   return val;
 });
 
@@ -1066,10 +1057,10 @@ const eventDateDay = computed(() => {
   let val;
   if (!dateStr) val = new Date().getDate();
   else {
-    const parts = dateStr.split("-");
-    val = parseInt(parts[2] || "0", 10);
+    const parts = dateStr.split('-');
+    val = parseInt(parts[2] || '0', 10);
   }
-  console.log("[computed] eventDateDay", val);
+  console.log('[computed] eventDateDay', val);
   return val;
 });
 
@@ -1101,7 +1092,7 @@ const updateEventDateMonth = (value: string | number | null) => {
     }
 
     const day = eventDateDay.value;
-    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
     newTask.value.eventDate = newDate;
 
     // Sync calendar view only if the date is not visible in current view
@@ -1113,7 +1104,7 @@ const updateEventDateMonth = (value: string | number | null) => {
     // Auto-focus to hour input after filling month (when month is 2 digits)
     if (String(value).length >= 2) {
       setTimeout(() => {
-        hourInput.value?.$el?.querySelector("input")?.focus();
+        hourInput.value?.$el?.querySelector('input')?.focus();
       }, 0);
     }
   } finally {
@@ -1129,7 +1120,7 @@ const updateEventDateYear = (value: string | number | null) => {
     const year = Number(value);
     const month = eventDateMonth.value;
     const day = eventDateDay.value;
-    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
     newTask.value.eventDate = newDate;
 
     // Sync calendar view only if the date is not visible in current view
@@ -1151,7 +1142,7 @@ const updateEventDateDay = (value: string | number | null) => {
     if (day < 1 || day > 31) return;
     const year = eventDateYear.value;
     const month = eventDateMonth.value;
-    const newDate = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
     newTask.value.eventDate = newDate;
 
     // Sync calendar view only if the date is not visible in current view
@@ -1163,7 +1154,7 @@ const updateEventDateDay = (value: string | number | null) => {
     // Auto-focus to month input after filling day (when day is 2 digits)
     if (String(value).length >= 2) {
       setTimeout(() => {
-        monthInput.value?.$el?.querySelector("input")?.focus();
+        monthInput.value?.$el?.querySelector('input')?.focus();
       }, 0);
     }
   } finally {
@@ -1173,98 +1164,116 @@ const updateEventDateDay = (value: string | number | null) => {
 
 // Time inputs
 const eventTimeHour = computed(() => {
-  if (!newTask.value.eventTime) return "";
-  const val = Number(newTask.value.eventTime.split(":")[0]);
-  console.log("[computed] eventTimeHour", val);
+  if (!newTask.value.eventTime) return '';
+  const val = Number(newTask.value.eventTime.split(':')[0]);
+  console.log('[computed] eventTimeHour', val);
   return val;
 });
 
 const eventTimeMinute = computed(() => {
-  if (!newTask.value.eventTime) return "";
-  const val = Number(newTask.value.eventTime.split(":")[1]);
-  console.log("[computed] eventTimeMinute", val);
+  if (!newTask.value.eventTime) return '';
+  const val = Number(newTask.value.eventTime.split(':')[1]);
+  console.log('[computed] eventTimeMinute', val);
   return val;
 });
 
 const updateEventTimeHour = (value: string | number | null) => {
-  if (value === null || value === "") return;
+  if (value === null || value === '') return;
   const hour = Number(value);
   if (hour < 0 || hour > 23) return;
 
   // Automatically switch to "Exact Hour" when user enters hour
-  timeType.value = "exactHour";
+  timeType.value = 'exactHour';
 
   const minute = eventTimeMinute.value || 0;
-  newTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(
-    2,
-    "0"
-  )}`;
+  newTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
   // Auto-focus to minute input after filling hour (when hour is 2 digits)
   if (String(value).length >= 2) {
     setTimeout(() => {
-      minuteInput.value?.$el?.querySelector("input")?.focus();
+      minuteInput.value?.$el?.querySelector('input')?.focus();
     }, 0);
   }
 };
 
 const updateEventTimeMinute = (value: string | number | null) => {
-  if (value === null || value === "") return;
+  if (value === null || value === '') return;
   const minute = Number(value);
   if (minute < 0 || minute > 59) return;
 
   // Automatically switch to "Exact Hour" when user enters minute
-  timeType.value = "exactHour";
+  timeType.value = 'exactHour';
 
   const hour = eventTimeHour.value || 0;
-  newTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(
-    2,
-    "0"
-  )}`;
+  newTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
 // Watch timeType to clear time when "Whole Day" is selected
 watch(timeType, (newValue) => {
-  if (newValue === "wholeDay") {
-    newTask.value.eventTime = "";
+  if (newValue === 'wholeDay') {
+    newTask.value.eventTime = '';
   }
 });
 
 const newTask = ref({
-  name: "",
-  description: "",
-  type_id: "TimeEvent",
-  status_id: "",
+  name: '',
+  description: '',
+  type_id: 'TimeEvent',
+  status_id: '',
   parent_id: null as string | null,
-  created_by: "",
-  priority: "medium" as Task["priority"],
+  created_by: '',
+  priority: 'medium' as Task['priority'],
   completed: false,
   groupId: undefined as string | undefined,
-  eventDate: format(new Date(), "yyyy-MM-dd"),
-  eventTime: "",
+  eventDate: format(new Date(), 'yyyy-MM-dd'),
+  eventTime: '',
 });
 
 const typeOptions = [
-  { label: "Command center", value: "Command center", icon: "dashboard" },
-  { label: "Note/Later", value: "Note/Later", icon: "note" },
-  { label: "TimeEvent", value: "TimeEvent", icon: "event" },
-  { label: "Replenishment", value: "Replenishment", icon: "shopping_cart" },
+  { label: 'Command center', value: 'Command center', icon: 'dashboard' },
+  { label: 'Note/Later', value: 'Note/Later', icon: 'note' },
+  { label: 'TimeEvent', value: 'TimeEvent', icon: 'event' },
+  { label: 'Replenishment', value: 'Replenishment', icon: 'shopping_cart' },
 ];
 
 const priorityOptions = [
-  { label: 'Lo', value: 'low', icon: 'low_priority', color: themePriorityColors.low, textColor: themePriorityTextColor('low') },
-  { label: 'Med', value: 'medium', icon: 'drag_handle', color: themePriorityColors.medium, textColor: themePriorityTextColor('medium') },
-  { label: 'Hi', value: 'high', icon: 'priority_high', color: themePriorityColors.high, textColor: themePriorityTextColor('high') },
-  { label: 'Crit', value: 'critical', icon: 'warning', color: themePriorityColors.critical, textColor: themePriorityTextColor('critical') },
+  {
+    label: 'Lo',
+    value: 'low',
+    icon: 'low_priority',
+    color: themePriorityColors.low,
+    textColor: themePriorityTextColor('low'),
+  },
+  {
+    label: 'Med',
+    value: 'medium',
+    icon: 'drag_handle',
+    color: themePriorityColors.medium,
+    textColor: themePriorityTextColor('medium'),
+  },
+  {
+    label: 'Hi',
+    value: 'high',
+    icon: 'priority_high',
+    color: themePriorityColors.high,
+    textColor: themePriorityTextColor('high'),
+  },
+  {
+    label: 'Crit',
+    value: 'critical',
+    icon: 'warning',
+    color: themePriorityColors.critical,
+    textColor: themePriorityTextColor('critical'),
+  },
 ];
 
 const parentTaskOptions = computed(() => {
   const val = currentDayData.value.tasks.map((task) => ({
     label: task.name,
     value: task.id,
-    icon: typeOptions.find((t) => t.value === task.category)?.icon || "task",
+    icon: typeOptions.find((t) => t.value === task.category)?.icon || 'task',
   }));
-  console.log("[computed] parentTaskOptions", val);
+  console.log('[computed] parentTaskOptions', val);
   return val;
 });
 
@@ -1284,12 +1293,12 @@ watch(currentDate, (newDate) => {
 
 const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
   update(() => {
-    if (val === "") {
+    if (val === '') {
       filteredParentOptions.value = parentTaskOptions.value;
     } else {
       const needle = val.toLowerCase();
       filteredParentOptions.value = parentTaskOptions.value.filter(
-        (option) => option.label.toLowerCase().indexOf(needle) > -1
+        (option) => option.label.toLowerCase().indexOf(needle) > -1,
       );
     }
   });
@@ -1303,10 +1312,10 @@ const sortedTasks = computed(() => {
   // If we're viewing Today, also include any tasks of type `Todo` from other days
   // so they appear in today's list. They should not show when viewing other days.
   try {
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (currentDate.value === todayStr && typeof getTasksInRange === "function") {
-      const allTasks = getTasksInRange("1970-01-01", "9999-12-31");
-      const todoExtras = allTasks.filter((t) => t.type_id === "Todo");
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (currentDate.value === todayStr && typeof getTasksInRange === 'function') {
+      const allTasks = getTasksInRange('1970-01-01', '9999-12-31');
+      const todoExtras = allTasks.filter((t) => t.type_id === 'Todo');
       // Merge without duplicating tasks already present for today
       for (const t of todoExtras) {
         if (!tasksToSort.some((existing) => existing.id === t.id)) {
@@ -1316,7 +1325,7 @@ const sortedTasks = computed(() => {
     }
   } catch (err) {
     // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
-    console.warn("Failed to include Todo extras for today", err);
+    console.warn('Failed to include Todo extras for today', err);
   }
   if (activeGroup.value && activeGroup.value.value !== null) {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
@@ -1342,7 +1351,7 @@ const sortedTasks = computed(() => {
 
     return 0;
   });
-  console.log("[computed] sortedTasks", val);
+  console.log('[computed] sortedTasks', val);
   return val;
 });
 
@@ -1366,7 +1375,9 @@ const handleReplenishRestore = async (taskId: string) => {
 // Group tasks by whether they have time
 const replenishTasks = computed(() => {
   // only show replenish tasks that are not done
-  const val = sortedTasks.value.filter((t) => t.type_id === "Replenish" && Number(t.status_id) !== 0);
+  const val = sortedTasks.value.filter(
+    (t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0,
+  );
   return val;
 });
 
@@ -1384,13 +1395,17 @@ const doneTasks = computed(() => {
 });
 
 const tasksWithTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !!t.eventTime && t.type_id !== "Replenish" && Number(t.status_id) !== 0);
-  console.log("[computed] tasksWithTime", val);
+  const val = sortedTasks.value.filter(
+    (t) => !!t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
+  );
+  console.log('[computed] tasksWithTime', val);
   return val;
 });
 const tasksWithoutTime = computed(() => {
-  const val = sortedTasks.value.filter((t) => !t.eventTime && t.type_id !== "Replenish" && Number(t.status_id) !== 0);
-  console.log("[computed] tasksWithoutTime", val);
+  const val = sortedTasks.value.filter(
+    (t) => !t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
+  );
+  console.log('[computed] tasksWithoutTime', val);
   return val;
 });
 
@@ -1400,7 +1415,7 @@ const groupOptions = computed(() => {
     label: g.name,
     value: g.id,
   }));
-  console.log("[computed] groupOptions", val);
+  console.log('[computed] groupOptions', val);
   return val;
 });
 
@@ -1423,7 +1438,7 @@ const activeGroupOptions = computed(() => {
     }),
   ];
 
-  console.log("[computed] activeGroupOptions", options);
+  console.log('[computed] activeGroupOptions', options);
   return options;
 });
 
@@ -1434,12 +1449,12 @@ const groupTree = computed(() => {
       id: group.id,
       label: group.name,
       color: group.color,
-      icon: "folder",
+      icon: 'folder',
       children: buildTree(group.id),
     }));
   };
   const val = buildTree();
-  console.log("[computed] groupTree", val);
+  console.log('[computed] groupTree', val);
   return val;
 });
 
@@ -1449,22 +1464,22 @@ const formatDateOnly = (date: string) => formatDisplayDate(date);
 // Return weekday (e.g., "Monday")
 const formatWeekday = (date: string) => {
   const dateObj = new Date(date);
-  return dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  return dateObj.toLocaleDateString('en-US', { weekday: 'long' });
 };
 
-const priorityColor = (priority: Task["priority"]) => themePriorityColors[priority];
-const priorityTextColor = (priority: Task["priority"]) => themePriorityTextColor(priority);
+const priorityColor = (priority: Task['priority']) => themePriorityColors[priority];
+const priorityTextColor = (priority: Task['priority']) => themePriorityTextColor(priority);
 
 const getGroupName = (groupId?: string): string => {
-  if (!groupId) return "Unknown";
+  if (!groupId) return 'Unknown';
   const group = groups.value.find((g) => g.id === groupId);
-  return group ? group.name : "Unknown";
+  return group ? group.name : 'Unknown';
 };
 
 const getGroupColor = (groupId?: string): string => {
-  if (!groupId) return "#1976d2";
+  if (!groupId) return '#1976d2';
   const group = groups.value.find((g) => g.id === groupId);
-  return group?.color || "#1976d2";
+  return group?.color || '#1976d2';
 };
 
 // Replenish color sets grouped by family (4 tones each), ordered dark->bright
@@ -1527,21 +1542,21 @@ const setReplenishColor = async (task: any, colorId: string | null) => {
 };
 
 const getDisplayDescription = (task: Task): string => {
-  const desc = (task.description || "").trim();
-  const name = (task.name || "").trim();
-  if (!desc) return "";
+  const desc = (task.description || '').trim();
+  const name = (task.name || '').trim();
+  if (!desc) return '';
   if (!name) return desc;
 
   // If description equals the name exactly, hide it
-  if (desc === name) return "";
+  if (desc === name) return '';
 
   // If description starts with the name followed by separators, strip the leading name
   if (desc.startsWith(name)) {
     const remainder = desc
       .slice(name.length)
-      .replace(/^[\s\-:\u2013\u2014]+/, "")
+      .replace(/^[\s\-:\u2013\u2014]+/, '')
       .trim();
-    return remainder || "";
+    return remainder || '';
   }
 
   return desc;
@@ -1551,9 +1566,9 @@ const handleAddTask = async (taskPayload: any) => {
   // Check if active group is selected (and not "All Groups")
   if (!activeGroup.value || activeGroup.value.value === null) {
     $q.notify({
-      type: "warning",
+      type: 'warning',
       message: 'Please select an active group first (not "All Groups")',
-      position: "top",
+      position: 'top',
     });
     return;
   }
@@ -1575,7 +1590,8 @@ const handleUpdateTask = async (updatedTask: any) => {
   if (!updatedTask || !updatedTask.id) return;
   const { id, ...rest } = updatedTask;
   // Determine which date bucket the task belongs to: prefer explicit `date`, then `eventDate`, otherwise current view
-  const targetDate = (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
+  const targetDate =
+    (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
   await updateTask(targetDate, id, rest);
   taskToEdit.value = null;
 };
@@ -1587,17 +1603,17 @@ const handleDeleteTask = async (taskId: string) => {
 
 const toggleStatus = async (task: any, lineIndex?: number) => {
   // If a line index is provided, toggle only that line's checked marker inside the description
-  if (typeof lineIndex === "number" && task && typeof task.description === "string") {
+  if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);
-    const ln = lines[lineIndex] ?? "";
+    const ln = lines[lineIndex] ?? '';
 
     const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
     const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/);
 
     if (dashMatch) {
       const prefix = dashMatch[1];
-      const marker = dashMatch[2] || "";
-      const content = dashMatch[3] || "";
+      const marker = dashMatch[2] || '';
+      const content = dashMatch[3] || '';
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
         // remove marker
@@ -1606,7 +1622,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         // add marker after the dash prefix
         lines[lineIndex] = `${prefix}[x] ${content}`;
       }
-      const newDesc = lines.join("\n");
+      const newDesc = lines.join('\n');
       // optimistic update so UI reflects change immediately
       try {
         task.description = newDesc;
@@ -1623,15 +1639,15 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 
     if (numMatch) {
       const prefix = numMatch[1];
-      const marker = numMatch[2] || "";
-      const content = numMatch[3] || "";
+      const marker = numMatch[2] || '';
+      const content = numMatch[3] || '';
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
         lines[lineIndex] = `${prefix}${content}`;
       } else {
         lines[lineIndex] = `${prefix}[x] ${content}`;
       }
-      const newDesc = lines.join("\n");
+      const newDesc = lines.join('\n');
       try {
         task.description = newDesc;
         if (taskToEdit.value && taskToEdit.value.id === task.id) {
@@ -1662,9 +1678,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   await updateTask(targetDate, task.id, { status_id: status });
 };
 
-const handleActiveGroupChange = (
-  value: { label: string; value: string | null } | null
-) => {
+const handleActiveGroupChange = (value: { label: string; value: string | null } | null) => {
   activeGroup.value = value;
 };
 
@@ -1689,7 +1703,7 @@ const onFileSelected = async (event: Event) => {
     try {
       await importData(file);
     } catch (error) {
-      console.error("Import failed:", error);
+      console.error('Import failed:', error);
     }
   }
 };
@@ -1697,11 +1711,7 @@ const onFileSelected = async (event: Event) => {
 const handleAddGroup = async () => {
   if (!newGroupName.value.trim()) return;
 
-  const group = await addGroup(
-    newGroupName.value,
-    newGroupParent.value,
-    newGroupColor.value
-  );
+  const group = await addGroup(newGroupName.value, newGroupParent.value, newGroupColor.value);
 
   // Set as default and active if it's the first group
   if (!defaultGroupId.value) {
@@ -1713,9 +1723,9 @@ const handleAddGroup = async () => {
   }
 
   // Reset form
-  newGroupName.value = "";
+  newGroupName.value = '';
   newGroupParent.value = undefined;
-  newGroupColor.value = "#1976d2";
+  newGroupColor.value = '#1976d2';
 };
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
@@ -1759,22 +1769,22 @@ const handleDeleteGroup = async (groupId: string) => {
 const showDataLocation = async () => {
   if (window.electronAPI) {
     const appDataPath = await window.electronAPI.getAppDataPath();
-    const dataFile = window.electronAPI.joinPath(appDataPath, "organiser-data.json");
+    const dataFile = window.electronAPI.joinPath(appDataPath, 'organiser-data.json');
 
     $q.dialog({
-      title: "Data Storage Location",
+      title: 'Data Storage Location',
       message: `Your data is automatically saved to:\n\n${dataFile}`,
       html: true,
       ok: {
-        label: "Close",
-        color: "primary",
+        label: 'Close',
+        color: 'primary',
       },
     });
   } else {
     $q.notify({
-      message: "Running in web mode - data is stored in browser localStorage",
-      color: "info",
-      position: "top",
+      message: 'Running in web mode - data is stored in browser localStorage',
+      color: 'info',
+      position: 'top',
     });
   }
 };
@@ -1830,7 +1840,7 @@ onMounted(async () => {
 .replenish-item {
   cursor: pointer;
   border-radius: 6px;
-  background: rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.6);
   padding: 8px;
   min-height: 40px;
   display: flex;
@@ -1838,7 +1848,8 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.task-card, .replenish-item {
+.task-card,
+.replenish-item {
   position: relative;
 }
 
