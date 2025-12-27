@@ -88,6 +88,31 @@ const repeatCycleOptions = [
   { label: 'Other', value: 'other', icon: 'more_horiz' },
 ];
 
+// Weekday multi-select for day/week repeat
+const weekDayOptions = [
+  { label: 'Mon', value: 'mon' },
+  { label: 'Tue', value: 'tue' },
+  { label: 'Wed', value: 'wed' },
+  { label: 'Thu', value: 'thu' },
+  { label: 'Fri', value: 'fri' },
+  { label: 'Sat', value: 'sat' },
+  { label: 'Sun', value: 'sun' },
+];
+const repeatDays = ref<string[]>([]);
+
+function checkAllDays() {
+  repeatDays.value = weekDayOptions.map((o) => o.value);
+}
+function clearDays() {
+  repeatDays.value = [];
+}
+
+function toggleDay(day: string) {
+  const idx = repeatDays.value.indexOf(day);
+  if (idx === -1) repeatDays.value = [...repeatDays.value, day];
+  else repeatDays.value = repeatDays.value.filter((d) => d !== day);
+}
+
 // Local newTask state, default to today
 const today = new Date();
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -869,6 +894,32 @@ function onSubmit(event: Event) {
                         />
                       </div>
 
+                      <div v-if="repeatCycleType === 'dayWeek'" class="q-mt-sm">
+                        <div
+                          class="row items-center weekday-row"
+                          style="gap: 0px; flex-wrap: nowrap; overflow-x: auto"
+                        >
+                          <q-btn
+                            v-for="opt in weekDayOptions"
+                            :key="opt.value"
+                            dense
+                            size="sm"
+                            :label="opt.label"
+                            :outline="repeatDays.indexOf(opt.value) === -1"
+                            :unelevated="repeatDays.indexOf(opt.value) !== -1"
+                            @click="toggleDay(opt.value)"
+                            class="weekday-btn q-ma-none"
+                            :class="{
+                              'weekday-btn-selected': repeatDays.indexOf(opt.value) !== -1,
+                            }"
+                          />
+                        </div>
+                        <div class="row" style="gap: 8px; margin-top: 6px; align-items: center">
+                          <q-btn dense flat size="sm" label="Check all" @click="checkAllDays" />
+                          <q-btn dense flat size="sm" label="Clear" @click="clearDays" />
+                        </div>
+                      </div>
+
                       <div class="row q-gutter-xs items-center" style="align-items: center">
                         <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
                           <q-input
@@ -1232,14 +1283,14 @@ function onSubmit(event: Event) {
 .priority-btn {
   min-width: 0 !important;
   box-sizing: border-box !important;
-  padding-left: 6px !important;
-  padding-right: 6px !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
 }
 .priority-btn .q-btn__content {
   justify-content: center !important;
 }
 .priority-btn .q-icon {
-  margin-right: 6px !important;
+  margin-right: 4px !important;
 }
 
 /* Grid for priority buttons: 1 column on small, 2 columns on md+ */
@@ -1281,10 +1332,10 @@ function onSubmit(event: Event) {
 
 /* Small adjustments for the time type toggle inside date/time card */
 .time-toggle {
-  --q-btn-padding: 6px 8px;
+  --q-btn-padding: 4px 6px;
 }
 .time-toggle .q-btn__content {
-  gap: 4px;
+  gap: 2px;
 }
 
 /* Unselected: white buttons with border for contrast on blue card */
@@ -1337,4 +1388,55 @@ function onSubmit(event: Event) {
   height: 12px !important;
 }
 /* repeat toggle uses the same styles as .time-toggle */
+
+/* Weekday multiselect selected state - target QBtn root and internal content for stronger specificity */
+/* Compact weekday button spacing */
+.weekday-row {
+  -webkit-overflow-scrolling: touch;
+  gap: 0px !important;
+}
+.weekday-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+}
+.weekday-btn .q-btn__content {
+  padding: 0 2px !important;
+}
+
+/* Make only first and last weekday buttons rounded */
+::v-deep .weekday-row .q-btn {
+  border-radius: 0 !important;
+}
+::v-deep .weekday-row .q-btn:first-child {
+  border-top-left-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+}
+::v-deep .weekday-row .q-btn:last-child {
+  border-top-right-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+::v-deep .q-btn.weekday-btn-selected,
+::v-deep button.q-btn.weekday-btn-selected,
+::v-deep .q-btn.weekday-btn-selected.q-btn--unelevated {
+  background-color: var(--q-color-primary, #1976d2) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+::v-deep .q-btn.weekday-btn-selected .q-btn__content,
+::v-deep button.q-btn.weekday-btn-selected .q-btn__content {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+::v-deep .q-btn.weekday-btn-selected .q-icon,
+::v-deep button.q-btn.weekday-btn-selected .q-icon {
+  color: inherit !important;
+}
 </style>
