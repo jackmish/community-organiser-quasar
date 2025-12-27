@@ -9,6 +9,7 @@ import {
   onMounted,
   onBeforeUnmount,
 } from 'vue';
+import { toRef } from 'vue';
 import { useQuasar } from 'quasar';
 import CalendarView from './CalendarView.vue';
 import {
@@ -105,7 +106,6 @@ const localNewTask = ref<TaskType>({
 });
 
 // Mode is controlled by parent via prop `mode` and `update:mode` emit
-import { toRef } from 'vue';
 const modeRef = toRef(props, 'mode') as any;
 // Friendly label for current mode (match ModeSwitcher labels)
 const modeLabel = computed(() => {
@@ -116,6 +116,7 @@ const modeLabel = computed(() => {
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
 const isReplenish = computed(() => (localNewTask.value.type_id || '') === 'Replenish');
+const showPriorityLabel = computed(() => $q.screen.gt.md);
 
 // Type options for task type selector (local only)
 const typeOptions = [
@@ -946,30 +947,37 @@ function onSubmit(event: Event) {
                 <div class="col-12 col-md-4">
                   <q-card flat bordered class="q-pa-sm">
                     <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
-                    <div class="column q-gutter-xs">
-                      <q-btn
+                    <div class="priority-grid">
+                      <div
                         v-for="option in priorityOptions"
                         :key="option.value"
-                        :color="
-                          localNewTask.priority === option.value ? option.background : 'grey-3'
-                        "
-                        :text-color="
-                          localNewTask.priority === option.value ? option.textColor : 'grey-7'
-                        "
-                        :icon="option.icon"
-                        :label="option.label"
-                        :size="btnSize"
-                        class="full-width"
-                        @click="updateTaskField('priority', option.value)"
-                        :unelevated="localNewTask.priority === option.value"
-                        :outline="localNewTask.priority !== option.value"
-                        :style="{
-                          backgroundColor:
-                            localNewTask.priority === option.value ? option.background : undefined,
-                          color:
-                            localNewTask.priority === option.value ? option.textColor : undefined,
-                        }"
-                      />
+                        class="priority-item"
+                      >
+                        <q-btn
+                          :color="
+                            localNewTask.priority === option.value ? option.background : 'grey-3'
+                          "
+                          :text-color="
+                            localNewTask.priority === option.value ? option.textColor : 'grey-7'
+                          "
+                          :icon="option.icon"
+                          :label="showPriorityLabel ? option.label : ''"
+                          :aria-label="option.label"
+                          :size="btnSize"
+                          class="priority-btn"
+                          @click="updateTaskField('priority', option.value)"
+                          :unelevated="localNewTask.priority === option.value"
+                          :outline="localNewTask.priority !== option.value"
+                          :style="{
+                            backgroundColor:
+                              localNewTask.priority === option.value
+                                ? option.background
+                                : undefined,
+                            color:
+                              localNewTask.priority === option.value ? option.textColor : undefined,
+                          }"
+                        />
+                      </div>
                     </div>
                   </q-card>
 
@@ -982,7 +990,7 @@ function onSubmit(event: Event) {
                         :label="opt.label"
                         :icon="opt.icon"
                         :size="btnSize"
-                        class="full-width"
+                        class="full-width priority-btn"
                         :outline="localNewTask.type_id !== opt.value"
                         :unelevated="localNewTask.type_id === opt.value"
                         @click="localNewTask.type_id = opt.value"
@@ -1174,5 +1182,37 @@ function onSubmit(event: Event) {
   height: 20px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* Reduce button min-width/padding for priority buttons so two columns fit on md */
+.priority-btn {
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+.priority-btn .q-btn__content {
+  justify-content: center !important;
+}
+.priority-btn .q-icon {
+  margin-right: 6px !important;
+}
+
+/* Grid for priority buttons: 1 column on small, 2 columns on md+ */
+.priority-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 960px) {
+  .priority-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.priority-item {
+  display: block;
+}
+.priority-item .q-btn {
+  width: 100%;
 }
 </style>
