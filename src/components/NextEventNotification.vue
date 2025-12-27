@@ -37,6 +37,39 @@ function formatDateLabel(dateStr: string) {
   return dt.toLocaleDateString();
 }
 
+function occursOnDay(task: any, day: string): boolean {
+  if (!task) return false;
+
+  if (task.repeatMode === 'cyclic') {
+    const cycle = task.repeatCycleType || 'dayWeek';
+    const target = new Date(day);
+
+    if (cycle === 'dayWeek') {
+      const dow = target.getDay();
+      const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const key = map[dow];
+      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      return days.indexOf(key) !== -1;
+    }
+
+    if (cycle === 'month') {
+      if (!task.eventDate) return false;
+      const seed = new Date(task.eventDate);
+      return seed.getDate() === target.getDate();
+    }
+
+    if (cycle === 'year') {
+      if (!task.eventDate) return false;
+      const seed = new Date(task.eventDate);
+      return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
 const nextEvent = computed(() => {
   const days = organiserData.value?.days || {};
   const tasks: any[] = [];
@@ -44,6 +77,14 @@ const nextEvent = computed(() => {
     const day = days[d];
     if (day && Array.isArray(day.tasks)) {
       day.tasks.forEach((t: any) => {
+        // For cyclic tasks, include them for this day only if the repeat rule matches
+        if (t.repeatMode === 'cyclic') {
+          if (!occursOnDay(t, d)) return;
+          const done = t.completed || Number(t.status_id) === 0;
+          if (!done) tasks.push({ ...t, _date: d });
+          return;
+        }
+
         const date = t.date || t.eventDate || d;
         const done = t.completed || Number(t.status_id) === 0;
         if (!done) tasks.push({ ...t, _date: date });

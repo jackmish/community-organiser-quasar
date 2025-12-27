@@ -1366,6 +1366,38 @@ const sortedTasks = computed(() => {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
   }
 
+  // Remove tasks that are stored on this date but are cyclic and shouldn't occur today
+  try {
+    const dayStr = currentDate.value;
+    const isCyclicNotOccurring = (task: any) => {
+      if (!task || task.repeatMode !== 'cyclic') return false;
+      const cycle = task.repeatCycleType || 'dayWeek';
+      const target = new Date(dayStr);
+      if (cycle === 'dayWeek') {
+        const dow = target.getDay();
+        const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const key = map[dow];
+        const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+        return days.indexOf(key) === -1;
+      }
+      if (cycle === 'month') {
+        if (!task.eventDate) return true; // if no seed, assume not occurring
+        const seed = new Date(task.eventDate);
+        return seed.getDate() !== target.getDate();
+      }
+      if (cycle === 'year') {
+        if (!task.eventDate) return true;
+        const seed = new Date(task.eventDate);
+        return seed.getDate() !== target.getDate() || seed.getMonth() !== target.getMonth();
+      }
+      return false;
+    };
+
+    tasksToSort = tasksToSort.filter((t) => !isCyclicNotOccurring(t));
+  } catch (e) {
+    // ignore
+  }
+
   // Include cyclic occurrences: find tasks across allTasks whose repeat rules make them occur
   // on the currently selected date, and merge them in (avoid duplicates).
   try {
