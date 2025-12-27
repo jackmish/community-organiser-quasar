@@ -124,7 +124,9 @@ function onClickNotification() {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: border-color 120ms ease, filter 120ms ease;
+  transition:
+    border-color 120ms ease,
+    filter 120ms ease;
   border: 1px solid transparent;
 }
 .next-event-title {
@@ -145,13 +147,13 @@ function onClickNotification() {
 }
 
 .next-event:hover {
-  border-color: rgba(0,0,0,0.12);
+  border-color: rgba(0, 0, 0, 0.12);
   /* Inverted effect: slightly darken the notification on hover for stronger contrast */
   filter: brightness(0.94);
 }
 
 .next-event:focus {
   outline: none;
-  border-color: rgba(0,0,0,0.14);
+  border-color: rgba(0, 0, 0, 0.14);
 }
 </style>
