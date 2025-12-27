@@ -116,7 +116,7 @@ const modeLabel = computed(() => {
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
 const isReplenish = computed(() => (localNewTask.value.type_id || '') === 'Replenish');
-const showPriorityLabel = computed(() => $q.screen.gt.md);
+const showPriorityLabel = computed(() => $q.screen.gt.sm);
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
 // Type options for task type selector (local only)
@@ -125,6 +125,12 @@ const typeOptions = [
   { label: 'TODO', shortLabel: 'Todo', value: 'Todo', icon: 'check_box' },
   { label: 'Replenish', shortLabel: 'Repl', value: 'Replenish', icon: 'autorenew' },
   { label: 'Note/Later', shortLabel: 'Note', value: 'NoteLater', icon: 'description' },
+];
+
+// Options for the time type toggle (Whole Day / Exact Hour)
+const timeTypeOptions = [
+  { label: 'day', value: 'wholeDay', icon: 'calendar_today' },
+  { label: 'hour', value: 'exactHour', icon: 'schedule' },
 ];
 
 // Local replenish color sets grouped by family (4 tones each), ordered dark->bright
@@ -832,59 +838,68 @@ function onSubmit(event: Event) {
               <div class="row q-gutter-sm q-mb-md" style="align-items: flex-start">
                 <div class="col">
                   <div class="row q-gutter-sm" style="align-items: flex-start">
-                    <q-card flat bordered class="q-pa-sm">
+                    <q-card flat bordered class="q-pa-sm bg-blue-1">
                       <div class="text-caption text-grey-7 q-mb-xs">Date</div>
-                      <div class="row q-gutter-xs">
-                        <q-input
-                          ref="dayInput"
-                          :model-value="eventDateDay"
-                          @update:model-value="updateEventDateDay"
-                          @focus="
-                            (e) =>
-                              (e.target as HTMLInputElement)?.select &&
-                              (e.target as HTMLInputElement).select()
-                          "
-                          type="number"
-                          label="Day"
-                          outlined
-                          dense
-                          min="1"
-                          max="31"
-                          style="max-width: 80px"
-                        />
-                        <q-input
-                          ref="monthInput"
-                          :model-value="eventDateMonth"
-                          @update:model-value="updateEventDateMonth"
-                          @focus="
-                            (e) =>
-                              (e.target as HTMLInputElement)?.select &&
-                              (e.target as HTMLInputElement).select()
-                          "
-                          type="number"
-                          label="Month"
-                          outlined
-                          dense
-                          min="1"
-                          max="12"
-                          style="max-width: 80px"
-                        />
+                      <div class="row q-gutter-xs items-center" style="align-items: center">
+                        <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
+                          <q-input
+                            ref="dayInput"
+                            :model-value="eventDateDay"
+                            @update:model-value="updateEventDateDay"
+                            @focus="
+                              (e) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
+                            type="number"
+                            label="Day"
+                            outlined
+                            dense
+                            min="1"
+                            max="31"
+                            style="max-width: 80px"
+                          />
+                          <q-input
+                            ref="monthInput"
+                            :model-value="eventDateMonth"
+                            @update:model-value="updateEventDateMonth"
+                            @focus="
+                              (e) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
+                            type="number"
+                            label="Month"
+                            outlined
+                            dense
+                            min="1"
+                            max="12"
+                            style="max-width: 80px"
+                          />
+                          <q-input
+                            ref="yearInput"
+                            :model-value="eventDateYear"
+                            @update:model-value="updateEventDateYear"
+                            @focus="
+                              (e) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
+                            type="number"
+                            label="Year"
+                            outlined
+                            dense
+                            style="max-width: 100px"
+                          />
+                        </div>
+                        <div class="col"></div>
+                        <div class="col-auto" style="display: flex; align-items: center">
+                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
+                        </div>
                       </div>
                       <div class="row items-center q-gutter-xs q-mb-sm">
                         <div class="row q-gutter-xs" style="gap: 8px">
                           <!-- day/month inputs -->
-                        </div>
-                        <div class="col-auto">
-                          <q-option-group
-                            v-model="timeType"
-                            :options="[
-                              { label: 'Whole Day', value: 'wholeDay' },
-                              { label: 'Exact Hour', value: 'exactHour' },
-                            ]"
-                            color="primary"
-                            inline
-                            dense
-                          />
                         </div>
                       </div>
                       <div class="row q-gutter-xs">
@@ -894,6 +909,11 @@ function onSubmit(event: Event) {
                             :model-value="eventTimeHour"
                             @update:model-value="updateEventTimeHour"
                             type="number"
+                            @focus="
+                              (e) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
                             label="Hour"
                             outlined
                             dense
@@ -913,6 +933,11 @@ function onSubmit(event: Event) {
                           :model-value="eventTimeMinute"
                           @update:model-value="updateEventTimeMinute"
                           type="number"
+                          @focus="
+                            (e) =>
+                              (e.target as HTMLInputElement)?.select &&
+                              (e.target as HTMLInputElement).select()
+                          "
                           label="Minute"
                           outlined
                           dense
@@ -920,25 +945,22 @@ function onSubmit(event: Event) {
                           max="59"
                           style="max-width: 80px"
                         />
+
+                        <div class="row q-mt-sm" style="gap: 8px; align-items: center">
+                          <div class="col-auto">
+                            <q-btn-toggle
+                              v-model="timeType"
+                              :options="timeTypeOptions"
+                              dense
+                              inline
+                              rounded
+                              class="time-toggle"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </q-card>
-                    <q-card flat bordered class="q-pa-sm" style="max-width: 120px">
-                      <div class="row items-center justify-between q-mb-xs">
-                        <div class="text-caption text-grey-7">Year</div>
-                        <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
-                      </div>
-                      <q-input
-                        ref="yearInput"
-                        :model-value="eventDateYear"
-                        @update:model-value="updateEventDateYear"
-                        type="number"
-                        label="Year"
-                        outlined
-                        dense
-                        style="max-width: 100px"
-                      />
-                      <div class="text-caption text-grey-7 q-mb-xs">Time Difference</div>
-                      <div class="text-h6 text-primary text-weight-bold">
+                      <div class="text-caption text-grey-7 q-mt-sm q-mb-xs">Time Difference</div>
+                      <div class="text-h6 text-primary text-weight-bold q-mb-sm">
                         {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
                       </div>
                     </q-card>
@@ -1205,6 +1227,8 @@ function onSubmit(event: Event) {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+  justify-items: stretch;
+  width: 100%;
 }
 @media (min-width: 960px) {
   .priority-grid {
@@ -1216,5 +1240,80 @@ function onSubmit(event: Event) {
 }
 .priority-item .q-btn {
   width: 100%;
+}
+
+/* Stack icon above label for priority buttons on md+ and center them */
+@media (min-width: 960px) {
+  ::v-deep .priority-btn .q-btn__content {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  ::v-deep .priority-btn .q-btn__content .q-icon {
+    margin-right: 0 !important;
+    margin-bottom: 6px !important;
+  }
+  ::v-deep .priority-btn .q-btn__label {
+    white-space: normal !important;
+    text-align: center !important;
+  }
+}
+
+/* Small adjustments for the time type toggle inside date/time card */
+.time-toggle {
+  --q-btn-padding: 6px 8px;
+}
+.time-toggle .q-btn__content {
+  gap: 4px;
+}
+
+/* Unselected: white buttons with border for contrast on blue card */
+.time-toggle .q-btn {
+  background: #ffffff !important;
+  color: var(--q-color-primary) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+  text-transform: capitalize !important;
+  font-size: 12px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  min-width: 0 !important;
+}
+.time-toggle .q-btn .q-icon {
+  color: var(--q-color-primary) !important;
+}
+.time-toggle .q-icon {
+  font-size: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-right: 4px !important;
+}
+
+/* Active/selected */
+.time-toggle .q-btn.q-btn--active,
+.time-toggle .q-btn.q-btn--active.q-btn--unelevated,
+.time-toggle .q-btn.q-btn--active.q-btn--flat {
+  background-color: var(--q-color-primary) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.time-toggle .q-btn.q-btn--active .q-icon {
+  color: inherit !important;
+}
+
+/* Use deep selectors to override Quasar internals if needed */
+::v-deep .time-toggle .q-btn__content,
+::v-deep .time-toggle .q-btn__content .q-btn__label {
+  font-size: 12px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  text-transform: capitalize !important;
+}
+::v-deep .time-toggle .q-btn__content .q-icon,
+::v-deep .time-toggle .q-icon {
+  font-size: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
 }
 </style>
