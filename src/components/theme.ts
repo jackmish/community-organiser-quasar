@@ -8,9 +8,10 @@ export const priorityColors: Record<string, string> = {
 };
 
 export const priorityTextColor = (p?: string) => {
-  if (!p) return 'white';
-  if (p === 'low' || p === 'medium') return 'grey-9';
-  return 'white';
+  // Return actual CSS color values for use in inline styles.
+  if (!p) return '#ffffff';
+  if (p === 'low' || p === 'medium') return '#263238'; // dark grey for contrast on light backgrounds
+  return '#ffffff';
 };
 
 export const timeDiffClassFor = (label: string) => {
