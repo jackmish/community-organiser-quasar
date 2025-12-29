@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  nextTick,
-  watch,
-  defineProps,
-  defineEmits,
-  onMounted,
-  onBeforeUnmount,
-} from 'vue';
-import { toRef } from 'vue';
+import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import CalendarView from './CalendarView.vue';
 import {
