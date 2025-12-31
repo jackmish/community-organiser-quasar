@@ -80,211 +80,23 @@
             <q-card-section v-if="sortedTasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
-            <div class="task-list" v-else>
-              <!-- Tasks with time -->
-              <template v-if="tasksWithTime.length > 0">
-                <q-item
-                  v-for="task in tasksWithTime"
-                  :key="task.id"
-                  class="q-pa-md task-card"
-                  :class="{
-                    'bg-grey-2': Number(task.status_id) === 0,
-                    'selected-task': selectedTaskId === task.id,
-                  }"
-                  :active="selectedTaskId === task.id"
-                  clickable
-                  @pointerdown="() => startLongPress(task)"
-                  @pointerup="cancelLongPress"
-                  @pointercancel="cancelLongPress"
-                  @pointerleave="cancelLongPress"
-                  @click="handleTaskClick(task)"
-                >
-                  <q-item-section side style="min-width: 60px">
-                    <div class="text-bold text-primary">{{ task.eventTime }}</div>
-                    <div v-if="getEventHoursDisplay(task)" class="text-caption text-grey-7 q-mt-xs">
-                      {{ getEventHoursDisplay(task) }}
-                    </div>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-checkbox
-                      :model-value="Number(task.status_id) === 0"
-                      @click.stop="toggleStatus(task)"
-                    />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
-                      <strong>{{ task.name }}</strong>
-                    </q-item-label>
-                    <q-item-label v-if="getDisplayDescription(task)" caption>{{
-                      getDisplayDescription(task)
-                    }}</q-item-label>
-                    <q-item-label caption class="q-mt-xs">
-                      <q-chip
-                        size="sm"
-                        :style="{
-                          backgroundColor: priorityColor(task.priority),
-                          color: priorityTextColor(task.priority),
-                        }"
-                      >
-                        {{ task.priority }}
-                      </q-chip>
-                      <q-chip
-                        v-if="task.groupId"
-                        :style="{ backgroundColor: getGroupColor(task.groupId) }"
-                        text-color="white"
-                        size="sm"
-                        icon="folder"
-                      >
-                        {{ getGroupName(task.groupId) }}
-                      </q-chip>
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <div class="row items-center" style="gap: 8px">
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        icon="edit"
-                        color="primary"
-                        @click.stop="editTask(task)"
-                      />
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        icon="delete"
-                        color="negative"
-                        @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-                      />
-                      <div
-                        v-if="openDeleteMenu === task.id"
-                        class="row items-center"
-                        style="gap: 8px"
-                      >
-                        <div>Delete?</div>
-                        <q-btn
-                          flat
-                          dense
-                          color="negative"
-                          label="Yes"
-                          @click.stop="handleDeleteTask(task.id)"
-                        />
-                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
-                      </div>
-                    </div>
-                  </q-item-section>
-
-                  <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
-                  <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
-                </q-item>
-              </template>
-
-              <!-- Separator for tasks without time -->
-              <q-separator
-                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
-                class="q-my-md"
-              />
-              <q-item-label
-                v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
-                header
-                class="text-grey-7"
-              >
-                No Time Set
-              </q-item-label>
-
-              <!-- Tasks without time -->
-              <template v-if="tasksWithoutTime.length > 0">
-                <q-item
-                  v-for="task in tasksWithoutTime"
-                  :key="task.id"
-                  class="q-pa-md task-card"
-                  :class="{
-                    'bg-grey-2': Number(task.status_id) === 0,
-                    'selected-task': selectedTaskId === task.id,
-                  }"
-                  :active="selectedTaskId === task.id"
-                  clickable
-                  @pointerdown="() => startLongPress(task)"
-                  @pointerup="cancelLongPress"
-                  @pointercancel="cancelLongPress"
-                  @pointerleave="cancelLongPress"
-                  @click="handleTaskClick(task)"
-                >
-                  <q-item-section>
-                    <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
-                      <strong>{{ task.name }}</strong>
-                    </q-item-label>
-                    <q-item-label v-if="getDisplayDescription(task)" caption>{{
-                      getDisplayDescription(task)
-                    }}</q-item-label>
-                    <q-item-label caption class="q-mt-xs">
-                      <q-chip
-                        size="sm"
-                        :style="{
-                          backgroundColor: priorityColor(task.priority),
-                          color: priorityTextColor(task.priority),
-                        }"
-                      >
-                        {{ task.priority }}
-                      </q-chip>
-                      <q-chip
-                        v-if="task.groupId"
-                        :style="{ backgroundColor: getGroupColor(task.groupId) }"
-                        text-color="white"
-                        size="sm"
-                        icon="folder"
-                      >
-                        {{ getGroupName(task.groupId) }}
-                      </q-chip>
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <div class="row items-center" style="gap: 8px">
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        icon="edit"
-                        color="primary"
-                        @click.stop="() => editTask(task)"
-                      />
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        icon="delete"
-                        color="negative"
-                        @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-                      />
-                      <div
-                        v-if="openDeleteMenu === task.id"
-                        class="row items-center"
-                        style="gap: 8px"
-                      >
-                        <div>Delete?</div>
-                        <q-btn
-                          flat
-                          dense
-                          color="negative"
-                          label="Yes"
-                          @click.stop="handleDeleteTask(task.id)"
-                        />
-                        <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
-                      </div>
-                    </div>
-                    <div class="row">
-                      <q-item-section side>
-                        <q-checkbox
-                          :model-value="Number(task.status_id) === 0"
-                          @click.stop="toggleStatus(task)"
-                        />
-                      </q-item-section>
-                    </div>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </div>
+            <TasksList
+              :tasks-with-time="tasksWithTime"
+              :tasks-without-time="tasksWithoutTime"
+              :selected-task-id="selectedTaskId"
+              :start-long-press="startLongPress"
+              :cancel-long-press="cancelLongPress"
+              :handle-task-click="handleTaskClick"
+              :toggle-status="toggleStatus"
+              :edit-task="editTask"
+              :handle-delete-task="handleDeleteTask"
+              :get-event-hours-display="getEventHoursDisplay"
+              :get-display-description="getDisplayDescription"
+              :priority-color="priorityColor"
+              :priority-text-color="priorityTextColor"
+              :get-group-color="getGroupColor"
+              :get-group-name="getGroupName"
+            />
           </q-card>
         </div>
         <!-- Right column for Replenishment list -->
@@ -373,6 +185,7 @@ import AddTaskForm from '../components/AddTaskForm.vue';
 import ReplenishmentList from '../components/ReplenishmentList.vue';
 import DoneTasksList from '../components/DoneTasksList.vue';
 import GroupManagementDialog from '../components/GroupManagementDialog.vue';
+import TasksList from '../components/TasksList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
