@@ -359,8 +359,6 @@
       v-model="showGroupDialog"
       :group-options="groupOptions"
       :group-tree="groupTree"
-      @add-group="handleAddGroup"
-      @delete-group="handleDeleteGroup"
     />
 
     <!-- First Run Dialog -->

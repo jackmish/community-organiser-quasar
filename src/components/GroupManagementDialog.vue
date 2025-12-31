@@ -63,6 +63,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 
+import { useDayOrganiser } from '../modules/day-organiser';
+
 const props = defineProps<{
   modelValue: boolean;
   groupOptions: any[];
@@ -95,18 +97,35 @@ watch(
   },
 );
 
-function onAddGroup() {
+async function onAddGroup() {
   if (!localName.value.trim()) return;
   const payload: { name: string; parent?: string; color?: string } = {
     name: localName.value.trim(),
     color: localColor.value,
   };
   if (localParent.value) payload.parent = localParent.value;
-  emit('add-group', payload);
+
+  try {
+    const { addGroup } = useDayOrganiser();
+    await addGroup(payload.name, payload.parent, payload.color as any);
+  } catch (e) {
+    console.error('addGroup failed', e);
+  }
+
+  // reset and close
+  localName.value = '';
+  localParent.value = null;
+  localColor.value = '#1976d2';
+  dialogVisible.value = false;
 }
 
-function onDeleteGroup(id: string) {
-  emit('delete-group', id);
+async function onDeleteGroup(id: string) {
+  try {
+    const { deleteGroup } = useDayOrganiser();
+    await deleteGroup(id);
+  } catch (e) {
+    console.error('deleteGroup failed', e);
+  }
 }
 
 function close() {
