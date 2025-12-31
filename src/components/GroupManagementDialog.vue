@@ -21,7 +21,11 @@
 
               <q-input v-model="localColor" label="Color" outlined dense style="max-width: 120px">
                 <template #append>
-                  <input v-model="localColor" type="color" style="width: 40px; height: 30px; border: none; cursor: pointer" />
+                  <input
+                    v-model="localColor"
+                    type="color"
+                    style="width: 40px; height: 30px; border: none; cursor: pointer"
+                  />
                 </template>
               </q-input>
 
@@ -36,7 +40,14 @@
               <q-icon :name="prop.node.icon || 'folder'" :color="prop.node.color" class="q-mr-sm" />
               <span>{{ prop.node.label }}</span>
               <q-space />
-              <q-btn flat dense round icon="delete" size="sm" @click.stop="onDeleteGroup(prop.node.id)" />
+              <q-btn
+                flat
+                dense
+                round
+                icon="delete"
+                size="sm"
+                @click.stop="onDeleteGroup(prop.node.id)"
+              />
             </div>
           </template>
         </q-tree>
@@ -103,5 +114,4 @@ function close() {
 }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>
