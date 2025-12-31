@@ -84,18 +84,10 @@
               :tasks-with-time="tasksWithTime"
               :tasks-without-time="tasksWithoutTime"
               :selected-task-id="selectedTaskId"
-              :start-long-press="startLongPress"
-              :cancel-long-press="cancelLongPress"
-              :handle-task-click="handleTaskClick"
-              :toggle-status="toggleStatus"
-              :edit-task="editTask"
-              :handle-delete-task="handleDeleteTask"
-              :get-event-hours-display="getEventHoursDisplay"
-              :get-display-description="getDisplayDescription"
-              :priority-color="priorityColor"
-              :priority-text-color="priorityTextColor"
-              :get-group-color="getGroupColor"
-              :get-group-name="getGroupName"
+              @task-click="handleTaskClick"
+              @toggle-status="toggleStatus"
+              @edit-task="editTask"
+              @delete-task="handleDeleteTask"
             />
           </q-card>
         </div>

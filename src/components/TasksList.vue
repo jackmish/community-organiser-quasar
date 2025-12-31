@@ -173,29 +173,95 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
+import { useLongPress } from '../composables/useLongPress';
+
 const props = defineProps<{
   tasksWithTime: any[];
   tasksWithoutTime: any[];
   selectedTaskId: string | null;
-  startLongPress: (task: any) => void;
-  cancelLongPress: () => void;
-  handleTaskClick: (task: any) => void;
-  toggleStatus: (task: any) => void;
-  editTask: (task: any) => void;
-  handleDeleteTask: (id: string) => void;
-  getEventHoursDisplay: (task: any) => string | undefined;
-  getDisplayDescription: (task: any) => string | undefined;
-  priorityColor: (p: any) => string | undefined;
-  priorityTextColor: (p: any) => string | undefined;
-  getGroupColor: (id?: string) => string | undefined;
-  getGroupName: (id?: string) => string | undefined;
+}>();
+
+const emit = defineEmits<{
+  (e: 'toggle-status', task: any): void;
+  (e: 'edit-task', task: any): void;
+  (e: 'task-click', task: any): void;
+  (e: 'delete-task', id: string): void;
 }>();
 
 const openDeleteMenu = ref<string | null>(null);
 
+const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
+
+// Bring in group and theme helpers locally so parent doesn't need to pass them
+import { useDayOrganiser } from '../modules/day-organiser/useDayOrganiser';
+import {
+  priorityColors as themePriorityColors,
+  priorityTextColor as themePriorityTextColor,
+  formatEventHoursDiff,
+} from './theme';
+
+const { groups } = useDayOrganiser();
+
+setLongPressHandler((t: any) => {
+  emit('edit-task', t);
+});
+
+const priorityColor = (priority: any) => themePriorityColors[priority] || 'transparent';
+const priorityTextColor = (priority: any) => themePriorityTextColor(priority);
+
+const getGroupName = (groupId?: string) => {
+  if (!groupId) return 'Unknown';
+  const g = groups.value.find((gg: any) => gg.id === groupId);
+  return g ? g.name : 'Unknown';
+};
+
+const getGroupColor = (groupId?: string) => {
+  if (!groupId) return '#1976d2';
+  const g = groups.value.find((gg: any) => gg.id === groupId);
+  return g?.color || '#1976d2';
+};
+
+const getEventHoursDisplay = (task: any) => {
+  const dateStr = task?.date || task?.eventDate || '';
+  const timeStr = task?.eventTime || '';
+  return formatEventHoursDiff(dateStr, timeStr);
+};
+
+const getDisplayDescription = (task: any) => {
+  const desc = (task.description || '').trim();
+  const name = (task.name || '').trim();
+  if (!desc) return '';
+  if (!name) return desc;
+  if (desc === name) return '';
+  if (desc.startsWith(name)) {
+    const remainder = desc
+      .slice(name.length)
+      .replace(/^[\s\-:\u2013\u2014]+/, '')
+      .trim();
+    return remainder || '';
+  }
+  return desc;
+};
+
+function handleTaskClick(task: any) {
+  if (longPressTriggered.value) {
+    longPressTriggered.value = false;
+    return;
+  }
+  emit('task-click', task);
+}
+
+function toggleStatus(task: any) {
+  emit('toggle-status', task);
+}
+
+function editTask(task: any) {
+  emit('edit-task', task);
+}
+
 function confirmDelete(id: string) {
   openDeleteMenu.value = null;
-  props.handleDeleteTask(id);
+  emit('delete-task', id);
 }
 </script>
 
