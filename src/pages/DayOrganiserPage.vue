@@ -289,55 +289,12 @@
         </div>
         <!-- Right column for Replenishment list -->
         <div class="col-12 replenish-column">
-          <q-card flat class="q-pa-sm q-mb-md" style="background: #e8f5ff; border-radius: 8px">
-            <div class="row items-center" style="gap: 8px">
-              <q-icon name="shopping_cart" color="primary" />
-              <div class="text-subtitle2 text-primary"><strong>Replenishment</strong></div>
-            </div>
-            <div class="replenish-grid q-mt-sm">
-              <div
-                v-for="r in replenishTasks"
-                :key="r.id"
-                class="replenish-item card q-pa-sm"
-                role="button"
-                @pointerdown="() => startLongPress(r)"
-                @pointerup="cancelLongPress"
-                @pointercancel="cancelLongPress"
-                @pointerleave="cancelLongPress"
-                @click="handleReplenishClick(r)"
-                :style="{ background: getReplenishBg(r) }"
-              >
-                <div class="row items-center justify-between" style="gap: 8px">
-                  <div
-                    :class="{ 'text-strike': Number(r.status_id) === 0 }"
-                    :style="{ color: getReplenishText(r) }"
-                  >
-                    {{ r.name }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <q-separator class="q-mt-sm" />
-            <div class="q-mt-sm">
-              <div class="row items-center" style="gap: 8px">
-                <q-icon name="check" color="grey-7" />
-                <div class="text-subtitle2"><strong>Done</strong></div>
-              </div>
-              <div class="q-mt-sm">
-                <div v-for="d in doneTasks" :key="d.id" class="done-item" @click="toggleStatus(d)">
-                  <div class="row items-center justify-between" style="gap: 8px">
-                    <div
-                      :class="{ 'text-strike': Number(d.status_id) === 0 }"
-                      style="color: rgba(0, 0, 0, 0.45)"
-                    >
-                      {{ d.name }}
-                    </div>
-                    <q-icon name="done" size="18px" color="grey-6" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </q-card>
+          <ReplenishmentList
+            :replenish-tasks="replenishTasks"
+            :done-tasks="doneTasks"
+            @toggle-status="toggleStatus"
+            @edit-task="editTask"
+          />
         </div>
       </div>
 
@@ -475,6 +432,7 @@
 import { format, addDays, startOfWeek } from 'date-fns';
 
 import AddTaskForm from '../components/AddTaskForm.vue';
+import ReplenishmentList from '../components/ReplenishmentList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -485,6 +443,7 @@ import {
 import TaskPreview from '../components/TaskPreview.vue';
 import ModeSwitcher from '../components/ModeSwitcher.vue';
 import CalendarView from '../components/CalendarView.vue';
+import { useLongPress } from '../composables/useLongPress';
 
 const getWeekDays = (startDate: Date) => {
   return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), 'yyyy-MM-dd'));
@@ -1022,28 +981,11 @@ const autoIncrementYear = ref(true);
 const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
 const isUpdatingDate = ref(false);
 const isClickBlocked = ref(false);
-// Long-press handling
-const longPressTimer = ref<number | null>(null);
-const longPressTriggered = ref(false);
-const LONG_PRESS_MS = 600;
+// Long-press handling via composable
+const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
-function startLongPress(task: Task, ev?: Event) {
-  cancelLongPress();
-  longPressTriggered.value = false;
-  // start timer
-  longPressTimer.value = window.setTimeout(() => {
-    longPressTriggered.value = true;
-    // long-press => open edit directly
-    editTask(task);
-  }, LONG_PRESS_MS) as unknown as number;
-}
-
-function cancelLongPress() {
-  if (longPressTimer.value !== null) {
-    clearTimeout(longPressTimer.value as unknown as number);
-    longPressTimer.value = null;
-  }
-}
+// Register page's edit handler with the composable
+setLongPressHandler(editTask);
 
 function handleTaskClick(task: Task) {
   if (longPressTriggered.value) {
