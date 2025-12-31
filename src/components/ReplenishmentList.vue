@@ -6,7 +6,7 @@
     </div>
     <div class="replenish-grid q-mt-sm">
       <div
-        v-for="r in replenishTasks"
+        v-for="r in props.replenishTasks"
         :key="r.id"
         class="replenish-item card q-pa-sm"
         role="button"
@@ -27,26 +27,6 @@
         </div>
       </div>
     </div>
-    <q-separator class="q-mt-sm" />
-    <div class="q-mt-sm">
-      <div class="row items-center" style="gap: 8px">
-        <q-icon name="check" color="grey-7" />
-        <div class="text-subtitle2"><strong>Done</strong></div>
-      </div>
-      <div class="q-mt-sm">
-        <div v-for="d in doneTasks" :key="d.id" class="done-item" @click="onDoneClick(d)">
-          <div class="row items-center justify-between" style="gap: 8px">
-            <div
-              :class="{ 'text-strike': Number(d.status_id) === 0 }"
-              style="color: rgba(0, 0, 0, 0.45)"
-            >
-              {{ d.name }}
-            </div>
-            <q-icon name="done" size="18px" color="grey-6" />
-          </div>
-        </div>
-      </div>
-    </div>
   </q-card>
 </template>
 
@@ -55,7 +35,6 @@ import { useLongPress } from '../composables/useLongPress';
 
 const props = defineProps<{
   replenishTasks: any[];
-  doneTasks: any[];
 }>();
 
 const emit = defineEmits<{
@@ -108,10 +87,8 @@ const getReplenishText = (task: any) => {
 const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();
 setLongPressHandler((t: any) => emit('edit-task', t));
 
-const replenishTasks = props.replenishTasks || [];
-const doneTasks = props.doneTasks || [];
-
 function onReplenishClick(task: any) {
+  console.debug('[ReplenishmentList] replenish clicked', task && task.id);
   emit('toggle-status', task);
 }
 

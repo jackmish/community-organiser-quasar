@@ -291,10 +291,12 @@
         <div class="col-12 replenish-column">
           <ReplenishmentList
             :replenish-tasks="replenishTasks"
-            :done-tasks="doneTasks"
             @toggle-status="toggleStatus"
             @edit-task="editTask"
           />
+          <div class="q-mt-sm">
+            <DoneReplenishmentList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
+          </div>
         </div>
       </div>
 
@@ -433,6 +435,7 @@ import { format, addDays, startOfWeek } from 'date-fns';
 
 import AddTaskForm from '../components/AddTaskForm.vue';
 import ReplenishmentList from '../components/ReplenishmentList.vue';
+import DoneReplenishmentList from '../components/DoneReplenishmentList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -1669,6 +1672,7 @@ const handleDeleteTask = async (taskId: string) => {
 };
 
 const toggleStatus = async (task: any, lineIndex?: number) => {
+  console.debug('[DayOrganiserPage] toggleStatus called', task && task.id, lineIndex);
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);
