@@ -295,7 +295,7 @@
             @edit-task="editTask"
           />
           <div class="q-mt-sm">
-            <DoneReplenishmentList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
+            <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
           </div>
         </div>
       </div>
@@ -435,7 +435,7 @@ import { format, addDays, startOfWeek } from 'date-fns';
 
 import AddTaskForm from '../components/AddTaskForm.vue';
 import ReplenishmentList from '../components/ReplenishmentList.vue';
-import DoneReplenishmentList from '../components/DoneReplenishmentList.vue';
+import DoneTasksList from '../components/DoneTasksList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
