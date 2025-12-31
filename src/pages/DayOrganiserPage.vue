@@ -355,75 +355,13 @@
     </div>
 
     <!-- Group Management Dialog -->
-    <q-dialog v-model="showGroupDialog">
-      <q-card style="min-width: 500px">
-        <q-card-section>
-          <div class="text-h6">Manage Groups</div>
-
-          <q-card-section class="q-pt-sm">
-            <q-form @submit.prevent="handleAddGroup" class="q-mb-md">
-              <div class="row q-gutter-sm items-end">
-                <q-input v-model="newGroupName" label="Group Name" outlined dense class="col" />
-
-                <q-select
-                  v-model="newGroupParent"
-                  :options="groupOptions"
-                  label="Parent Group (optional)"
-                  outlined
-                  dense
-                  clearable
-                  style="min-width: 180px"
-                />
-
-                <q-input
-                  v-model="newGroupColor"
-                  label="Color"
-                  outlined
-                  dense
-                  style="max-width: 120px"
-                >
-                  <template #append>
-                    <input
-                      v-model="newGroupColor"
-                      type="color"
-                      style="width: 40px; height: 30px; border: none; cursor: pointer"
-                    />
-                  </template>
-                </q-input>
-
-                <q-btn type="submit" color="primary" icon="add" dense />
-              </div>
-            </q-form>
-          </q-card-section>
-
-          <q-tree :nodes="groupTree" node-key="id" default-expand-all>
-            <template #default-header="prop">
-              <div class="row items-center full-width">
-                <q-icon
-                  :name="prop.node.icon || 'folder'"
-                  :color="prop.node.color"
-                  class="q-mr-sm"
-                />
-                <span>{{ prop.node.label }}</span>
-                <q-space />
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="delete"
-                  size="sm"
-                  @click.stop="handleDeleteGroup(prop.node.id)"
-                />
-              </div>
-            </template>
-          </q-tree>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Close" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <GroupManagementDialog
+      v-model="showGroupDialog"
+      :group-options="groupOptions"
+      :group-tree="groupTree"
+      @add-group="handleAddGroup"
+      @delete-group="handleDeleteGroup"
+    />
 
     <!-- First Run Dialog -->
     <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
@@ -436,6 +374,7 @@ import { format, addDays, startOfWeek } from 'date-fns';
 import AddTaskForm from '../components/AddTaskForm.vue';
 import ReplenishmentList from '../components/ReplenishmentList.vue';
 import DoneTasksList from '../components/DoneTasksList.vue';
+import GroupManagementDialog from '../components/GroupManagementDialog.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
