@@ -56,8 +56,6 @@ export function useDayOrganiser() {
       };
 
       const dirPath = await storage.getDataFilePathPublic();
-      console.log('Loaded organiser data:', organiserData.value);
-      console.log('Loaded from directory:', dirPath);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {

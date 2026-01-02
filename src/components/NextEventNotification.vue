@@ -1,29 +1,43 @@
 <template>
-  <div v-if="nextEvents.length" class="next-events-row q-ml-md">
-    <div
-      v-for="ev in nextEvents"
-      :key="ev.id + '-' + (ev.eventTime || '')"
-      class="next-event"
-      :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
-      @click.prevent.stop="onClickEvent(ev)"
-      role="button"
-      tabindex="0"
-    >
-      <q-icon :name="iconFor(ev)" size="16" />
-      <div class="next-event-text">
-        <div class="next-event-title">{{ ev.name }}</div>
-        <div class="next-event-meta text-caption">{{ formatEventDisplay(ev) }}</div>
+  <div class="next-events-row q-ml-md">
+    <template v-if="nextEvents.length">
+      <div
+        v-for="ev in nextEvents"
+        :key="ev.id + '-' + (ev.eventTime || '')"
+        class="next-event"
+        :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
+        @click.prevent.stop="onClickEvent(ev)"
+        role="button"
+        tabindex="0"
+      >
+        <q-icon :name="iconFor(ev)" size="16" />
+        <div class="next-event-text">
+          <div class="next-event-title">{{ ev.name }}</div>
+          <div class="next-event-meta text-caption">{{ formatEventDisplay(ev) }}</div>
+        </div>
       </div>
-    </div>
+    </template>
+    <template v-else>
+      <div class="next-event-placeholder text-caption text-grey-6 q-pa-xs">No upcoming events</div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
 import { priorityColors, priorityTextColor, typeIcons, priorityIcons } from './theme';
 
-const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange } = useDayOrganiser();
+const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } = useDayOrganiser();
+
+onMounted(() => {
+  // Ensure organiser data is loaded so notifications can compute tasks
+  try {
+    if (typeof loadData === 'function') loadData();
+  } catch (e) {
+    // ignore
+  }
+});
 
 function formatDateLabel(dateStr?: string) {
   if (!dateStr) return '';
@@ -41,37 +55,54 @@ function formatDateLabel(dateStr?: string) {
   return dt.toLocaleDateString();
 }
 
+function _getRepeatMode(task: any) {
+  if (!task) return undefined;
+  return task.repeatMode ?? task.repeat_mode ?? task.repeat ?? undefined;
+}
+
+function _getRepeatCycleType(task: any) {
+  return task.repeatCycleType ?? task.repeat_cycle_type ?? 'dayWeek';
+}
+
+function _getRepeatDays(task: any) {
+  return Array.isArray(task.repeatDays) ? task.repeatDays : Array.isArray(task.repeat_days) ? task.repeat_days : [];
+}
+
 function occursOnDay(task: any, day: string): boolean {
   if (!task) return false;
 
-  if (task.repeatMode === 'cyclic') {
-    const cycle = task.repeatCycleType || 'dayWeek';
+  const repeatMode = _getRepeatMode(task);
+  if (repeatMode === 'cyclic' || repeatMode === 'repeat' || repeatMode === true) {
+    const cycle = _getRepeatCycleType(task) || 'dayWeek';
     const target = new Date(day);
 
     if (cycle === 'dayWeek') {
       const dow = target.getDay();
       const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
       const key = map[dow];
-      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      const days = _getRepeatDays(task);
       return days.indexOf(key) !== -1;
     }
 
     if (cycle === 'month') {
-      if (!task.eventDate) return false;
-      const seed = new Date(task.eventDate);
+      const evDate = task.eventDate ?? task.date ?? null;
+      if (!evDate) return false;
+      const seed = new Date(evDate);
       return seed.getDate() === target.getDate();
     }
 
     if (cycle === 'year') {
-      if (!task.eventDate) return false;
-      const seed = new Date(task.eventDate);
+      const evDate = task.eventDate ?? task.date ?? null;
+      if (!evDate) return false;
+      const seed = new Date(evDate);
       return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
     }
 
     return false;
   }
 
-  return true;
+  // Not cyclic: falls back to one-time match by date
+  return (task.date || task.eventDate) === day;
 }
 
 const nextEvents = computed(() => {
@@ -103,15 +134,45 @@ const nextEvents = computed(() => {
 
   const instances: any[] = [];
 
+  // Debugging: log total tasks and any cyclic-marked tasks for diagnosis
+  try {
+    // limit logs in production by checking console availability
+    console.debug('[NextEventNotification] total tasks found:', allTasks.length);
+    console.debug('[NextEventNotification] sample tasks (first 5):', allTasks.slice(0, 5).map((t: any) => ({
+      id: t?.id,
+      date: t?.date,
+      eventDate: t?.eventDate,
+      repeatMode: _getRepeatMode(t),
+      repeatCycleType: _getRepeatCycleType(t),
+      repeatDays: _getRepeatDays(t),
+    })));
+
+    const cyclicSample = allTasks.filter((t) => t && (_getRepeatMode(t) === 'cyclic' || _getRepeatMode(t) === 'repeat' || _getRepeatMode(t) === true))
+      .slice(0, 5);
+    if (cyclicSample.length) console.debug('[NextEventNotification] sample cyclic tasks:', cyclicSample);
+  } catch (e) {
+    // ignore
+  }
+
   for (const t of allTasks) {
     const done = t.completed || Number(t.status_id) === 0;
     if (done) continue;
 
-    if (t.repeatMode === 'cyclic') {
+    const rMode = _getRepeatMode(t);
+    if (rMode === 'cyclic' || rMode === 'repeat' || rMode === true) {
       // For cyclic tasks, generate instances for matching window days
       for (const d of windowDays) {
-        if (occursOnDay(t, d)) {
-          instances.push({ ...t, _date: d });
+        try {
+          const match = occursOnDay(t, d);
+          if (match) {
+            // Lightweight log when a cyclic task matches a window day (limited amount)
+            if (instances.length < 5) {
+              console.debug('[NextEventNotification] cyclic match:', { id: t.id, _date: d, repeatMode: _getRepeatMode(t), repeatDays: _getRepeatDays(t) });
+            }
+            instances.push({ ...t, _date: d });
+          }
+        } catch (err) {
+          // ignore individual task errors
         }
       }
     } else {
@@ -141,6 +202,9 @@ const nextEvents = computed(() => {
     const dt = new Date(`${datePart}T${timePart}:00`);
     return dt >= oneHourAgo;
   });
+
+  console.debug('[NextEventNotification] instances count:', instances.length);
+  console.debug('[NextEventNotification] filtered count:', filtered.length);
 
   // Return up to 5 unique instances (avoid duplicate ids on same date/time)
   const output: any[] = [];

@@ -185,7 +185,6 @@ async function copyStyledTask() {
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
-    console.log('Copied styled task to clipboard');
   } catch (err) {
     console.error('Copy failed', err);
   }

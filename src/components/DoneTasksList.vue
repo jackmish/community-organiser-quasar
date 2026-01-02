@@ -30,7 +30,6 @@ const emit = defineEmits<{
 }>();
 
 function onDoneClick(task: any) {
-  console.debug('[DoneTasksList] clicked', task && task.id);
   emit('toggle-status', task);
 }
 </script>

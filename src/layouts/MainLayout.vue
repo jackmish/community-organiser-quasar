@@ -2,10 +2,24 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
-        <q-toolbar-title> Community Organiser </q-toolbar-title>
+        <q-toolbar-title style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span>CO21</span>
+            <div class="header-today" style="display:inline-block; font-size:0.9rem; background:#0f1724; color:#2196f3; padding:8px 12px; border-radius:6px; align-items:center;">
+              <div class="text-caption" style="color: #90caf9; margin-right: 8px; display:inline-block;">
+                Today is <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
+                <span style="color: #ffffff">{{ currentDateShort }}</span>
+              </div>
+              <div class="text-caption" style="color: #90caf9; margin-left: 8px; display:inline-block;">
+                |&nbsp;Its <span style="color: #ffffff">{{ currentTimeDisplay }}</span> now
+              </div>
+            </div>
+          </div>
 
-        <!-- Next upcoming event notification component -->
-        <NextEventNotification />
+          <div class="q-ml-md" style="display:flex; align-items:center">
+            <NextEventNotification />
+          </div>
+        </q-toolbar-title>
 
         <q-chip
           :color="isOnline ? 'positive' : 'negative'"
@@ -38,11 +52,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
+const now = ref(new Date());
+let clockTimer: any = null;
+
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    now.value = new Date();
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer);
+});
+
+const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
+const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
+const currentTimeDisplay = computed(() => format(now.value, 'HH:mm'));
 
 async function checkInternetConnection(): Promise<boolean> {
   try {

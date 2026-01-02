@@ -18,24 +18,7 @@
           </template>
         </q-select>
 
-        <div
-          class="row items-center"
-          style="
-            background: #0f1724;
-            color: #2196f3;
-            padding: 8px 12px;
-            border-radius: 6px;
-            align-items: center;
-          "
-        >
-          <div class="text-caption" style="color: #90caf9; margin-right: 8px">
-            Today is <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
-            <span style="color: #ffffff">{{ currentDateShort }}</span>
-          </div>
-          <div class="text-caption" style="color: #90caf9; margin-left: 8px">
-            |&nbsp;Its <span style="color: #ffffff">{{ currentTimeDisplay }}</span> now
-          </div>
-        </div>
+        
       </div>
 
       <TaskTypeSelector
@@ -346,7 +329,6 @@ const calendarViewDays = ref(42); // Default to 42 days view
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const val = getWeekDays(weekStart);
-  console.log('[computed] calendarCurrentWeek', val);
   return val;
 });
 
@@ -374,7 +356,6 @@ const calendarNextWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const nextWeekStart = addDays(weekStart, 7);
   const val = getWeekDays(nextWeekStart);
-  console.log('[computed] calendarNextWeek', val);
   return val;
 });
 
@@ -389,7 +370,6 @@ const allCalendarWeeks = computed(() => {
     weeks.push(getWeekDays(weekStartDate));
   }
 
-  console.log('[computed] allCalendarWeeks', weeks);
   return weeks;
 });
 
@@ -582,7 +562,6 @@ const eventDateYear = computed(() => {
     const parts = dateStr.split('-');
     val = parseInt(parts[0] || '0', 10);
   }
-  console.log('[computed] eventDateYear', val);
   return val;
 });
 
@@ -594,7 +573,6 @@ const eventDateMonth = computed(() => {
     const parts = dateStr.split('-');
     val = parseInt(parts[1] || '0', 10);
   }
-  console.log('[computed] eventDateMonth', val);
   return val;
 });
 
@@ -606,7 +584,6 @@ const eventDateDay = computed(() => {
     const parts = dateStr.split('-');
     val = parseInt(parts[2] || '0', 10);
   }
-  console.log('[computed] eventDateDay', val);
   return val;
 });
 
@@ -712,14 +689,12 @@ const updateEventDateDay = (value: string | number | null) => {
 const eventTimeHour = computed(() => {
   if (!newTask.value.eventTime) return '';
   const val = Number(newTask.value.eventTime.split(':')[0]);
-  console.log('[computed] eventTimeHour', val);
   return val;
 });
 
 const eventTimeMinute = computed(() => {
   if (!newTask.value.eventTime) return '';
   const val = Number(newTask.value.eventTime.split(':')[1]);
-  console.log('[computed] eventTimeMinute', val);
   return val;
 });
 
@@ -819,7 +794,6 @@ const parentTaskOptions = computed(() => {
     value: task.id,
     icon: typeOptions.find((t) => t.value === task.category)?.icon || 'task',
   }));
-  console.log('[computed] parentTaskOptions', val);
   return val;
 });
 
@@ -987,7 +961,6 @@ const sortedTasks = computed(() => {
 
     return 0;
   });
-  console.log('[computed] sortedTasks', val);
   return val;
 });
 
@@ -1034,14 +1007,12 @@ const tasksWithTime = computed(() => {
   const val = sortedTasks.value.filter(
     (t) => !!t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
   );
-  console.log('[computed] tasksWithTime', val);
   return val;
 });
 const tasksWithoutTime = computed(() => {
   const val = sortedTasks.value.filter(
     (t) => !t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
   );
-  console.log('[computed] tasksWithoutTime', val);
   return val;
 });
 
@@ -1051,7 +1022,6 @@ const groupOptions = computed(() => {
     label: g.name,
     value: g.id,
   }));
-  console.log('[computed] groupOptions', val);
   return val;
 });
 
@@ -1074,7 +1044,6 @@ const activeGroupOptions = computed(() => {
     }),
   ];
 
-  console.log('[computed] activeGroupOptions', options);
   return options;
 });
 
@@ -1090,7 +1059,6 @@ const groupTree = computed(() => {
     }));
   };
   const val = buildTree();
-  console.log('[computed] groupTree', val);
   return val;
 });
 
@@ -1238,7 +1206,7 @@ const handleDeleteTask = async (taskId: string) => {
 };
 
 const toggleStatus = async (task: any, lineIndex?: number) => {
-  console.debug('[DayOrganiserPage] toggleStatus called', task && task.id, lineIndex);
+  
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);

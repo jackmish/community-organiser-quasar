@@ -364,7 +364,7 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
         holidays.value.set(holiday.date, holiday);
       });
 
-      console.log(`Loaded holidays for ${year} from APPDATA`);
+      
       return true;
     } else {
       // Load from localStorage
@@ -418,8 +418,10 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       );
       await (window as any).electronAPI.ensureDir(dirPath);
 
-      // Write file
-      await (window as any).electronAPI.writeJsonFile(filePath, cache);
+      // Write file (serialize to plain JSON first to avoid structured-clone errors
+      // when crossing the contextBridge boundary)
+      const safe = JSON.parse(JSON.stringify(cache));
+      await (window as any).electronAPI.writeJsonFile(filePath, safe);
       console.log(`Saved holidays for ${year} to APPDATA`);
     } else {
       // Save to localStorage
@@ -435,14 +437,12 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
 async function fetchHolidays(year: number) {
   // Try to load from cache first
   const loaded = await loadHolidaysFromCache(year);
-  if (loaded) {
-    console.log(`Loaded holidays for ${year} from cache`);
-    return;
-  }
+    if (loaded) {
+      return;
+    }
 
   // In Electron, don't connect to API - just use fallback
   if (isElectron) {
-    console.log(`No cached holidays for ${year} in Electron, using fallback`);
     loadFallbackHolidays(year);
     // Save fallback to cache for next time
     const fallbackList = Array.from(holidays.value.values()).filter((h) =>
@@ -454,7 +454,7 @@ async function fetchHolidays(year: number) {
 
   // In browser, fetch from API if not in cache
   try {
-    console.log(`Fetching holidays for ${year} from API...`);
+    
 
     // Use XMLHttpRequest instead of fetch to avoid QUIC protocol issues in Electron
     const data: Holiday[] = await new Promise((resolve, reject) => {
@@ -484,7 +484,7 @@ async function fetchHolidays(year: number) {
 
     // Save to cache
     await saveHolidaysToCache(year, data);
-    console.log(`Cached ${data.length} holidays for ${year}`);
+    
   } catch (error) {
     console.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
     // Load fallback holidays
@@ -526,7 +526,7 @@ function loadFallbackHolidays(year: number) {
     holidays.value.set(holiday.date, holiday);
   });
 
-  console.log(`Loaded ${fallbackHolidays.length} fallback holidays for ${year}`);
+  
 }
 
 // Check if a date is a holiday
@@ -544,7 +544,6 @@ onMounted(async () => {
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
   const result = Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), 'yyyy-MM-dd'));
-  console.log('[computed] calendarCurrentWeek', result);
   return result;
 });
 
@@ -556,7 +555,6 @@ const allCalendarWeeks = computed(() => {
       format(addDays(weekStart, weekIndex * 7 + dayIndex), 'yyyy-MM-dd'),
     ),
   );
-  console.log('[computed] allCalendarWeeks', result);
   return result;
 });
 
@@ -572,7 +570,6 @@ const nextSixMonths = computed(() => {
     });
   }
 
-  console.log('[computed] nextSixMonths', months);
   return months;
 });
 
@@ -590,7 +587,6 @@ function setEventDateToToday() {
   const today = new Date();
   calendarBaseDate.value = new Date();
   const formatted = format(today, 'yyyy-MM-dd');
-  console.log('[emit] update:selectedDate', formatted);
   emit('update:selectedDate', formatted);
 }
 
@@ -603,7 +599,6 @@ function jumpToMonth(dateString: string) {
 }
 
 function handleDateSelect(dateString: string) {
-  console.log('[emit] update:selectedDate', dateString);
   emit('update:selectedDate', dateString);
 }
 

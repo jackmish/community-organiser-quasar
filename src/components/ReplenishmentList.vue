@@ -88,7 +88,6 @@ const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();
 setLongPressHandler((t: any) => emit('edit-task', t));
 
 function onReplenishClick(task: any) {
-  console.debug('[ReplenishmentList] replenish clicked', task && task.id);
   emit('toggle-status', task);
 }
 

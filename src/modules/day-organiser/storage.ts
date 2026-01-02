@@ -62,7 +62,6 @@ class DayOrganiserStorage {
       data.lastModified = new Date().toISOString();
       // Save each group to its own file in the testing/storage/groups directory
       await saveGroupsToFiles(data.groups);
-      console.log('Groups saved to testing/storage/groups');
     } catch (error) {
       console.error('Error saving organiser data to group files:', error);
       throw error;
@@ -121,20 +120,18 @@ class DayOrganiserStorage {
     ) {
       const appDataDir = await window.electronAPI.getAppDataPath();
       const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
-      console.log('Using electronAPI to load groups ' + groupDir);
       // Ensure the directory exists before reading
       await window.electronAPI.ensureDir(groupDir);
       const groups: any[] = [];
       try {
         const files = await window.electronAPI.readDir(groupDir);
-        console.log('Group files found:', files);
+        
         for (const file of files) {
           if (file.startsWith('group-') && file.endsWith('.json')) {
             const filePath = window.electronAPI.joinPath(groupDir, file);
             try {
               const groupData = await window.electronAPI.readJsonFile(filePath);
               groups.push(groupData);
-              console.log('Loaded group file:', filePath);
             } catch (err) {
               // Could not read file, skip
               console.error('Error reading group file:', filePath, err);
@@ -147,7 +144,6 @@ class DayOrganiserStorage {
       }
       return groups;
     } else if (typeof window !== 'undefined' && window.localStorage) {
-      console.log('Using localStorage to load groups');
       const stored = localStorage.getItem('day-organiser-groups');
       if (stored) {
         try {
@@ -212,7 +208,6 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
 
       const filePath = window.electronAPI.joinPath(groupDir, filename);
       try {
-        console.log('Saving file ' + filePath, group);
         await window.electronAPI.writeFile(filePath, JSON.stringify(group));
       } catch (err) {
         console.error('[saveGroupsToFiles] Error writing file:', filePath, err);
