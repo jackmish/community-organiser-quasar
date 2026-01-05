@@ -952,7 +952,8 @@ const doneTasks = computed(() => {
     try {
       const cycle = getCycleType(t);
       if (!cycle) return false;
-      const hist = (t as any).history || [];
+      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const hist = (base as any).history || [];
       return hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day);
     } catch (e) {
       return false;
@@ -1132,7 +1133,11 @@ const getReplenishText = (task: any) => {
 };
 
 const setReplenishColor = async (task: any, colorId: string | null) => {
-  const targetDate = task.date || task.eventDate || currentDate.value;
+  // For generated cyclic instances prefer the instance's eventDate (or current view)
+  const targetDate =
+    task && task.__isCyclicInstance
+      ? task.eventDate || currentDate.value
+      : task.date || task.eventDate || currentDate.value;
   try {
     // optimistic UI
     task.color_set = colorId;
@@ -1216,8 +1221,38 @@ const handleDeleteTask = async (payload: any) => {
   }
 };
 
+// `lineIndex?: number`: when provided toggles a specific checklist line
+// inside the task's description instead of toggling the whole task.
 const toggleStatus = async (task: any, lineIndex?: number) => {
-  const targetDate = task.date || task.eventDate || currentDate.value;
+  // Prefer the task's own date for cyclic tasks, otherwise use the currently
+  // selected calendar date. This ensures generated cyclic instances use their
+  // occurrence date when persisting per-occurrence completions.
+  const isCyclic = Boolean(getCycleType(task));
+  const targetDate = !isCyclic
+    ? task.date || task.eventDate || currentDate.value
+    : currentDate.value;
+  try {
+    // Debug: help trace toggle attempts for cyclic occurrences
+    const baseCheck = (allTasks.value || []).find((x: any) => x.id === task.id) || null;
+    console.debug(
+      '[toggleStatus] taskId=',
+      task?.id,
+      'instanceDate=',
+      (task && (task.date || task.eventDate)) || null,
+      'targetDate=',
+      targetDate,
+      'isCyclic=',
+      isCyclic,
+      'isInstance=',
+      Boolean(task?.__isCyclicInstance),
+      'instanceHistoryLen=',
+      (task?.history || []).length || 0,
+      'baseHistoryLen=',
+      baseCheck && baseCheck.history ? baseCheck.history.length : 0,
+    );
+  } catch (e) {
+    // ignore
+  }
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);
@@ -1293,62 +1328,89 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // Toggle entire task status (existing behavior)
   // Handle cyclic tasks explicitly: mark occurrence done via toggleTaskComplete or undo via undoCycleDone
   try {
-    const isCyclic = Boolean(getCycleType(task));
     if (isCyclic) {
+      console.debug('[toggleStatus] cyclic handling start', {
+        taskId: task?.id,
+        instanceDate: task?.date || task?.eventDate || null,
+        targetDate,
+        isInstance: Boolean(task?.__isCyclicInstance),
+      });
       // If an occurrence is already marked done for this date, undo it
       const tAny: any = task;
       const hist = tAny.history || [];
+      try {
+        console.debug('[toggleStatus] history raw:', hist);
+        console.debug(
+          '[toggleStatus] history dates:',
+          Array.isArray(hist) ? hist.map((hh: any) => ({ type: hh?.type, date: hh?.date })) : hist,
+        );
+        console.debug('[toggleStatus] targetDate value/type:', targetDate, typeof targetDate);
+      } catch (e) {
+        // ignore logging errors
+      }
       const alreadyDone =
         Array.isArray(hist) &&
         hist.some((h: any) => h && h.type === 'cycleDone' && h.date === targetDate);
+      console.debug('[toggleStatus] alreadyDone=', { taskId: task.id, targetDate, alreadyDone });
       if (alreadyDone) {
         const undone = await undoCycleDone(targetDate, task.id);
         if (undone) {
-          // optimistic local update for UI
-          const tAny: any = task;
-          const h = tAny.history || [];
-          if (Array.isArray(h))
-            tAny.history = h.filter(
+          console.debug('[toggleStatus] undoCycleDone succeeded', { taskId: task.id, targetDate });
+          const removeCycleDone = (obj: any) => {
+            if (!obj || !Array.isArray(obj.history)) return;
+            obj.history = obj.history.filter(
               (hh: any) => !(hh && hh.type === 'cycleDone' && hh.date === targetDate),
             );
-          if (taskToEdit.value && taskToEdit.value.id === task.id) {
-            const editAny: any = taskToEdit.value;
-            const th = editAny.history || [];
-            if (Array.isArray(th))
-              editAny.history = th.filter(
-                (hh: any) => !(hh && hh.type === 'cycleDone' && hh.date === targetDate),
-              );
+          };
+
+          try {
+            removeCycleDone(task);
+            const base = (allTasks.value || []).find((x: any) => x.id === task.id);
+            removeCycleDone(base);
+            if (taskToEdit.value && taskToEdit.value.id === task.id)
+              removeCycleDone(taskToEdit.value);
+            console.debug('[toggleStatus] optimistic undo applied', {
+              taskId: task.id,
+              targetDate,
+            });
+          } catch (e) {
+            console.warn('[toggleStatus] optimistic undo failed', {
+              taskId: task.id,
+              targetDate,
+              err: e,
+            });
           }
         }
         return;
       }
 
       // Otherwise mark the occurrence done
+      console.debug('[toggleStatus] calling toggleTaskComplete', { taskId: task.id, targetDate });
       await toggleTaskComplete(targetDate, task.id);
       // optimistic local update so UI moves task to Done list
       try {
-        const tAny: any = task;
-        const h = tAny.history || [];
-        if (Array.isArray(h)) {
-          h.push({
-            type: 'cycleDone',
-            is_done: true,
-            date: targetDate,
-            changedAt: new Date().toISOString(),
-          });
-          tAny.history = h;
-        } else {
-          tAny.history = [
-            {
-              type: 'cycleDone',
-              is_done: true,
-              date: targetDate,
-              changedAt: new Date().toISOString(),
-            },
-          ];
-        }
+        const newEntry = {
+          type: 'cycleDone',
+          is_done: true,
+          date: targetDate,
+          changedAt: new Date().toISOString(),
+        };
+        const ensurePush = (obj: any) => {
+          if (!obj) return;
+          if (!Array.isArray(obj.history)) obj.history = [];
+          obj.history.push(newEntry);
+        };
+
+        ensurePush(task);
+        const base = (allTasks.value || []).find((x: any) => x.id === task.id);
+        ensurePush(base);
+        console.debug('[toggleStatus] optimistic mark applied', { taskId: task.id, targetDate });
       } catch (e) {
-        // ignore optimistic update failures
+        console.warn('[toggleStatus] optimistic mark failed', {
+          taskId: task.id,
+          targetDate,
+          err: e,
+        });
       }
       return;
     }

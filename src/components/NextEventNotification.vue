@@ -71,14 +71,6 @@ const nextEvents = computed(() => {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
-  console.log(
-    '[NextEventNotification] windowDays:',
-    windowDays[0],
-    '->',
-    windowDays[windowDays.length - 1],
-    'count',
-    windowDays.length,
-  );
 
   // Gather tasks
   let allTasks: any[] = [];
@@ -99,10 +91,7 @@ const nextEvents = computed(() => {
   for (const t of allTasks) {
     const done = Number(t.status_id) === 0;
     const cycleType = getCycleType(t);
-    if (!cycleType && done) {
-      console.log('[NextEventNotification] skipping done task', t.name, cycleType);
-      continue;
-    }
+    if (!cycleType && done) continue;
 
     const addOccurrence = (dateStr: string) => {
       // compute local Date for this occurrence
@@ -131,17 +120,6 @@ const nextEvents = computed(() => {
       if (date && windowDays.includes(date)) addOccurrence(date);
     }
   }
-  console.log('[NextEventNotification] occurrences generated:', occurrences.length);
-
-  // Debug: log first few occurrences (name + datetime) to help ordering issues
-  try {
-    console.log(
-      '[NextEventNotification] sample occurrences:',
-      occurrences.slice(0, 6).map((o) => ({ name: o.task.name, when: o.occ.toISOString() })),
-    );
-  } catch (e) {
-    // ignore
-  }
 
   // Keep only occurrences: cyclic must be >= now, non-cyclic allowed if >= now - 1 hour
   const cutoff = new Date(now.getTime() - 60 * 60 * 1000);
@@ -165,7 +143,6 @@ const nextEvents = computed(() => {
     if (out.length >= 5) break;
   }
 
-  console.log('[NextEventNotification] totalTasks:', allTasks.length, 'upcoming:', out.length);
   return out;
 });
 

@@ -256,6 +256,19 @@ export function useDayOrganiser() {
   const toggleTaskComplete = async (date: string, taskId: string): Promise<void> => {
     const dayData = getDayData(date);
     let task = dayData.tasks.find((t) => t.id === taskId);
+    // Debug logging to help trace toggle attempts across dates
+    try {
+      console.debug(
+        '[toggleTaskComplete] date=',
+        date,
+        'taskId=',
+        taskId,
+        'foundInBucket=',
+        Boolean(task),
+      );
+    } catch (e) {
+      // ignore
+    }
 
     // If not found in this date bucket, look across all days (cyclic occurrences may be generated)
     if (!task) {
@@ -285,6 +298,16 @@ export function useDayOrganiser() {
             date: date,
             changedAt: new Date().toISOString(),
           });
+          // Debug: log after adding history
+          try {
+            console.debug('[toggleTaskComplete] added cycleDone', {
+              date,
+              taskId,
+              historyLen: (task as any).history.length,
+            });
+          } catch (e) {
+            // ignore
+          }
         } else {
           (task as any).status_id = next;
         }
@@ -293,6 +316,12 @@ export function useDayOrganiser() {
       }
       task.updatedAt = new Date().toISOString();
       await saveData();
+      try {
+        // Debug: log after save
+        console.debug('[toggleTaskComplete] saveData complete for taskId=', taskId, 'date=', date);
+      } catch (e) {
+        // ignore
+      }
     }
   };
 
