@@ -968,15 +968,49 @@ const doneTasks = computed(() => {
 });
 
 const tasksWithTime = computed(() => {
-  const val = sortedTasks.value.filter(
-    (t) => !!t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
-  );
+  const day = currentDate.value;
+  const val = sortedTasks.value.filter((t) => {
+    if (t.type_id === 'Replenish') return false;
+    if (Number(t.status_id) === 0) return false;
+    try {
+      const cycle = getCycleType(t);
+      if (cycle) {
+        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+        const hist = (base as any).history || [];
+        if (
+          Array.isArray(hist) &&
+          hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day)
+        )
+          return false;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return !!t.eventTime;
+  });
   return val;
 });
 const tasksWithoutTime = computed(() => {
-  const val = sortedTasks.value.filter(
-    (t) => !t.eventTime && t.type_id !== 'Replenish' && Number(t.status_id) !== 0,
-  );
+  const day = currentDate.value;
+  const val = sortedTasks.value.filter((t) => {
+    if (t.type_id === 'Replenish') return false;
+    if (Number(t.status_id) === 0) return false;
+    try {
+      const cycle = getCycleType(t);
+      if (cycle) {
+        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+        const hist = (base as any).history || [];
+        if (
+          Array.isArray(hist) &&
+          hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day)
+        )
+          return false;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return !t.eventTime;
+  });
   return val;
 });
 
@@ -1241,6 +1275,19 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       return;
     }
     // Not a list-like line: fall through to toggling whole task
+  }
+
+  // Special-case Replenishment items: toggle their base status immediately
+  if (task.type_id === 'Replenish') {
+    const status = Number(task.status_id) === 0 ? 1 : 0;
+    try {
+      task.status_id = status;
+      if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.status_id = status;
+    } catch (e) {
+      // ignore
+    }
+    await updateTask(targetDate, task.id, { status_id: status });
+    return;
   }
 
   // Toggle entire task status (existing behavior)
