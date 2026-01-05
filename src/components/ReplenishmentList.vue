@@ -32,6 +32,11 @@
 
 <script setup lang="ts">
 import { useLongPress } from '../composables/useLongPress';
+import {
+  findReplenishSet,
+  getReplenishBg as themeGetReplenishBg,
+  getReplenishText as themeGetReplenishText,
+} from './theme';
 
 const props = defineProps<{
   replenishTasks: any[];
@@ -43,45 +48,9 @@ const emit = defineEmits<{
   (e: 'replenish-restore', taskId: string): void;
 }>();
 
-// Local color sets so component can compute bg/text
-const replenishColorSets = [
-  { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
-  { id: 'set-4', bg: '#ff5252', text: '#000000' },
-  { id: 'set-3', bg: '#ff8a80', text: '#000000' },
-  { id: 'set-5', bg: '#fdd835', text: '#000000' },
-  { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
-  { id: 'set-6', bg: '#fff176', text: '#000000' },
-  { id: 'set-9', bg: '#2e7d32', text: '#ffffff' },
-  { id: 'set-11', bg: '#9ccc65', text: '#000000' },
-  { id: 'set-12', bg: '#a5d6a7', text: '#000000' },
-  { id: 'set-13', bg: '#00acc1', text: '#ffffff' },
-  { id: 'set-15', bg: '#80deea', text: '#000000' },
-  { id: 'set-16', bg: '#b2ebf2', text: '#000000' },
-  { id: 'set-17', bg: '#0d47a1', text: '#ffffff' },
-  { id: 'set-18', bg: '#1976d2', text: '#ffffff' },
-  { id: 'set-20', bg: '#90caf9', text: '#000000' },
-  { id: 'set-21', bg: '#6a1b9a', text: '#ffffff' },
-  { id: 'set-23', bg: '#ab47bc', text: '#ffffff' },
-  { id: 'set-24', bg: '#ce93d8', text: '#000000' },
-  { id: 'set-25', bg: '#000000', text: '#ffffff' },
-  { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
-  { id: 'set-28', bg: '#ffffff', text: '#000000' },
-];
-
-const findColorSet = (id?: string | null) => {
-  if (!id) return null;
-  return replenishColorSets.find((s) => s.id === id) || null;
-};
-
-const getReplenishBg = (task: any) => {
-  const s = findColorSet(task.color_set);
-  return s ? s.bg : 'transparent';
-};
-
-const getReplenishText = (task: any) => {
-  const s = findColorSet(task.color_set);
-  return s ? s.text : 'inherit';
-};
+// Use centralized replenish color helpers from theme
+const getReplenishBg = (task: any) => themeGetReplenishBg(task.color_set);
+const getReplenishText = (task: any) => themeGetReplenishText(task.color_set);
 
 // Use local long-press to emit edit requests
 const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();

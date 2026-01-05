@@ -235,6 +235,7 @@ import { occursOnDay } from 'src/utils/occursOnDay';
 import { format, addDays, startOfWeek } from 'date-fns';
 import {
   priorityColors as themePriorityColors,
+  priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
 } from './theme';
 

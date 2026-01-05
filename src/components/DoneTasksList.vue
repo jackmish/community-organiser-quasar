@@ -14,7 +14,7 @@
       >
         <div class="row items-center justify-between" style="gap: 8px">
           <div class="row items-center" style="gap: 8px">
-            <q-icon :name="getIcon(d)" :color="getIconColor(d)" />
+            <q-icon :name="getIcon(d)" :style="{ color: getIconColor(d) }" />
             <div
               :class="{ 'text-strike': Number(d.status_id) === 0 }"
               :style="{ color: getTextColor(d) }"
@@ -30,7 +30,7 @@
                 borderColor: priorityColor(d.priority),
               }"
             />
-            <q-icon name="done" size="18px" color="grey-6" />
+            <q-icon name="done" size="18px" :style="{ color: getIconColor(d) }" />
           </div>
         </div>
       </div>
@@ -56,44 +56,30 @@ function onDoneClick(task: any) {
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
+  priorityDefinitions as themePriorityDefinitions,
+  findReplenishSet,
+  getReplenishBg,
+  getReplenishText,
 } from './theme';
+import { getCycleType } from 'src/utils/occursOnDay';
 
-const replenishColorSets = [
-  { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
-  { id: 'set-4', bg: '#ff5252', text: '#000000' },
-  { id: 'set-3', bg: '#ff8a80', text: '#000000' },
-  { id: 'set-5', bg: '#fdd835', text: '#000000' },
-  { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
-  { id: 'set-6', bg: '#fff176', text: '#000000' },
-  { id: 'set-9', bg: '#2e7d32', text: '#ffffff' },
-  { id: 'set-11', bg: '#9ccc65', text: '#000000' },
-  { id: 'set-12', bg: '#a5d6a7', text: '#000000' },
-  { id: 'set-13', bg: '#00acc1', text: '#ffffff' },
-  { id: 'set-15', bg: '#80deea', text: '#000000' },
-  { id: 'set-16', bg: '#b2ebf2', text: '#000000' },
-  { id: 'set-17', bg: '#0d47a1', text: '#ffffff' },
-  { id: 'set-18', bg: '#1976d2', text: '#ffffff' },
-  { id: 'set-20', bg: '#90caf9', text: '#000000' },
-  { id: 'set-21', bg: '#6a1b9a', text: '#ffffff' },
-  { id: 'set-23', bg: '#ab47bc', text: '#ffffff' },
-  { id: 'set-24', bg: '#ce93d8', text: '#000000' },
-  { id: 'set-25', bg: '#000000', text: '#ffffff' },
-  { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
-  { id: 'set-28', bg: '#ffffff', text: '#000000' },
-];
-
-const findReplenishSet = (id?: string | null) => {
-  if (!id) return null;
-  return replenishColorSets.find((s) => s.id === id) || null;
-};
+// Replenish color data imported from theme
 
 const priorityColor = (priority: any) => themePriorityColors[priority] || 'transparent';
 const priorityTextColor = (priority: any) => themePriorityTextColor(priority);
 
+const isCyclic = (task: any) => {
+  try {
+    return Boolean(getCycleType(task)) || Boolean(task && task.__isCyclicInstance);
+  } catch (e) {
+    return Boolean(task && task.__isCyclicInstance);
+  }
+};
+
 const getIcon = (task: any) => {
   if (!task) return 'task';
   if (task.type_id === 'Replenish') return 'shopping_cart';
-  if (task.repeat || task.repeatMode === 'cyclic') return 'repeat';
+  if (isCyclic(task)) return 'repeat';
   if (task.eventTime) return 'event';
   return 'label';
 };
@@ -104,23 +90,31 @@ const getIconColor = (task: any) => {
     const s = findReplenishSet(task.color_set);
     return s ? s.text : '#000000';
   }
-  // If the done item has a custom background, ensure icon contrasts
-  if (hasBg(task)) return getContrastColor(priorityColor(task.priority) || '#ffffff');
-  return priorityColor(task.priority) || '#000000';
+  // If the done item has a custom background, prefer theme's priority text color
+  if (hasBg(task)) return priorityTextColor(task.priority) || '#000000';
+  // Prefer the priority color for icon fill if available, otherwise use a high-contrast dark
+  return priorityColor(task.priority) || 'rgba(0,0,0,0.87)';
 };
 
 const getTextColor = (task: any) => {
-  if (!task) return 'rgba(0,0,0,0.45)';
+  if (!task) return 'rgba(0,0,0,0.87)';
   if (task.type_id === 'Replenish') {
     const s = findReplenishSet(task.color_set);
-    return s ? s.text : 'rgba(0,0,0,0.45)';
+    return s ? s.text : 'rgba(0,0,0,0.87)';
   }
   // If the done item has a custom background, return contrasting text
   if (hasBg(task)) {
-    const bg = priorityColor(task.priority) || '#ffffff';
-    return getContrastColor(bg);
+    // Use the theme's priority text color for readability on priority backgrounds
+    return (
+      priorityTextColor(task.priority) ||
+      (priorityColor(task.priority)
+        ? getContrastColor(priorityColor(task.priority))
+        : 'rgba(0,0,0,0.87)')
+    );
   }
-  return 'rgba(0,0,0,0.45)';
+  // Prefer the priority text color when available
+  const pt = priorityTextColor(task.priority);
+  return pt || 'rgba(0,0,0,0.87)';
 };
 
 const getDoneItemStyle = (task: any) => {
@@ -131,11 +125,11 @@ const getDoneItemStyle = (task: any) => {
   }
   // For cyclic finished occurrences show priority color lightly as bg
   try {
-    if (task.repeat || task.repeatMode === 'cyclic') {
+    if (isCyclic(task)) {
       const bg = priorityColor(task.priority) || 'transparent';
-      // Use a low-opacity background but set explicit text color for contrast
+      // Use the priority color as a subtle background and choose contrasting text
       const text = getContrastColor(bg);
-      return { backgroundColor: bg, color: text, opacity: 0.12 };
+      return { backgroundColor: bg, color: text };
     }
   } catch (e) {
     // ignore
@@ -150,7 +144,8 @@ const hasBg = (task: any) => {
     const s = findReplenishSet(task.color_set);
     return !!s;
   }
-  if (task.repeat || task.repeatMode === 'cyclic') {
+  // Also treat generated cyclic instances as cyclic so they get priority styling
+  if (isCyclic(task)) {
     const bg = priorityColor(task.priority) || '';
     return !!bg && bg !== 'transparent';
   }
@@ -182,8 +177,8 @@ const getContrastColor = (hex: string) => {
 
 <style scoped>
 .done-item {
-  filter: grayscale(100%);
-  opacity: 0.9;
+  /* Light desaturation for done items while preserving readability */
+  filter: grayscale(10%);
   background: transparent;
   border-radius: 6px;
   padding: 6px 8px;
@@ -193,7 +188,6 @@ const getContrastColor = (hex: string) => {
 .done-item--has-bg {
   /* When an item has a custom background, keep original colors and remove grayscale */
   filter: none;
-  opacity: 1;
 }
 
 .priority-indicator {

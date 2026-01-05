@@ -197,6 +197,7 @@ import { useDayOrganiser } from '../modules/day-organiser/useDayOrganiser';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
+  priorityDefinitions as themePriorityDefinitions,
   formatEventHoursDiff,
 } from './theme';
 

@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
-import { priorityColors, priorityTextColor, typeIcons, priorityIcons } from './theme';
+import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from './theme';
 import { occursOnDay, getCycleType, getRepeatDays } from '../utils/occursOnDay';
 
 const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
@@ -165,7 +165,8 @@ function priorityText(ev: any) {
 
 function iconFor(ev: any) {
   if (!ev) return 'notifications';
-  if (ev.priority && priorityIcons[String(ev.priority)]) return priorityIcons[String(ev.priority)];
+  const pd = ev.priority ? priorityDefinitions[String(ev.priority)] : null;
+  if (pd && pd.icon) return pd.icon;
   if (ev.type_id && typeIcons[ev.type_id]) return typeIcons[ev.type_id];
   return 'notifications';
 }

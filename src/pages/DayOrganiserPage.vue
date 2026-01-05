@@ -164,9 +164,13 @@ import TasksList from '../components/TasksList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
+  priorityDefinitions as themePriorityDefinitions,
   timeDiffClassFor,
   formatDisplayDate,
   formatEventHoursDiff,
+  findReplenishSet,
+  getReplenishBg as themeGetReplenishBg,
+  getReplenishText as themeGetReplenishText,
 } from '../components/theme';
 import TaskPreview from '../components/TaskPreview.vue';
 import ModeSwitcher from '../components/ModeSwitcher.vue';
@@ -1085,52 +1089,9 @@ const getGroupColor = (groupId?: string): string => {
   return group?.color || '#1976d2';
 };
 
-// Replenish color sets grouped by family (4 tones each), ordered dark->bright
-const replenishColorSets = [
-  // Reds (dark -> bright) - removed 2nd swatch
-  { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
-  { id: 'set-4', bg: '#ff5252', text: '#000000' },
-  { id: 'set-3', bg: '#ff8a80', text: '#000000' },
-  // Yellows (dark -> bright) - removed 2nd swatch
-  { id: 'set-5', bg: '#fdd835', text: '#000000' },
-  { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
-  { id: 'set-6', bg: '#fff176', text: '#000000' },
-  // Greens (dark -> bright) - removed 2nd swatch
-  { id: 'set-9', bg: '#2e7d32', text: '#ffffff' },
-  { id: 'set-11', bg: '#9ccc65', text: '#000000' },
-  { id: 'set-12', bg: '#a5d6a7', text: '#000000' },
-  // Azures / Cyans (dark -> bright) - removed 2nd swatch
-  { id: 'set-13', bg: '#00acc1', text: '#ffffff' },
-  { id: 'set-15', bg: '#80deea', text: '#000000' },
-  { id: 'set-16', bg: '#b2ebf2', text: '#000000' },
-  // Blues (dark -> bright) - removed 2nd swatch
-  { id: 'set-17', bg: '#0d47a1', text: '#ffffff' },
-  { id: 'set-18', bg: '#1976d2', text: '#ffffff' },
-  { id: 'set-20', bg: '#90caf9', text: '#000000' },
-  // Violets (dark -> bright) - removed 2nd swatch
-  { id: 'set-21', bg: '#6a1b9a', text: '#ffffff' },
-  { id: 'set-23', bg: '#ab47bc', text: '#ffffff' },
-  { id: 'set-24', bg: '#ce93d8', text: '#000000' },
-  // Black / Gray / White (dark -> bright) - removed 2nd swatch
-  { id: 'set-25', bg: '#000000', text: '#ffffff' },
-  { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
-  { id: 'set-28', bg: '#ffffff', text: '#000000' },
-];
-
-const findColorSet = (id?: string | null) => {
-  if (!id) return null;
-  return replenishColorSets.find((s) => s.id === id) || null;
-};
-
-const getReplenishBg = (task: any) => {
-  const s = findColorSet(task.color_set);
-  return s ? s.bg : 'transparent';
-};
-
-const getReplenishText = (task: any) => {
-  const s = findColorSet(task.color_set);
-  return s ? s.text : 'inherit';
-};
+// Replenish colors and helpers live in the shared theme
+const getReplenishBg = (task: any) => themeGetReplenishBg(task.color_set);
+const getReplenishText = (task: any) => themeGetReplenishText(task.color_set);
 
 const setReplenishColor = async (task: any, colorId: string | null) => {
   // For generated cyclic instances prefer the instance's eventDate (or current view)
@@ -1619,8 +1580,8 @@ onMounted(async () => {
 }
 
 .done-item {
-  filter: grayscale(100%);
-  opacity: 0.55;
+  /* Keep done tasks readable: very light desaturation */
+  filter: grayscale(10%);
   background: transparent;
   border-radius: 6px;
   padding: 6px 8px;

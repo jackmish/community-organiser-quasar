@@ -60,6 +60,7 @@ import {
   priorityTextColor,
   formatDisplayDate,
   formatEventHoursDiff,
+  priorityDefinitions,
 } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
