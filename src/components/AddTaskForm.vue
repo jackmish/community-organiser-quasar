@@ -902,8 +902,15 @@ function onSubmit(event: Event) {
                             class="time-toggle"
                           />
                         </div>
-                        <div class="col-auto">
+                        <div class="col-auto" v-if="repeatMode !== 'cyclic'">
                           <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
+                        </div>
+
+                        <div
+                          v-if="repeatMode !== 'cyclic'"
+                          class="text-h6 text-primary text-weight-bold q-mb-sm"
+                        >
+                          {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
                         </div>
                       </div>
                       <div v-if="repeatMode === 'cyclic'">
@@ -1064,10 +1071,6 @@ function onSubmit(event: Event) {
                             />
                           </div>
                         </div>
-                      </div>
-                      <div class="text-caption text-grey-7 q-mt-sm q-mb-xs">Time Difference</div>
-                      <div class="text-h6 text-primary text-weight-bold q-mb-sm">
-                        {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
                       </div>
                     </q-card>
                   </div>
