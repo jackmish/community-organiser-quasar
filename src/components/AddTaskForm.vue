@@ -1494,4 +1494,26 @@ function onSubmit(event: Event) {
 ::v-deep button.q-btn.weekday-btn-selected .q-icon {
   color: inherit !important;
 }
+
+/* Ensure form inputs have a white background within this component */
+::v-deep .q-field__control {
+  background: #ffffff !important;
+  border-radius: 6px !important;
+}
+
+/* Ensure textarea/input elements inherit white background for readability */
+::v-deep textarea,
+::v-deep input {
+  background: transparent !important;
+}
+
+/* Make radio-like buttons (btn-toggles and priority/type buttons) use white background by default when NOT active.
+   Do not use !important so active/selected rules can override this default. */
+::v-deep .q-btn-toggle .q-btn:not(.q-btn--active),
+::v-deep .time-toggle .q-btn:not(.q-btn--active),
+::v-deep .priority-btn.q-btn:not(.q-btn--active) {
+  background: #ffffff;
+  color: inherit;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
 </style>
