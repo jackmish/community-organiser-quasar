@@ -1246,9 +1246,19 @@ function onSubmit(event: Event) {
                             label="Remove"
                             @click.stop="openDeleteConfirm"
                           />
-                          <div v-if="showDeleteConfirm" class="row items-center" style="gap:8px; display:inline-flex; margin-left:8px">
+                          <div
+                            v-if="showDeleteConfirm"
+                            class="row items-center"
+                            style="gap: 8px; display: inline-flex; margin-left: 8px"
+                          >
                             <div>Delete?</div>
-                            <q-btn flat dense color="negative" label="Yes" @click.stop="performDelete" />
+                            <q-btn
+                              flat
+                              dense
+                              color="negative"
+                              label="Yes"
+                              @click.stop="performDelete"
+                            />
                             <q-btn flat dense label="No" @click.stop="cancelDeleteConfirm" />
                           </div>
                         </div>
