@@ -4,7 +4,11 @@
       <q-toolbar>
         <q-toolbar-title style="display: flex; align-items: center; gap: 12px">
           <div style="display: flex; align-items: center; gap: 12px">
-            <span>CO21</span>
+            <img
+              src="icons/co21-logo.png"
+              alt="CO21"
+              style="height: 28px; width: auto; display: inline-block"
+            />
             <div
               class="header-today"
               style="
@@ -21,14 +25,11 @@
                 class="text-caption"
                 style="color: #90caf9; margin-right: 8px; display: inline-block"
               >
-                Today is <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
+                <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
                 <span style="color: #ffffff">{{ currentDateShort }}</span>
               </div>
-              <div
-                class="text-caption"
-                style="color: #90caf9; margin-left: 8px; display: inline-block"
-              >
-                |&nbsp;Its <span style="color: #ffffff">{{ currentTimeDisplay }}</span> now
+              <div class="text-caption" style="color: #90caf9; display: inline-block">
+                |&nbsp; <span style="color: #ffffff">{{ currentTimeDisplay }}</span>
               </div>
             </div>
           </div>
@@ -46,7 +47,6 @@
           :clickable="!isOnline"
           @click="!isOnline && updateOnlineStatus()"
         >
-          {{ isOnline ? 'Online' : 'Offline' }}
         </q-chip>
 
         <q-btn
@@ -58,7 +58,6 @@
           icon="refresh"
           @click="updateOnlineStatus"
         />
-        <div>v{{ $q.version }}</div>
       </q-toolbar>
     </q-header>
 

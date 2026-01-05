@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
-app.setName('Community Organiser');
+app.setName('CO21 - Community Organiser');
 console.log('App data path:', app.getPath('userData'));
 // Fix for ES modules - __dirname is not defined
 const __filename = fileURLToPath(import.meta.url);
@@ -23,7 +23,16 @@ function createWindow() {
 
   const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
+  // Choose appropriate icon for platform (use .ico on Windows)
+  const iconPath = path.resolve(
+    __dirname,
+    process.platform === 'win32'
+      ? '../public/icons/co21-logo.ico'
+      : '../public/icons/co21-logo.png',
+  );
+
   mainWindow = new BrowserWindow({
+    icon: iconPath,
     // ...
     webPreferences: {
       // HERE IS THE MAGIC:

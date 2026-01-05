@@ -60,6 +60,9 @@ function formatDateLabel(dateStr?: string) {
 // occursOnDay and repeat helpers moved to ../utils/occursOnDay
 
 const nextEvents = computed(() => {
+  // Touch organiserData to ensure this computed tracks changes to the store
+  // (some callers mutate nested structures and explicit access guarantees reactivity)
+  void organiserData.value;
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -129,6 +132,16 @@ const nextEvents = computed(() => {
     }
   }
   console.log('[NextEventNotification] occurrences generated:', occurrences.length);
+
+  // Debug: log first few occurrences (name + datetime) to help ordering issues
+  try {
+    console.log(
+      '[NextEventNotification] sample occurrences:',
+      occurrences.slice(0, 6).map((o) => ({ name: o.task.name, when: o.occ.toISOString() })),
+    );
+  } catch (e) {
+    // ignore
+  }
 
   // Keep only occurrences: cyclic must be >= now, non-cyclic allowed if >= now - 1 hour
   const cutoff = new Date(now.getTime() - 60 * 60 * 1000);
@@ -223,6 +236,7 @@ function onClickEvent(ev: any) {
 .next-event-title {
   font-weight: 600;
   line-height: 1;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

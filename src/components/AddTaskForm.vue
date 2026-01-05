@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
-import { useQuasar } from 'quasar';
+import { useQuasar, Dialog } from 'quasar';
 import CalendarView from './CalendarView.vue';
 import {
   priorityColors as themePriorityColors,
@@ -47,6 +47,7 @@ const emit = defineEmits([
   'filter-parent-tasks',
   'update:mode',
   'replenish-restore',
+  'delete-task',
 ]);
 
 // Input refs
@@ -362,6 +363,27 @@ watch(
         eventTime: val.eventTime || '',
         id: val.id,
       } as TaskType;
+      // Populate repeat-related form fields from canonical `repeat` object if present
+      try {
+        if (val.repeat && typeof val.repeat === 'object') {
+          repeatMode.value = 'cyclic';
+          repeatCycleType.value = val.repeat.cycleType || 'dayWeek';
+          repeatDays.value = Array.isArray(val.repeat.days) ? [...val.repeat.days] : [];
+          // Prefer eventDate from repeat seed if not set on task
+          if (!localNewTask.value.eventDate && val.repeat.eventDate) {
+            localNewTask.value.eventDate = val.repeat.eventDate;
+          }
+        } else {
+          repeatMode.value = 'oneTime';
+          repeatCycleType.value = 'dayWeek';
+          repeatDays.value = [];
+        }
+      } catch (e) {
+        repeatMode.value = 'oneTime';
+        repeatCycleType.value = 'dayWeek';
+        repeatDays.value = [];
+      }
+
       emit('update:mode', 'edit');
     } else {
       // switch back to add mode and reset fields
@@ -381,6 +403,10 @@ watch(
           `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
         eventTime: '',
       } as TaskType;
+      // Reset repeat inputs when clearing the form
+      repeatMode.value = 'oneTime';
+      repeatCycleType.value = 'dayWeek';
+      repeatDays.value = [];
     }
   },
   { immediate: true },
@@ -478,6 +504,25 @@ function updateTaskField(field: string, value: any) {
 function onCalendarDateSelect(date: string) {
   localNewTask.value.eventDate = date;
   emit('calendar-date-select', date);
+}
+
+// Inline delete confirmation state (matches TasksList behavior)
+const showDeleteConfirm = ref(false);
+
+function openDeleteConfirm() {
+  if (!localNewTask.value || !localNewTask.value.id) return;
+  showDeleteConfirm.value = true;
+}
+
+function cancelDeleteConfirm() {
+  showDeleteConfirm.value = false;
+}
+
+function performDelete() {
+  if (!localNewTask.value || !localNewTask.value.id) return;
+  emit('delete-task', { id: localNewTask.value.id, date: localNewTask.value.eventDate });
+  emit('cancel-edit');
+  showDeleteConfirm.value = false;
 }
 
 // Sync when parent calendar selection changes
@@ -1193,6 +1238,20 @@ function onSubmit(event: Event) {
                           label="Done"
                           class="q-ml-sm"
                         />
+                        <div v-if="mode === 'edit'" class="q-ml-sm">
+                          <q-btn
+                            flat
+                            color="negative"
+                            icon="delete"
+                            label="Remove"
+                            @click.stop="openDeleteConfirm"
+                          />
+                          <div v-if="showDeleteConfirm" class="row items-center" style="gap:8px; display:inline-flex; margin-left:8px">
+                            <div>Delete?</div>
+                            <q-btn flat dense color="negative" label="Yes" @click.stop="performDelete" />
+                            <q-btn flat dense label="No" @click.stop="cancelDeleteConfirm" />
+                          </div>
+                        </div>
                         <div
                           v-if="activeGroup && activeGroup.value"
                           class="text-caption text-grey-7 q-ml-md"

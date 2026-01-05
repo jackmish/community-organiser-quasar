@@ -126,6 +126,7 @@
               @update:mode="(v) => (mode = v)"
               @add-task="handleAddTask"
               @update-task="handleUpdateTask"
+              @delete-task="handleDeleteTask"
               @replenish-restore="handleReplenishRestore"
               @cancel-edit="() => clearTaskToEdit()"
               @calendar-date-select="handleCalendarDateSelect"
@@ -1152,9 +1153,22 @@ const handleUpdateTask = async (updatedTask: any) => {
   taskToEdit.value = null;
 };
 
-const handleDeleteTask = async (taskId: string) => {
-  await deleteTask(currentDate.value, taskId);
-  openDeleteMenu.value = null;
+const handleDeleteTask = async (payload: any) => {
+  try {
+    let id: string | undefined;
+    let date: string = currentDate.value;
+    if (!payload) return;
+    if (typeof payload === 'string') {
+      id = payload;
+    } else if (typeof payload === 'object') {
+      id = payload.id;
+      if (payload.date) date = payload.date;
+    }
+    if (!id) return;
+    await deleteTask(date, id);
+  } finally {
+    openDeleteMenu.value = null;
+  }
 };
 
 const toggleStatus = async (task: any, lineIndex?: number) => {
