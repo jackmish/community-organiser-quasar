@@ -27,8 +27,10 @@
 import { computed, onMounted } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
 import { priorityColors, priorityTextColor, typeIcons, priorityIcons } from './theme';
+import { occursOnDay, getCycleType, getRepeatDays } from '../utils/occursOnDay';
 
-const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } = useDayOrganiser();
+const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
+  useDayOrganiser();
 
 onMounted(() => {
   // Ensure organiser data is loaded so notifications can compute tasks
@@ -55,76 +57,32 @@ function formatDateLabel(dateStr?: string) {
   return dt.toLocaleDateString();
 }
 
-function _getRepeatMode(task: any) {
-  if (!task) return undefined;
-  return task.repeatMode ?? task.repeat_mode ?? task.repeat ?? undefined;
-}
-
-function _getRepeatCycleType(task: any) {
-  return task.repeatCycleType ?? task.repeat_cycle_type ?? 'dayWeek';
-}
-
-function _getRepeatDays(task: any) {
-  return Array.isArray(task.repeatDays) ? task.repeatDays : Array.isArray(task.repeat_days) ? task.repeat_days : [];
-}
-
-function occursOnDay(task: any, day: string): boolean {
-  if (!task) return false;
-
-  const repeatMode = _getRepeatMode(task);
-  if (repeatMode === 'cyclic' || repeatMode === 'repeat' || repeatMode === true) {
-    const cycle = _getRepeatCycleType(task) || 'dayWeek';
-    const target = new Date(day);
-
-    if (cycle === 'dayWeek') {
-      const dow = target.getDay();
-      const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-      const key = map[dow];
-      const days = _getRepeatDays(task);
-      return days.indexOf(key) !== -1;
-    }
-
-    if (cycle === 'month') {
-      const evDate = task.eventDate ?? task.date ?? null;
-      if (!evDate) return false;
-      const seed = new Date(evDate);
-      return seed.getDate() === target.getDate();
-    }
-
-    if (cycle === 'year') {
-      const evDate = task.eventDate ?? task.date ?? null;
-      if (!evDate) return false;
-      const seed = new Date(evDate);
-      return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
-    }
-
-    return false;
-  }
-
-  // Not cyclic: falls back to one-time match by date
-  return (task.date || task.eventDate) === day;
-}
+// occursOnDay and repeat helpers moved to ../utils/occursOnDay
 
 const nextEvents = computed(() => {
-  const iso = new Date().toISOString();
-  const todayStr = iso.split('T')[0] ?? '';
-  if (!todayStr) return [];
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Build a window of dates (today .. today+29)
-  const windowDays: string[] = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    windowDays.push(d.toISOString().slice(0, 10));
-  }
+  // Build the next 30 local dates as YYYY-MM-DD
+  const windowDays = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  console.log(
+    '[NextEventNotification] windowDays:',
+    windowDays[0],
+    '->',
+    windowDays[windowDays.length - 1],
+    'count',
+    windowDays.length,
+  );
 
-  // Collect all known tasks
+  // Gather tasks
   let allTasks: any[] = [];
   try {
     allTasks =
       typeof getTasksInRange === 'function' ? getTasksInRange('1970-01-01', '9999-12-31') : [];
   } catch (e) {
-    // fallback to organiserData days
     const days = organiserData.value?.days || {};
     Object.keys(days).forEach((d) => {
       const day = days[d];
@@ -132,92 +90,70 @@ const nextEvents = computed(() => {
     });
   }
 
-  const instances: any[] = [];
-
-  // Debugging: log total tasks and any cyclic-marked tasks for diagnosis
-  try {
-    // limit logs in production by checking console availability
-    console.debug('[NextEventNotification] total tasks found:', allTasks.length);
-    console.debug('[NextEventNotification] sample tasks (first 5):', allTasks.slice(0, 5).map((t: any) => ({
-      id: t?.id,
-      date: t?.date,
-      eventDate: t?.eventDate,
-      repeatMode: _getRepeatMode(t),
-      repeatCycleType: _getRepeatCycleType(t),
-      repeatDays: _getRepeatDays(t),
-    })));
-
-    const cyclicSample = allTasks.filter((t) => t && (_getRepeatMode(t) === 'cyclic' || _getRepeatMode(t) === 'repeat' || _getRepeatMode(t) === true))
-      .slice(0, 5);
-    if (cyclicSample.length) console.debug('[NextEventNotification] sample cyclic tasks:', cyclicSample);
-  } catch (e) {
-    // ignore
-  }
+  // Build occurrence objects with precise local Date for the occurrence
+  const occurrences: Array<{ task: any; occ: Date; dateStr: string }> = [];
 
   for (const t of allTasks) {
-    const done = t.completed || Number(t.status_id) === 0;
-    if (done) continue;
+    const done = Number(t.status_id) === 0;
+    const cycleType = getCycleType(t);
+    if (!cycleType && done) {
+      console.log('[NextEventNotification] skipping done task', t.name, cycleType);
+      continue;
+    }
 
-    const rMode = _getRepeatMode(t);
-    if (rMode === 'cyclic' || rMode === 'repeat' || rMode === true) {
-      // For cyclic tasks, generate instances for matching window days
-      for (const d of windowDays) {
+    const addOccurrence = (dateStr: string) => {
+      // compute local Date for this occurrence
+      const [y, m, d] = dateStr.split('-').map((p) => Number(p));
+      if (!y || !m || !d) return;
+      let occ: Date;
+      if (t.eventTime) {
+        const [hh, mm] = (t.eventTime || '').split(':').map((p: string) => Number(p || 0));
+        occ = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+      } else {
+        occ = new Date(y, m - 1, d, 0, 0, 0, 0);
+      }
+      occurrences.push({ task: t, occ, dateStr });
+    };
+
+    if (cycleType) {
+      for (const day of windowDays) {
         try {
-          const match = occursOnDay(t, d);
-          if (match) {
-            // Lightweight log when a cyclic task matches a window day (limited amount)
-            if (instances.length < 5) {
-              console.debug('[NextEventNotification] cyclic match:', { id: t.id, _date: d, repeatMode: _getRepeatMode(t), repeatDays: _getRepeatDays(t) });
-            }
-            instances.push({ ...t, _date: d });
-          }
-        } catch (err) {
-          // ignore individual task errors
+          if (occursOnDay(t, day)) addOccurrence(day);
+        } catch (e) {
+          // ignore
         }
       }
     } else {
       const date = t.date || t.eventDate || null;
-      if (date && windowDays.indexOf(date) !== -1) {
-        instances.push({ ...t, _date: date });
-      }
+      if (date && windowDays.includes(date)) addOccurrence(date);
     }
   }
+  console.log('[NextEventNotification] occurrences generated:', occurrences.length);
 
-  // Sort instances by date/time
-  instances.sort((a, b) => {
-    if (a._date !== b._date) return a._date.localeCompare(b._date);
-    const ta = a.eventTime || '';
-    const tb = b.eventTime || '';
-    return ta.localeCompare(tb);
+  // Keep only occurrences: cyclic must be >= now, non-cyclic allowed if >= now - 1 hour
+  const cutoff = new Date(now.getTime() - 60 * 60 * 1000);
+  const future = occurrences.filter((o) => {
+    const isCyclic = Boolean(getCycleType(o.task));
+    return isCyclic ? o.occ.getTime() >= now.getTime() : o.occ.getTime() >= cutoff.getTime();
   });
 
-  // Exclude today's events older than 1 hour
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-  const filtered = instances.filter((ev) => {
-    if (ev._date !== todayStr) return true;
-    if (!ev.eventTime) return true;
-    const datePart = (ev._date || '') as string;
-    const timePart = ev.eventTime || '';
-    const dt = new Date(`${datePart}T${timePart}:00`);
-    return dt >= oneHourAgo;
-  });
+  // Sort by occurrence datetime
+  future.sort((a, b) => a.occ.getTime() - b.occ.getTime());
 
-  console.debug('[NextEventNotification] instances count:', instances.length);
-  console.debug('[NextEventNotification] filtered count:', filtered.length);
-
-  // Return up to 5 unique instances (avoid duplicate ids on same date/time)
-  const output: any[] = [];
+  // Dedupe by task id + date + time and return up to 5
+  const out: any[] = [];
   const seen = new Set<string>();
-  for (const ev of filtered) {
-    const key = `${ev.id}-${ev._date}-${ev.eventTime || ''}`;
+  for (const o of future) {
+    const key = `${o.task.id}-${o.dateStr}-${o.task.eventTime || ''}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    output.push(ev);
-    if (output.length >= 5) break;
+    const item = { ...o.task, _date: o.dateStr };
+    out.push(item);
+    if (out.length >= 5) break;
   }
 
-  return output;
+  console.log('[NextEventNotification] totalTasks:', allTasks.length, 'upcoming:', out.length);
+  return out;
 });
 
 function formatEventDisplay(ev: any) {

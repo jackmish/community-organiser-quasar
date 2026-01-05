@@ -22,7 +22,7 @@ export interface Task {
   // Alternate event date field; some code uses `eventDate` instead of `date`
   eventDate?: string;
   // `completed` kept for backward compatibility but will be deprecated
-  completed?: boolean;
+  // legacy `completed` field removed; use `status_id` (0 = done) instead
   groupId?: string; // Reference to TaskGroup
   tags?: string[];
   eventTime?: string; // HH:mm format

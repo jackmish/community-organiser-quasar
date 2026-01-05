@@ -125,7 +125,7 @@ class DayOrganiserStorage {
       const groups: any[] = [];
       try {
         const files = await window.electronAPI.readDir(groupDir);
-        
+
         for (const file of files) {
           if (file.startsWith('group-') && file.endsWith('.json')) {
             const filePath = window.electronAPI.joinPath(groupDir, file);

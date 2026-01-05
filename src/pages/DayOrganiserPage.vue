@@ -17,8 +17,6 @@
             <q-icon name="folder_open" />
           </template>
         </q-select>
-
-        
       </div>
 
       <TaskTypeSelector
@@ -93,6 +91,7 @@
             :selected-date="newTask.eventDate"
             :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
+            @preview-task="setPreviewTask"
           />
         </div>
         <div class="col-12 col-md-4">
@@ -399,6 +398,7 @@ import { useQuasar } from 'quasar';
 import { useDayOrganiser } from '../modules/day-organiser';
 import type { Task, TaskDuration, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
+import { occursOnDay, getCycleType } from 'src/utils/occursOnDay';
 import TaskTypeSelector from '../components/TaskTypeSelector.vue';
 
 const $q = useQuasar();
@@ -855,27 +855,14 @@ const sortedTasks = computed(() => {
   try {
     const dayStr = currentDate.value;
     const isCyclicNotOccurring = (task: any) => {
-      if (!task || task.repeatMode !== 'cyclic') return false;
-      const cycle = task.repeatCycleType || 'dayWeek';
-      const target = new Date(dayStr);
-      if (cycle === 'dayWeek') {
-        const dow = target.getDay();
-        const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-        const key = map[dow];
-        const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
-        return days.indexOf(key) === -1;
+      const cycle = getCycleType(task);
+      if (!cycle) return false;
+      try {
+        const occurs = occursOnDay(task, dayStr);
+        return !occurs;
+      } catch (err) {
+        return false;
       }
-      if (cycle === 'month') {
-        if (!task.eventDate) return true; // if no seed, assume not occurring
-        const seed = new Date(task.eventDate);
-        return seed.getDate() !== target.getDate();
-      }
-      if (cycle === 'year') {
-        if (!task.eventDate) return true;
-        const seed = new Date(task.eventDate);
-        return seed.getDate() !== target.getDate() || seed.getMonth() !== target.getMonth();
-      }
-      return false;
     };
 
     tasksToSort = tasksToSort.filter((t) => !isCyclicNotOccurring(t));
@@ -888,41 +875,6 @@ const sortedTasks = computed(() => {
   try {
     const full = allTasks.value || [];
     const day = currentDate.value;
-    // helper to check occurrence (supports dayWeek, month, year)
-    const occursOnDay = (task: any, dayStr: string) => {
-      if (!task) return false;
-      // If this task is cyclic, evaluate repeat rules first (ignore explicit date seed)
-      if (task.repeatMode === 'cyclic') {
-        const cycle = task.repeatCycleType || 'dayWeek';
-        const target = new Date(dayStr);
-
-        if (cycle === 'dayWeek') {
-          const dow = target.getDay();
-          const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-          const key = map[dow];
-          const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
-          return days.indexOf(key) !== -1;
-        }
-
-        if (cycle === 'month') {
-          if (!task.eventDate) return false;
-          const seed = new Date(task.eventDate);
-          return seed.getDate() === target.getDate();
-        }
-
-        if (cycle === 'year') {
-          if (!task.eventDate) return false;
-          const seed = new Date(task.eventDate);
-          return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
-        }
-
-        return false;
-      }
-
-      // Non-cyclic: match explicit-dated tasks by exact date
-      const explicit = task.date || task.eventDate;
-      return explicit === dayStr;
-    };
 
     for (const t of full) {
       if (Number(t.status_id) === 0) continue; // skip done
@@ -1206,7 +1158,6 @@ const handleDeleteTask = async (taskId: string) => {
 };
 
 const toggleStatus = async (task: any, lineIndex?: number) => {
-  
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);

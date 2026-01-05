@@ -164,8 +164,25 @@
                               : '#fff',
                           }"
                         >
-                          <span class="event-time" v-if="ev.eventTime">{{ ev.eventTime }} </span>
-                          <span class="event-title">{{ ev.name }}</span>
+                          <span
+                            class="event-time"
+                            v-if="ev.eventTime"
+                            @pointerdown="() => startLongPress(ev)"
+                            @pointerup="cancelLongPress"
+                            @pointercancel="cancelLongPress"
+                            @pointerleave="cancelLongPress"
+                          >
+                            {{ ev.eventTime }}
+                          </span>
+                          <span
+                            class="event-title"
+                            @pointerdown="() => startLongPress(ev)"
+                            @pointerup="cancelLongPress"
+                            @pointercancel="cancelLongPress"
+                            @pointerleave="cancelLongPress"
+                          >
+                            {{ ev.name }}
+                          </span>
                         </div>
                       </template>
                     </div>
@@ -213,6 +230,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import { useLongPress } from '../composables/useLongPress';
+import { occursOnDay } from 'src/utils/occursOnDay';
 import { format, addDays, startOfWeek } from 'date-fns';
 import {
   priorityColors as themePriorityColors,
@@ -227,7 +246,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selectedDate', value: string): void;
+  (e: 'preview-task', id: string | null): void;
 }>();
+
+// Long-press composable for event pills
+const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();
+setLongPressHandler((task: any) => {
+  try {
+    emit('preview-task', task?.id ?? null);
+  } catch (e) {
+    // ignore
+  }
+});
 
 const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
@@ -364,7 +394,6 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
         holidays.value.set(holiday.date, holiday);
       });
 
-      
       return true;
     } else {
       // Load from localStorage
@@ -437,9 +466,9 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
 async function fetchHolidays(year: number) {
   // Try to load from cache first
   const loaded = await loadHolidaysFromCache(year);
-    if (loaded) {
-      return;
-    }
+  if (loaded) {
+    return;
+  }
 
   // In Electron, don't connect to API - just use fallback
   if (isElectron) {
@@ -454,8 +483,6 @@ async function fetchHolidays(year: number) {
 
   // In browser, fetch from API if not in cache
   try {
-    
-
     // Use XMLHttpRequest instead of fetch to avoid QUIC protocol issues in Electron
     const data: Holiday[] = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -484,7 +511,6 @@ async function fetchHolidays(year: number) {
 
     // Save to cache
     await saveHolidaysToCache(year, data);
-    
   } catch (error) {
     console.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
     // Load fallback holidays
@@ -525,8 +551,6 @@ function loadFallbackHolidays(year: number) {
   fallbackHolidays.forEach((holiday) => {
     holidays.value.set(holiday.date, holiday);
   });
-
-  
 }
 
 // Check if a date is a holiday
@@ -729,41 +753,7 @@ function isWeekend(day: string) {
 }
 
 // Determine whether a given task occurs on the provided day string (yyyy-MM-dd).
-function occursOnDay(task: any, day: string): boolean {
-  if (!task) return false;
-
-  // If cyclic, evaluate repeat rules (ignore explicit date seed)
-  if (task.repeatMode === 'cyclic') {
-    const cycle = task.repeatCycleType || 'dayWeek';
-    const target = new Date(day);
-
-    if (cycle === 'dayWeek') {
-      const dow = target.getDay(); // 0 = Sun, 1 = Mon ...
-      const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-      const key = map[dow];
-      const days = Array.isArray(task.repeatDays) ? task.repeatDays : [];
-      return days.indexOf(key) !== -1;
-    }
-
-    if (cycle === 'month') {
-      if (!task.eventDate) return false;
-      const seed = new Date(task.eventDate);
-      return seed.getDate() === target.getDate();
-    }
-
-    if (cycle === 'year') {
-      if (!task.eventDate) return false;
-      const seed = new Date(task.eventDate);
-      return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
-    }
-
-    return false;
-  }
-
-  // Non-cyclic: match explicit-dated events by exact date
-  const taskDate = task.date || task.eventDate;
-  return taskDate === day;
-}
+// Use shared occursOnDay helper from utils
 
 function getEventsForDay(day: string) {
   if (!props.tasks || !props.tasks.length) return [];

@@ -49,6 +49,9 @@ export function useDayOrganiser() {
         }
       }
 
+      // NOTE: legacy task form/data is no longer migrated here; stored tasks must use the
+      // canonical `repeat` object. Older formats will be ignored.
+
       organiserData.value = {
         days: Object.keys(daysMap).length ? daysMap : (data as any).days || {},
         groups: (data as any).groups || [],
@@ -255,7 +258,7 @@ export function useDayOrganiser() {
   const getIncompleteTasks = (): Task[] => {
     const tasks: Task[] = [];
     Object.values(organiserData.value.days).forEach((day) => {
-      tasks.push(...day.tasks.filter((t) => !t.completed));
+      tasks.push(...day.tasks.filter((t) => Number((t as any).status_id) !== 0));
     });
     return tasks.sort((a, b) => a.date.localeCompare(b.date));
   };

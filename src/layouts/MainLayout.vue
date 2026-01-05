@@ -2,21 +2,38 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
-        <q-toolbar-title style="display:flex; align-items:center; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px;">
+        <q-toolbar-title style="display: flex; align-items: center; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 12px">
             <span>CO21</span>
-            <div class="header-today" style="display:inline-block; font-size:0.9rem; background:#0f1724; color:#2196f3; padding:8px 12px; border-radius:6px; align-items:center;">
-              <div class="text-caption" style="color: #90caf9; margin-right: 8px; display:inline-block;">
+            <div
+              class="header-today"
+              style="
+                display: inline-block;
+                font-size: 0.9rem;
+                background: #0f1724;
+                color: #2196f3;
+                padding: 8px 12px;
+                border-radius: 6px;
+                align-items: center;
+              "
+            >
+              <div
+                class="text-caption"
+                style="color: #90caf9; margin-right: 8px; display: inline-block"
+              >
                 Today is <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
                 <span style="color: #ffffff">{{ currentDateShort }}</span>
               </div>
-              <div class="text-caption" style="color: #90caf9; margin-left: 8px; display:inline-block;">
+              <div
+                class="text-caption"
+                style="color: #90caf9; margin-left: 8px; display: inline-block"
+              >
                 |&nbsp;Its <span style="color: #ffffff">{{ currentTimeDisplay }}</span> now
               </div>
             </div>
           </div>
 
-          <div class="q-ml-md" style="display:flex; align-items:center">
+          <div class="q-ml-md" style="display: flex; align-items: center">
             <NextEventNotification />
           </div>
         </q-toolbar-title>

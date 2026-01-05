@@ -809,10 +809,15 @@ function onSubmit(event: Event) {
   }
   if (props.mode === 'add') {
     const payload: any = { ...localNewTask.value };
+    // Canonical repeat object
     if (repeatMode.value === 'cyclic') {
-      payload.repeatMode = repeatMode.value;
-      payload.repeatCycleType = repeatCycleType.value;
-      payload.repeatDays = Array.isArray(repeatDays.value) ? [...repeatDays.value] : [];
+      payload.repeat = {
+        cycleType: repeatCycleType.value,
+        days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
+        eventDate: localNewTask.value.eventDate || null,
+      };
+    } else {
+      payload.repeat = null;
     }
     emit('add-task', payload);
     // Clear the description textarea after adding the task
@@ -824,8 +829,19 @@ function onSubmit(event: Event) {
       localNewTask.value.status_id = 1;
     }
   } else {
-    // Edit mode: emit update and switch back to add mode
-    emit('update-task', { ...localNewTask.value });
+    // Edit mode: convert repeat form fields into canonical object before update
+    const updated = { ...localNewTask.value } as any;
+    if (repeatMode.value === 'cyclic') {
+      updated.repeat = {
+        cycleType: repeatCycleType.value,
+        days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
+        eventDate: localNewTask.value.eventDate || null,
+      };
+    } else {
+      updated.repeat = null;
+    }
+    // Emit update and switch back to add mode
+    emit('update-task', updated);
     // reset form to add defaults
     emit('update:mode', 'add');
     // notify parent to clear its edit selection
