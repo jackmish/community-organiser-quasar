@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { getCycleType } from '../../utils/occursOnDay';
 import type { OrganiserData, DayData, Task, TaskGroup } from './types';
 import { storage } from './storage';
 import { generateGroupId } from './groupId';
@@ -104,6 +105,16 @@ export function useDayOrganiser() {
       updatedAt: now,
     };
 
+    // Ensure cyclic tasks remain with non-zero status
+    try {
+      const isCyclic = Boolean(getCycleType(task));
+      if (isCyclic) {
+        (task as any).status_id = 1;
+      }
+    } catch (e) {
+      // ignore
+    }
+
     const dayData = getDayData(date);
     dayData.tasks.push(task);
 
@@ -141,11 +152,64 @@ export function useDayOrganiser() {
     updates: Partial<Omit<Task, 'id' | 'createdAt'>>,
   ): Promise<void> => {
     const dayData = getDayData(date);
-    const task = dayData.tasks.find((t) => t.id === taskId);
+    let task = dayData.tasks.find((t) => t.id === taskId);
+
+    // If task not in this date bucket (e.g. a generated cyclic instance), find it across all days
+    if (!task) {
+      for (const dKey of Object.keys(organiserData.value.days)) {
+        const d = organiserData.value.days[dKey];
+        if (!d || !Array.isArray(d.tasks)) continue;
+        const found = d.tasks.find((t) => t.id === taskId);
+        if (found) {
+          task = found;
+          break;
+        }
+      }
+    }
 
     if (!task) {
       throw new Error('Task not found');
     }
+
+    // Prepare history array
+    if (!Array.isArray((task as any).history)) (task as any).history = [];
+
+    // Handle cyclic tasks specially: marking as done should not change base status
+    const isCyclic = Boolean(getCycleType(task));
+    if (Object.prototype.hasOwnProperty.call(updates, 'status_id')) {
+      const newStatus = Number((updates as any).status_id);
+      if (isCyclic && newStatus === 0) {
+        // Record a cycleDone history entry for the occurrence `date` instead of setting status to done
+        (task as any).history.push({
+          type: 'cycleDone',
+          is_done: true,
+          date: date,
+          changedAt: new Date().toISOString(),
+        });
+        // remove status_id from updates to avoid marking task done
+        delete (updates as any).status_id;
+      }
+    }
+
+    // For other updates, record field-level history entries when values change
+    Object.keys(updates).forEach((k) => {
+      try {
+        const key = k as keyof typeof task;
+        const oldVal = (task as any)[key];
+        const newVal = (updates as any)[key];
+        if (oldVal !== newVal) {
+          (task as any).history.push({
+            type: 'update',
+            field: key,
+            old: oldVal,
+            new: newVal,
+            changedAt: new Date().toISOString(),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
 
     Object.assign(task, updates, {
       updatedAt: new Date().toISOString(),
@@ -191,13 +255,39 @@ export function useDayOrganiser() {
   // Toggle task completion
   const toggleTaskComplete = async (date: string, taskId: string): Promise<void> => {
     const dayData = getDayData(date);
-    const task = dayData.tasks.find((t) => t.id === taskId);
+    let task = dayData.tasks.find((t) => t.id === taskId);
+
+    // If not found in this date bucket, look across all days (cyclic occurrences may be generated)
+    if (!task) {
+      for (const dKey of Object.keys(organiserData.value.days)) {
+        const d = organiserData.value.days[dKey];
+        if (!d || !Array.isArray(d.tasks)) continue;
+        const found = d.tasks.find((t) => t.id === taskId);
+        if (found) {
+          task = found;
+          break;
+        }
+      }
+    }
 
     if (task) {
       // Flip status_id between 0 (done) and 1 (just created)
       try {
         const cur = Number((task as any).status_id);
-        (task as any).status_id = cur === 0 ? 1 : 0;
+        const next = cur === 0 ? 1 : 0;
+        const isCyclic = Boolean(getCycleType(task));
+        if (isCyclic && next === 0) {
+          // For cyclic tasks, record a history entry rather than setting base status
+          if (!Array.isArray((task as any).history)) (task as any).history = [];
+          (task as any).history.push({
+            type: 'cycleDone',
+            is_done: true,
+            date: date,
+            changedAt: new Date().toISOString(),
+          });
+        } else {
+          (task as any).status_id = next;
+        }
       } catch (e) {
         (task as any).status_id = 1;
       }
@@ -306,6 +396,108 @@ export function useDayOrganiser() {
     currentDate.value = formatDate(date);
   };
 
+  // Undo a cycleDone history entry for a specific task/date.
+  // Returns true if an entry was removed and data saved.
+  const undoCycleDone = async (date: string, taskId: string): Promise<boolean> => {
+    try {
+      for (const dayKey of Object.keys(organiserData.value.days)) {
+        const day = organiserData.value.days[dayKey];
+        if (!day || !Array.isArray(day.tasks)) continue;
+        const task = day.tasks.find((t: any) => t.id === taskId);
+        if (task) {
+          if (!Array.isArray((task as any).history)) return false;
+          const before = (task as any).history.length;
+          (task as any).history = (task as any).history.filter(
+            (h: any) => !(h && h.type === 'cycleDone' && h.date === date),
+          );
+          const after = (task as any).history.length;
+          if (after < before) {
+            task.updatedAt = new Date().toISOString();
+            await saveData();
+            return true;
+          }
+          return false;
+        }
+      }
+    } catch (err) {
+      console.error('undoCycleDone failed', err);
+    }
+    return false;
+  };
+  // Add group management helpers
+  const addGroup = async (name: string, parentId?: string, color?: string): Promise<TaskGroup> => {
+    const now = new Date().toISOString();
+    const group: TaskGroup = {
+      id: generateGroupId(name),
+      name,
+      createdAt: now,
+      ...(parentId && { parentId }),
+      ...(color && { color }),
+    };
+
+    organiserData.value.groups.push(group);
+    // Save using storage.ts logic (handles Electron and browser)
+    await saveData();
+    return group;
+  };
+
+  const updateGroup = async (
+    groupId: string,
+    updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
+  ): Promise<void> => {
+    const group = organiserData.value.groups.find((g) => g.id === groupId);
+    if (!group) {
+      throw new Error('Group not found');
+    }
+    Object.assign(group, updates);
+    await saveData();
+  };
+
+  const deleteGroup = async (groupId: string): Promise<void> => {
+    const groupToDelete = organiserData.value.groups.find((g) => g.id === groupId);
+
+    // Remove group
+    organiserData.value.groups = organiserData.value.groups.filter((g) => g.id !== groupId);
+
+    // Remove groupId from all tasks
+    Object.values(organiserData.value.days).forEach((day) => {
+      day.tasks.forEach((task) => {
+        if (task.groupId === groupId) {
+          delete task.groupId;
+        }
+      });
+    });
+
+    // Move child groups to parent or root
+    organiserData.value.groups.forEach((g) => {
+      if (g.parentId === groupId) {
+        if (groupToDelete?.parentId) {
+          g.parentId = groupToDelete.parentId;
+        } else {
+          delete g.parentId;
+        }
+      }
+    });
+
+    await saveData();
+  };
+
+  const getGroupsByParent = (parentId?: string): TaskGroup[] => {
+    return organiserData.value.groups.filter((g) => g.parentId === parentId);
+  };
+
+  const getGroupHierarchy = (): TaskGroup[] => {
+    const buildTree = (parentId?: string): TaskGroup[] => {
+      return organiserData.value.groups
+        .filter((g) => g.parentId === parentId)
+        .map((group) => ({
+          ...group,
+          children: buildTree(group.id),
+        })) as TaskGroup[];
+    };
+    return buildTree();
+  };
+
   return {
     // State
     organiserData,
@@ -351,87 +543,9 @@ export function useDayOrganiser() {
 
     // Utils
     formatDate,
+    // Undo a cycleDone entry for a specific task/date. Returns true if an entry was removed.
+    undoCycleDone,
   };
 }
 
-// Add a new group
-const addGroup = async (name: string, parentId?: string, color?: string): Promise<TaskGroup> => {
-  const now = new Date().toISOString();
-  const group: TaskGroup = {
-    id: generateGroupId(name),
-    name,
-    createdAt: now,
-    ...(parentId && { parentId }),
-    ...(color && { color }),
-  };
-
-  organiserData.value.groups.push(group);
-  // Save using storage.ts logic (handles Electron and browser)
-  await storage.saveData(organiserData.value);
-  return group;
-};
-
-// Update a group
-const updateGroup = async (
-  groupId: string,
-  updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
-): Promise<void> => {
-  const group = organiserData.value.groups.find((g) => g.id === groupId);
-  if (!group) {
-    throw new Error('Group not found');
-  }
-  Object.assign(group, updates);
-  await saveData();
-};
-
-// Delete a group
-const deleteGroup = async (groupId: string): Promise<void> => {
-  const groupToDelete = organiserData.value.groups.find((g) => g.id === groupId);
-
-  // Remove group
-  organiserData.value.groups = organiserData.value.groups.filter((g) => g.id !== groupId);
-
-  // Remove groupId from all tasks
-  Object.values(organiserData.value.days).forEach((day) => {
-    day.tasks.forEach((task) => {
-      if (task.groupId === groupId) {
-        delete task.groupId;
-      }
-    });
-  });
-
-  // Move child groups to parent or root
-  organiserData.value.groups.forEach((g) => {
-    if (g.parentId === groupId) {
-      if (groupToDelete?.parentId) {
-        g.parentId = groupToDelete.parentId;
-      } else {
-        delete g.parentId;
-      }
-    }
-  });
-
-  await saveData();
-};
-
-// Get groups by parent (for hierarchical display)
-const getGroupsByParent = (parentId?: string): TaskGroup[] => {
-  return organiserData.value.groups.filter((g) => g.parentId === parentId);
-};
-
-// Get full group hierarchy
-const getGroupHierarchy = (): TaskGroup[] => {
-  const buildTree = (parentId?: string): TaskGroup[] => {
-    return organiserData.value.groups
-      .filter((g) => g.parentId === parentId)
-      .map((group) => ({
-        ...group,
-        children: buildTree(group.id),
-      })) as TaskGroup[];
-  };
-  return buildTree();
-};
-
-function saveData(): Promise<void> {
-  return storage.saveData(organiserData.value);
-}
+// (group helpers moved into useDayOrganiser scope)
