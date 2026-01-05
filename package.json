@@ -47,6 +47,34 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.0.7"
   },
+  "build": {
+    "productName": "CO21 - Community Organiser",
+    "appId": "com.co21.organiser",
+    "files": [
+      "dist/**",
+      "src-electron/**",
+      "public/**",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build/icons"
+    },
+    "win": {
+      "icon": "build/icons/co21-logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "icon": "build/icons/co21-logo.icns"
+    },
+    "linux": {
+      "icon": "build/icons"
+    }
+  },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20",
     "npm": ">= 6.13.4",
