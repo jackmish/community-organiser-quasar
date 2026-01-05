@@ -892,6 +892,7 @@ function onSubmit(event: Event) {
                     >
                       <div class="row items-center q-mb-xs" style="gap: 8px; align-items: center">
                         <div class="text-caption text-grey-7">Date</div>
+
                         <div class="col-auto">
                           <q-btn-toggle
                             v-model="repeatMode"
@@ -902,15 +903,14 @@ function onSubmit(event: Event) {
                             class="time-toggle"
                           />
                         </div>
-                        <div class="col-auto" v-if="repeatMode !== 'cyclic'">
-                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
-                        </div>
-
                         <div
                           v-if="repeatMode !== 'cyclic'"
                           class="text-h6 text-primary text-weight-bold q-mb-sm"
                         >
                           {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
+                        </div>
+                        <div class="col-auto" v-if="repeatMode !== 'cyclic'">
+                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
                         </div>
                       </div>
                       <div v-if="repeatMode === 'cyclic'">
