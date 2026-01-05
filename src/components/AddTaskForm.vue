@@ -165,8 +165,8 @@ const typeOptions = [
 
 // Options for the time type toggle (Whole Day / Exact Hour)
 const timeTypeOptions = [
-  { label: 'day', value: 'wholeDay', icon: 'calendar_today' },
-  { label: 'hour', value: 'exactHour', icon: 'schedule' },
+  { label: '', value: 'wholeDay', icon: 'calendar_today' },
+  { label: '', value: 'exactHour', icon: 'schedule' },
 ];
 
 // Use centralized replenish color sets from theme
@@ -957,7 +957,10 @@ function onSubmit(event: Event) {
                         class="row q-gutter-xs items-center"
                         style="align-items: center"
                       >
-                        <div class="row q-gutter-xs" style="gap: 8px; align-items: center">
+                        <div
+                          class="row q-gutter-xs date-inputs-row"
+                          style="gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto"
+                        >
                           <q-input
                             ref="dayInput"
                             :model-value="eventDateDay"
@@ -1005,7 +1008,7 @@ function onSubmit(event: Event) {
                             label="Year"
                             outlined
                             dense
-                            style="max-width: 100px"
+                            style="max-width: 80px"
                           />
                         </div>
                         <div class="col"></div>
@@ -1015,8 +1018,11 @@ function onSubmit(event: Event) {
                           <!-- day/month inputs -->
                         </div>
                       </div>
-                      <div class="row q-gutter-xs">
-                        <div class="column" style="max-width: 80px">
+                      <div
+                        class="row q-gutter-xs"
+                        style="gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto"
+                      >
+                        <div style="flex: 0 0 auto; display: flex; gap: 8px; align-items: center">
                           <q-input
                             ref="hourInput"
                             :model-value="eventTimeHour"
@@ -1032,44 +1038,37 @@ function onSubmit(event: Event) {
                             dense
                             min="0"
                             max="23"
-                            style="max-width: 80px"
+                            style="max-width: 80px; min-width: 64px"
                           />
-                          <div
-                            v-if="eventTimeHoursDisplay"
-                            class="text-caption text-grey-7 q-mt-xs"
-                          >
-                            {{ eventTimeHoursDisplay }}
-                          </div>
-                        </div>
-                        <q-input
-                          ref="minuteInput"
-                          :model-value="eventTimeMinute"
-                          @update:model-value="updateEventTimeMinute"
-                          type="number"
-                          @focus="
-                            (e) =>
-                              (e.target as HTMLInputElement)?.select &&
-                              (e.target as HTMLInputElement).select()
-                          "
-                          label="Minute"
-                          outlined
-                          dense
-                          min="0"
-                          max="59"
-                          style="max-width: 80px"
-                        />
 
-                        <div class="row q-mt-sm" style="gap: 8px; align-items: center">
-                          <div class="col-auto">
-                            <q-btn-toggle
-                              v-model="timeType"
-                              :options="timeTypeOptions"
-                              dense
-                              inline
-                              rounded
-                              class="time-toggle"
-                            />
-                          </div>
+                          <q-input
+                            ref="minuteInput"
+                            :model-value="eventTimeMinute"
+                            @update:model-value="updateEventTimeMinute"
+                            type="number"
+                            @focus="
+                              (e) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
+                            label="Minute"
+                            outlined
+                            dense
+                            min="0"
+                            max="59"
+                            style="max-width: 80px; min-width: 64px"
+                          />
+                        </div>
+
+                        <div style="flex: 0 0 auto">
+                          <q-btn-toggle
+                            v-model="timeType"
+                            :options="timeTypeOptions"
+                            dense
+                            inline
+                            rounded
+                            class="time-toggle"
+                          />
                         </div>
                       </div>
                     </q-card>
@@ -1255,7 +1254,7 @@ function onSubmit(event: Event) {
                 <!-- Priority and Type column to the right of date/time -->
                 <div class="col-12 col-md-4">
                   <q-card flat bordered class="q-pa-sm q-mt-sm">
-                    <div class="text-caption text-grey-7 q-mb-xs">Type</div>
+                    <div class="text-caption text-grey-7 q-mb-xs">Task type</div>
                     <div class="column q-gutter-xs">
                       <q-btn
                         v-for="opt in typeOptions"
