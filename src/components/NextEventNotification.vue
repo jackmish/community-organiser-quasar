@@ -1,26 +1,28 @@
 <template>
   <div class="next-events-container q-ml-md">
     <div class="next-events-row">
-    <template v-if="nextEvents.length">
-      <div
-        v-for="ev in nextEvents"
-        :key="ev.id + '-' + (ev.eventTime || '')"
-        class="next-event"
-        :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
-        @click.prevent.stop="onClickEvent(ev)"
-        role="button"
-        tabindex="0"
-      >
-        <q-icon :name="iconFor(ev)" size="16" />
-        <div class="next-event-text">
-          <div class="next-event-title">{{ ev.name }}</div>
-          <div class="next-event-meta text-caption">{{ formatEventDisplay(ev) }}</div>
+      <template v-if="nextEvents.length">
+        <div
+          v-for="ev in nextEvents"
+          :key="ev.id + '-' + (ev.eventTime || '')"
+          class="next-event"
+          :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
+          @click.prevent.stop="onClickEvent(ev)"
+          role="button"
+          tabindex="0"
+        >
+          <q-icon :name="iconFor(ev)" size="16" />
+          <div class="next-event-text">
+            <div class="next-event-title">{{ ev.name }}</div>
+            <div class="next-event-meta text-caption">{{ formatEventDisplay(ev) }}</div>
+          </div>
         </div>
-      </div>
-    </template>
-    <template v-else>
-      <div class="next-event-placeholder text-caption text-grey-6 q-pa-xs">No upcoming events</div>
-    </template>
+      </template>
+      <template v-else>
+        <div class="next-event-placeholder text-caption text-grey-6 q-pa-xs">
+          No upcoming events
+        </div>
+      </template>
     </div>
   </div>
 </template>
