@@ -82,12 +82,6 @@
     </template>
 
     <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" />
-    <q-item-label
-      v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0"
-      header
-      class="text-grey-7"
-      >No Time Set</q-item-label
-    >
 
     <template v-if="tasksWithoutTime.length > 0">
       <q-item
