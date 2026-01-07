@@ -17,55 +17,46 @@
             <q-icon name="folder_open" />
           </template>
         </q-select>
-        <q-btn
-          dense
-          flat
-          round
-          icon="more_vert"
-          class="q-ml-sm"
-          @click="groupMenu = !groupMenu"
-          ref="groupMenuBtn"
-        />
-        <q-menu v-model="groupMenu" :context-menu="false" anchor="bottom right" self="top right">
-          <q-list style="min-width: 260px">
-            <q-item-label header class="text-caption q-pa-sm">Groups</q-item-label>
+        <q-btn dense flat round icon="more_vert" class="q-ml-sm" @click="showGroupDialog = true" />
+
+        <q-dialog v-model="showGroupDialog">
+          <q-card style="min-width: 320px; max-width: 480px">
+            <q-card-section>
+              <div class="text-h6">Groups</div>
+            </q-card-section>
             <q-separator />
-            <q-item v-for="g in groups" :key="g.id" clickable>
-              <q-item-section avatar>
-                <div
-                  :style="{
-                    width: '18px',
-                    height: '18px',
-                    background: g.color || '#1976d2',
-                    borderRadius: '4px',
-                  }"
-                />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>{{ g.name }}</q-item-label>
-                <q-item-label caption>{{ g.id }}</q-item-label>
-              </q-item-section>
-              <q-item-section
-                side
-                style="
-                  min-width: 90px;
-                  display: flex;
-                  gap: 6px;
-                  align-items: center;
-                  justify-content: flex-end;
-                "
-              >
-                <q-btn dense flat icon="edit" size="sm" @click.stop="openEditGroup(g)" />
-              </q-item-section>
-            </q-item>
+            <q-card-section>
+              <q-list>
+                <q-item v-for="g in groups" :key="g.id" clickable>
+                  <q-item-section avatar>
+                    <div
+                      :style="{
+                        width: '18px',
+                        height: '18px',
+                        background: g.color || '#1976d2',
+                        borderRadius: '4px',
+                      }"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ g.name }}</q-item-label>
+                    <q-item-label caption>{{ g.id }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section
+                    side
+                    style="min-width: 90px; display: flex; gap: 6px; justify-content: flex-end"
+                  >
+                    <q-btn dense flat icon="edit" size="sm" @click.stop="openEditGroup(g)" />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
             <q-separator />
-            <q-item clickable v-close-popup @click="showGroupDialog = true">
-              <q-item-section>
-                <q-item-label class="text-primary">Manage groups</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
+            <q-card-actions align="right">
+              <q-btn flat label="Close" v-close-popup @click="showGroupDialog = false" />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
       </div>
 
       <TaskTypeSelector
