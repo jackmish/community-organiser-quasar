@@ -17,6 +17,55 @@
             <q-icon name="folder_open" />
           </template>
         </q-select>
+        <q-btn
+          dense
+          flat
+          round
+          icon="more_vert"
+          class="q-ml-sm"
+          @click="groupMenu = !groupMenu"
+          ref="groupMenuBtn"
+        />
+        <q-menu v-model="groupMenu" :context-menu="false" anchor="bottom right" self="top right">
+          <q-list style="min-width: 260px">
+            <q-item-label header class="text-caption q-pa-sm">Groups</q-item-label>
+            <q-separator />
+            <q-item v-for="g in groups" :key="g.id" clickable>
+              <q-item-section avatar>
+                <div
+                  :style="{
+                    width: '18px',
+                    height: '18px',
+                    background: g.color || '#1976d2',
+                    borderRadius: '4px',
+                  }"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ g.name }}</q-item-label>
+                <q-item-label caption>{{ g.id }}</q-item-label>
+              </q-item-section>
+              <q-item-section
+                side
+                style="
+                  min-width: 90px;
+                  display: flex;
+                  gap: 6px;
+                  align-items: center;
+                  justify-content: flex-end;
+                "
+              >
+                <q-btn dense flat icon="edit" size="sm" @click.stop="openEditGroup(g)" />
+              </q-item-section>
+            </q-item>
+            <q-separator />
+            <q-item clickable v-close-popup @click="showGroupDialog = true">
+              <q-item-section>
+                <q-item-label class="text-primary">Manage groups</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
       </div>
 
       <TaskTypeSelector
@@ -148,6 +197,40 @@
       :group-options="groupOptions"
       :group-tree="groupTree"
     />
+
+    <!-- Inline Edit Group Dialog -->
+    <q-dialog v-model="showEditGroupDialog">
+      <q-card style="min-width: 360px" v-if="editGroupLocal">
+        <q-card-section>
+          <div class="text-h6">Edit Group</div>
+          <div class="q-mt-md">
+            <q-input v-model="editGroupLocal.name" label="Group name" outlined dense />
+            <q-select
+              v-model="editGroupLocal.parentId"
+              :options="groupOptions"
+              label="Parent group"
+              outlined
+              dense
+              class="q-mt-sm"
+              clearable
+            />
+            <q-input v-model="editGroupLocal.color" label="Color" outlined dense class="q-mt-sm">
+              <template #append>
+                <input
+                  v-model="editGroupLocal.color"
+                  type="color"
+                  style="width: 40px; height: 30px; border: none; cursor: pointer"
+                />
+              </template>
+            </q-input>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" @click="cancelEditGroup" />
+          <q-btn flat label="Save" color="primary" @click="saveEditedGroup" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- First Run Dialog -->
     <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
@@ -454,6 +537,15 @@ const allTasks = computed(() => {
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const showGroupDialog = ref(false);
+const groupMenu = ref(false);
+const groupMenuBtn = ref<any>(null);
+const showEditGroupDialog = ref(false);
+const editGroupLocal = ref<{
+  id: string;
+  name: string;
+  parentId?: string | null;
+  color?: string;
+} | null>(null);
 const showFirstRunDialog = ref(false);
 const newGroupName = ref('');
 const newGroupParent = ref<string | undefined>(undefined);
@@ -492,6 +584,40 @@ function clearTaskToEdit() {
   taskToEdit.value = null;
   mode.value = 'add';
   selectedTaskId.value = null;
+}
+
+function openEditGroup(g: TaskGroup) {
+  editGroupLocal.value = {
+    id: g.id,
+    name: g.name,
+    parentId: (g as any).parentId || null,
+    color: g.color || '#1976d2',
+  };
+  showEditGroupDialog.value = true;
+  groupMenu.value = false;
+}
+
+async function saveEditedGroup() {
+  if (!editGroupLocal.value) return;
+  const { id, name, parentId, color } = editGroupLocal.value;
+  if (!name || !name.trim()) return;
+  try {
+    const { updateGroup } = useDayOrganiser();
+    const updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>> = {};
+    updates.name = name.trim();
+    if (parentId !== undefined && parentId !== null) updates.parentId = parentId as any;
+    if (color !== undefined && color !== null) updates.color = color as any;
+    await updateGroup(id, updates);
+  } catch (e) {
+    console.error('updateGroup failed', e);
+  }
+  showEditGroupDialog.value = false;
+  editGroupLocal.value = null;
+}
+
+function cancelEditGroup() {
+  showEditGroupDialog.value = false;
+  editGroupLocal.value = null;
 }
 
 // When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
@@ -1201,6 +1327,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   const targetDate = !isCyclic
     ? task.date || task.eventDate || currentDate.value
     : currentDate.value;
+  // status used for non-cyclic optimistic toggles — declare in outer scope
+  let status = Number(task.status_id) === 0 ? 1 : 0;
   try {
     // Debug: help trace toggle attempts for cyclic occurrences
     const baseCheck = (allTasks.value || []).find((x: any) => x.id === task.id) || null;
@@ -1284,7 +1412,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 
   // Special-case Replenishment items: toggle their base status immediately
   if (task.type_id === 'Replenish') {
-    const status = Number(task.status_id) === 0 ? 1 : 0;
+    status = Number(task.status_id) === 0 ? 1 : 0;
     try {
       task.status_id = status;
       if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.status_id = status;
@@ -1385,7 +1513,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       return;
     }
 
-    const status = Number(task.status_id) === 0 ? 1 : 0;
+    // reuse outer `status` (already computed) for non-cyclic toggle
   } catch (e) {
     // ignore errors when probing/recording cycleDone
     console.warn('toggleStatus cyclic handling error', e);
