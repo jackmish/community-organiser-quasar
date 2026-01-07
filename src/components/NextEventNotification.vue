@@ -1,5 +1,6 @@
 <template>
-  <div class="next-events-row q-ml-md">
+  <div class="next-events-container q-ml-md">
+    <div class="next-events-row">
     <template v-if="nextEvents.length">
       <div
         v-for="ev in nextEvents"
@@ -20,6 +21,7 @@
     <template v-else>
       <div class="next-event-placeholder text-caption text-grey-6 q-pa-xs">No upcoming events</div>
     </template>
+    </div>
   </div>
 </template>
 
@@ -31,6 +33,14 @@ import { occursOnDay, getCycleType, getRepeatDays } from '../utils/occursOnDay';
 
 const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
   useDayOrganiser();
+
+function refreshNotifications() {
+  try {
+    if (typeof loadData === 'function') loadData();
+  } catch (e) {
+    // ignore
+  }
+}
 
 onMounted(() => {
   // Ensure organiser data is loaded so notifications can compute tasks

@@ -1,6 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+    <q-header>
       <q-toolbar>
         <q-toolbar-title style="display: flex; align-items: center; gap: 12px">
           <div style="display: flex; align-items: center; gap: 12px">
@@ -41,11 +41,12 @@
 
         <q-chip
           :color="isOnline ? 'positive' : 'negative'"
-          text-color="white"
+          text-color=""
           :icon="isOnline ? 'wifi' : 'wifi_off'"
           size="sm"
           :clickable="!isOnline"
           @click="!isOnline && updateOnlineStatus()"
+          style="position: relative; z-index: 3"
         >
         </q-chip>
 
@@ -55,8 +56,19 @@
           dense
           color="white"
           label="Connect"
-          icon="refresh"
+          icon=""
           @click="updateOnlineStatus"
+        />
+        <!-- Refresh button positioned behind the online status chip; currently triggers data reload -->
+
+        <q-btn
+          flat
+          dense
+          round
+          icon="refresh"
+          title="Refresh notifications"
+          style="opacity: 0.95"
+          @click="refreshNotifications"
         />
       </q-toolbar>
     </q-header>
@@ -71,6 +83,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
+import { useDayOrganiser } from '../modules/day-organiser';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
@@ -136,6 +149,15 @@ onMounted(async () => {
     isOnline.value = false; // Immediately mark offline
   });
 });
+
+function refreshNotifications() {
+  try {
+    const mod = useDayOrganiser();
+    mod?.loadData?.();
+  } catch (e) {
+    // ignore
+  }
+}
 
 onUnmounted(() => {
   window.removeEventListener('online', updateOnlineStatus);
