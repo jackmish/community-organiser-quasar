@@ -92,6 +92,7 @@
             :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
             @preview-task="setPreviewTask"
+            @edit-task="handleCalendarEdit"
           />
         </div>
         <div class="col-12 col-md-4">
@@ -396,6 +397,14 @@ function selectCalendarDate(dateString: string) {
 
 function handleCalendarDateSelect(dateString: string) {
   selectCalendarDate(dateString);
+}
+
+function handleCalendarEdit(taskId: string | null) {
+  if (!taskId) return;
+  const found = (allTasks.value || []).find((t: any) => t.id === String(taskId));
+  if (found) {
+    editTask(found);
+  }
 }
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';

@@ -168,7 +168,7 @@
                             class="event-time"
                             v-if="ev.eventTime"
                             @pointerdown="() => startLongPress(ev)"
-                            @pointerup="cancelLongPress"
+                            @pointerup="() => onEventPointerUp(ev)"
                             @pointercancel="cancelLongPress"
                             @pointerleave="cancelLongPress"
                           >
@@ -177,7 +177,7 @@
                           <span
                             class="event-title"
                             @pointerdown="() => startLongPress(ev)"
-                            @pointerup="cancelLongPress"
+                            @pointerup="() => onEventPointerUp(ev)"
                             @pointercancel="cancelLongPress"
                             @pointerleave="cancelLongPress"
                           >
@@ -248,17 +248,33 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:selectedDate', value: string): void;
   (e: 'preview-task', id: string | null): void;
+  (e: 'edit-task', id: string | null): void;
 }>();
 
 // Long-press composable for event pills
-const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();
+const { startLongPress, cancelLongPress, setLongPressHandler, longPressTriggered } = useLongPress();
+
+// Long-press should open edit mode; short press shows preview.
 setLongPressHandler((task: any) => {
   try {
-    emit('preview-task', task?.id ?? null);
+    emit('edit-task', task?.id ?? null);
   } catch (e) {
     // ignore
   }
 });
+
+function onEventPointerUp(task: any) {
+  try {
+    // If long-press wasn't triggered, treat as a short click -> preview
+    if (!longPressTriggered.value) {
+      emit('preview-task', task?.id ?? null);
+    }
+  } catch (e) {
+    // ignore
+  } finally {
+    cancelLongPress();
+  }
+}
 
 const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
