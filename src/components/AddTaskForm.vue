@@ -173,7 +173,20 @@ const watermarkIcon = computed(() => {
           return 'add_circle';
       }
     }
-    if (props.mode === 'edit') return 'edit';
+    if (props.mode === 'edit') {
+      switch (type) {
+        case 'Todo':
+          return 'check_box';
+        case 'TimeEvent':
+          return 'event';
+        case 'Replenish':
+          return 'autorenew';
+        case 'NoteLater':
+          return 'description';
+        default:
+          return 'edit';
+      }
+    }
     if (props.mode === 'preview') {
       switch (type) {
         case 'Todo':
