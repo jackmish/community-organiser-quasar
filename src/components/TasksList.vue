@@ -466,7 +466,7 @@ function confirmDelete(id: string) {
   padding: 2px 6px;
   align-self: center;
   justify-self: center;
-  background-color: rgba(8,10,12,0.5); /* darker graphite at 50% opacity */
+  background-color: rgba(8, 10, 12, 0.5); /* darker graphite at 50% opacity */
   color: #ffffff; /* white text */
   border-radius: 6px;
   display: inline-flex;
@@ -475,11 +475,11 @@ function confirmDelete(id: string) {
 }
 /* make edit icon inherit item text color */
 .edit-btn .q-icon {
-  color: rgba(0,0,0,0.9) !important; /* darker icon color */
+  color: rgba(0, 0, 0, 0.9) !important; /* darker icon color */
 }
 /* ensure the button uses a darker explicit color */
 .edit-btn {
-  color: rgba(0,0,0,0.9) !important;
+  color: rgba(0, 0, 0, 0.9) !important;
 }
 /* Slightly smaller text for task cards to match compact notification style */
 .task-card {
