@@ -175,7 +175,7 @@ const formAccentColor = computed(() => {
     case 'TimeEvent':
       return '#90caf9'; // light blue
     case 'Replenish':
-      return '#ffcc80'; // light orange
+      return '#ffeb3b'; // light yellow
     case 'NoteLater':
       return '#e0e0e0'; // light grey
     default:
@@ -883,14 +883,14 @@ const typeColors: Record<string, string> = {
   TimeEvent: '#2196f3', // blue
   Todo: '#4caf50', // green
   NoteLater: '#9e9e9e', // grey
-  Replenish: '#ffb300', // amber
+  Replenish: '#ffeb3b', // yellow
 };
 
 const typeTextColors: Record<string, string> = {
   TimeEvent: 'white',
   Todo: 'white',
   NoteLater: 'white',
-  Replenish: 'white',
+  Replenish: '#212121',
 };
 
 // Map checkbox to numeric status_id (0 = done, 1 = just created)
