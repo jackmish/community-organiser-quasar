@@ -154,6 +154,12 @@ function refreshNotifications() {
   try {
     const mod = useDayOrganiser();
     mod?.loadData?.();
+    try {
+      // notify pages that data was reloaded so they can refresh UI (calendar, lists)
+      window.dispatchEvent(new Event('organiser:reloaded'));
+    } catch (e) {
+      // ignore
+    }
   } catch (e) {
     // ignore
   }

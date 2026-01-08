@@ -102,6 +102,7 @@
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
             <TasksList
+              :key="reloadKey"
               :tasks-with-time="tasksWithTime"
               :tasks-without-time="tasksWithoutTime"
               :selected-task-id="selectedTaskId"
@@ -128,6 +129,7 @@
       <div class="row q-col-gutter-md q-mt-md">
         <div class="col-12 col-md-8">
           <CalendarView
+            :key="reloadKey"
             :selected-date="newTask.eventDate"
             :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
@@ -547,6 +549,7 @@ const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
 const mode = ref<'add' | 'edit' | 'preview'>('add');
 const selectedTaskId = ref<string | null>(null);
+const reloadKey = ref(0);
 
 // Allowed modes depend on whether a task is selected
 const allowedModes = computed(() => (taskToEdit.value ? ['add', 'edit', 'preview'] : ['add']));
@@ -1635,6 +1638,26 @@ const showDataLocation = async () => {
 
 onMounted(async () => {
   await loadData();
+
+  // Listen for global reload events (e.g. from MainLayout refresh button)
+  const handler = async () => {
+    try {
+      await loadData();
+    } catch (e) {
+      // ignore
+    }
+    // bump reload key to force child components to re-render where necessary
+    reloadKey.value += 1;
+  };
+  window.addEventListener('organiser:reloaded', handler as EventListener);
+  // cleanup listener on component unmount
+  onBeforeUnmount(() => {
+    try {
+      window.removeEventListener('organiser:reloaded', handler as EventListener);
+    } catch (e) {
+      // ignore
+    }
+  });
 
   // Show first run dialog if no groups exist
   if (groups.value.length === 0) {

@@ -936,11 +936,16 @@ function getEventsForDay(day: string) {
   font-weight: 500;
   letter-spacing: 0.3px;
   text-align: center;
-  max-width: 70px;
+  max-width: 90px;
   overflow: hidden;
   word-wrap: break-word;
   white-space: normal;
-  line-height: 1.2;
+  line-height: 1.0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  /* prefer system fonts with full Latin glyph coverage for diacritics */
+  font-family: Arial, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, sans-serif;
 }
 
 .calendar-month-label-above {
@@ -1000,8 +1005,9 @@ function getEventsForDay(day: string) {
   gap: 6px;
   max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* allow wrapping inside the pill so titles can span up to two lines */
+  white-space: normal;
+  font-family: Arial, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, sans-serif;
 }
 .today-jump-btn {
   margin-right: 18px;
@@ -1016,5 +1022,13 @@ function getEventsForDay(day: string) {
 }
 .calendar-event-pill .event-title {
   font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  line-height: 1.0;
+  text-transform: none !important;
 }
 </style>
