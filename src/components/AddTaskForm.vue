@@ -155,6 +155,45 @@ const cardStyle = computed(() => {
   return { backgroundColor: '#ffffff' };
 });
 
+// Watermark icon depending on mode/type
+const watermarkIcon = computed(() => {
+  try {
+    const type = (localNewTask as any)?.value?.type_id ?? (localNewTask as any)?.type_id ?? null;
+    if (props.mode === 'add') {
+      switch (type) {
+        case 'Todo':
+          return 'check_box';
+        case 'TimeEvent':
+          return 'event';
+        case 'Replenish':
+          return 'autorenew';
+        case 'NoteLater':
+          return 'description';
+        default:
+          return 'add_circle';
+      }
+    }
+    if (props.mode === 'edit') return 'edit';
+    if (props.mode === 'preview') {
+      switch (type) {
+        case 'Todo':
+          return 'check_box';
+        case 'TimeEvent':
+          return 'event';
+        case 'Replenish':
+          return 'autorenew';
+        case 'NoteLater':
+          return 'description';
+        default:
+          return 'visibility';
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+});
+
 // Quasar screen for responsive button sizing
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
@@ -892,7 +931,25 @@ function onSubmit(event: Event) {
 </script>
 
 <template>
-  <q-card class="q-mb-md" :style="cardStyle">
+  <q-card class="q-mb-md add-task-card" :style="cardStyle">
+    <i
+      v-if="watermarkIcon"
+      class="material-icons add-watermark-text"
+      style="
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        font-size: 320px;
+        opacity: 0.28;
+        color: rgba(0, 0, 0, 0.14);
+        z-index: 1000;
+        pointer-events: none;
+        transform: rotate(-12deg);
+      "
+      aria-hidden="true"
+    >
+      {{ watermarkIcon }}
+    </i>
     <q-card-section>
       <q-form @submit="onSubmit" class="q-gutter-md">
         <!-- Type selector moved into Priority card below; header removed -->
@@ -1346,6 +1403,33 @@ function onSubmit(event: Event) {
 </template>
 
 <style scoped>
+.add-task-card {
+  position: relative;
+  overflow: visible;
+}
+.add-watermark-text {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  font-family: 'Material Icons';
+  font-size: 260px;
+  opacity: 0.14;
+  color: rgba(0, 0, 0, 0.1);
+  transform: rotate(-12deg);
+  pointer-events: none;
+  z-index: 1; /* sits above card background but below inputs */
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.add-watermark-icon[data-v-] {
+  /* ensure scoped styles apply to q-icon inner element */
+}
+/* ensure card content sits above watermark */
+.add-task-card > .q-card__section {
+  position: relative;
+  z-index: 3;
+}
 .color-swatch {
   width: 20px;
   height: 20px;
