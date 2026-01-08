@@ -314,7 +314,7 @@ function createReplenishFromInput() {
   localNewTask.value.name = name;
   localNewTask.value.type_id = 'Replenish';
   localNewTask.value.status_id = 1;
-  emit('add-task', { ...localNewTask.value });
+  emit('add-task', { ...localNewTask.value }, { preview: !stayAfterSave.value });
   // reset fields after creating
   replenishQuery.value = '';
   selectedReplenishId.value = null;
@@ -860,6 +860,9 @@ const descriptionRows = computed(() => {
 
 // Auto-resize textarea to fit content
 const descriptionInput = ref<any>(null);
+
+// When creating new tasks, keep the form open after save by default
+const stayAfterSave = ref(false);
 function adjustDescriptionHeight() {
   nextTick(() => {
     try {
@@ -918,7 +921,7 @@ function onSubmit(event: Event) {
     } else {
       payload.repeat = null;
     }
-    emit('add-task', payload);
+    emit('add-task', payload, { preview: !stayAfterSave.value });
     // Clear the description textarea after adding the task
     localNewTask.value.description = '';
     // Reset status checkbox to '1' (just created)
@@ -939,12 +942,8 @@ function onSubmit(event: Event) {
     } else {
       updated.repeat = null;
     }
-    // Emit update and switch back to add mode
+    // Emit update; parent will switch to preview and clear edit selection
     emit('update-task', updated);
-    // reset form to add defaults
-    emit('update:mode', 'add');
-    // notify parent to clear its edit selection
-    emit('cancel-edit');
   }
 }
 </script>
@@ -1317,6 +1316,7 @@ function onSubmit(event: Event) {
                           :style="{ backgroundColor: submitColor, color: '#ffffff' }"
                           class="text-white"
                         />
+
                         <q-btn
                           v-if="mode === 'edit'"
                           flat
@@ -1331,6 +1331,13 @@ function onSubmit(event: Event) {
                           dense
                           label="Done"
                           class="q-ml-sm"
+                        />
+                        <q-checkbox
+                          v-if="mode === 'add'"
+                          v-model="stayAfterSave"
+                          dense
+                          class="q-ml-sm"
+                          label="Stay after save"
                         />
                         <div v-if="mode === 'edit'" class="q-ml-sm">
                           <q-btn

@@ -1259,7 +1259,7 @@ const getDisplayDescription = (task: Task): string => {
   return desc;
 };
 
-const handleAddTask = async (taskPayload: any) => {
+const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
   // Check if active group is selected (and not "All Groups")
   if (!activeGroup.value || activeGroup.value.value === null) {
     $q.notify({
@@ -1280,7 +1280,17 @@ const handleAddTask = async (taskPayload: any) => {
     groupId: activeGroup.value.value,
   };
 
-  await addTask(currentDate.value, taskData);
+  const created = await addTask(currentDate.value, taskData);
+  if (opts && opts.preview && created) {
+    taskToEdit.value = created as any;
+    mode.value = 'preview';
+    selectedTaskId.value = created.id;
+    try {
+      setCurrentDate((created as any).date || (created as any).eventDate || null);
+    } catch (e) {
+      // ignore
+    }
+  }
 };
 
 const handleUpdateTask = async (updatedTask: any) => {
@@ -1290,7 +1300,23 @@ const handleUpdateTask = async (updatedTask: any) => {
   const targetDate =
     (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
   await updateTask(targetDate, id, rest);
-  taskToEdit.value = null;
+  // Find the updated task in the global task list and show it in preview
+  const updated = (allTasks.value || []).find((t) => t.id === id) || null;
+  taskToEdit.value = updated as any;
+  if (updated) {
+    mode.value = 'preview';
+    selectedTaskId.value = id;
+    // ensure current date syncs to the task's date
+    try {
+      setCurrentDate((updated as any).date || (updated as any).eventDate || null);
+    } catch (e) {
+      // ignore
+    }
+  } else {
+    // fallback: no task found, ensure we return to add mode
+    mode.value = 'add';
+    selectedTaskId.value = null;
+  }
 };
 
 const handleDeleteTask = async (payload: any) => {
