@@ -148,6 +148,13 @@ const modeLabel = computed(() => {
   return props.mode === 'add' ? 'Add new thing' : props.mode === 'edit' ? 'Edit thing' : 'Preview';
 });
 
+// Card background style depending on mode: light green for add, light orange for edit, white for preview
+const cardStyle = computed(() => {
+  if (props.mode === 'add') return { backgroundColor: '#e8f5e9' };
+  if (props.mode === 'edit') return { backgroundColor: '#fff3e0' };
+  return { backgroundColor: '#ffffff' };
+});
+
 // Quasar screen for responsive button sizing
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
@@ -885,7 +892,7 @@ function onSubmit(event: Event) {
 </script>
 
 <template>
-  <q-card class="q-mb-md">
+  <q-card class="q-mb-md" :style="cardStyle">
     <q-card-section>
       <q-form @submit="onSubmit" class="q-gutter-md">
         <!-- Type selector moved into Priority card below; header removed -->
