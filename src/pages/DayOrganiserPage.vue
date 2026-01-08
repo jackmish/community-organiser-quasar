@@ -1332,6 +1332,12 @@ const handleDeleteTask = async (payload: any) => {
     }
     if (!id) return;
     await deleteTask(date, id);
+    // If the deleted task was currently selected for preview/edit, switch back to create mode
+    if (taskToEdit.value && taskToEdit.value.id === id) {
+      taskToEdit.value = null;
+      mode.value = 'add';
+      selectedTaskId.value = null;
+    }
   } finally {
     openDeleteMenu.value = null;
   }
