@@ -148,11 +148,46 @@ const modeLabel = computed(() => {
   return props.mode === 'add' ? 'Add new thing' : props.mode === 'edit' ? 'Edit thing' : 'Preview';
 });
 
-// Card background style depending on mode: light green for add, light orange for edit, white for preview
+// Convert hex like '#aabbcc' to rgba string with given alpha
+function hexToRgba(hex: string, alpha = 1) {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h,
+    16,
+  );
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Accent color based on task type (used for a subtle 4px ring)
+const formAccentColor = computed(() => {
+  const type = (localNewTask as any)?.value?.type_id ?? (localNewTask as any)?.type_id ?? null;
+  switch (type) {
+    case 'Todo':
+      return '#a5d6a7'; // light green
+    case 'TimeEvent':
+      return '#90caf9'; // light blue
+    case 'Replenish':
+      return '#ffcc80'; // light orange
+    case 'NoteLater':
+      return '#e0e0e0'; // light grey
+    default:
+      return props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
+  }
+});
+
+// Card background style depending on mode and accented ring by task type
 const cardStyle = computed(() => {
-  if (props.mode === 'add') return { backgroundColor: '#e8f5e9' };
-  if (props.mode === 'edit') return { backgroundColor: '#fff3e0' };
-  return { backgroundColor: '#ffffff' };
+  const bg = props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
+  const accent = formAccentColor.value || '#000000';
+  return { backgroundColor: bg, border: `8px solid ${accent}` };
 });
 
 // Watermark icon depending on mode/type
@@ -206,6 +241,8 @@ const watermarkIcon = computed(() => {
   }
   return null;
 });
+
+// (watermark color removed — revert to default monochrome)
 
 // Quasar screen for responsive button sizing
 const $q = useQuasar();
