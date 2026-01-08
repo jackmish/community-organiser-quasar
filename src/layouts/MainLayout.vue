@@ -14,8 +14,8 @@
               style="
                 display: inline-block;
                 font-size: 0.9rem;
-                background: #0f1724;
-                color: #2196f3;
+                background: #ffffff;
+                color: #212121;
                 padding: 8px 12px;
                 border-radius: 6px;
                 align-items: center;
@@ -23,13 +23,16 @@
             >
               <div
                 class="text-caption"
-                style="color: #90caf9; margin-right: 8px; display: inline-block"
+                style="color: #424242; margin-right: 8px; display: inline-block"
               >
-                <span style="color: #90caf9">{{ currentDateWeekday }},&nbsp;</span>
-                <span style="color: #ffffff">{{ currentDateShort }}</span>
+                <span style="color: #757575; font-weight: 700"
+                  >{{ currentDateWeekday }},&nbsp;</span
+                >
+                <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
               </div>
-              <div class="text-caption" style="color: #90caf9; display: inline-block">
-                |&nbsp; <span style="color: #ffffff">{{ currentTimeDisplay }}</span>
+              <div class="text-caption" style="color: #424242; display: inline-block">
+                |&nbsp;
+                <span style="color: #2e7d32; font-weight: 700">{{ currentTimeDisplay }}</span>
               </div>
             </div>
           </div>
