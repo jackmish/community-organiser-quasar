@@ -187,7 +187,13 @@ const formAccentColor = computed(() => {
 const cardStyle = computed(() => {
   const bg = props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
   const accent = formAccentColor.value || '#000000';
-  return { backgroundColor: bg, border: `8px solid ${accent}` };
+  return {
+    backgroundColor: bg,
+    borderLeft: `8px solid ${accent}`,
+    borderRight: '0',
+    borderTop: '0',
+    borderBottom: '0',
+  };
 });
 
 // Watermark icon depending on mode/type
