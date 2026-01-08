@@ -9,69 +9,62 @@
           'bg-grey-2': Number(task.status_id) === 0,
           'selected-task': selectedTaskId === task.id,
         }"
-        :active="selectedTaskId === task.id"
-        clickable
-        @pointerdown="() => startLongPress(task)"
-        @pointerup="cancelLongPress"
-        @pointercancel="cancelLongPress"
-        @pointerleave="cancelLongPress"
-        @click="handleTaskClick(task)"
       >
-        <q-item-section side style="min-width: 60px">
-          <div class="text-bold text-primary">{{ task.eventTime }}</div>
-          <div v-if="getEventHoursDisplay(task)" class="text-caption text-grey-7 q-mt-xs">
-            {{ getEventHoursDisplay(task) }}
+        <q-item-section class="title-row">
+          <div style="flex: 1 1 auto">
+            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+              <span
+                class="priority-left"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="14px"
+                />
+              </span>
+              <strong>{{ task.name }}</strong>
+            </q-item-label>
           </div>
-        </q-item-section>
-        <q-item-section side>
-          <q-checkbox
-            :model-value="Number(task.status_id) === 0"
-            @click.stop="toggleStatus(task)"
-          />
-        </q-item-section>
-        <q-item-section>
-          <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
-            <strong>{{ task.name }}</strong>
-          </q-item-label>
           <q-item-label v-if="getDisplayDescription(task)" caption>
             {{ getDisplayDescription(task) }}
           </q-item-label>
-          <q-item-label caption class="q-mt-xs">
-            <q-chip
-              size="sm"
-              :style="{
-                backgroundColor: priorityColor(task.priority),
-                color: priorityTextColor(task.priority),
-              }"
-            >
-              {{ task.priority }}
-            </q-chip>
-            <q-chip
-              v-if="task.groupId"
-              :style="{ backgroundColor: getGroupColor(task.groupId) }"
-              text-color="white"
-              size="sm"
-              icon="folder"
-            >
-              {{ getGroupName(task.groupId) }}
-            </q-chip>
-          </q-item-label>
         </q-item-section>
         <q-item-section side>
-          <div class="row items-center" style="gap: 8px">
-            <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
-            <q-btn
-              flat
-              round
-              dense
-              icon="delete"
-              color="negative"
-              @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-            />
-            <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
-              <div>Delete?</div>
-              <q-btn flat dense color="negative" label="Yes" @click.stop="confirmDelete(task.id)" />
-              <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+          <div class="task-controls-grid">
+            <div>
+              <q-btn
+                flat
+                round
+                dense
+                icon="delete"
+                color="negative"
+                @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
+              />
+              <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
+                <div>Delete?</div>
+                <q-btn
+                  flat
+                  dense
+                  color="negative"
+                  label="Yes"
+                  @click.stop="confirmDelete(task.id)"
+                />
+                <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+              </div>
+            </div>
+            <div>
+              <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
+            </div>
+
+            <div>
+              <q-checkbox
+                :model-value="Number(task.status_id) === 0"
+                @click.stop="toggleStatus(task)"
+              />
             </div>
           </div>
         </q-item-section>
@@ -100,63 +93,61 @@
         @pointerleave="cancelLongPress"
         @click="handleTaskClick(task)"
       >
-        <q-item-section>
-          <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
-            ><strong>{{ task.name }}</strong></q-item-label
-          >
-          <q-item-label v-if="getDisplayDescription(task)" caption>{{
-            getDisplayDescription(task)
-          }}</q-item-label>
-          <q-item-label caption class="q-mt-xs">
-            <q-chip
-              size="sm"
-              :style="{
-                backgroundColor: priorityColor(task.priority),
-                color: priorityTextColor(task.priority),
-              }"
-              >{{ task.priority }}</q-chip
+        <q-item-section class="title-row">
+          <div style="flex: 1 1 auto">
+            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
+              ><span
+                class="priority-left"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="14px"
+                /> </span
+              ><strong>{{ task.name }}</strong></q-item-label
             >
-            <q-chip
-              v-if="task.groupId"
-              :style="{ backgroundColor: getGroupColor(task.groupId) }"
-              text-color="white"
-              size="sm"
-              icon="folder"
-              >{{ getGroupName(task.groupId) }}</q-chip
-            >
-          </q-item-label>
+            <q-item-label v-if="getDisplayDescription(task)" caption>{{
+              getDisplayDescription(task)
+            }}</q-item-label>
+          </div>
         </q-item-section>
         <q-item-section side>
-          <div class="row items-center" style="gap: 8px">
-            <q-btn
-              flat
-              round
-              dense
-              icon="edit"
-              color="primary"
-              @click.stop="() => editTask(task)"
-            />
-            <q-btn
-              flat
-              round
-              dense
-              icon="delete"
-              color="negative"
-              @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-            />
-            <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
-              <div>Delete?</div>
-              <q-btn flat dense color="negative" label="Yes" @click.stop="confirmDelete(task.id)" />
-              <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+          <div class="task-controls-grid">
+            <div>
+              <q-btn
+                flat
+                round
+                dense
+                icon="delete"
+                color="negative"
+                @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
+              />
+              <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
+                <div>Delete?</div>
+                <q-btn
+                  flat
+                  dense
+                  color="negative"
+                  label="Yes"
+                  @click.stop="confirmDelete(task.id)"
+                />
+                <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
+              </div>
             </div>
-          </div>
-          <div class="row">
-            <q-item-section side>
+            <div>
+              <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
+            </div>
+
+            <div>
               <q-checkbox
                 :model-value="Number(task.status_id) === 0"
                 @click.stop="toggleStatus(task)"
               />
-            </q-item-section>
+            </div>
           </div>
         </q-item-section>
       </q-item>
@@ -272,6 +263,93 @@ function confirmDelete(id: string) {
   min-width: 280px;
   max-width: 360px;
   flex: 0 0 320px;
+}
+.priority-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.task-card {
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 18px;
+  font-size: 12px;
+}
+.priority-badge q-icon {
+  margin: 0 !important;
+}
+.badge-group-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+/* left badge next to title */
+.priority-left {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  margin-right: 6px;
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+/* title row ensuring badge sits left of title */
+.title-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px;
+  flex-direction: row !important;
+}
+.title-row > div {
+  min-width: 0; /* allow text to truncate instead of pushing badge above */
+  display: flex;
+  flex-direction: column;
+}
+.title-row q-item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.priority-left {
+  vertical-align: middle;
+}
+/* 2x2 grid for controls: edit / delete / priority+group / done checkbox */
+.task-controls-grid {
+  display: grid;
+  grid-template-columns: 32px 32px;
+  grid-template-rows: auto auto;
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+}
+.task-controls-grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Slightly smaller text for task cards to match compact notification style */
+.task-card {
+  font-size: 13px;
+}
+.task-card strong {
+  font-size: 14px;
 }
 .done-floating {
   position: absolute;
