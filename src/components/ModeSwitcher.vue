@@ -1,5 +1,5 @@
 <template>
-  <div class="row" style="gap:8px">
+  <div class="row" style="gap: 8px">
     <q-btn
       v-for="opt in options"
       :key="opt.value"
@@ -12,10 +12,11 @@
       @click="emit('update:modelValue', opt.value)"
       :style="{
         backgroundColor: modelValue === opt.value ? opt.color : 'transparent',
-        color: modelValue === opt.value ? (opt.textColor || 'white') : (opt.color || 'rgba(0,0,0,0.87)'),
+        color:
+          modelValue === opt.value ? opt.textColor || 'white' : opt.color || 'rgba(0,0,0,0.87)',
         borderColor: opt.color,
         width: 'auto',
-        padding: '6px 14px'
+        padding: '6px 14px',
       }"
     />
   </div>
@@ -30,8 +31,8 @@ const emit = defineEmits(['update:modelValue']);
 const modelValue = toRef(props, 'modelValue');
 
 const labelMap: Record<string, string> = {
-  add: 'Add new thing',
-  edit: 'Edit thing',
+  add: 'Add new',
+  edit: 'Edit',
   preview: 'Preview',
 };
 

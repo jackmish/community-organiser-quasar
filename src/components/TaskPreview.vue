@@ -1,5 +1,5 @@
 <template>
-  <q-card class="q-mb-md">
+  <q-card class="q-mb-md" :style="previewCardStyle">
     <q-card-section>
       <!-- header: title on left, copy on right -->
       <div class="row items-center justify-between q-mb-sm">
@@ -66,6 +66,12 @@ import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string }>();
 const emit = defineEmits(['edit', 'close', 'toggle-status']);
+
+// preview card style: 8px blue border to match AddTaskForm style
+const previewCardStyle = computed(() => ({
+  border: '8px solid #1976d2',
+  backgroundColor: '#ffffff',
+}));
 
 const priorityColor = (p?: string) => {
   return p ? priorityColors[p] || 'grey-4' : 'grey-4';

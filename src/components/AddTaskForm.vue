@@ -166,34 +166,18 @@ function hexToRgba(hex: string, alpha = 1) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Accent color based on task type (used for a subtle 4px ring)
-const formAccentColor = computed(() => {
-  const type = (localNewTask as any)?.value?.type_id ?? (localNewTask as any)?.type_id ?? null;
-  switch (type) {
-    case 'Todo':
-      return '#a5d6a7'; // light green
-    case 'TimeEvent':
-      return '#90caf9'; // light blue
-    case 'Replenish':
-      return '#ffeb3b'; // light yellow
-    case 'NoteLater':
-      return '#e0e0e0'; // light grey
-    default:
-      return props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
-  }
+// Mode-based accent color (creation/edit)
+const modeAccentColor = computed(() => {
+  if (props.mode === 'add') return '#4caf50'; // green for creation
+  if (props.mode === 'edit') return '#ff9800'; // orange for edit
+  return '#1976d2'; // default primary
 });
 
-// Card background style depending on mode and accented ring by task type
+// Card background style depending on mode; draw an 8px solid border on all sides using mode color
 const cardStyle = computed(() => {
   const bg = props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
-  const accent = formAccentColor.value || '#000000';
-  return {
-    backgroundColor: bg,
-    borderLeft: `8px solid ${accent}`,
-    borderRight: '0',
-    borderTop: '0',
-    borderBottom: '0',
-  };
+  const accent = modeAccentColor.value || '#000000';
+  return { backgroundColor: bg, border: `8px solid ${accent}` };
 });
 
 // Watermark icon depending on mode/type
@@ -1053,7 +1037,7 @@ function onSubmit(event: Event) {
                       v-if="localNewTask.type_id === 'TimeEvent'"
                       flat
                       bordered
-                      class="q-pa-sm bg-blue-1"
+                      class="q-pa-sm bg-transparent"
                     >
                       <div class="row items-center q-mb-xs" style="gap: 8px; align-items: center">
                         <div class="text-caption text-grey-7">Date</div>
@@ -1070,12 +1054,17 @@ function onSubmit(event: Event) {
                         </div>
                         <div
                           v-if="repeatMode !== 'cyclic'"
-                          class="text-h6 text-primary text-weight-bold q-mb-sm"
+                          class="text-h7 text-primary text-weight-bold"
                         >
                           {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
                         </div>
                         <div class="col-auto" v-if="repeatMode !== 'cyclic'">
-                          <q-checkbox v-model="autoIncrementYear" dense size="xs" label="Auto" />
+                          <q-checkbox
+                            v-model="autoIncrementYear"
+                            dense
+                            size="xs"
+                            label="Auto Year"
+                          />
                         </div>
                       </div>
                       <div v-if="repeatMode === 'cyclic'">
