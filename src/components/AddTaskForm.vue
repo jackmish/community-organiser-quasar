@@ -720,22 +720,18 @@ function updateEventDateYear(val: number | string | null) {
 
 // (Handlers replaced by computed setters above)
 
-// Returns a human-readable difference between the given date and today
+// Returns a simple day-only difference between the given date and today
 const getTimeDifferenceDisplay = (dayDate: string) => {
   if (!dayDate) return 'Select a date';
 
   const date = new Date(dayDate);
-  const todayDate = new Date();
+  const today = new Date();
 
   // Normalize both dates to midnight for accurate day comparison
   const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayNormalized = new Date(
-    todayDate.getFullYear(),
-    todayDate.getMonth(),
-    todayDate.getDate(),
-  );
+  const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const daysDiff = Math.floor(
+  const daysDiff = Math.round(
     (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
   );
 
@@ -744,41 +740,11 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
   if (daysDiff === -1) return 'YESTERDAY';
 
   if (daysDiff > 0) {
-    // Future date
-    const weeksDiff = Math.floor(daysDiff / 7);
-
-    if (weeksDiff >= 1) {
-      const remainingDays = daysDiff % 7;
-      if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        const dayText = remainingDays === 1 ? 'day' : 'days';
-        return `In ${weeksDiff} ${weekText} ${remainingDays} ${dayText}`;
-      }
-      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-      return `In ${weeksDiff} ${weekText}`;
-    }
-
-    const dayText = daysDiff === 1 ? 'day' : 'days';
-    return `In ${daysDiff} ${dayText}`;
-  } else {
-    // Past date
-    const absDaysDiff = Math.abs(daysDiff);
-    const weeksDiff = Math.floor(absDaysDiff / 7);
-
-    if (weeksDiff >= 1) {
-      const remainingDays = absDaysDiff % 7;
-      if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        const dayText = remainingDays === 1 ? 'day' : 'days';
-        return `${weeksDiff} ${weekText} ${remainingDays} ${dayText} ago`;
-      }
-      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-      return `${weeksDiff} ${weekText} ago`;
-    }
-
-    const dayText = absDaysDiff === 1 ? 'day' : 'days';
-    return `${absDaysDiff} ${dayText} ago`;
+    return `In ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`;
   }
+
+  const absDays = Math.abs(daysDiff);
+  return `${absDays} ${absDays === 1 ? 'day' : 'days'} ago`;
 };
 // Computed for eventDate parts, always in sync with eventDate
 const eventDate = computed(() => {
@@ -1037,7 +1003,7 @@ function onSubmit(event: Event) {
                       v-if="localNewTask.type_id === 'TimeEvent'"
                       flat
                       bordered
-                      class="q-pa-sm bg-transparent"
+                      class="q-pa-sm bg-blue-1"
                     >
                       <div class="row items-center q-mb-xs" style="gap: 8px; align-items: center">
                         <div class="text-caption text-grey-7">Date</div>
