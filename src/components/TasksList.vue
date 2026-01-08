@@ -1,5 +1,5 @@
 <template>
-  <div class="task-list">
+  <div class="task-list" style="gap: 4px">
     <template v-if="tasksWithTime.length > 0">
       <q-item
         v-for="task in tasksWithTime"
@@ -9,11 +9,12 @@
           'bg-grey-2': Number(task.status_id) === 0,
           'selected-task': selectedTaskId === task.id,
         }"
+        :style="itemStyle(task)"
       >
         <q-item-section class="title-row">
           <div style="flex: 1 1 auto">
-            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
-              <span
+            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
+              ><span
                 class="priority-left"
                 :title="task.priority"
                 :style="{
@@ -22,16 +23,53 @@
                 }"
               >
                 <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  :name="typeIcons[task.type_id || task.type] || 'label'"
                   size="14px"
+                /> </span
+              ><strong>{{ task.name }}</strong></q-item-label
+            >
+            <q-item-label
+              v-if="
+                (task.type === 'event' ||
+                  task.type_id === 'TimeEvent' ||
+                  task.type === 'TimeEvent') &&
+                getEventHoursDisplay(task)
+              "
+              caption
+              :class="['task-desc', { 'has-date': hasDate(task) }]"
+            >
+              <span
+                class="priority-inline"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="12px"
                 />
               </span>
-              <strong>{{ task.name }}</strong>
+              {{ getEventHoursDisplay(task) }}
+            </q-item-label>
+            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
+              <span
+                class="priority-inline"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="12px"
+                />
+              </span>
+              {{ getDisplayDescription(task) }}
             </q-item-label>
           </div>
-          <q-item-label v-if="getDisplayDescription(task)" caption>
-            {{ getDisplayDescription(task) }}
-          </q-item-label>
         </q-item-section>
         <q-item-section side>
           <div class="task-controls-grid">
@@ -60,7 +98,7 @@
               <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
             </div>
 
-            <div>
+            <div class="controls-checkbox">
               <q-checkbox
                 :model-value="Number(task.status_id) === 0"
                 @click.stop="toggleStatus(task)"
@@ -69,7 +107,6 @@
           </div>
         </q-item-section>
 
-        <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
         <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
       </q-item>
     </template>
@@ -85,6 +122,7 @@
           'bg-grey-2': Number(task.status_id) === 0,
           'selected-task': selectedTaskId === task.id,
         }"
+        :style="itemStyle(task)"
         :active="selectedTaskId === task.id"
         clickable
         @pointerdown="() => startLongPress(task)"
@@ -105,14 +143,51 @@
                 }"
               >
                 <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  :name="typeIcons[task.type_id || task.type] || 'label'"
                   size="14px"
                 /> </span
               ><strong>{{ task.name }}</strong></q-item-label
             >
-            <q-item-label v-if="getDisplayDescription(task)" caption>{{
-              getDisplayDescription(task)
-            }}</q-item-label>
+            <q-item-label
+              v-if="
+                (task.type === 'event' ||
+                  task.type_id === 'TimeEvent' ||
+                  task.type === 'TimeEvent') &&
+                getEventHoursDisplay(task)
+              "
+              caption
+              :class="['task-desc', { 'has-date': hasDate(task) }]"
+            >
+              <span
+                class="priority-inline"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="12px"
+                />
+              </span>
+              {{ getEventHoursDisplay(task) }}
+            </q-item-label>
+            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
+              <span
+                class="priority-inline"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="12px"
+                /> </span
+              >{{ getDisplayDescription(task) }}</q-item-label
+            >
           </div>
         </q-item-section>
         <q-item-section side>
@@ -142,7 +217,7 @@
               <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
             </div>
 
-            <div>
+            <div class="controls-checkbox">
               <q-checkbox
                 :model-value="Number(task.status_id) === 0"
                 @click.stop="toggleStatus(task)"
@@ -184,6 +259,8 @@ import {
   priorityTextColor as themePriorityTextColor,
   priorityDefinitions as themePriorityDefinitions,
   formatEventHoursDiff,
+  formatDisplayDate,
+  typeIcons,
 } from './theme';
 
 const { groups } = useDayOrganiser();
@@ -210,7 +287,31 @@ const getGroupColor = (groupId?: string) => {
 const getEventHoursDisplay = (task: any) => {
   const dateStr = task?.date || task?.eventDate || '';
   const timeStr = task?.eventTime || '';
-  return formatEventHoursDiff(dateStr, timeStr);
+  if (!dateStr) return '';
+  if (timeStr) {
+    // Display the actual time (HH:MM) rather than a relative difference
+    return timeStr;
+  }
+  // No explicit time: show relative day labels when applicable
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return formatDisplayDate(dateStr);
+  const today = new Date();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((dateMid.getTime() - todayMid.getTime()) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays === -1) return 'Yesterday';
+  return formatDisplayDate(dateStr);
+};
+
+const hasDate = (task: any) => {
+  // Consider a task to "have a date" if it's a time-event type or has explicit date/time
+  if (!task) return false;
+  if (task.type === 'event' || task.type_id === 'TimeEvent') return true;
+  if (task?.eventTime) return true;
+  if (task?.date || task?.eventDate) return true;
+  return false;
 };
 
 const getDisplayDescription = (task: any) => {
@@ -227,6 +328,18 @@ const getDisplayDescription = (task: any) => {
     return remainder || '';
   }
   return desc;
+};
+
+const itemStyle = (task: any) => {
+  if (!task) return {};
+  // keep "done" items using the grey styles
+  if (Number(task.status_id) === 0) return {};
+  const bg = priorityColor(task.priority) || 'transparent';
+  const color = priorityTextColor(task.priority) || 'inherit';
+  return {
+    backgroundColor: bg,
+    color,
+  } as Record<string, string>;
 };
 
 function handleTaskClick(task: any) {
@@ -255,7 +368,7 @@ function confirmDelete(id: string) {
 .task-list {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: 4px;
   flex-wrap: wrap;
   align-items: flex-start;
 }
@@ -287,6 +400,24 @@ function confirmDelete(id: string) {
   gap: 8px;
   padding: 6px 10px;
   border-radius: 18px;
+  font-size: 12px;
+}
+
+.has-date {
+  font-weight: 800;
+}
+
+.type-icon {
+  margin-right: 6px;
+}
+.priority-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  margin-right: 6px;
   font-size: 12px;
 }
 .priority-badge q-icon {
@@ -327,15 +458,27 @@ function confirmDelete(id: string) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.task-desc {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  max-width: 100%;
+  color: inherit; /* respect item text color */
+}
+/* ensure truncation applies in title rows */
+.title-row .task-desc {
+  max-width: calc(100% - 40px);
+}
 .priority-left {
   vertical-align: middle;
 }
 /* 2x2 grid for controls: edit / delete / priority+group / done checkbox */
 .task-controls-grid {
   display: grid;
-  grid-template-columns: 32px 32px;
-  grid-template-rows: auto auto;
-  gap: 6px;
+  grid-template-columns: 28px 28px;
+  grid-template-rows: 20px 20px;
+  gap: 8px 2px; /* row-gap 8px (vertical), column-gap 2px (horizontal) */
   align-items: center;
   justify-items: center;
 }
@@ -343,6 +486,11 @@ function confirmDelete(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* place checkbox in bottom-right cell */
+.task-controls-grid .controls-checkbox {
+  grid-column: 2;
+  grid-row: 2;
 }
 /* Slightly smaller text for task cards to match compact notification style */
 .task-card {
