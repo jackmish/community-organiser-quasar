@@ -214,6 +214,19 @@ const isReplenish = computed(() => (localNewTask.value.type_id || '') === 'Reple
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
+// Submit button appearance based on mode
+const submitColor = computed(() => {
+  if (props.mode === 'add') return '#4caf50';
+  if (props.mode === 'edit') return '#ff9800';
+  return 'primary';
+});
+
+const submitIcon = computed(() => {
+  if (props.mode === 'add') return 'add';
+  if (props.mode === 'edit') return 'edit';
+  return '';
+});
+
 // Type options for task type selector (local only)
 const typeOptions = [
   { label: 'Time Event', shortLabel: 'Time', value: 'TimeEvent', icon: 'event' },
@@ -964,6 +977,24 @@ function onSubmit(event: Event) {
       {{ watermarkIcon }}
     </i>
     <q-card-section>
+      <div
+        v-if="mode === 'edit'"
+        class="row items-center q-mb-lg"
+        style="align-items: center; gap: 6px"
+      >
+        <div class="text-h6" style="display: flex; align-items: center; gap: 4px">
+          <i
+            v-if="watermarkIcon"
+            class="material-icons"
+            style="font-size: 18px; color: #ff9800; line-height: 1"
+            aria-hidden="true"
+          >
+            {{ watermarkIcon }}
+          </i>
+          <span style="color: #ff9800; font-weight: 600">Edit:</span>
+          <span style="font-weight: 500">{{ localNewTask.name || 'Untitled' }}</span>
+        </div>
+      </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
         <!-- Type selector moved into Priority card below; header removed -->
 
@@ -1279,15 +1310,14 @@ function onSubmit(event: Event) {
                       <div class="row items-center" style="gap: 12px">
                         <q-btn
                           type="submit"
-                          color="primary"
+                          unelevated
+                          :icon="submitIcon || undefined"
                           :label="
-                            mode === 'add'
-                              ? 'Add Task'
-                              : mode === 'edit'
-                                ? 'Save Changes'
-                                : 'Preview'
+                            mode === 'add' ? 'Add Task' : mode === 'edit' ? 'Update' : 'Preview'
                           "
                           :disable="mode === 'preview'"
+                          :style="{ backgroundColor: submitColor, color: '#ffffff' }"
+                          class="text-white"
                         />
                         <q-btn
                           v-if="mode === 'edit'"
