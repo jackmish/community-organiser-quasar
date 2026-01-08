@@ -73,37 +73,16 @@
         </q-item-section>
         <q-item-section side>
           <div class="task-controls-grid">
-            <div>
-              <q-btn
-                flat
-                round
-                dense
-                icon="delete"
-                color="negative"
-                @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-              />
-              <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
-                <div>Delete?</div>
-                <q-btn
-                  flat
-                  dense
-                  color="negative"
-                  label="Yes"
-                  @click.stop="confirmDelete(task.id)"
-                />
-                <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
-              </div>
+            <div class="controls-edit">
+              <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
             </div>
-            <div>
-              <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
-            </div>
-
             <div class="controls-checkbox">
               <q-checkbox
                 :model-value="Number(task.status_id) === 0"
                 @click.stop="toggleStatus(task)"
               />
             </div>
+            <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
           </div>
         </q-item-section>
 
@@ -192,37 +171,16 @@
         </q-item-section>
         <q-item-section side>
           <div class="task-controls-grid">
-            <div>
-              <q-btn
-                flat
-                round
-                dense
-                icon="delete"
-                color="negative"
-                @click.stop="openDeleteMenu = openDeleteMenu === task.id ? null : task.id"
-              />
-              <div v-if="openDeleteMenu === task.id" class="row items-center" style="gap: 8px">
-                <div>Delete?</div>
-                <q-btn
-                  flat
-                  dense
-                  color="negative"
-                  label="Yes"
-                  @click.stop="confirmDelete(task.id)"
-                />
-                <q-btn flat dense label="No" @click.stop="openDeleteMenu = null" />
-              </div>
+            <div class="controls-edit">
+              <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
             </div>
-            <div>
-              <q-btn flat round dense icon="edit" color="primary" @click.stop="editTask(task)" />
-            </div>
-
             <div class="controls-checkbox">
               <q-checkbox
                 :model-value="Number(task.status_id) === 0"
                 @click.stop="toggleStatus(task)"
               />
             </div>
+            <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
           </div>
         </q-item-section>
       </q-item>
@@ -487,10 +445,41 @@ function confirmDelete(id: string) {
   align-items: center;
   justify-content: center;
 }
-/* place checkbox in bottom-right cell */
+/* place checkbox in top-right cell */
 .task-controls-grid .controls-checkbox {
   grid-column: 2;
+  grid-row: 1;
+}
+/* place edit in top-left cell */
+.task-controls-grid .controls-edit {
+  grid-column: 1;
+  grid-row: 1;
+}
+/* group name spans both columns on second row */
+.task-controls-grid .group-name {
+  grid-column: 1 / 3;
   grid-row: 2;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 6px;
+  align-self: center;
+  justify-self: center;
+  background-color: rgba(8,10,12,0.5); /* darker graphite at 50% opacity */
+  color: #ffffff; /* white text */
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  min-width: 60px;
+}
+/* make edit icon inherit item text color */
+.edit-btn .q-icon {
+  color: rgba(0,0,0,0.9) !important; /* darker icon color */
+}
+/* ensure the button uses a darker explicit color */
+.edit-btn {
+  color: rgba(0,0,0,0.9) !important;
 }
 /* Slightly smaller text for task cards to match compact notification style */
 .task-card {
