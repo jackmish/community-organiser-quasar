@@ -138,7 +138,7 @@
           />
         </div>
         <div class="col-12 col-md-4">
-          <div class="q-mb-sm">
+          <div class="q-mb-sm" v-if="mode !== 'add'">
             <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
           </div>
 
