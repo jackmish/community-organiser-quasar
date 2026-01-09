@@ -4,12 +4,19 @@
       <q-item
         v-for="task in tasksWithTime"
         :key="task.id"
-        class="q-pa-md task-card"
+        class="q-pa-sm task-card"
         :class="{
           'bg-grey-2': Number(task.status_id) === 0,
           'selected-task': selectedTaskId === task.id,
         }"
         :style="itemStyle(task)"
+        :active="selectedTaskId === task.id"
+        clickable
+        @pointerdown="() => startLongPress(task)"
+        @pointerup="cancelLongPress"
+        @pointercancel="cancelLongPress"
+        @pointerleave="cancelLongPress"
+        @click="handleTaskClick(task)"
       >
         <q-icon
           v-if="typeIcons[task.type_id || task.type]"
@@ -18,21 +25,19 @@
         />
         <q-item-section class="title-row">
           <div style="flex: 1 1 auto">
-            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
-              ><span
-                class="priority-left"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="typeIcons[task.type_id || task.type] || 'label'"
-                  size="14px"
-                /> </span
-              ><strong>{{ task.name }}</strong></q-item-label
-            >
+            <div class="title-main">
+              <div class="title-text">
+                <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                  <strong>{{ task.name }}</strong>
+                </q-item-label>
+              </div>
+              <div class="title-checkbox">
+                <q-checkbox
+                  :model-value="Number(task.status_id) === 0"
+                  @click.stop="toggleStatus(task)"
+                />
+              </div>
+            </div>
             <q-item-label
               v-if="
                 (task.type === 'event' ||
@@ -58,22 +63,6 @@
               </span>
               {{ getEventHoursDisplay(task) }}
             </q-item-label>
-            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
-              <span
-                class="priority-inline"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              {{ getDisplayDescription(task) }}
-            </q-item-label>
           </div>
         </q-item-section>
         <q-item-section side>
@@ -81,12 +70,7 @@
             <div class="controls-edit">
               <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
             </div>
-            <div class="controls-checkbox">
-              <q-checkbox
-                :model-value="Number(task.status_id) === 0"
-                @click.stop="toggleStatus(task)"
-              />
-            </div>
+
             <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
           </div>
         </q-item-section>
@@ -101,7 +85,7 @@
       <q-item
         v-for="task in tasksWithoutTime"
         :key="task.id"
-        class="q-pa-md task-card"
+        class="q-pa-sm task-card"
         :class="{
           'bg-grey-2': Number(task.status_id) === 0,
           'selected-task': selectedTaskId === task.id,
@@ -122,21 +106,19 @@
         />
         <q-item-section class="title-row">
           <div style="flex: 1 1 auto">
-            <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
-              ><span
-                class="priority-left"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="typeIcons[task.type_id || task.type] || 'label'"
-                  size="14px"
-                /> </span
-              ><strong>{{ task.name }}</strong></q-item-label
-            >
+            <div class="title-main">
+              <div class="title-text">
+                <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                  <strong>{{ task.name }}</strong>
+                </q-item-label>
+              </div>
+              <div class="title-checkbox">
+                <q-checkbox
+                  :model-value="Number(task.status_id) === 0"
+                  @click.stop="toggleStatus(task)"
+                />
+              </div>
+            </div>
             <q-item-label
               v-if="
                 (task.type === 'event' ||
@@ -183,12 +165,6 @@
           <div class="task-controls-grid">
             <div class="controls-edit">
               <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
-            </div>
-            <div class="controls-checkbox">
-              <q-checkbox
-                :model-value="Number(task.status_id) === 0"
-                @click.stop="toggleStatus(task)"
-              />
             </div>
             <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
           </div>
@@ -388,6 +364,9 @@ function confirmDelete(id: string) {
 
 .type-icon {
   margin-right: 6px;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
 }
 .priority-inline {
   display: inline-flex;
@@ -421,27 +400,58 @@ function confirmDelete(id: string) {
 }
 /* left badge next to title */
 .priority-left {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  margin-right: 6px;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  margin-right: 8px;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 10px;
 }
-/* title row ensuring badge sits left of title */
 .title-row {
   display: flex !important;
   align-items: center !important;
   gap: 8px;
   flex-direction: row !important;
+  position: relative;
 }
 .title-row > div {
   min-width: 0; /* allow text to truncate instead of pushing badge above */
   display: flex;
   flex-direction: column;
+  padding-right: 0; /* checkbox is inline now */
+}
+.title-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.title-text {
+  min-width: 0;
+  display: block;
+}
+/* make the title label very compact */
+.title-text q-item-label {
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.title-text q-item-label strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+/* tighten title spacing */
+.title-text q-item-label,
+.title-text q-item-label strong {
+  line-height: 1.05;
 }
 .title-row q-item-label {
   white-space: nowrap;
@@ -452,7 +462,10 @@ function confirmDelete(id: string) {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  display: block !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px;
+  margin: 0 !important;
   max-width: 100%;
   color: inherit; /* respect item text color */
 }
@@ -518,7 +531,13 @@ function confirmDelete(id: string) {
   font-size: 13px;
 }
 .task-card strong {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
+}
+/* ensure the title label itself is compact */
+.title-text q-item-label {
+  font-size: 13px;
+  line-height: 1;
 }
 .done-floating {
   position: absolute;
@@ -530,10 +549,11 @@ function confirmDelete(id: string) {
   color: inherit;
 }
 .selected-task {
-  border: 2px solid var(--q-primary, #1976d2);
   border-radius: 6px;
-  background-color: rgba(25, 118, 210, 0.06);
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.06);
+  /* visual 4px solid border (no transparency) using a static blue */
+  box-shadow: 0 0 0 4px rgb(100, 181, 246);
+  /* keep a slightly stronger light background tint */
+  background-color: rgba(100, 181, 246, 0.06);
 }
 .replenish-item {
   cursor: pointer;
