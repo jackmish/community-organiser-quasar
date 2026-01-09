@@ -338,6 +338,8 @@ function confirmDelete(id: string) {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
   gap: 8px;
   align-items: start;
+  padding: 0 8px 8px 8px; /* remove top padding, keep other sides */
+  box-sizing: border-box;
 }
 .task-card {
   width: 100%;
