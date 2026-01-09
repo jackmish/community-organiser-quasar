@@ -361,6 +361,8 @@ function confirmDelete(id: string) {
 
 .has-date {
   font-weight: 800;
+  font-size: 15px; /* larger hour/time for time-event tasks */
+  line-height: 1.1;
 }
 
 .type-icon {
