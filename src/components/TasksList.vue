@@ -11,6 +11,11 @@
         }"
         :style="itemStyle(task)"
       >
+        <q-icon
+          v-if="typeIcons[task.type_id || task.type]"
+          :name="typeIcons[task.type_id || task.type]"
+          class="type-watermark"
+        />
         <q-item-section class="title-row">
           <div style="flex: 1 1 auto">
             <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
@@ -110,6 +115,11 @@
         @pointerleave="cancelLongPress"
         @click="handleTaskClick(task)"
       >
+        <q-icon
+          v-if="typeIcons[task.type_id || task.type]"
+          :name="typeIcons[task.type_id || task.type]"
+          class="type-watermark"
+        />
         <q-item-section class="title-row">
           <div style="flex: 1 1 auto">
             <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }"
@@ -230,6 +240,14 @@ setLongPressHandler((t: any) => {
 const priorityColor = (priority: any) => themePriorityColors[priority] || 'transparent';
 const priorityTextColor = (priority: any) => themePriorityTextColor(priority);
 
+// Colors for task types (match AddTaskForm.vue)
+const typeColors: Record<string, string> = {
+  TimeEvent: '#2196f3', // blue
+  Todo: '#4caf50', // green
+  NoteLater: '#9e9e9e', // grey
+  Replenish: '#ffeb3b', // yellow
+};
+
 const getGroupName = (groupId?: string) => {
   if (!groupId) return 'Unknown';
   const g = groups.value.find((gg: any) => gg.id === groupId);
@@ -294,9 +312,11 @@ const itemStyle = (task: any) => {
   if (Number(task.status_id) === 0) return {};
   const bg = priorityColor(task.priority) || 'transparent';
   const color = priorityTextColor(task.priority) || 'inherit';
+  const typeColor = typeColors[task.type_id || task.type] || 'transparent';
   return {
     backgroundColor: bg,
     color,
+    borderLeft: `4px solid ${typeColor}`,
   } as Record<string, string>;
 };
 
@@ -350,6 +370,7 @@ function confirmDelete(id: string) {
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
 .priority-badge {
@@ -377,6 +398,17 @@ function confirmDelete(id: string) {
   border-radius: 4px;
   margin-right: 6px;
   font-size: 12px;
+}
+
+.type-watermark {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font-size: 72px;
+  opacity: 0.06;
+  pointer-events: none;
+  color: currentColor;
+  transform: rotate(-10deg);
 }
 .priority-badge q-icon {
   margin: 0 !important;
