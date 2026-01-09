@@ -79,7 +79,7 @@
       <div class="row q-col-gutter-md tasks-row">
         <!-- Tasks column (left) and Replenishment column (right) -->
         <div class="col-12 left-panel tasks-column">
-          <q-card>
+          <q-card class="task-list-card">
             <q-card-section>
               <div class="text-h6 text-primary">
                 <div
@@ -1728,6 +1728,12 @@ onMounted(async () => {
   min-width: 280px;
   max-width: 360px;
   flex: 0 0 320px;
+}
+
+/* styling for the tasks container card to match AddTaskForm/preview style */
+.task-list-card {
+  border: 8px solid #808080; /* gray */
+  background-color: #e8f5e9; /* light green interior */
 }
 
 .replenish-grid {

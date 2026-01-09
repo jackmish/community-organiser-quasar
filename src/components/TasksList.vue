@@ -1,5 +1,13 @@
 <template>
-  <div class="task-list">
+  <div
+    class="task-list"
+    style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 8px;
+      align-items: start;
+    "
+  >
     <template v-if="tasksWithTime.length > 0">
       <q-item
         v-for="task in tasksWithTime"
