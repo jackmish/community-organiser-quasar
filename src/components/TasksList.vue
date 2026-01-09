@@ -347,6 +347,7 @@ function confirmDelete(id: string) {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
+  overflow: hidden;
 }
 
 .priority-badge {
@@ -381,13 +382,23 @@ function confirmDelete(id: string) {
 
 .type-watermark {
   position: absolute;
-  left: 8px;
-  top: 8px;
-  font-size: 72px;
-  opacity: 0.06;
+  left: 50%;
+  top: 50%;
+  /* shift slightly down to sit lower inside the card */
+  transform: translate(50%, -30%) rotate(-10deg);
+  font-size: 120px;
+  opacity: 0.18;
   pointer-events: none;
   color: currentColor;
-  transform: rotate(-10deg);
+  z-index: 0;
+}
+
+/* ensure content appears above watermark */
+.title-row,
+.task-controls-grid,
+.q-item-section {
+  position: relative;
+  z-index: 1;
 }
 .priority-badge q-icon {
   margin: 0 !important;
