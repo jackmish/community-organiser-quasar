@@ -1,5 +1,5 @@
 <template>
-  <div class="task-list" style="gap: 4px">
+  <div class="task-list">
     <template v-if="tasksWithTime.length > 0">
       <q-item
         v-for="task in tasksWithTime"
@@ -320,16 +320,18 @@ function confirmDelete(id: string) {
 
 <style scoped>
 .task-list {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: grid !important;
+  /* use auto-fit with a sensible min width so grid creates as many columns as fit
+     across different screen sizes (robust against container width constraints) */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: 8px;
+  align-items: start;
 }
 .task-card {
-  min-width: 280px;
-  max-width: 360px;
-  flex: 0 0 320px;
+  width: 100%;
+  /* ensure parent/global styles don't force a large min-width */
+  min-width: 0 !important;
+  max-width: none !important;
 }
 .priority-icon {
   display: inline-flex;
@@ -386,8 +388,8 @@ function confirmDelete(id: string) {
   position: absolute;
   left: 50%;
   top: 50%;
-  /* shift slightly down to sit lower inside the card */
-  transform: translate(50%, -30%) rotate(-10deg);
+  /* center and sit a bit lower inside the card */
+  transform: translate(-50%, -35%) rotate(-10deg);
   font-size: 120px;
   opacity: 0.18;
   pointer-events: none;
