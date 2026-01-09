@@ -35,7 +35,9 @@
           <div style="flex: 1 1 auto">
             <div class="title-main">
               <div class="title-text">
-                <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                <q-item-label
+                  :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
+                >
                   <strong>{{ task.name }}</strong>
                 </q-item-label>
               </div>
@@ -116,7 +118,9 @@
           <div style="flex: 1 1 auto">
             <div class="title-main">
               <div class="title-text">
-                <q-item-label :class="{ 'text-strike': Number(task.status_id) === 0 }">
+                <q-item-label
+                  :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
+                >
                   <strong>{{ task.name }}</strong>
                 </q-item-label>
               </div>
@@ -454,21 +458,21 @@ function confirmDelete(id: string) {
   min-width: 0;
   display: block;
 }
-/* make the title label very compact */
+/* clamp the title to a maximum of 2 lines and show ellipsis */
 .title-text q-item-label {
   padding: 0;
   margin: 0;
-  font-size: 12px;
-  line-height: 1;
-  height: 18px;
-  display: inline-block;
-  vertical-align: middle;
+  font-size: 13px;
+  line-height: 1.1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal; /* allow wrapping up to the clamp */
 }
 .title-text q-item-label strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 /* tighten title spacing */
@@ -477,9 +481,14 @@ function confirmDelete(id: string) {
   line-height: 1.05;
 }
 .title-row q-item-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* allow wrapping but clamp to two lines to avoid 3-line titles
+     use !important to override other global/compiled rules */
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
 }
 .task-desc {
   white-space: nowrap !important;
@@ -557,10 +566,40 @@ function confirmDelete(id: string) {
   font-size: 13px;
   line-height: 1;
 }
-/* ensure the title label itself is compact */
-.title-text q-item-label {
-  font-size: 13px;
-  line-height: 1;
+/* title label compactness handled above (keeps 2-line clamp) */
+
+/* stronger override: target the rendered label and its inner strong to
+   ensure the clamp can't be overridden by global/compiled rules */
+.task-list .title-text q-item-label,
+.task-list .title-text q-item-label strong,
+.task-card .title-text q-item-label,
+.task-card .title-text q-item-label strong {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: normal !important;
+  line-height: 1.25em !important;
+  max-height: calc(2 * 1.25em + 4px) !important; /* add small buffer for descenders */
+}
+
+.title-text q-item-label strong {
+  display: block !important;
+}
+
+/* explicit class for title clamping (fallback to compiled global helper) */
+.title-ellipsis,
+.task-card .title-ellipsis,
+.task-list .title-ellipsis {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: normal !important;
+  line-height: 1.25em !important;
+  max-height: calc(2 * 1.25em + 4px) !important; /* buffer to avoid clipping descenders */
 }
 .done-floating {
   position: absolute;
