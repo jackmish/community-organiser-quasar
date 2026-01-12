@@ -138,8 +138,9 @@
           />
         </div>
         <div class="col-12 col-md-4">
-          <div class="q-mb-sm" v-if="mode !== 'add'">
-            <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
+          <div class="" v-if="mode !== 'add'" style="margin-bottom: -4px">
+            <!-- remove the 'add' option here; floating Add button handles adding -->
+            <ModeSwitcher v-model="mode" :allowed-modes="['preview', 'edit']" />
           </div>
 
           <!-- Replenishment items are rendered with other tasks (no separate right-column panel) -->
@@ -227,6 +228,18 @@
 
     <!-- First Run Dialog -->
     <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
+
+    <!-- Floating Add button: appears in edit/preview, hidden in add mode -->
+    <q-btn
+      v-if="mode === 'edit' || mode === 'preview'"
+      class="floating-add-btn"
+      color="green"
+      fab
+      icon="add"
+      dense
+      @click="clearTaskToEdit"
+      title="Add new task"
+    />
   </q-page>
 </template>
 
@@ -1756,6 +1769,15 @@ onMounted(async () => {
 .task-card,
 .replenish-item {
   position: relative;
+}
+
+/* Floating Add button styles */
+.floating-add-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1400;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
 .done-floating {
