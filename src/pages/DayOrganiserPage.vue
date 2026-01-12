@@ -1,73 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <!-- Active Group Selector and Type Selector -->
-    <div class="row justify-between items-center q-mb-md">
-      <div class="row items-center" style="gap: 12px">
-        <q-select
-          v-model="activeGroup"
-          :options="activeGroupOptions"
-          label="Active Group"
-          outlined
-          dense
-          style="min-width: 300px"
-          @update:model-value="handleActiveGroupChange"
-          :rules="[(val) => !!val || 'Please select an active group']"
-        >
-          <template #prepend>
-            <q-icon name="folder_open" />
-          </template>
-        </q-select>
-        <q-btn dense flat round icon="more_vert" class="q-ml-sm" @click="showGroupDialog = true" />
-
-        <q-dialog v-model="showGroupDialog">
-          <q-card style="min-width: 320px; max-width: 480px">
-            <q-card-section>
-              <div class="text-h6">Groups</div>
-            </q-card-section>
-            <q-separator />
-            <q-card-section>
-              <q-list>
-                <q-item v-for="g in groups" :key="g.id" clickable>
-                  <q-item-section avatar>
-                    <div
-                      :style="{
-                        width: '18px',
-                        height: '18px',
-                        background: g.color || '#1976d2',
-                        borderRadius: '4px',
-                      }"
-                    />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ g.name }}</q-item-label>
-                    <q-item-label caption>{{ g.id }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section
-                    side
-                    style="min-width: 90px; display: flex; gap: 6px; justify-content: flex-end"
-                  >
-                    <q-btn dense flat icon="edit" size="sm" @click.stop="openEditGroup(g)" />
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-card-section>
-            <q-separator />
-            <q-card-actions align="right">
-              <q-btn flat label="Close" v-close-popup @click="showGroupDialog = false" />
-            </q-card-actions>
-          </q-card>
-        </q-dialog>
-      </div>
-
-      <TaskTypeSelector
-        :model-value="newTask.type_id"
-        @update:model-value="
-          (value) => {
-            if (newTask.type_id !== value) newTask.type_id = value;
-          }
-        "
-      />
-    </div>
+    <!-- top selector removed; groups shown in the header -->
 
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center q-pa-lg">
@@ -94,6 +27,32 @@
                       formatDateOnly(currentDate)
                     }}</span>
                     <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
+                  </div>
+
+                  <div class="group-select-wrapper">
+                    <q-select
+                      v-model="activeGroup"
+                      :options="activeGroupOptions"
+                      label="Active Group"
+                      outlined
+                      dense
+                      style="min-width: 220px"
+                      @update:model-value="handleActiveGroupChange"
+                      :rules="[(val) => !!val || 'Please select an active group']"
+                    >
+                      <template #prepend>
+                        <q-icon name="folder_open" />
+                      </template>
+                    </q-select>
+
+                    <q-btn
+                      dense
+                      flat
+                      round
+                      icon="more_vert"
+                      class="q-ml-sm"
+                      @click="showGroupDialog = true"
+                    />
                   </div>
                 </div>
               </div>
@@ -1755,10 +1714,69 @@ onMounted(async () => {
   background-color: #1976d2; /* blue header background only */
   padding: 8px 12px;
   border-radius: 8px;
-  display: inline-block;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Right-aligned wrapper for the group select inside the header */
+.task-list-header .group-select-wrapper {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  margin-right: 0; /* keep inside header padding */
+}
+
+.task-list-header .group-select-wrapper .q-field {
+  min-width: 220px;
+  max-width: 320px;
+  height: 36px !important; /* compact fixed height */
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Ensure any internal row spacing doesn't push controls down */
+.task-list-header .row.items-center.justify-between {
+  margin-top: 0 !important;
+  align-items: center !important;
+  width: 100%;
+}
+
+.task-list-header .group-select-wrapper .q-field,
+.task-list-header .group-select-wrapper .q-btn {
+  margin-top: 0 !important;
+  align-self: center !important;
+}
+
+/* Ensure select control contents are vertically centered */
+.task-list-header .group-select-wrapper .q-field__control {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Make the header's inner row span full width so justify-between pushes the group wrapper to the right edge */
+.task-list-header > .row.items-center.justify-between {
+  width: 100%;
+}
+
+/* Hide the floating label so the field height stays compact */
+.task-list-header .group-select-wrapper .q-field__label {
+  display: none !important;
+}
+
+/* Compact the selected value/control vertically */
+.task-list-header .group-select-wrapper .q-field__native {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 /* ensure arrow buttons/icons in the header are visible on blue */
