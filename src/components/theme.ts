@@ -19,10 +19,11 @@ export const priorityTextColor = (p?: string) => {
 };
 
 export const timeDiffClassFor = (label: string) => {
-  if (!label) return 'text-grey-7';
-  if (label === 'TODAY') return 'text-primary';
-  if (label === 'TOMORROW') return 'text-positive';
-  return 'text-grey-7';
+  // Return semantic class names that the page can style for improved contrast
+  if (!label) return 'time-diff-default';
+  if (label === 'TODAY') return 'time-diff-white';
+  if (label === 'TOMORROW') return 'time-diff-lightblue';
+  return 'time-diff-default';
 };
 
 export function formatDisplayDate(date: string) {

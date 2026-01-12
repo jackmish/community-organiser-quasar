@@ -81,18 +81,18 @@
         <div class="col-12 left-panel tasks-column">
           <q-card class="task-list-card">
             <q-card-section>
-              <div class="text-h6 text-primary">
+              <div class="text-h6 task-list-header">
                 <div
                   class="row items-center justify-between"
                   style="align-items: center; margin-top: 6px"
                 >
                   <div class="row items-center" style="gap: 8px">
                     <q-btn flat dense round icon="chevron_left" @click="prevDay" color="primary" />
-                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{
-                      getTimeDifferenceDisplay(currentDate)
-                    }}</span>
+                    <span class="date-black">{{ getTimeDifferenceDisplay(currentDate) }}</span>
                     <span class="q-mx-sm">|</span>
-                    <span class="date-black">{{ formatDateOnly(currentDate) }}</span>
+                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{
+                      formatDateOnly(currentDate)
+                    }}</span>
                     <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
                   </div>
                 </div>
@@ -1745,8 +1745,49 @@ onMounted(async () => {
 
 /* styling for the tasks container card to match AddTaskForm/preview style */
 .task-list-card {
-  border: 8px solid #808080; /* gray */
-  background-color: #e8f5e9; /* light green interior */
+  /* dark blue per request */
+  background-color: #0d47a1;
+}
+
+/* header styling to contrast with the green background */
+.task-list-header {
+  color: #ffffff; /* primary header text: white */
+  background-color: #1976d2; /* blue header background only */
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* ensure arrow buttons/icons in the header are visible on blue */
+.task-list-header .q-btn,
+.task-list-header .q-btn .q-icon {
+  color: #ffffff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* make date text a light blue for contrast */
+.task-list-card .task-list-header .date-black {
+  color: #bbdefb !important; /* light blue for header date (force override) */
+}
+
+/* allow the time-diff bold element to remain white */
+.task-list-header .text-weight-bold {
+  color: #ffffff;
+}
+
+/* time-diff helper classes returned by theme.timeDiffClassFor() */
+.time-diff-white {
+  color: #ffffff !important;
+}
+.time-diff-lightblue {
+  color: #bbdefb !important;
+}
+.time-diff-default {
+  color: rgba(255, 255, 255, 0.85) !important;
 }
 
 .replenish-grid {
