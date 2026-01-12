@@ -26,7 +26,7 @@
 import { toRef, computed } from 'vue';
 
 const props = defineProps<{ modelValue?: string; allowedModes?: string[] }>();
-const emit = defineEmits(['up :modelValue']);
+const emit = defineEmits(['update:modelValue']);
 
 const modelValue = toRef(props, 'modelValue');
 
