@@ -89,7 +89,7 @@
       </q-item>
     </template>
 
-    <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" />
+    <!-- <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" /> -->
 
     <template v-if="tasksWithoutTime.length > 0">
       <q-item
