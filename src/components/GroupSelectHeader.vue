@@ -11,6 +11,9 @@
         map-options
         outlined
         dense
+        class="group-select--header"
+        color="white"
+        text-color="white"
         style="min-width: 220px"
         label="Active Group"
         @update:model-value="onChange"
@@ -138,3 +141,59 @@ const onChange = (val: any) => {
   prevValue = val ?? null;
 };
 </script>
+
+<style scoped>
+.group-select--header ::v-deep .q-field__control {
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* specifically target outlined variant and focus states */
+.group-select--header ::v-deep .q-field--outlined .q-field__control,
+.group-select--header ::v-deep .q-field--outlined .q-field__control::before,
+.group-select--header ::v-deep .q-field--outlined .q-field__control::after,
+.group-select--header ::v-deep .q-field--outlined.q-focused .q-field__control {
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) !important;
+}
+
+.group-select--header ::v-deep .q-field__label,
+.group-select--header ::v-deep .q-select__input,
+.group-select--header ::v-deep .q-item__label,
+.group-select--header ::v-deep .q-field__native {
+  color: #ffffff !important;
+}
+
+.group-select--header ::v-deep .q-icon,
+.group-select--header ::v-deep .q-field__label,
+.group-select--header ::v-deep .q-field__label--float {
+  color: #ffffff !important;
+}
+
+/* ensure dropdown items in the menu are readable on dark header */
+.group-select--header ::v-deep .q-menu .q-item__label {
+  color: #000 !important;
+}
+
+/* Extra overrides for stubborn outlined borders and pseudo-elements */
+.group-select--header ::v-deep .q-field__control,
+.group-select--header ::v-deep .q-select__control,
+.group-select--header ::v-deep .q-field--outlined .q-field__control,
+.group-select--header ::v-deep .q-select--outlined .q-field__control {
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.group-select--header ::v-deep .q-field__control::before,
+.group-select--header ::v-deep .q-field__control::after {
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  background: transparent !important;
+}
+
+.group-select--header ::v-deep .q-field__native {
+  color: #ffffff !important;
+}
+</style>

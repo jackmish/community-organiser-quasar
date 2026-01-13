@@ -9,9 +9,6 @@
               alt="CO21"
               style="height: 28px; width: auto; display: inline-block"
             />
-            <div style="display: flex; align-items: center">
-              <GroupSelectHeader />
-            </div>
           </div>
 
           <div
@@ -22,9 +19,13 @@
               flex: 1;
               justify-content: flex-end;
               min-width: 0;
+              gap: 12px;
             "
           >
             <NextEventNotification />
+            <div style="display: flex; align-items: center">
+              <GroupSelectHeader />
+            </div>
           </div>
         </q-toolbar-title>
 

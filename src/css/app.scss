@@ -1,1 +1,229 @@
 // app global css in SCSS form
+
+/* Make Quasar menus use the app primary color with white text globally */
+.q-menu,
+.q-menu__content,
+.q-popover,
+.q-dialog__inner {
+  background-color: var(--q-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Menu list items */
+.q-menu .q-list,
+.q-menu .q-item,
+.q-menu .q-item__section,
+.q-menu .q-item__label {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Make menu item hover/desaturate when the menu is hovered; keep hover darker
+   (instead of brighter). Scoping to `.q-menu:hover` prevents hover styles
+   from persisting when the mouse leaves the menu container. */
+.q-menu:hover .q-item:hover {
+  /* Legacy selector - keep for specificity but delegate to explicit rules below. */
+}
+
+/* Hover on non-active items: use a solid, darker blue so it is visually
+   darker than the active (non-hover) background. */
+.q-menu .q-item:not(.q-item--active):hover {
+  /* subtle hover overlay (lighter than active) */
+  background-color: rgba(13, 71, 161, 0.12) !important;
+}
+
+/* Hover on the currently active item: make it even darker so hover always
+   appears darker than the active (non-hover) state. */
+.q-menu .q-item.q-item--active:hover,
+.q-menu .q-item--active:hover {
+  /* hover on active: slightly stronger overlay but not brighter */
+  background-color: rgba(11, 60, 137, 0.22) !important;
+}
+
+/* Force active menu/list items to use task-list section blue */
+.q-menu .q-item--active,
+.q-menu__content .q-item--active,
+.q-select__popup .q-item--active,
+.q-list--dense .q-item--active {
+  /* Active (non-hover) uses the task-list blue, hover will be darker */
+  background-color: #0d47a1 !important;
+  color: #ffffff !important;
+}
+
+/* Prevent lingering hover/focus styles when the mouse leaves the menu.
+   Quasar may add focus/manual-focus classes; reset those to non-bright
+   background so the last hovered item doesn't remain visually brighter. */
+.q-menu .q-item:focus,
+.q-menu .q-item:active,
+.q-menu .q-item.q-manual-focusable--focused,
+.q-menu .q-item.q-focusable.q-manual-focusable--focused {
+  background-color: transparent !important;
+  outline: none !important;
+}
+
+/* Reduce transition so hover changes are immediate and don't leave visual traces. */
+.q-menu .q-item,
+.q-menu .q-item * {
+  transition: background-color 0ms !important;
+}
+
+/* Clear any lingering visual state on the last hovered item by forcing
+   non-hover, non-active items to transparent and removing additive effects.
+   This covers cases where a :hover style was left behind by focus/active
+   classes or JS-managed states. */
+.q-menu .q-item:not(:hover):not(.q-item--active) {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+}
+
+/* Also clear manual-focus/focus-visible states that can leave a highlight */
+.q-menu .q-item.q-manual-focusable--focused,
+.q-menu .q-item.q-focusable.q-manual-focusable--focused,
+.q-menu .q-item:focus-visible {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Ensure labels/icons inside active items are white */
+.q-menu .q-item--active .q-item__label,
+.q-menu .q-item--active ::v-deep .q-icon {
+  color: #ffffff !important;
+}
+
+/* Stronger overrides: target pseudo-elements, filters and blend modes that
+	 might alter perceived color (e.g. overlays, :before/:after, or mix-blend). */
+.q-menu .q-item--active,
+.q-menu .q-item.q-item--active,
+.q-menu .q-item--active::before,
+.q-menu .q-item--active::after,
+.q-menu .q-item.q-item--active::before,
+.q-menu .q-item.q-item--active::after,
+.q-select__popup .q-item--active,
+.q-list--dense .q-item--active,
+.q-item.q-item--active {
+  background-color: #0b3c89 !important; /* darker task-list blue for active */
+  color: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+  border-color: transparent !important;
+}
+
+/* Ensure inner label sections and icons inherit white color when active */
+.q-menu .q-item--active .q-item__section,
+.q-menu .q-item--active .q-item__label,
+.q-menu .q-item--active ::v-deep .q-icon {
+  color: #ffffff !important;
+}
+
+/* Ensure icons inside menus are white */
+.q-menu ::v-deep .q-icon {
+  color: #ffffff !important;
+}
+
+/* Dropdowns created by components like q-select (popups/menus) */
+.q-menu--popup,
+.q-select__popup,
+.q-list--dense {
+  background-color: var(--q-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Make dialog card areas readable using primary color */
+.q-dialog .q-card,
+.q-dialog .q-card-section,
+.q-dialog .q-card-actions {
+  background-color: var(--q-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Inputs inside menus/dialogs should have white text */
+.q-menu ::v-deep input,
+.q-dialog ::v-deep input,
+.q-menu ::v-deep .q-field__native,
+.q-dialog ::v-deep .q-field__native {
+  color: #ffffff !important;
+}
+
+/* Disable Quasar's focus-helper highlight inside menus/popovers.
+   The global rule `body.desktop .q-focusable:focus > .q-focus-helper` sets
+   an opacity that leaves a bright trace on the last hovered/focused item.
+   Scope overrides to menu/popover/select popups to avoid affecting other
+   focus outlines in the app. */
+body.desktop .q-menu .q-focus-helper,
+body.desktop .q-menu__content .q-focus-helper,
+.q-menu .q-focus-helper,
+.q-select__popup .q-focus-helper,
+.q-popover .q-focus-helper,
+.q-menu .q-manual-focusable--focused > .q-focus-helper,
+.q-menu .q-focusable:focus > .q-focus-helper {
+  opacity: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+/* Background-only overlay approach: apply a pseudo-element to darken
+   item backgrounds without affecting text/icons. Placed at the end to
+   override earlier rules when necessary. */
+.q-menu .q-item {
+  position: relative;
+  overflow: visible;
+}
+.q-menu .q-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: background-color 120ms ease !important;
+  z-index: 0;
+}
+.q-menu .q-item > *,
+.q-menu .q-item .q-item__section,
+.q-menu .q-item .q-item__label,
+.q-menu .q-item .q-icon {
+  position: relative;
+  z-index: 1;
+}
+
+/* Neutralize any direct background-color rules on items so overlay is visible */
+.q-menu .q-item,
+.q-menu .q-item--active,
+.q-menu__content .q-item--active,
+.q-select__popup .q-item--active,
+.q-list--dense .q-item--active {
+  background-color: transparent !important;
+}
+
+/* Inactive item hover: subtle dark overlay */
+.q-menu .q-item:not(.q-item--active):hover::before {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Active (non-hover): use task-list card blue so active matches task list bg */
+.q-menu .q-item.q-item--active::before,
+.q-menu .q-item--active::before {
+  background-color: #0d47a1 !important; /* task-list blue */
+}
+
+/* Active + hover: darker than active (use a darker solid variant) */
+.q-menu .q-item.q-item--active:hover::before,
+.q-menu .q-item--active:hover::before {
+  background-color: #0d47a1 !important;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.06)) !important;
+  background-blend-mode: overlay !important;
+}
+
+/* Ensure no transitions or focus helpers make items brighter after hover */
+.q-menu .q-item,
+.q-menu .q-item * {
+  transition: none !important;
+}
