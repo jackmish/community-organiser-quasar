@@ -9,11 +9,15 @@
       <div>
         <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">
           <div class="text-caption text-grey-7 preview-datetime">
-            <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{ displayDate }}</span>
+            <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{
+              displayDate
+            }}</span>
             <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
-            <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
+            <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{
+              eventTimeHoursDisplay
+            }}</span>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
+          <div style="display: flex; gap: 8px; align-items: center">
             <q-chip
               size="sm"
               :style="{
@@ -22,7 +26,9 @@
               }"
               >{{ task.priority }}</q-chip
             >
-            <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{ groupName }}</q-chip>
+            <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{
+              groupName
+            }}</q-chip>
           </div>
         </div>
 
@@ -45,14 +51,18 @@
           </div>
         </div>
 
-        <div v-if="(task.type_id || '') === 'Todo'" class="q-mt-sm" style="display:flex;gap:8px;align-items:center">
+        <div
+          v-if="(task.type_id || '') === 'Todo'"
+          class="q-mt-sm"
+          style="display: flex; gap: 8px; align-items: center"
+        >
           <q-input
             dense
             outlined
             placeholder="Quick add subtask"
             v-model="quickSubtask"
             @keyup.enter="addQuickSubtask"
-            style="flex:1;"
+            style="flex: 1"
           />
           <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
         </div>
