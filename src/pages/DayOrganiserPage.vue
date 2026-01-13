@@ -28,32 +28,41 @@
                     }}</span>
                     <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
                   </div>
-
-                  <div class="group-select-wrapper">
-                    <q-select
-                      v-model="activeGroup"
-                      :options="activeGroupOptions"
-                      label="Active Group"
-                      outlined
-                      dense
-                      style="min-width: 220px"
-                      @update:model-value="handleActiveGroupChange"
-                      :rules="[(val) => !!val || 'Please select an active group']"
+                  <!-- Insert today's full date/time near the task list header (swapped from main header) -->
+                  <div style="margin-left: 12px; display: inline-block">
+                    <div
+                      class="header-today"
+                      style="
+                        display: inline-block;
+                        font-size: 0.9rem;
+                        background: #ffffff;
+                        color: #212121;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        align-items: center;
+                      "
                     >
-                      <template #prepend>
-                        <q-icon name="folder_open" />
-                      </template>
-                    </q-select>
-
-                    <q-btn
-                      dense
-                      flat
-                      round
-                      icon="more_vert"
-                      class="q-ml-sm"
-                      @click="showGroupDialog = true"
-                    />
+                      <div
+                        class="text-caption"
+                        style="color: #424242; margin-right: 6px; display: inline-block"
+                      >
+                        <span style="color: #757575; font-weight: 700"
+                          >{{ currentDateWeekday }},&nbsp;</span
+                        >
+                        <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
+                      </div>
+                      <div
+                        class="text-caption"
+                        style="color: #424242; display: inline-block; margin-left: 6px"
+                      >
+                        |&nbsp;<span style="color: #2e7d32; font-weight: 700">{{
+                          currentTimeDisplay
+                        }}</span>
+                      </div>
+                    </div>
                   </div>
+
+                  <!-- group select moved to main header -->
                 </div>
               </div>
             </q-card-section>
@@ -483,6 +492,7 @@ const {
   nextDay,
   prevDay,
   groups,
+  activeGroup,
   addGroup,
   deleteGroup,
   getGroupsByParent,
@@ -516,7 +526,6 @@ const newGroupName = ref('');
 const newGroupParent = ref<string | undefined>(undefined);
 const newGroupColor = ref('#1976d2');
 const defaultGroupId = ref<string | undefined>(undefined);
-const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
 const mode = ref<'add' | 'edit' | 'preview'>('add');
@@ -1678,10 +1687,16 @@ onMounted(async () => {
     reloadKey.value += 1;
   };
   window.addEventListener('organiser:reloaded', handler as EventListener);
+  // allow header group 'manage' button to open the group dialog
+  const groupManageHandler = () => {
+    showGroupDialog.value = true;
+  };
+  window.addEventListener('group:manage', groupManageHandler as EventListener);
   // cleanup listener on component unmount
   onBeforeUnmount(() => {
     try {
       window.removeEventListener('organiser:reloaded', handler as EventListener);
+      window.removeEventListener('group:manage', groupManageHandler as EventListener);
     } catch (e) {
       // ignore
     }

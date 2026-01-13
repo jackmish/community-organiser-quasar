@@ -9,31 +9,8 @@
               alt="CO21"
               style="height: 28px; width: auto; display: inline-block"
             />
-            <div
-              class="header-today"
-              style="
-                display: inline-block;
-                font-size: 0.9rem;
-                background: #ffffff;
-                color: #212121;
-                padding: 8px 12px;
-                border-radius: 6px;
-                align-items: center;
-              "
-            >
-              <div
-                class="text-caption"
-                style="color: #424242; margin-right: 8px; display: inline-block"
-              >
-                <span style="color: #757575; font-weight: 700"
-                  >{{ currentDateWeekday }},&nbsp;</span
-                >
-                <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
-              </div>
-              <div class="text-caption" style="color: #424242; display: inline-block">
-                |&nbsp;
-                <span style="color: #2e7d32; font-weight: 700">{{ currentTimeDisplay }}</span>
-              </div>
+            <div style="display: flex; align-items: center">
+              <GroupSelectHeader />
             </div>
           </div>
 
@@ -87,6 +64,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
 import { useDayOrganiser } from '../modules/day-organiser';
+import GroupSelectHeader from 'src/components/GroupSelectHeader.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;

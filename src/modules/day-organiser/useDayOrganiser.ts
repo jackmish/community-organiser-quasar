@@ -23,6 +23,8 @@ const isLoading = ref(false);
 const currentDate = ref(formatDate(new Date()));
 // Optional preview request: a component can request a task preview by id
 const previewTaskId = ref<string | null>(null);
+// Shared active group selection across pages/components
+const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 
 export function useDayOrganiser() {
   // Load data from storage
@@ -552,6 +554,8 @@ export function useDayOrganiser() {
 
     // Groups
     groups: computed(() => organiserData.value.groups),
+    // Shared active group state for UI components
+    activeGroup: activeGroup,
     addGroup,
     updateGroup,
     deleteGroup,
