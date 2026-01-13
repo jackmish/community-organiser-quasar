@@ -14,7 +14,16 @@
             </div>
           </div>
 
-          <div class="q-ml-md" style="display: flex; align-items: center">
+          <div
+            class="q-ml-md"
+            style="
+              display: flex;
+              align-items: center;
+              flex: 1;
+              justify-content: flex-end;
+              min-width: 0;
+            "
+          >
             <NextEventNotification />
           </div>
         </q-toolbar-title>
@@ -33,6 +42,35 @@
           }"
           @click="refreshNotifications"
         />
+
+        <!-- Menu button (three lines) with configuration options -->
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          color="primary"
+          text-color="white"
+          style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
+          title="Menu"
+        >
+          <q-menu v-model="menuOpen" anchor="bottom right" self="top right" style="width: auto">
+            <q-list style="min-width: 160px">
+              <q-item clickable v-ripple @click="handleConnectionClick">
+                <q-item-section>Connection</q-item-section>
+              </q-item>
+              <q-item clickable v-ripple @click="openSettings">
+                <q-item-section>Settings</q-item-section>
+              </q-item>
+              <q-item clickable v-ripple @click="openAbout">
+                <q-item-section>About</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
+        <AppConfigDialog v-model="showConfigDialog" />
+        <AboutDialog v-model="showAboutDialog" />
       </q-toolbar>
     </q-header>
 
@@ -48,11 +86,16 @@ import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
 import { useDayOrganiser } from '../modules/day-organiser';
 import GroupSelectHeader from 'src/components/GroupSelectHeader.vue';
+import AppConfigDialog from 'src/components/AppConfigDialog.vue';
+import AboutDialog from 'src/components/AboutDialog.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
 const now = ref(new Date());
 let clockTimer: any = null;
+const showConfigDialog = ref(false);
+const showAboutDialog = ref(false);
+const menuOpen = ref(false);
 
 onMounted(() => {
   clockTimer = setInterval(() => {
@@ -127,6 +170,22 @@ function refreshNotifications() {
   } catch (e) {
     // ignore
   }
+}
+
+function handleConnectionClick() {
+  // trigger an immediate connection check and close menu
+  updateOnlineStatus();
+  menuOpen.value = false;
+}
+
+function openSettings() {
+  showConfigDialog.value = true;
+  menuOpen.value = false;
+}
+
+function openAbout() {
+  showAboutDialog.value = true;
+  menuOpen.value = false;
 }
 
 onUnmounted(() => {
