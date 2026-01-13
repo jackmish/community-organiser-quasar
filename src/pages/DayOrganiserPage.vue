@@ -124,6 +124,7 @@
               "
               @close="clearTaskToEdit"
               @toggle-status="(t, i) => toggleStatus(t, i)"
+              @update-task="(t) => handleUpdateTask(t)"
             />
           </div>
           <div v-else>

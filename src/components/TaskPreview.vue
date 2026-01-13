@@ -7,12 +7,23 @@
         <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
       </div>
       <div>
-        <div class="text-caption text-grey-7 q-mb-sm preview-datetime">
-          <span class="preview-date">{{ displayDate }}</span>
-          <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
-          <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{
-            eventTimeHoursDisplay
-          }}</span>
+        <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">
+          <div class="text-caption text-grey-7 preview-datetime">
+            <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{ displayDate }}</span>
+            <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
+            <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{ eventTimeHoursDisplay }}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <q-chip
+              size="sm"
+              :style="{
+                backgroundColor: priorityColor(task.priority),
+                color: priorityTextColor(task.priority),
+              }"
+              >{{ task.priority }}</q-chip
+            >
+            <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{ groupName }}</q-chip>
+          </div>
         </div>
 
         <div>
@@ -34,18 +45,16 @@
           </div>
         </div>
 
-        <div class="q-mt-md">
-          <q-chip
-            size="sm"
-            :style="{
-              backgroundColor: priorityColor(task.priority),
-              color: priorityTextColor(task.priority),
-            }"
-            >{{ task.priority }}</q-chip
-          >
-          <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{
-            groupName
-          }}</q-chip>
+        <div v-if="(task.type_id || '') === 'Todo'" class="q-mt-sm" style="display:flex;gap:8px;align-items:center">
+          <q-input
+            dense
+            outlined
+            placeholder="Quick add subtask"
+            v-model="quickSubtask"
+            @keyup.enter="addQuickSubtask"
+            style="flex:1;"
+          />
+          <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
         </div>
       </div>
     </q-card-section>
@@ -53,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRaw } from 'vue';
+import { computed, toRaw, ref, nextTick } from 'vue';
 import { format } from 'date-fns';
 import {
   priorityColors,
@@ -65,7 +74,24 @@ import {
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string }>();
-const emit = defineEmits(['edit', 'close', 'toggle-status']);
+const emit = defineEmits(['edit', 'close', 'toggle-status', 'update-task']);
+
+// Quick-add subtask helper
+const quickSubtask = ref('');
+
+function addQuickSubtask() {
+  const text = (quickSubtask.value || '').trim();
+  if (!text) return;
+  const cur = props.task.description || '';
+  const needsNewline = cur !== '' && !cur.endsWith('\n');
+  const updated = `${cur}${needsNewline ? '\n' : ''}- ${text}`;
+  const newTask = { ...(toRaw(props.task) as any), description: updated } as Task;
+  emit('update-task', newTask);
+  quickSubtask.value = '';
+  nextTick(() => {
+    // no-op; parent will handle re-render
+  });
+}
 
 // preview card style: 8px blue border to match AddTaskForm style
 const previewCardStyle = computed(() => ({
@@ -78,6 +104,8 @@ const priorityColor = (p?: string) => {
 };
 
 const groupName = computed(() => props.groupName || '');
+
+const isTimeEvent = computed(() => (props.task?.type_id || '') === 'TimeEvent');
 
 // Rendered description with simple replacements:
 // - replace '[x]' with a check emoji
@@ -298,6 +326,12 @@ function buildHtmlFromParsed(
   font-size: 1.05rem;
   font-weight: 600;
   margin-left: 4px;
+}
+
+.preview-date.insignificant {
+  color: #9e9e9e;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 /* Reduce spacing and line-height for todo subtask list in preview */
