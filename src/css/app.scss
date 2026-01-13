@@ -176,6 +176,10 @@ body .q-dialog ::v-deep input[type='color'] {
   -webkit-text-fill-color: #ffffff !important;
 }
 
+.q-dialog .q-field__native {
+  color: #fff !important;
+}
+
 /* Centralized border: replace Quasar's default outlined pseudo-element */
 .q-field--outlined .q-field__control::before {
   border: 1px solid rgba(255, 255, 255, 0.32) !important;
@@ -203,7 +207,7 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 .q-field--outlined .q-field__control:before,
 .q-field--outlined .q-field__control::after,
 .q-field--outlined .q-field__control:after {
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(155, 255, 155, 0.75) !important;
   background: transparent !important;
   box-shadow: none !important;
 }
@@ -211,14 +215,15 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 .q-field--outlined .q-field__control:hover::before,
 .q-field--outlined .q-field__control:hover:before,
 .q-field--outlined.q-focused .q-field__control::before {
-  border-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(155, 255, 155, 0.15) !important;
 }
 /* TASK-LIST BLUE applied to the q-field container (keeps native inputs transparent) */
 /* Do NOT touch .q-menu or .q-select__popup (expanded options) */
 html body .q-select .q-field,
 html body .group-select--header .q-field,
 html body .q-dialog .q-card .q-field,
-html body .q-dialog__inner .q-field {
+html body .q-dialog__inner .q-field,
+.q-select {
   background: #26b !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
