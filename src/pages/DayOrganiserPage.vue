@@ -101,7 +101,7 @@
             :selected-date="newTask.eventDate"
             :tasks="allTasks"
             @update:selected-date="handleCalendarDateSelect"
-            @preview-task="setPreviewTask"
+            @preview-task="handleCalendarPreview"
             @edit-task="handleCalendarEdit"
           />
         </div>
@@ -498,6 +498,7 @@ const {
   deleteGroup,
   getGroupsByParent,
   previewTaskId,
+  previewTaskPayload,
   setPreviewTask,
   undoCycleDone,
 } = useDayOrganiser();
@@ -560,10 +561,23 @@ watch(taskToEdit, (val) => {
 });
 
 function setTaskToEdit(task: Task) {
-  taskToEdit.value = task;
+  // If this is a cyclic/occurring task, attach the current visible date
+  // so the preview shows the occurrence date rather than the base creation date.
+  let toShow: Task = task;
+  try {
+    const cycle = getCycleType(task);
+    if (cycle) {
+      toShow = { ...(task as any) } as Task;
+      (toShow as any).date = currentDate.value;
+    }
+  } catch (e) {
+    // ignore and fall back to the original task
+  }
+
+  taskToEdit.value = toShow;
   // show preview when a task is clicked
   mode.value = 'preview';
-  selectedTaskId.value = task.id;
+  selectedTaskId.value = toShow.id;
 }
 
 function editTask(task: Task) {
@@ -634,12 +648,25 @@ watch(
       found = null;
     }
     if (found) {
-      taskToEdit.value = found;
+      // If this is a cyclic/occurring task, prefer to show it with the
+      // currently visible date so the preview displays the occurrence.
+      let toShow: Task = found;
+      try {
+        const cycle = getCycleType(found as any);
+        if (cycle) {
+          toShow = { ...(found as any) } as Task;
+          (toShow as any).date = currentDate.value;
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      taskToEdit.value = toShow;
       mode.value = 'preview';
-      selectedTaskId.value = found.id;
+      selectedTaskId.value = toShow.id;
       // also ensure the calendar/date syncs to the task date
       try {
-        setCurrentDate(found.date || found.eventDate || null);
+        setCurrentDate((toShow as any).date || toShow.eventDate || null);
       } catch (e) {
         // ignore
       }
@@ -652,6 +679,62 @@ watch(
     }
   },
 );
+
+// If a payload was provided (e.g. from notifications) use it to preview the task
+watch(
+  () => previewTaskPayload && (previewTaskPayload as any).value,
+  (payload) => {
+    if (!payload) return;
+    try {
+      handleCalendarPreview(payload);
+    } catch (e) {
+      // ignore
+    }
+    // clear payload after handling
+    try {
+      setPreviewTask(null);
+    } catch (e) {
+      void 0;
+    }
+  },
+);
+
+// Handle preview event from calendar (may pass either id string or full event object)
+function handleCalendarPreview(payload: any) {
+  if (!payload) return;
+  let found: Task | null = null;
+  try {
+    if (typeof payload === 'string' || typeof payload === 'number') {
+      const sid = String(payload);
+      found = (allTasks.value || []).find((t) => t.id === sid) || null;
+    } else if (payload && payload.id) {
+      // Prefer to find canonical task by id and then attach occurrence date
+      const sid = String(payload.id);
+      const base = (allTasks.value || []).find((t) => t.id === sid) || null;
+      if (base) {
+        // shallow clone and attach occurrence date if provided
+        found = { ...(base as any) } as Task;
+        const occ = payload.date || payload._date || payload._dateStr || payload.eventDate;
+        if (occ) (found as any).date = occ;
+      } else {
+        // fallback to using payload as the task object
+        found = payload as Task;
+      }
+    }
+  } catch (e) {
+    found = null;
+  }
+  if (found) {
+    taskToEdit.value = found;
+    mode.value = 'preview';
+    selectedTaskId.value = found.id;
+    try {
+      setCurrentDate((found as any).date || found.date || found.eventDate || null);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
 
 // Refs for date inputs
 const dayInput = ref<any>(null);

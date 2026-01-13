@@ -23,6 +23,8 @@ const isLoading = ref(false);
 const currentDate = ref(formatDate(new Date()));
 // Optional preview request: a component can request a task preview by id
 const previewTaskId = ref<string | null>(null);
+// Optional preview payload: may include occurrence date for cyclic tasks
+const previewTaskPayload = ref<Record<string, unknown> | null>(null);
 // Shared active group selection across pages/components
 const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 
@@ -588,9 +590,25 @@ export function useDayOrganiser() {
     prevDay,
 
     // Preview helper
+    // Preview helper: supports either an id string or a payload object { id, date, ... }
     previewTaskId: computed(() => previewTaskId.value),
-    setPreviewTask: (id: string | null) => {
-      previewTaskId.value = id;
+    previewTaskPayload: computed(() => previewTaskPayload.value),
+    setPreviewTask: (payload: string | number | Record<string, unknown> | null) => {
+      if (payload == null) {
+        previewTaskId.value = null;
+        previewTaskPayload.value = null;
+        return;
+      }
+      if (typeof payload === 'string' || typeof payload === 'number') {
+        previewTaskId.value = String(payload);
+        previewTaskPayload.value = null;
+        return;
+      }
+      // object payload -> store both id and payload
+      const p = payload;
+      const pid = p['id'];
+      previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
+      previewTaskPayload.value = p;
     },
 
     // Utils

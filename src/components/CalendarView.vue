@@ -247,7 +247,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selectedDate', value: string): void;
-  (e: 'preview-task', id: string | null): void;
+  (e: 'preview-task', payload: any): void;
   (e: 'edit-task', id: string | null): void;
 }>();
 
@@ -267,7 +267,8 @@ function onEventPointerUp(task: any) {
   try {
     // If long-press wasn't triggered, treat as a short click -> preview
     if (!longPressTriggered.value) {
-      emit('preview-task', task?.id ?? null);
+      // Emit the full task/event object (includes `date` when coming from getEventsForDay)
+      emit('preview-task', task ?? null);
     }
   } catch (e) {
     // ignore
@@ -774,13 +775,14 @@ function isWeekend(day: string) {
 
 function getEventsForDay(day: string) {
   if (!props.tasks || !props.tasks.length) return [];
-  return props.tasks.filter((t: any) => {
-    // Exclude Replenishment and simple TODO tasks from calendar display
-    // TODO items are not calendar events (they belong to the day list)
-    if (t.type_id === 'Replenish' || t.type_id === 'Todo') return false;
-    // Include explicit-dated events (TimeEvent) and any tasks that occur cyclically on this day
-    return occursOnDay(t, day);
-  });
+  // Return a shallow copy of matching tasks and attach the occurrence `date` so
+  // callers (preview/edit) receive the specific instance date for cyclic events.
+  return props.tasks
+    .filter((t: any) => {
+      if (t.type_id === 'Replenish' || t.type_id === 'Todo') return false;
+      return occursOnDay(t, day);
+    })
+    .map((t: any) => ({ ...t, date: day }));
 }
 </script>
 

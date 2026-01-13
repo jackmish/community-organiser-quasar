@@ -191,7 +191,8 @@ function onClickEvent(ev: any) {
     // ignore
   }
   try {
-    setPreviewTask(ev.id || null);
+    // Pass the full event payload so viewers can use the occurrence date for cyclic events
+    setPreviewTask(ev || null);
   } catch (e) {
     // ignore
   }
