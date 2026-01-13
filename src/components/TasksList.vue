@@ -38,7 +38,16 @@
                 <q-item-label
                   :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
                 >
-                  <strong>{{ task.name }}</strong>
+                  <strong>
+                    <template v-if="(task.type_id || task.type) === 'Todo'">
+                      <span v-if="countTodoSubtasks(task).total > 0">
+                        ({{ countTodoSubtasks(task).done }}/{{
+                          countTodoSubtasks(task).total
+                        }})&nbsp;
+                      </span>
+                    </template>
+                    {{ task.name }}
+                  </strong>
                 </q-item-label>
               </div>
               <div class="title-checkbox">
@@ -121,7 +130,16 @@
                 <q-item-label
                   :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
                 >
-                  <strong>{{ task.name }}</strong>
+                  <strong>
+                    <template v-if="(task.type_id || task.type) === 'Todo'">
+                      <span v-if="countTodoSubtasks(task).total > 0">
+                        ({{ countTodoSubtasks(task).done }}/{{
+                          countTodoSubtasks(task).total
+                        }})&nbsp;
+                      </span>
+                    </template>
+                    {{ task.name }}
+                  </strong>
                 </q-item-label>
               </div>
               <div class="title-checkbox">
@@ -292,6 +310,31 @@ const getDisplayDescription = (task: any) => {
     return remainder || '';
   }
   return desc;
+};
+
+const countTodoSubtasks = (task: any) => {
+  const desc = (task?.description || '') + '';
+  if (!desc) return { done: 0, total: 0 };
+  const lines = desc.split(/\r?\n/);
+  let total = 0;
+  let done = 0;
+  // Treat hyphen/numbered list items as checklist lines. A list item may
+  // include an explicit checkbox ([ ], [x], [✓]) or omit the brackets entirely.
+  // Match leading bullet/number, optionally followed by a checkbox; capture the
+  // checkbox mark if present.
+  const listItemRe = /^\s*(?:[-*+]|(?:\d+[.)]))\s*(?:\[\s*([^\]\s])?\s*\])?/;
+  for (const l of lines) {
+    const m = l.match(listItemRe);
+    if (m) {
+      total += 1;
+      const mark = m[1];
+      if (mark) {
+        const lower = mark.toLowerCase();
+        if (lower === 'x' || mark === '✓' || mark === '✔' || mark === '☑') done += 1;
+      }
+    }
+  }
+  return { done, total };
 };
 
 const itemStyle = (task: any) => {
