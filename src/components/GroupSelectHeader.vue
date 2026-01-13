@@ -160,8 +160,9 @@ const onChange = (val: any) => {
 
 .group-select--header ::v-deep .q-field__label,
 .group-select--header ::v-deep .q-select__input,
-.group-select--header ::v-deep .q-item__label,
-.group-select--header ::v-deep .q-field__native {
+.group-select--header ::v-deep input,
+.group-select--header ::v-deep textarea,
+.group-select--header ::v-deep .q-item__label {
   color: #ffffff !important;
 }
 
@@ -173,7 +174,7 @@ const onChange = (val: any) => {
 
 /* ensure dropdown items in the menu are readable on dark header */
 .group-select--header ::v-deep .q-menu .q-item__label {
-  color: #000 !important;
+  color: #ffffff !important;
 }
 
 /* Extra overrides for stubborn outlined borders and pseudo-elements */
@@ -181,8 +182,6 @@ const onChange = (val: any) => {
 .group-select--header ::v-deep .q-select__control,
 .group-select--header ::v-deep .q-field--outlined .q-field__control,
 .group-select--header ::v-deep .q-select--outlined .q-field__control {
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(255, 255, 255, 0.95) !important;
   box-shadow: none !important;
   background: transparent !important;
 }
@@ -193,7 +192,9 @@ const onChange = (val: any) => {
   background: transparent !important;
 }
 
-.group-select--header ::v-deep .q-field__native {
+.group-select--header ::v-deep input,
+.group-select--header ::v-deep textarea,
+.group-select--header ::v-deep .q-select__input {
   color: #ffffff !important;
 }
 </style>

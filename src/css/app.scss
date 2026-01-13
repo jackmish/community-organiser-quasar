@@ -18,6 +18,8 @@
   color: #ffffff !important;
 }
 
+/* (removed accidental global black default for native fields) */
+
 /* Make menu item hover/desaturate when the menu is hovered; keep hover darker
    (instead of brighter). Scoping to `.q-menu:hover` prevents hover styles
    from persisting when the mouse leaves the menu container. */
@@ -112,7 +114,7 @@
   -webkit-filter: none !important;
   mix-blend-mode: normal !important;
   opacity: 1 !important;
-  border-color: transparent !important;
+  /* border handled centrally */
 }
 
 /* Ensure inner label sections and icons inherit white color when active */
@@ -156,10 +158,12 @@
   color: #ffffff !important;
 }
 
-.q-dialog .q-card ::v-deep .q-field__native,
 .q-dialog .q-card ::v-deep input,
-.q-dialog__inner ::v-deep .q-field__native,
-.q-dialog__inner ::v-deep input {
+.q-dialog .q-card ::v-deep textarea,
+.q-dialog .q-card ::v-deep .q-select__input,
+.q-dialog__inner ::v-deep input,
+.q-dialog__inner ::v-deep textarea,
+.q-dialog__inner ::v-deep .q-select__input {
   color: #ffffff !important;
 }
 
@@ -175,13 +179,11 @@
 
 .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control,
 .q-dialog__inner ::v-deep .q-field--outlined .q-field__control {
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  /* borders centralized */
 }
 
 .q-dialog .q-card ::v-deep .q-field--focused .q-field__control,
 .q-dialog__inner ::v-deep .q-field--focused .q-field__control {
-  border-color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: none !important;
 }
 
 /* Color picker input (native color input) - make surrounding label white */
@@ -206,19 +208,27 @@
 
 /* Target field internals explicitly (native, prefix, suffix, input) inside
    dialogs, menus and select popups so they use white text and light borders. */
-.q-dialog .q-card ::v-deep .q-field__native,
+.q-dialog .q-card ::v-deep input,
+.q-dialog .q-card ::v-deep textarea,
+.q-dialog .q-card ::v-deep .q-select__input,
 .q-dialog .q-card ::v-deep .q-field__prefix,
 .q-dialog .q-card ::v-deep .q-field__suffix,
 .q-dialog .q-card ::v-deep .q-field__input,
-.q-dialog__inner ::v-deep .q-field__native,
+.q-dialog__inner ::v-deep input,
+.q-dialog__inner ::v-deep textarea,
+.q-dialog__inner ::v-deep .q-select__input,
 .q-dialog__inner ::v-deep .q-field__prefix,
 .q-dialog__inner ::v-deep .q-field__suffix,
 .q-dialog__inner ::v-deep .q-field__input,
-.q-menu ::v-deep .q-field__native,
+.q-menu ::v-deep input,
+.q-menu ::v-deep textarea,
+.q-menu ::v-deep .q-select__input,
 .q-menu ::v-deep .q-field__prefix,
 .q-menu ::v-deep .q-field__suffix,
 .q-menu ::v-deep .q-field__input,
-.q-select__popup ::v-deep .q-field__native,
+.q-select__popup ::v-deep input,
+.q-select__popup ::v-deep textarea,
+.q-select__popup ::v-deep .q-select__input,
 .q-select__popup ::v-deep .q-field__prefix,
 .q-select__popup ::v-deep .q-field__suffix,
 .q-select__popup ::v-deep .q-field__input {
@@ -229,12 +239,18 @@
 }
 
 /* Placeholder text for the native field internals */
-.q-dialog .q-card ::v-deep .q-field__native::placeholder,
-.q-dialog__inner ::v-deep .q-field__native::placeholder,
-.q-menu ::v-deep .q-field__native::placeholder,
-.q-select__popup ::v-deep .q-field__native::placeholder,
 .q-dialog .q-card ::v-deep input::placeholder,
-.q-dialog__inner ::v-deep input::placeholder {
+.q-dialog .q-card ::v-deep textarea::placeholder,
+.q-dialog .q-card ::v-deep .q-select__input::placeholder,
+.q-dialog__inner ::v-deep input::placeholder,
+.q-dialog__inner ::v-deep textarea::placeholder,
+.q-dialog__inner ::v-deep .q-select__input::placeholder,
+.q-menu ::v-deep input::placeholder,
+.q-menu ::v-deep textarea::placeholder,
+.q-menu ::v-deep .q-select__input::placeholder,
+.q-select__popup ::v-deep input::placeholder,
+.q-select__popup ::v-deep textarea::placeholder,
+.q-select__popup ::v-deep .q-select__input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -255,7 +271,7 @@
 .q-dialog__inner ::v-deep .q-field--outlined .q-field__control,
 .q-menu ::v-deep .q-field--outlined .q-field__control,
 .q-select__popup ::v-deep .q-field--outlined .q-field__control {
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  /* borders centralized */
 }
 
 /* Strongest possible overrides for dialog inputs (q-input/q-field) to
@@ -268,12 +284,12 @@
 }
 
 /* Native input/textarea inside q-field */
-.q-dialog .q-card ::v-deep .q-field__native,
 .q-dialog .q-card ::v-deep input,
 .q-dialog .q-card ::v-deep textarea,
-.q-dialog__inner ::v-deep .q-field__native,
+.q-dialog .q-card ::v-deep .q-select__input,
 .q-dialog__inner ::v-deep input,
-.q-dialog__inner ::v-deep textarea {
+.q-dialog__inner ::v-deep textarea,
+.q-dialog__inner ::v-deep .q-select__input {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
@@ -301,7 +317,6 @@
 .q-dialog .q-card ::v-deep .q-input__control,
 .q-dialog__inner ::v-deep .q-field__control,
 .q-dialog__inner ::v-deep .q-input__control {
-  border-color: rgba(255, 255, 255, 0.32) !important;
   box-shadow: none !important;
   background: transparent !important;
 }
@@ -309,7 +324,7 @@
 /* Focused outline for inputs inside dialog */
 .q-dialog .q-card ::v-deep .q-field--focused .q-field__control,
 .q-dialog__inner ::v-deep .q-field--focused .q-field__control {
-  border-color: rgba(255, 255, 255, 0.9) !important;
+  /* focused outline centralized */
 }
 
 /* Ensure select/input icons inside dialog are white */
@@ -329,9 +344,9 @@
    select internals with very specific selectors so black text/borders are
    replaced by white theme colors. Keep these at the end to maximize precedence. */
 .q-dialog .q-card ::v-deep .q-field__control,
-.q-dialog .q-card ::v-deep .q-field__native,
 .q-dialog .q-card ::v-deep input,
 .q-dialog .q-card ::v-deep textarea,
+.q-dialog .q-card ::v-deep .q-select__input,
 .q-dialog .q-card ::v-deep .q-select__dropdown,
 .q-dialog .q-card ::v-deep .q-select__control {
   background-color: transparent !important;
@@ -339,10 +354,9 @@
   caret-color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
-
-.q-dialog .q-card ::v-deep .q-field__native::placeholder,
 .q-dialog .q-card ::v-deep input::placeholder,
-.q-dialog .q-card ::v-deep textarea::placeholder {
+.q-dialog .q-card ::v-deep textarea::placeholder,
+.q-dialog .q-card ::v-deep .q-select__input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -355,7 +369,7 @@
 .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control,
 .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control:focus,
 .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control:hover {
-  border-color: rgba(255, 255, 255, 0.32) !important;
+  /* borders centralized */
 }
 
 .q-dialog .q-card ::v-deep .q-select__dropdown .q-item,
@@ -375,20 +389,28 @@
 /* Highest-specificity overrides for q-field internals to ensure white text,
    placeholders and light borders inside dialogs, menus and popups. These
    selectors are body-scoped and placed at the end to win over other rules. */
-body .q-dialog .q-card ::v-deep .q-field__native,
+body .q-dialog .q-card ::v-deep input,
+body .q-dialog .q-card ::v-deep textarea,
+body .q-dialog .q-card ::v-deep .q-select__input,
 body .q-dialog .q-card ::v-deep .q-field__prefix,
 body .q-dialog .q-card ::v-deep .q-field__suffix,
 body .q-dialog .q-card ::v-deep .q-field__input,
 body .q-dialog .q-card ::v-deep .q-field__control,
-body .q-dialog__inner ::v-deep .q-field__native,
+body .q-dialog__inner ::v-deep input,
+body .q-dialog__inner ::v-deep textarea,
+body .q-dialog__inner ::v-deep .q-select__input,
 body .q-dialog__inner ::v-deep .q-field__prefix,
 body .q-dialog__inner ::v-deep .q-field__suffix,
 body .q-dialog__inner ::v-deep .q-field__input,
-body .q-menu ::v-deep .q-field__native,
+body .q-menu ::v-deep input,
+body .q-menu ::v-deep textarea,
+body .q-menu ::v-deep .q-select__input,
 body .q-menu ::v-deep .q-field__prefix,
 body .q-menu ::v-deep .q-field__suffix,
 body .q-menu ::v-deep .q-field__input,
-body .q-select__popup ::v-deep .q-field__native,
+body .q-select__popup ::v-deep input,
+body .q-select__popup ::v-deep textarea,
+body .q-select__popup ::v-deep .q-select__input,
 body .q-select__popup ::v-deep .q-field__prefix,
 body .q-select__popup ::v-deep .q-field__suffix,
 body .q-select__popup ::v-deep .q-field__input {
@@ -399,12 +421,18 @@ body .q-select__popup ::v-deep .q-field__input {
 }
 
 /* Placeholders */
-body .q-dialog .q-card ::v-deep .q-field__native::placeholder,
-body .q-dialog__inner ::v-deep .q-field__native::placeholder,
-body .q-menu ::v-deep .q-field__native::placeholder,
-body .q-select__popup ::v-deep .q-field__native::placeholder,
 body .q-dialog .q-card ::v-deep input::placeholder,
-body .q-dialog__inner ::v-deep input::placeholder {
+body .q-dialog .q-card ::v-deep textarea::placeholder,
+body .q-dialog .q-card ::v-deep .q-select__input::placeholder,
+body .q-dialog__inner ::v-deep input::placeholder,
+body .q-dialog__inner ::v-deep textarea::placeholder,
+body .q-dialog__inner ::v-deep .q-select__input::placeholder,
+body .q-menu ::v-deep input::placeholder,
+body .q-menu ::v-deep textarea::placeholder,
+body .q-menu ::v-deep .q-select__input::placeholder,
+body .q-select__popup ::v-deep input::placeholder,
+body .q-select__popup ::v-deep textarea::placeholder,
+body .q-select__popup ::v-deep .q-select__input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -423,7 +451,7 @@ body .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control,
 body .q-dialog__inner ::v-deep .q-field--outlined .q-field__control,
 body .q-menu ::v-deep .q-field--outlined .q-field__control,
 body .q-select__popup ::v-deep .q-field--outlined .q-field__control {
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  /* centralized border rule is defined once at file end */
 }
 
 /* Ensure input icons are white and no dark shadows remain */
@@ -435,9 +463,9 @@ body .q-select__popup ::v-deep .q-icon {
 
 /* Inputs inside menus/dialogs should have white text */
 .q-menu ::v-deep input,
+.q-menu ::v-deep textarea,
 .q-dialog ::v-deep input,
-.q-menu ::v-deep .q-field__native,
-.q-dialog ::v-deep .q-field__native {
+.q-dialog ::v-deep textarea {
   color: #ffffff !important;
 }
 
@@ -528,22 +556,22 @@ body.desktop .q-menu__content .q-focus-helper,
 }
 
 /* Native input text */
-.q-menu ::v-deep .q-field__native,
-.q-select__popup ::v-deep .q-field__native,
-.q-dialog__inner ::v-deep .q-field__native,
 .q-menu ::v-deep input,
+.q-menu ::v-deep textarea,
+.q-menu ::v-deep .q-select__input,
 .q-select__popup ::v-deep input,
-.q-dialog__inner ::v-deep input {
+.q-select__popup ::v-deep textarea,
+.q-select__popup ::v-deep .q-select__input,
+.q-dialog__inner ::v-deep input,
+.q-dialog__inner ::v-deep textarea,
+.q-dialog__inner ::v-deep .q-select__input {
   color: #ffffff !important;
 }
 
 /* Placeholder text */
 .q-menu ::v-deep input::placeholder,
 .q-select__popup ::v-deep input::placeholder,
-.q-dialog__inner ::v-deep input::placeholder,
-.q-menu ::v-deep .q-field__native::placeholder,
-.q-select__popup ::v-deep .q-field__native::placeholder,
-.q-dialog__inner ::v-deep .q-field__native::placeholder {
+.q-dialog__inner ::v-deep input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -564,14 +592,13 @@ body.desktop .q-menu__content .q-focus-helper,
 .q-menu ::v-deep .q-field--outlined .q-field__control,
 .q-select__popup ::v-deep .q-field--outlined .q-field__control,
 .q-dialog__inner ::v-deep .q-field--outlined .q-field__control {
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  /* borders centralized */
 }
 
 /* Focused fields: brighter border */
 .q-menu ::v-deep .q-field--focused .q-field__control,
 .q-select__popup ::v-deep .q-field--focused .q-field__control,
 .q-dialog__inner ::v-deep .q-field--focused .q-field__control {
-  border-color: rgba(255, 255, 255, 0.72) !important;
   box-shadow: none !important;
 }
 
@@ -586,71 +613,51 @@ body.desktop .q-menu__content .q-focus-helper,
    sets: `.q-field--outlined .q-field__control:before`. This duplicates
    class selectors and prefixes with `html body` to raise specificity and
    ensure the white border wins even if Quasar's rule appears later. */
-html body .q-field--outlined .q-field__control:before,
-html body .q-field--outlined .q-field__control::before,
-body .q-field--outlined.q-field--outlined .q-field__control:before,
-body .q-field--outlined.q-field--outlined .q-field__control::before,
-body .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control:before,
-body .q-dialog__inner ::v-deep .q-field--outlined .q-field__control:before {
-  border: 1px solid rgba(255, 255, 255, 0.32) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
+/* removed duplicate border rules above; centralized below */
 
 /* Extra highest-precedence overrides for specific internals observed in DevTools
    (input.q-field__native, div.q-field__native, q-select focus targets, color
    inputs). These use body-scoped selectors and !important so they win over
    inline styles applied at runtime. */
-body .q-dialog ::v-deep input.q-field__native,
-body .q-dialog ::v-deep div.q-field__native,
-body .q-dialog .q-card ::v-deep input.q-field__native,
-body .q-dialog .q-card ::v-deep div.q-field__native,
+
 body .q-dialog ::v-deep .q-select__focus-target,
 body .q-dialog ::v-deep input.q-select__focus-target,
-body .q-dialog ::v-deep input[type='color'],
-body .q-menu ::v-deep input.q-field__native,
-body .q-select__popup ::v-deep input.q-field__native {
+body .q-dialog ::v-deep input[type='color'] {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
   background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
   box-shadow: none !important;
   outline: none !important;
 }
 
 /* Ensure placeholders and native color inputs render correctly */
-body .q-dialog ::v-deep input.q-field__native::placeholder,
 body .q-dialog ::v-deep input::placeholder,
 body .q-dialog ::v-deep textarea::placeholder,
+body .q-dialog ::v-deep .q-select__input::placeholder,
 body .q-dialog ::v-deep input[type='color'] {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
 /* Ensure any row container used as a native field also shows white text */
-body .q-dialog ::v-deep .row.items-center.q-field__native {
+body .q-dialog ::v-deep .row.items-center input,
+body .q-dialog ::v-deep .row.items-center textarea,
+body .q-dialog ::v-deep .row.items-center .q-select__input {
   color: #ffffff !important;
 }
 
 /* FINAL: force the control element (which provides the visible border) to white
    - Targets the .q-field__control which often determines borderColor seen in DevTools
    - Placed at the absolute end for maximal precedence */
-body .q-dialog .q-field__control,
 body .q-dialog .q-field--outlined .q-field__control,
 body .q-dialog__inner .q-field__control,
 body .q-dialog__inner .q-field--outlined .q-field__control,
 body .q-dialog .q-field,
-body .q-dialog__inner .q-field,
-body .q-dialog .q-field__native,
-body .q-dialog__inner .q-field__native,
-body .q-dialog .q-field__native.q-placeholder,
-body .q-dialog input.q-field__native,
-body .q-dialog div.q-field__native {
+body .q-dialog__inner .q-field {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
   background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -668,8 +675,15 @@ body .q-dialog__inner .q-select {
 /* Focused/hovered control state */
 body .q-dialog .q-field--focused .q-field__control,
 body .q-dialog__inner .q-field--focused .q-field__control {
-  border-color: rgba(255, 255, 255, 0.9) !important;
   box-shadow: none !important;
+}
+
+/* Keep focused state visible but subtle: only show a thin outline on focus */
+html body .q-dialog ::v-deep .q-field--focused .q-field__control,
+html body .q-select ::v-deep .q-field--focused .q-field__control,
+html body .group-select--header ::v-deep .q-field--focused .q-field__control {
+  /* focus outline centralized if needed */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04) !important;
 }
 
 /* Mirror the working `group-select--header` approach for popups: force
@@ -681,13 +695,7 @@ html body .q-select__popup ::v-deep .q-field__control::after,
 html body .q-menu ::v-deep .q-field__control,
 html body .q-menu ::v-deep .q-field--outlined .q-field__control,
 html body .q-menu ::v-deep .q-field__control::before,
-html body .q-menu ::v-deep .q-field__control::after,
-html body .q-dialog .q-card ::v-deep .q-field__control,
-html body .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control,
-html body .q-dialog .q-card ::v-deep .q-field__control::before,
-html body .q-dialog .q-card ::v-deep .q-field__control::after {
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(255, 255, 255, 0.95) !important;
+html body .q-menu ::v-deep .q-field__control::after {
   box-shadow: none !important;
   background: transparent !important;
   color: #ffffff !important;
@@ -697,37 +705,60 @@ html body .q-dialog .q-card ::v-deep .q-field__control::after {
 html body .q-select__popup ::v-deep .q-field--outlined .q-field__control:hover::before,
 html body .q-menu ::v-deep .q-field--outlined .q-field__control:hover::before,
 html body .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control:hover::before {
-  border-color: rgba(255, 255, 255, 0.95) !important;
+  /* hover border centralized */
 }
 
 /* Override Quasar's outlined-field pseudo-element border which draws the
    visible outline. Replace the default black-ish border with a white one. */
-body .q-dialog .q-card ::v-deep .q-field--outlined .q-field__control::before,
-body .q-dialog__inner ::v-deep .q-field--outlined .q-field__control::before,
-body .q-menu ::v-deep .q-field--outlined .q-field__control::before,
-body .q-select__popup ::v-deep .q-field--outlined .q-field__control::before,
-::v-deep .q-field--outlined .q-field__control::before,
+/* pseudo-element border handled by centralized rule at file end */
+
+/* RESET: remove redundant borders from native fields and controls.
+   This global override avoids duplicating many border rules above and
+   ensures inputs/controls render without heavy borders while preserving
+   focused outlines where necessary. */
+body .q-dialog .q-card ::v-deep .q-field__control,
+body .q-dialog ::v-deep input,
+body .q-dialog ::v-deep textarea,
+body .q-dialog ::v-deep .q-select__input,
+body .q-select ::v-deep .q-field__control,
+body .q-select ::v-deep .q-select__control,
+.group-select--header ::v-deep .q-field__control,
+.group-select--header ::v-deep .q-select__control {
+  border: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  /* native field color is controlled by contextual overrides (dialogs/menus/header) */
+}
+
+/* rely on existing contextual overrides to set white text inside dialogs/menus/header */
+
+/* Ensure native internals use white inside popups/dialogs/headers. This explicitly
+   targets Quasar's `.q-field__native` and `.q-field__input` elements with high
+   specificity so they render white on dark backgrounds. Do NOT set borders here. */
+html body .q-dialog .q-card ::v-deep .q-field__native,
+html body .q-dialog .q-card ::v-deep .q-field__input,
+html body .q-dialog__inner ::v-deep .q-field__native,
+html body .q-dialog__inner ::v-deep .q-field__input,
+html body .q-select__popup ::v-deep .q-field__native,
+html body .q-select__popup ::v-deep .q-field__input,
+html body .q-menu ::v-deep .q-field__native,
+html body .q-menu ::v-deep .q-field__input,
+html body .group-select--header ::v-deep .q-field__native,
+html body .group-select--header ::v-deep .q-field__input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* Ensure grouped select choices and any nested native fields in the popup are white */
+.q-header .q-field__native .ellipsis {
+  color: #fff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .q-field--outlined .q-field__control::before {
   border: 1px solid rgba(255, 255, 255, 0.32) !important;
   background: transparent !important;
   box-shadow: none !important;
-}
-
-/* Explicit visible border for native inputs: force a white border on the
-   actual input element so computed styles no longer report a black border. */
-body .q-dialog ::v-deep input.q-field__native,
-body .q-dialog ::v-deep input.q-field__native.q-placeholder,
-body .q-dialog .q-card ::v-deep input.q-field__native,
-body .q-dialog .q-card ::v-deep div.q-field__native,
-body .q-dialog ::v-deep input,
-body .q-select__popup ::v-deep input.q-field__native,
-body .q-menu ::v-deep input.q-field__native {
-  border: 1px solid rgba(255, 255, 255, 0.32) !important;
-  border-style: solid !important;
-  border-width: 1px !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  outline: none !important;
 }

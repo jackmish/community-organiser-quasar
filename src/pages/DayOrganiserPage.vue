@@ -1821,7 +1821,9 @@ onMounted(async () => {
 }
 
 /* Compact the selected value/control vertically */
-.task-list-header .group-select-wrapper .q-field__native {
+.task-list-header .group-select-wrapper input,
+.task-list-header .group-select-wrapper textarea,
+.task-list-header .group-select-wrapper .q-select__input {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }

@@ -75,6 +75,11 @@ export default defineConfig((/* ctx */) => {
           { server: false },
         ],
       ],
+      extendViteConf(viteConf) {
+        viteConf.css = viteConf.css || {};
+        // enable CSS dev sourcemaps so browser inspector can map rules back to SCSS files
+        (viteConf.css as any).devSourcemap = true;
+      },
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
