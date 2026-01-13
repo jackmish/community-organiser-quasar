@@ -58,7 +58,11 @@ function save() {
   }
   dialogVisible.value = false;
   try {
-    window.dispatchEvent(new CustomEvent('app:config:changed', { detail: { notifications: notifications.value, darkMode: darkMode.value } }));
+    window.dispatchEvent(
+      new CustomEvent('app:config:changed', {
+        detail: { notifications: notifications.value, darkMode: darkMode.value },
+      }),
+    );
   } catch (e) {
     // ignore
   }

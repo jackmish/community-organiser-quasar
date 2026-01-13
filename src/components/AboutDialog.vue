@@ -7,9 +7,7 @@
       </q-card-section>
 
       <q-card-section class="q-pt-sm">
-        <div>
-          A lightweight community organiser app.
-        </div>
+        <div>A lightweight community organiser app.</div>
       </q-card-section>
 
       <q-card-actions align="right">
