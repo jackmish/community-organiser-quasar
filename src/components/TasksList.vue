@@ -505,7 +505,7 @@ function confirmDelete(id: string) {
 }
 /* ensure truncation applies in title rows */
 .title-row .task-desc {
-  max-width: calc(100% - 40px);
+  max-width: calc(100%);
 }
 .priority-left {
   vertical-align: middle;
