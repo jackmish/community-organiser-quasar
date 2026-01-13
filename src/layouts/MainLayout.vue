@@ -19,35 +19,18 @@
           </div>
         </q-toolbar-title>
 
-        <q-chip
-          :color="isOnline ? 'positive' : 'negative'"
-          text-color=""
-          :icon="isOnline ? 'wifi' : 'wifi_off'"
-          size="sm"
-          :clickable="!isOnline"
-          @click="!isOnline && updateOnlineStatus()"
-          style="position: relative; z-index: 3"
-        >
-        </q-chip>
-
-        <q-btn
-          v-if="!isOnline"
-          flat
-          dense
-          color="white"
-          label="Connect"
-          icon=""
-          @click="updateOnlineStatus"
-        />
-        <!-- Refresh button positioned behind the online status chip; currently triggers data reload -->
-
+        <!-- Refresh button with connection status border -->
         <q-btn
           flat
           dense
           round
           icon="refresh"
-          title="Refresh notifications"
-          style="opacity: 0.95"
+          :title="isOnline ? 'Refresh notifications (Online)' : 'Refresh notifications (Offline)'"
+          :style="{
+            opacity: 0.95,
+            border: `2px solid var(--q-${isOnline ? 'positive' : 'negative'})`,
+            borderRadius: '50%',
+          }"
           @click="refreshNotifications"
         />
       </q-toolbar>
