@@ -1,5 +1,5 @@
 <template>
-  <q-card class="q-mb-md" :style="previewCardStyle">
+  <q-card class="q-mb-md task-preview" :style="previewCardStyle">
     <q-card-section>
       <!-- header: title on left, copy on right -->
       <div class="row items-center justify-between q-mb-sm">
@@ -298,5 +298,23 @@ function buildHtmlFromParsed(
   font-size: 1.05rem;
   font-weight: 600;
   margin-left: 4px;
+}
+
+/* Reduce spacing and line-height for todo subtask list in preview */
+.task-preview .q-item {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+.task-preview .q-item .q-item-section {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.task-preview .q-item .q-item-section div {
+  line-height: 1.15 !important;
+  font-size: 13px;
+}
+.task-preview .q-mb-xs {
+  margin-bottom: 6px !important;
+  line-height: 1.15 !important;
 }
 </style>
