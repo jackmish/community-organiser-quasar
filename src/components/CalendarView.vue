@@ -775,8 +775,9 @@ function isWeekend(day: string) {
 function getEventsForDay(day: string) {
   if (!props.tasks || !props.tasks.length) return [];
   return props.tasks.filter((t: any) => {
-    // Exclude Replenishment tasks from calendar display
-    if (t.type_id === 'Replenish') return false;
+    // Exclude Replenishment and simple TODO tasks from calendar display
+    // TODO items are not calendar events (they belong to the day list)
+    if (t.type_id === 'Replenish' || t.type_id === 'Todo') return false;
     // Include explicit-dated events (TimeEvent) and any tasks that occur cyclically on this day
     return occursOnDay(t, day);
   });

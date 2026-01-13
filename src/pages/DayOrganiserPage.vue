@@ -1305,7 +1305,13 @@ const handleUpdateTask = async (updatedTask: any) => {
     selectedTaskId.value = id;
     // ensure current date syncs to the task's date
     try {
-      setCurrentDate((updated as any).date || (updated as any).eventDate || null);
+      // Do not change the active calendar day when updating a simple 'Todo' task
+      // or when updating a cyclic task instance. Only sync the current date
+      // for actual calendar events (non-cyclic, non-Todo).
+      const isCyclicUpdated = Boolean(getCycleType(updated));
+      if ((updated as any).type_id !== 'Todo' && !isCyclicUpdated) {
+        setCurrentDate((updated as any).date || (updated as any).eventDate || null);
+      }
     } catch (e) {
       // ignore
     }
