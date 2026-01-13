@@ -94,6 +94,8 @@ const weekDayOptions = [
   { label: 'Sun', value: 'sun' },
 ];
 const repeatDays = ref<string[]>([]);
+// Interval in days for month/year cycle types (optional)
+const repeatIntervalDays = ref<number | null>(null);
 
 function checkAllDays() {
   repeatDays.value = weekDayOptions.map((o) => o.value);
@@ -499,6 +501,14 @@ watch(
           repeatMode.value = 'cyclic';
           repeatCycleType.value = val.repeat.cycleType || 'dayWeek';
           repeatDays.value = Array.isArray(val.repeat.days) ? [...val.repeat.days] : [];
+          // load interval days if present
+          try {
+            if (typeof val.repeat.intervalDays === 'number')
+              repeatIntervalDays.value = val.repeat.intervalDays;
+            else repeatIntervalDays.value = null;
+          } catch (e) {
+            repeatIntervalDays.value = null;
+          }
           // Prefer eventDate from repeat seed if not set on task
           if (!localNewTask.value.eventDate && val.repeat.eventDate) {
             localNewTask.value.eventDate = val.repeat.eventDate;
@@ -512,6 +522,7 @@ watch(
         repeatMode.value = 'oneTime';
         repeatCycleType.value = 'dayWeek';
         repeatDays.value = [];
+        repeatIntervalDays.value = null;
       }
 
       emit('update:mode', 'edit');
@@ -945,6 +956,19 @@ watch(
   },
 );
 
+// When user switches the repeat cycle type, set sensible defaults for month/year
+watch(repeatCycleType, (val) => {
+  try {
+    if (val === 'month') {
+      repeatIntervalDays.value = 30;
+    } else if (val === 'year') {
+      repeatIntervalDays.value = 365;
+    }
+  } catch (e) {
+    // ignore
+  }
+});
+
 onMounted(() => {
   adjustDescriptionHeight();
 });
@@ -975,6 +999,8 @@ function onSubmit(event: Event) {
         cycleType: repeatCycleType.value,
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
         eventDate: localNewTask.value.eventDate || null,
+        intervalDays:
+          typeof repeatIntervalDays.value === 'number' ? repeatIntervalDays.value : undefined,
       };
     } else {
       payload.repeat = null;
@@ -996,6 +1022,8 @@ function onSubmit(event: Event) {
         cycleType: repeatCycleType.value,
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
         eventDate: localNewTask.value.eventDate || null,
+        intervalDays:
+          typeof repeatIntervalDays.value === 'number' ? repeatIntervalDays.value : undefined,
       };
     } else {
       updated.repeat = null;
@@ -1099,6 +1127,20 @@ function onSubmit(event: Event) {
                             inline
                             rounded
                             class="time-toggle"
+                          />
+                        </div>
+
+                        <div
+                          v-if="repeatCycleType === 'month' || repeatCycleType === 'year'"
+                          class="q-mb-sm"
+                        >
+                          <q-input
+                            type="number"
+                            label="Cycle (days)"
+                            dense
+                            outlined
+                            v-model.number="repeatIntervalDays"
+                            style="max-width: 160px"
                           />
                         </div>
 

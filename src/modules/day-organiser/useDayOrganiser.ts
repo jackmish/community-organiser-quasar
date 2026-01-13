@@ -35,6 +35,29 @@ export function useDayOrganiser() {
     try {
       const data = await storage.loadData();
 
+      // Debug: log loaded groups/tasks to help trace missing cyclic repeats after reload
+      try {
+        console.debug(
+          '[useDayOrganiser.loadData] loaded raw data groups:',
+          Array.isArray((data as any).groups) ? (data as any).groups.length : 0,
+        );
+        if (Array.isArray((data as any).groups) && (data as any).groups.length > 0) {
+          try {
+            const sample = (data as any).groups[0];
+            console.debug(
+              '[useDayOrganiser.loadData] sample group keys:',
+              Object.keys(sample || {}),
+            );
+            if (Array.isArray(sample.tasks))
+              console.debug('[useDayOrganiser.loadData] sample group.tasks[0]:', sample.tasks[0]);
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
       // If storage returned groups with tasks, reconstruct days mapping
       const daysMap: Record<string, DayData> = {};
       if (Array.isArray((data as any).groups)) {
