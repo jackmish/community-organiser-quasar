@@ -422,9 +422,11 @@ onBeforeUnmount(() => {
 watch(
   () => localNewTask.value.type_id,
   (val) => {
-    if (val === 'Replenish' && props.mode === 'add') {
-      nextTick(() => {
-        try {
+    if (props.mode !== 'add') return;
+
+    nextTick(() => {
+      try {
+        if (val === 'Replenish') {
           // prefer Quasar focus API
           if (replenishInput.value && typeof replenishInput.value.focus === 'function') {
             replenishInput.value.focus();
@@ -434,12 +436,41 @@ watch(
           const input = el?.querySelector ? el.querySelector('input') : null;
           if (input && typeof input.focus === 'function') {
             input.focus();
+            return;
           }
-        } catch (e) {
-          // ignore
         }
-      });
-    }
+
+        if (val === 'Todo' || val === 'NoteLater') {
+          // focus description textarea/input
+          if (descriptionInput.value && typeof descriptionInput.value.focus === 'function') {
+            descriptionInput.value.focus();
+            return;
+          }
+          const el = descriptionInput.value?.$el || descriptionInput.value;
+          const input = el?.querySelector ? el.querySelector('textarea, input') : null;
+          if (input && typeof input.focus === 'function') {
+            input.focus();
+            return;
+          }
+        }
+
+        if (val === 'TimeEvent') {
+          // focus hour input
+          if (hourInput.value && typeof hourInput.value.focus === 'function') {
+            hourInput.value.focus();
+            return;
+          }
+          const el = hourInput.value?.$el || hourInput.value;
+          const input = el?.querySelector ? el.querySelector('input') : null;
+          if (input && typeof input.focus === 'function') {
+            input.focus();
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
   },
 );
 
