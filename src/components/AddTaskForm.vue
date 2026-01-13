@@ -141,6 +141,31 @@ const localNewTask = ref<TaskType>({
   eventTime: '',
 });
 
+// Remember the last selected task type so resetting the form doesn't revert the chooser.
+// Persist to localStorage so the selection survives form resets/remounts.
+const STORAGE_KEY = 'coq:lastTaskType';
+let initialStored = 'TimeEvent';
+try {
+  const s = localStorage.getItem(STORAGE_KEY);
+  if (s) initialStored = s;
+} catch (e) {
+  // ignore (e.g. SSR or blocked storage)
+}
+const lastSelectedType = ref<string>(initialStored || localNewTask.value.type_id || 'TimeEvent');
+watch(
+  () => localNewTask.value.type_id,
+  (v) => {
+    if (v) {
+      lastSelectedType.value = v;
+      try {
+        localStorage.setItem(STORAGE_KEY, v);
+      } catch (e) {
+        // ignore
+      }
+    }
+  },
+);
+
 // Mode is controlled by parent via prop `mode` and `update:mode` emit
 const modeRef = toRef(props, 'mode') as any;
 // Friendly label for current mode (match ModeSwitcher labels)
@@ -462,11 +487,13 @@ watch(
     } else {
       // switch back to add mode and reset fields
       emit('update:mode', 'add');
+      // preserve currently selected type so the chooser doesn't jump back to default
+      const prevType = lastSelectedType.value || localNewTask.value?.type_id || 'TimeEvent';
       // keep date if provided via selectedDate prop
       localNewTask.value = {
         name: '',
         description: '',
-        type_id: 'TimeEvent',
+        type_id: prevType,
         status_id: 1,
         parent_id: null,
         created_by: '',
