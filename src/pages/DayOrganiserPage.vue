@@ -1650,6 +1650,30 @@ onMounted(async () => {
     } catch (e) {
       // ignore
     }
+    try {
+      // If current active date is before today, move active day to today when refreshing
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      if (currentDate && currentDate.value) {
+        const cur = new Date(currentDate.value);
+        const today = new Date(todayStr);
+        // normalize to midnight for comparison
+        const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
+        const todayNorm = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+        ).getTime();
+        if (curNorm < todayNorm) {
+          try {
+            setCurrentDate(todayStr);
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
     // bump reload key to force child components to re-render where necessary
     reloadKey.value += 1;
   };
