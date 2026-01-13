@@ -532,6 +532,22 @@ const mode = ref<'add' | 'edit' | 'preview'>('add');
 const selectedTaskId = ref<string | null>(null);
 const reloadKey = ref(0);
 
+// outer-scope handlers for window events (registered/assigned inside onMounted)
+let organiserReloadHandler: any = null;
+let organiserGroupManageHandler: any = null;
+
+// Register cleanup synchronously during setup so lifecycle hook is valid
+onBeforeUnmount(() => {
+  try {
+    if (organiserReloadHandler)
+      window.removeEventListener('organiser:reloaded', organiserReloadHandler as EventListener);
+    if (organiserGroupManageHandler)
+      window.removeEventListener('group:manage', organiserGroupManageHandler as EventListener);
+  } catch (e) {
+    // ignore
+  }
+});
+
 // Allowed modes depend on whether a task is selected
 const allowedModes = computed(() => (taskToEdit.value ? ['add', 'edit', 'preview'] : ['add']));
 
@@ -1653,7 +1669,8 @@ onMounted(async () => {
   await loadData();
 
   // Listen for global reload events (e.g. from MainLayout refresh button)
-  const handler = async () => {
+  // Handlers are assigned to outer-scope vars so cleanup can be registered synchronously
+  organiserReloadHandler = async () => {
     try {
       await loadData();
     } catch (e) {
@@ -1686,21 +1703,12 @@ onMounted(async () => {
     // bump reload key to force child components to re-render where necessary
     reloadKey.value += 1;
   };
-  window.addEventListener('organiser:reloaded', handler as EventListener);
+  window.addEventListener('organiser:reloaded', organiserReloadHandler as EventListener);
   // allow header group 'manage' button to open the group dialog
-  const groupManageHandler = () => {
+  organiserGroupManageHandler = () => {
     showGroupDialog.value = true;
   };
-  window.addEventListener('group:manage', groupManageHandler as EventListener);
-  // cleanup listener on component unmount
-  onBeforeUnmount(() => {
-    try {
-      window.removeEventListener('organiser:reloaded', handler as EventListener);
-      window.removeEventListener('group:manage', groupManageHandler as EventListener);
-    } catch (e) {
-      // ignore
-    }
-  });
+  window.addEventListener('group:manage', organiserGroupManageHandler as EventListener);
 
   // Show first run dialog if no groups exist
   if (groups.value.length === 0) {

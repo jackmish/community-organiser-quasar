@@ -61,6 +61,25 @@ export function useDayOrganiser() {
         lastModified: (data as any).lastModified || new Date().toISOString(),
       };
 
+      // If no activeGroup was set previously, default to the first group (if any)
+      try {
+        const grpList = organiserData.value.groups || [];
+        if (
+          (!activeGroup.value || activeGroup.value === null) &&
+          Array.isArray(grpList) &&
+          grpList.length > 0
+        ) {
+          const fg = grpList[0];
+          if (fg) {
+            const fid = (fg as any).id;
+            const fname = (fg as any).name || String(fid);
+            activeGroup.value = { label: fname, value: fid };
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
       const dirPath = await storage.getDataFilePathPublic();
     } catch (error) {
       console.error('Failed to load data:', error);
