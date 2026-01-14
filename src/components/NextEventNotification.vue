@@ -90,8 +90,10 @@ const nextEvents = computed(() => {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Build the next 30 local dates as YYYY-MM-DD
-  const windowDays = Array.from({ length: 30 }, (_, i) => {
+  // Build the next N local dates as YYYY-MM-DD (extended window to find more occurrences)
+  const MAX_EVENTS = 20;
+  const WINDOW_DAYS = 90;
+  const windowDays = Array.from({ length: WINDOW_DAYS }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
@@ -155,7 +157,7 @@ const nextEvents = computed(() => {
   // Sort by occurrence datetime
   future.sort((a, b) => a.occ.getTime() - b.occ.getTime());
 
-  // Dedupe by task id + date + time and return up to 10
+  // Dedupe by task id + date + time and return up to MAX_EVENTS
   const out: any[] = [];
   const seen = new Set<string>();
   for (const o of future) {
@@ -164,7 +166,7 @@ const nextEvents = computed(() => {
     seen.add(key);
     const item = { ...o.task, _date: o.dateStr };
     out.push(item);
-    if (out.length >= 10) break;
+    if (out.length >= MAX_EVENTS) break;
   }
 
   return out;
