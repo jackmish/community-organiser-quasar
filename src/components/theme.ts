@@ -18,8 +18,13 @@ export const priorityTextColor = (p?: string) => {
   return priorityDefinitions[p] ? priorityDefinitions[p].text : '#ffffff';
 };
 
-// Application main background color used for global styling
+// Application main background color used for  global styling
 export const appMainBg = '#def';
+
+// Highlight/pin icon choices — can be changed globally here.
+export const highlightIcon = 'flag';
+export const highlightIconOutlined = 'push_pin_outlined';
+export const highlightIconRounded = 'push_pin_rounded';
 
 export const timeDiffClassFor = (label: string) => {
   // Return semantic class names that the page can style for improved contrast

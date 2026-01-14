@@ -51,7 +51,7 @@
                       <q-icon
                         v-for="n in countStarredUndone(task)"
                         :key="`s-${task.id}-${n}`"
-                        name="star"
+                        :name="highlightIcon"
                         color="amber"
                         size="14px"
                       />
@@ -152,7 +152,7 @@
                       <q-icon
                         v-for="n in countStarredUndone(task)"
                         :key="`s2-${task.id}-${n}`"
-                        name="star"
+                        :name="highlightIcon"
                         color="amber"
                         size="14px"
                       />
@@ -253,6 +253,7 @@ import {
   formatEventHoursDiff,
   formatDisplayDate,
   typeIcons,
+  highlightIcon,
 } from './theme';
 
 const { groups } = useDayOrganiser();

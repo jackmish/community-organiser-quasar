@@ -90,10 +90,10 @@
             flat
             round
             size="sm"
-            :icon="quickSubtaskStar ? 'star' : 'star_border'"
+            :icon="highlightIcon"
             :color="quickSubtaskStar ? 'amber' : undefined"
             @click.stop="quickSubtaskStar = !quickSubtaskStar"
-            :title="quickSubtaskStar ? 'Starred' : 'Mark as important'"
+            :title="quickSubtaskStar ? 'Pinned' : 'Pin'"
           />
           <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
         </div>
@@ -127,7 +127,7 @@
                       round
                       size="sm"
                       class="highlight-btn"
-                      :icon="line.highlighted ? 'star' : 'star_border'"
+                      :icon="highlightIcon"
                       :color="line.highlighted ? 'amber' : 'grey-6'"
                       @click.stop="toggleHighlight(idx)"
                     />
@@ -155,6 +155,7 @@ import {
   formatEventHoursDiff,
   priorityDefinitions,
   priorityIcons,
+  highlightIcon,
 } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
