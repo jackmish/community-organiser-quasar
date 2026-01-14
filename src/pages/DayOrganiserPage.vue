@@ -1541,25 +1541,43 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
         // unchecked: move to top behind title (second line) unless already there.
-        // Title is the first line of the description; detect if first line is non-empty.
+        // If the undone item has NO trailing star, append it after the last starred undone item.
         const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-        const insertIndex = hasTitleInDesc ? 1 : 0;
+        const baseInsertIndex = hasTitleInDesc ? 1 : 0;
+        const hadStar = /\s*\*\s*$/.test(content);
         // If the user toggled the actual title line (index 0 when title present), don't move it.
         if (lineIndex === 0 && hasTitleInDesc) {
           lines[lineIndex] = `${prefix}${content}`;
-        } else if (lineIndex === insertIndex) {
-          // already in desired position — just remove marker in-place
-          lines[lineIndex] = `${prefix}${content}`;
         } else {
-          // animate collapse, wait for child to finish collapsing, then move and request expand
-          animatingLines.value = [lineIndex];
-          await waitForLineEvent(task.id, lineIndex, 'collapsed');
-          const movedLine = `${prefix}${content}`;
-          // adjust insert position if removing an earlier index shifts the array
-          const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
-          lines.splice(lineIndex, 1);
-          lines.splice(adjustedIndex, 0, movedLine);
-          appendedIndex = adjustedIndex;
+          // find where completed items start so we only consider the undone section
+          const completedStart = lines.findIndex(
+            (ln: string) => /^\s*-\s*\[[xX]\]/.test(ln) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln),
+          );
+          const undoneEnd = completedStart === -1 ? lines.length : completedStart;
+          // find last starred undone item
+          let lastStarIndex = -1;
+          for (let i = baseInsertIndex; i < undoneEnd; i++) {
+            try {
+              if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
+            } catch (e) {
+              // ignore
+            }
+          }
+          // decide final insert position: starred undone items go to top; unstarred go after last starred undone
+          let finalInsert = baseInsertIndex;
+          if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
+          // if already in final spot (taking shifts into account), just remove marker in-place
+          const adjustedFinal = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
+          if (lineIndex === adjustedFinal) {
+            lines[lineIndex] = `${prefix}${content}`;
+          } else {
+            animatingLines.value = [lineIndex];
+            await waitForLineEvent(task.id, lineIndex, 'collapsed');
+            const movedLine = `${prefix}${content}`;
+            lines.splice(lineIndex, 1);
+            lines.splice(adjustedFinal, 0, movedLine);
+            appendedIndex = adjustedFinal;
+          }
         }
       } else {
         // animate then mark done and move this subtask to the end (or into starred-top area)
@@ -1624,22 +1642,39 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const content = numMatch[3] || '';
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
-        // unchecked numeric item -> move to top behind title (second line) unless already there.
-        // Title is the first line of the description; detect if first line is non-empty.
+        // unchecked numeric item -> move to top behind title unless already there.
+        // If the undone item has NO trailing star, append it after the last starred undone item.
         const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-        const insertIndex = hasTitleInDesc ? 1 : 0;
+        const baseInsertIndex = hasTitleInDesc ? 1 : 0;
+        const hadStar = /\s*\*\s*$/.test(content);
         if (lineIndex === 0 && hasTitleInDesc) {
           lines[lineIndex] = `${prefix}${content}`;
-        } else if (lineIndex === insertIndex) {
-          lines[lineIndex] = `${prefix}${content}`;
         } else {
-          animatingLines.value = [lineIndex];
-          await waitForLineEvent(task.id, lineIndex, 'collapsed');
-          const movedLine = `${prefix}${content}`;
-          const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
-          lines.splice(lineIndex, 1);
-          lines.splice(adjustedIndex, 0, movedLine);
-          appendedIndex = adjustedIndex;
+          const completedStart = lines.findIndex(
+            (ln: string) => /^\s*-\s*\[[xX]\]/.test(ln) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln),
+          );
+          const undoneEnd = completedStart === -1 ? lines.length : completedStart;
+          let lastStarIndex = -1;
+          for (let i = baseInsertIndex; i < undoneEnd; i++) {
+            try {
+              if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
+            } catch (e) {
+              // ignore
+            }
+          }
+          let finalInsert = baseInsertIndex;
+          if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
+          const adjustedIndex = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
+          if (lineIndex === adjustedIndex) {
+            lines[lineIndex] = `${prefix}${content}`;
+          } else {
+            animatingLines.value = [lineIndex];
+            await waitForLineEvent(task.id, lineIndex, 'collapsed');
+            const movedLine = `${prefix}${content}`;
+            lines.splice(lineIndex, 1);
+            lines.splice(adjustedIndex, 0, movedLine);
+            appendedIndex = adjustedIndex;
+          }
         }
       } else {
         // animate then convert numeric item into a completed bullet at the end (or into starred-top area)
