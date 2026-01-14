@@ -47,6 +47,30 @@ export function occursOnDay(task: any, day: string): boolean {
       return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
     }
 
+    // Interval-based cycles (stored as 'other') use an interval in days
+    if (cycle === 'other') {
+      const evDate =
+        task?.repeat?.eventDate ?? task?.repeat?.date ?? task.eventDate ?? task.date ?? null;
+      if (!evDate) return false;
+      const seed = new Date(evDate);
+      const rawInterval =
+        Number(
+          task?.repeat?.intervalDays ??
+            task?.repeat?.interval_days ??
+            task.intervalDays ??
+            task.interval_days ??
+            0,
+        ) || 0;
+      const interval = Math.max(0, Math.floor(rawInterval));
+      if (interval <= 0) return false;
+
+      // Calculate full-day difference between target and seed
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const diffDays = Math.floor((target.getTime() - seed.getTime()) / msPerDay);
+      if (diffDays < 0) return false; // occurrences start at seed and go forward
+      return diffDays % interval === 0;
+    }
+
     return false;
   }
 

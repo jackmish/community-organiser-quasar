@@ -75,12 +75,11 @@ const repeatOptions = [
 ];
 
 // When cyclic, choose period
-const repeatCycleType = ref<'dayWeek' | 'month' | 'year' | 'other'>('dayWeek');
+const repeatCycleType = ref<'dayWeek' | 'interval' | 'nth'>('dayWeek');
 const repeatCycleOptions = [
   { label: 'Day/Week', value: 'dayWeek', icon: 'today' },
-  { label: 'Month', value: 'month', icon: 'date_range' },
-  { label: 'Year', value: 'year', icon: 'event' },
-  { label: 'Other', value: 'other', icon: 'more_horiz' },
+  { label: 'Interval', value: 'interval', icon: 'repeat' },
+  { label: 'Nth', value: 'nth', icon: 'looks_one' },
 ];
 
 // Weekday multi-select for day/week repeat
@@ -94,6 +93,8 @@ const weekDayOptions = [
   { label: 'Sun', value: 'sun' },
 ];
 const repeatDays = ref<string[]>([]);
+// Option to quickly set an exact day-of-month (e.g. 10)
+const everyNDayOfMonth = ref<number | null>(null);
 // Interval in days for month/year cycle types (optional)
 const repeatIntervalDays = ref<number | null>(null);
 
@@ -499,8 +500,36 @@ watch(
       try {
         if (val.repeat && typeof val.repeat === 'object') {
           repeatMode.value = 'cyclic';
-          repeatCycleType.value = val.repeat.cycleType || 'dayWeek';
+          const incomingCycle = val.repeat.cycleType || 'dayWeek';
+          // Map legacy cycle names to new UI choices
+          if (incomingCycle === 'month') {
+            repeatCycleType.value = 'nth';
+            // If seed eventDate has a day, set it
+            try {
+              const ev = val.repeat.eventDate || val.eventDate || val.date || null;
+              if (ev) {
+                const d = new Date(ev);
+                if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+              }
+            } catch (e) {
+              // ignore
+            }
+          } else if (incomingCycle === 'other' || incomingCycle === 'year') {
+            repeatCycleType.value = 'interval';
+            if (typeof val.repeat.intervalDays === 'number')
+              repeatIntervalDays.value = val.repeat.intervalDays;
+          } else {
+            repeatCycleType.value = incomingCycle;
+          }
           repeatDays.value = Array.isArray(val.repeat.days) ? [...val.repeat.days] : [];
+          // load seed if present (used for interval calculations)
+          try {
+            if (val.repeat && val.repeat.eventDate) {
+              // nothing special to do here
+            }
+          } catch (e) {
+            // ignore
+          }
           // load interval days if present
           try {
             if (typeof val.repeat.intervalDays === 'number')
@@ -517,12 +546,14 @@ watch(
           repeatMode.value = 'oneTime';
           repeatCycleType.value = 'dayWeek';
           repeatDays.value = [];
+          everyNDayOfMonth.value = null;
         }
       } catch (e) {
         repeatMode.value = 'oneTime';
         repeatCycleType.value = 'dayWeek';
         repeatDays.value = [];
         repeatIntervalDays.value = null;
+        everyNDayOfMonth.value = null;
       }
 
       emit('update:mode', 'edit');
@@ -959,10 +990,13 @@ watch(
 // When user switches the repeat cycle type, set sensible defaults for month/year
 watch(repeatCycleType, (val) => {
   try {
-    if (val === 'month') {
-      repeatIntervalDays.value = 30;
-    } else if (val === 'year') {
-      repeatIntervalDays.value = 365;
+    if (val === 'interval') {
+      if (
+        !everyNDayOfMonth.value &&
+        (repeatIntervalDays.value == null || repeatIntervalDays.value === 0)
+      ) {
+        repeatIntervalDays.value = 30;
+      }
     }
   } catch (e) {
     // ignore
@@ -995,12 +1029,54 @@ function onSubmit(event: Event) {
     const payload: any = { ...localNewTask.value };
     // Canonical repeat object
     if (repeatMode.value === 'cyclic') {
-      payload.repeat = {
-        cycleType: repeatCycleType.value,
+      let outCycle = repeatCycleType.value as string;
+      const repeatObj: any = {
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
-        eventDate: localNewTask.value.eventDate || null,
-        intervalDays:
-          typeof repeatIntervalDays.value === 'number' ? repeatIntervalDays.value : undefined,
+      };
+
+      if (repeatCycleType.value === 'interval') {
+        if (everyNDayOfMonth.value) {
+          outCycle = 'month';
+          try {
+            const base = localNewTask.value.eventDate || '';
+            const parts = base.split('-');
+            if (parts.length === 3) {
+              parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
+              repeatObj.eventDate = parts.join('-');
+            } else {
+              repeatObj.eventDate = localNewTask.value.eventDate || null;
+            }
+          } catch (e) {
+            repeatObj.eventDate = localNewTask.value.eventDate || null;
+          }
+        } else {
+          outCycle = 'other';
+          if (typeof repeatIntervalDays.value === 'number')
+            repeatObj.intervalDays = repeatIntervalDays.value;
+          repeatObj.eventDate = localNewTask.value.eventDate || null;
+        }
+      } else if (repeatCycleType.value === 'nth') {
+        outCycle = 'month';
+        try {
+          const base = localNewTask.value.eventDate || '';
+          const parts = base.split('-');
+          if (parts.length === 3 && everyNDayOfMonth.value) {
+            parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
+            repeatObj.eventDate = parts.join('-');
+          } else {
+            repeatObj.eventDate = localNewTask.value.eventDate || null;
+          }
+        } catch (e) {
+          repeatObj.eventDate = localNewTask.value.eventDate || null;
+        }
+      } else {
+        outCycle = repeatCycleType.value as string;
+        repeatObj.eventDate = localNewTask.value.eventDate || null;
+      }
+
+      payload.repeat = {
+        cycleType: outCycle,
+        ...repeatObj,
       };
     } else {
       payload.repeat = null;
@@ -1018,12 +1094,40 @@ function onSubmit(event: Event) {
     // Edit mode: convert repeat form fields into canonical object before update
     const updated = { ...localNewTask.value } as any;
     if (repeatMode.value === 'cyclic') {
-      updated.repeat = {
-        cycleType: repeatCycleType.value,
+      let outCycle = repeatCycleType.value as string;
+      const repeatObj: any = {
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
-        eventDate: localNewTask.value.eventDate || null,
-        intervalDays:
-          typeof repeatIntervalDays.value === 'number' ? repeatIntervalDays.value : undefined,
+      };
+
+      if (repeatCycleType.value === 'interval') {
+        if (everyNDayOfMonth.value) {
+          outCycle = 'month';
+          try {
+            const base = localNewTask.value.eventDate || '';
+            const parts = base.split('-');
+            if (parts.length === 3) {
+              parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
+              repeatObj.eventDate = parts.join('-');
+            } else {
+              repeatObj.eventDate = localNewTask.value.eventDate || null;
+            }
+          } catch (e) {
+            repeatObj.eventDate = localNewTask.value.eventDate || null;
+          }
+        } else {
+          outCycle = 'other';
+          if (typeof repeatIntervalDays.value === 'number')
+            repeatObj.intervalDays = repeatIntervalDays.value;
+          repeatObj.eventDate = localNewTask.value.eventDate || null;
+        }
+      } else {
+        outCycle = repeatCycleType.value as string;
+        repeatObj.eventDate = localNewTask.value.eventDate || null;
+      }
+
+      updated.repeat = {
+        cycleType: outCycle,
+        ...repeatObj,
       };
     } else {
       updated.repeat = null;
@@ -1129,11 +1233,36 @@ function onSubmit(event: Event) {
                             class="time-toggle"
                           />
                         </div>
+                        <div v-if="repeatCycleType === 'nth'" class="q-mb-sm">
+                          <q-input
+                            type="number"
+                            label="Nth day"
+                            dense
+                            outlined
+                            v-model.number="everyNDayOfMonth"
+                            min="1"
+                            max="31"
+                            style="max-width: 120px"
+                            placeholder="10"
+                          />
+                          <div v-if="everyNDayOfMonth" class="text-caption q-mb-xs">
+                            Repeats every month on day {{ everyNDayOfMonth }}.
+                          </div>
+                        </div>
 
-                        <div
-                          v-if="repeatCycleType === 'month' || repeatCycleType === 'year'"
-                          class="q-mb-sm"
-                        >
+                        <div v-else-if="repeatCycleType === 'interval'" class="q-mb-sm">
+                          <div class="row q-gutter-sm q-mb-xs">
+                            <q-btn
+                              v-for="v in [14, 28, 30, 365]"
+                              :key="v"
+                              dense
+                              size="sm"
+                              :label="String(v)"
+                              @click="repeatIntervalDays = v"
+                              :unelevated="repeatIntervalDays === v"
+                              :outline="repeatIntervalDays !== v"
+                            />
+                          </div>
                           <q-input
                             type="number"
                             label="Cycle (days)"
@@ -1144,7 +1273,7 @@ function onSubmit(event: Event) {
                           />
                         </div>
 
-                        <div v-if="repeatCycleType === 'dayWeek'" class="q-mt-sm">
+                        <div v-else-if="repeatCycleType === 'dayWeek'" class="q-mt-sm">
                           <div
                             class="row items-center weekday-row"
                             style="gap: 0px; flex-wrap: nowrap; overflow-x: auto"
