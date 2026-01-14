@@ -7,6 +7,11 @@ $task-blue: #0d47a1;
 $inactive-blue: #1976d2; // matches :root --q-primary
 $menu-bg: $inactive-blue;
 
+/* Set main element background to app theme main color */
+main {
+  background: #def !important;
+}
+
 /* Global background and text for menus, popovers and dialog inners */
 .q-menu,
 .q-menu__content,

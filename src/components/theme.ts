@@ -18,6 +18,9 @@ export const priorityTextColor = (p?: string) => {
   return priorityDefinitions[p] ? priorityDefinitions[p].text : '#ffffff';
 };
 
+// Application main background color used for global styling
+export const appMainBg = '#def';
+
 export const timeDiffClassFor = (label: string) => {
   // Return semantic class names that the page can style for improved contrast
   if (!label) return 'time-diff-default';
