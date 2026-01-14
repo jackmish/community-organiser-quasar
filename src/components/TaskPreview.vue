@@ -77,10 +77,23 @@
           <q-input
             dense
             outlined
+            type="textarea"
+            autosize
+            rows="1"
             placeholder="Quick add subtask"
             v-model="quickSubtask"
             @keyup.enter="addQuickSubtask"
-            style="flex: 1"
+            style="flex: 1; min-height: 40px"
+          />
+          <q-btn
+            dense
+            flat
+            round
+            size="sm"
+            :icon="quickSubtaskStar ? 'star' : 'star_border'"
+            :color="quickSubtaskStar ? 'amber' : undefined"
+            @click.stop="quickSubtaskStar = !quickSubtaskStar"
+            :title="quickSubtaskStar ? 'Starred' : 'Mark as important'"
           />
           <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
         </div>
@@ -157,27 +170,26 @@ const emit = defineEmits([
 
 // Quick-add subtask helper
 const quickSubtask = ref('');
+const quickSubtaskStar = ref(false);
 
 // refs to each rendered list item so we can animate height directly
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
 const priorityMenu = ref(false);
+// track pending transition fallback timers per element
+const transitionFallbacks = new Map<HTMLElement, number>();
 
 function selectPriority(p: string) {
   try {
-    const t = toRaw(props.task || ({} as any));
-    const newTask = { ...(t as any), priority: p } as Task;
-    emit('update-task', newTask);
-  } catch (e) {
-    void e;
+    const t: Task = { ...toRaw(props.task) } as Task;
+    t.priority = p as Task['priority'];
+    emit('update-task', t);
   } finally {
     priorityMenu.value = false;
   }
 }
-// fallback timers for transitionend handlers to ensure cleanup/emits always run
-const transitionFallbacks = new Map<HTMLElement, number>();
 
 function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
-  if (!el) {
+  if (el == null) {
     itemRefs.value[idx] = null;
     return;
   }
@@ -191,6 +203,17 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
   if (maybeEl && maybeEl instanceof HTMLElement) {
     itemRefs.value[idx] = maybeEl;
     return;
+  }
+  // If we received a generic Element (e.g. SVGElement), coerce as a fallback.
+  // This is uncommon but avoids a TS error when refs resolve to Element.
+  try {
+    const asEl = el as unknown as HTMLElement;
+    if (asEl && (asEl as any).style !== undefined) {
+      itemRefs.value[idx] = asEl;
+      return;
+    }
+  } catch (e) {
+    void e;
   }
   // fallback
   itemRefs.value[idx] = null;
@@ -317,7 +340,20 @@ function addQuickSubtask() {
   const title = (props.task?.name || '').trim();
   const lines = cur.split(/\r?\n/);
   let updated: string;
-  if (title && lines.length > 0) {
+  // If there are starred undone subtasks, insert after the last one
+  const parsed = parsedLines.value || [];
+  let lastStarredUndone = -1;
+  for (let i = 0; i < parsed.length; i++) {
+    const it = parsed[i];
+    if (!it) continue;
+    if (it.type === 'list' && it.highlighted && !it.checked) lastStarredUndone = i;
+  }
+  if (lastStarredUndone >= 0) {
+    const newLines = [...lines];
+    const starSuffix = quickSubtaskStar.value ? ' *' : '';
+    newLines.splice(lastStarredUndone + 1, 0, `- ${text}${starSuffix}`);
+    updated = newLines.join('\n');
+  } else if (title && lines.length > 0) {
     const first = lines[0] || '';
     const titleMatch = new RegExp('^\\s*' + escapeRegExp(title) + '\\b', 'i');
     if (titleMatch.test(first)) {
@@ -335,6 +371,7 @@ function addQuickSubtask() {
   const newTask = { ...(toRaw(props.task) as any), description: updated } as Task;
   emit('update-task', newTask);
   quickSubtask.value = '';
+  quickSubtaskStar.value = false;
   nextTick(() => {
     // no-op; parent will handle re-render
   });
