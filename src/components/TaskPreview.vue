@@ -127,36 +127,57 @@ watch(
   () => props.animatingLines && [...(props.animatingLines || [])],
   async (newVal, oldVal) => {
     const added = (newVal || []).filter((i) => !(oldVal || []).includes(i));
-    for (const idx of added) {
+    for (const rawIdx of added) {
+      const expand = rawIdx < 0;
+      const idx = expand ? Math.abs(rawIdx) - 1 : rawIdx;
       const el = itemRefs.value[idx];
       if (!el) continue;
       try {
         const style = el.style;
-        // capture current dimensions
-        const startHeight = el.scrollHeight + 'px';
-        style.overflow = 'hidden';
-        style.height = startHeight;
-        style.marginBottom = getComputedStyle(el).marginBottom;
-        // force layout
-        await nextTick();
-        void el.offsetHeight;
-        style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
-        // animate to collapsed (height/margin only)
-        style.height = '0px';
-        style.marginBottom = '0px';
-
-        const handler = (ev: TransitionEvent) => {
-          if ((ev && ev.propertyName !== 'height') || !el) return;
-          // cleanup inline styles after animation
-          style.removeProperty('height');
-          style.removeProperty('overflow');
-          style.removeProperty('transition');
-          style.removeProperty('padding-top');
-          style.removeProperty('padding-bottom');
-          style.removeProperty('margin-bottom');
-          el.removeEventListener('transitionend', handler);
-        };
-        el.addEventListener('transitionend', handler);
+        if (expand) {
+          // expanding: animate from 0 -> full height so element appears to grow
+          const targetHeight = el.scrollHeight + 'px';
+          const originalMargin = getComputedStyle(el).marginBottom;
+          style.overflow = 'hidden';
+          // start collapsed
+          style.height = '0px';
+          style.marginBottom = '0px';
+          await nextTick();
+          void el.offsetHeight;
+          style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
+          // animate to natural height
+          style.height = targetHeight;
+          style.marginBottom = originalMargin;
+          const handler = (ev: TransitionEvent) => {
+            if ((ev && ev.propertyName !== 'height') || !el) return;
+            style.removeProperty('height');
+            style.removeProperty('overflow');
+            style.removeProperty('transition');
+            style.removeProperty('margin-bottom');
+            el.removeEventListener('transitionend', handler);
+          };
+          el.addEventListener('transitionend', handler);
+        } else {
+          // collapsing: animate from current height -> 0
+          const startHeight = el.scrollHeight + 'px';
+          style.overflow = 'hidden';
+          style.height = startHeight;
+          style.marginBottom = getComputedStyle(el).marginBottom;
+          await nextTick();
+          void el.offsetHeight;
+          style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
+          style.height = '0px';
+          style.marginBottom = '0px';
+          const handler = (ev: TransitionEvent) => {
+            if ((ev && ev.propertyName !== 'height') || !el) return;
+            style.removeProperty('height');
+            style.removeProperty('overflow');
+            style.removeProperty('transition');
+            style.removeProperty('margin-bottom');
+            el.removeEventListener('transitionend', handler);
+          };
+          el.addEventListener('transitionend', handler);
+        }
       } catch (e) {
         // ignore animation errors
       }
@@ -422,6 +443,11 @@ function buildHtmlFromParsed(
   overflow: hidden;
   display: block;
 }
+.collapse-wrapper {
+  transition:
+    height 0.5s ease-in-out,
+    margin 0.5s ease-in-out;
+}
 </style>
 
 <style scoped>
@@ -453,30 +479,12 @@ function buildHtmlFromParsed(
 .task-preview .q-item {
   padding-top: 4px !important;
   padding-bottom: 4px !important;
-  /* allow smooth height-based collapse: set an ample max-height and enable transitions */
-  max-height: 200px;
+  max-height: none;
   min-height: 0 !important;
   height: auto !important;
   box-sizing: border-box;
-  overflow: hidden;
-  transition:
-    max-height 0.5s ease-in-out,
-    padding 0.5s ease-in-out,
-    margin 0.5s ease-in-out;
-}
-.task-preview .q-item {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  /* allow smooth height-based collapse: set an ample max-height and enable transitions */
-  max-height: 1000px;
-  min-height: 0 !important;
-  height: auto !important;
-  box-sizing: border-box;
-  overflow: hidden;
-  transition:
-    max-height 0.5s ease-in-out,
-    padding 0.5s ease-in-out,
-    margin 0.5s ease-in-out;
+  overflow: visible;
+  transition: none;
 }
 .task-preview .q-item .q-item-section {
   padding-top: 0 !important;

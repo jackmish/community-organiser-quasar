@@ -1470,6 +1470,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
     const lines = task.description.split(/\r?\n/);
+    let appendedIndex: number | undefined = undefined;
     const ln = lines[lineIndex] ?? '';
 
     const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
@@ -1490,6 +1491,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         const completedLine = `${prefix}[x] ${content}`;
         lines.splice(lineIndex, 1);
         lines.push(completedLine);
+        appendedIndex = lines.length - 1;
       }
       const newDesc = lines.join('\n');
       // update the task description after animation
@@ -1501,6 +1503,15 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } catch (e) {
         // ignore
       }
+      // If we recorded an appendedIndex above, signal expansion now that DOM will update
+      try {
+        if (typeof appendedIndex !== 'undefined') {
+          animatingLines.value = [-(appendedIndex + 1)];
+        }
+      } catch (e) {
+        // ignore
+      }
+      await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
       await updateTask(targetDate, task.id, { description: newDesc });
       return;
@@ -1520,6 +1531,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         const completedLine = `- [x] ${content}`;
         lines.splice(lineIndex, 1);
         lines.push(completedLine);
+        appendedIndex = lines.length - 1;
       }
       const newDesc = lines.join('\n');
       try {
@@ -1530,6 +1542,15 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } catch (e) {
         // ignore
       }
+      // If we recorded an appendedIndex above, signal expansion now that DOM will update
+      try {
+        if (typeof appendedIndex !== 'undefined') {
+          animatingLines.value = [-(appendedIndex + 1)];
+        }
+      } catch (e) {
+        // ignore
+      }
+      await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
       await updateTask(targetDate, task.id, { description: newDesc });
       return;
