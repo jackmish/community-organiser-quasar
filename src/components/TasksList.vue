@@ -47,6 +47,15 @@
                       </span>
                     </template>
                     {{ task.name }}
+                    <span class="star-count" v-if="countStarredUndone(task) > 0">
+                      <q-icon
+                        v-for="n in countStarredUndone(task)"
+                        :key="`s-${task.id}-${n}`"
+                        name="star"
+                        color="amber"
+                        size="14px"
+                      />
+                    </span>
                   </strong>
                 </q-item-label>
               </div>
@@ -139,6 +148,15 @@
                       </span>
                     </template>
                     {{ task.name }}
+                    <span class="star-count" v-if="countStarredUndone(task) > 0">
+                      <q-icon
+                        v-for="n in countStarredUndone(task)"
+                        :key="`s2-${task.id}-${n}`"
+                        name="star"
+                        color="amber"
+                        size="14px"
+                      />
+                    </span>
                   </strong>
                 </q-item-label>
               </div>
@@ -337,6 +355,26 @@ const countTodoSubtasks = (task: any) => {
   return { done, total };
 };
 
+const countStarredUndone = (task: any) => {
+  const desc = (task?.description || '') + '';
+  if (!desc) return 0;
+  const lines = desc.split(/\r?\n/);
+  let count = 0;
+  const listItemRe = /^\s*(?:[-*+]|(?:\d+[.)]))\s*(?:\[\s*([^\]\s])?\s*\])?/;
+  for (const l of lines) {
+    const m = l.match(listItemRe);
+    if (m) {
+      const mark = m[1];
+      const checked =
+        mark &&
+        (String(mark).toLowerCase() === 'x' || mark === '✓' || mark === '✔' || mark === '☑');
+      const hasStar = /\*\s*$/.test(l);
+      if (!checked && hasStar) count += 1;
+    }
+  }
+  return count;
+};
+
 const itemStyle = (task: any) => {
   if (!task) return {};
   // keep "done" items using the grey styles
@@ -398,6 +436,10 @@ function confirmDelete(id: string) {
   height: 28px;
   border-radius: 50%;
   margin-right: 8px;
+}
+
+.star-count q-icon {
+  margin-left: 4px;
 }
 
 .task-card {
