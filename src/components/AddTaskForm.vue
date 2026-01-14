@@ -555,6 +555,37 @@ watch(
         repeatIntervalDays.value = null;
         everyNDayOfMonth.value = null;
       }
+      // If the incoming task has a seeded repeat/event date, prefer that saved day
+      try {
+        const savedEv =
+          (val && val.repeat && (val.repeat.eventDate || val.repeat.date)) ||
+          val.eventDate ||
+          val.date ||
+          null;
+        if (savedEv) {
+          const ds = new Date(savedEv);
+          if (!isNaN(ds.getTime())) {
+            everyNDayOfMonth.value = ds.getDate();
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Ensure nth/day seed is restored for edit mode if applicable (fallback)
+      try {
+        if (repeatCycleType.value === 'nth' && !everyNDayOfMonth.value) {
+          const ev = localNewTask.value.eventDate || props.selectedDate || null;
+          if (ev) {
+            const d = new Date(ev);
+            if (!isNaN(d.getTime())) {
+              everyNDayOfMonth.value = d.getDate();
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
 
       emit('update:mode', 'edit');
     } else {
@@ -998,6 +1029,22 @@ watch(repeatCycleType, (val) => {
         repeatIntervalDays.value = 30;
       }
     }
+    if (val === 'nth') {
+      try {
+        if (!everyNDayOfMonth.value) {
+          // Prefer the current event date day, otherwise fall back to selectedDate prop
+          const dayNum = Number(eventDateDay.value) || null;
+          if (dayNum && !isNaN(dayNum)) {
+            everyNDayOfMonth.value = dayNum;
+          } else if (props.selectedDate) {
+            const parts = String(props.selectedDate).split('-');
+            if (parts.length === 3) everyNDayOfMonth.value = Number(parts[2]);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   } catch (e) {
     // ignore
   }
@@ -1118,6 +1165,20 @@ function onSubmit(event: Event) {
           outCycle = 'other';
           if (typeof repeatIntervalDays.value === 'number')
             repeatObj.intervalDays = repeatIntervalDays.value;
+          repeatObj.eventDate = localNewTask.value.eventDate || null;
+        }
+      } else if (repeatCycleType.value === 'nth') {
+        outCycle = 'month';
+        try {
+          const base = localNewTask.value.eventDate || '';
+          const parts = base.split('-');
+          if (parts.length === 3 && everyNDayOfMonth.value) {
+            parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
+            repeatObj.eventDate = parts.join('-');
+          } else {
+            repeatObj.eventDate = localNewTask.value.eventDate || null;
+          }
+        } catch (e) {
           repeatObj.eventDate = localNewTask.value.eventDate || null;
         }
       } else {
@@ -1244,6 +1305,16 @@ function onSubmit(event: Event) {
                             max="31"
                             style="max-width: 120px"
                             placeholder="10"
+                            @focus="
+                              (e: Event) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
+                            @click="
+                              (e: Event) =>
+                                (e.target as HTMLInputElement)?.select &&
+                                (e.target as HTMLInputElement).select()
+                            "
                           />
                           <div v-if="everyNDayOfMonth" class="text-caption q-mb-xs">
                             Repeats every month on day {{ everyNDayOfMonth }}.
@@ -1301,7 +1372,7 @@ function onSubmit(event: Event) {
                       </div>
 
                       <div
-                        v-if="!(repeatMode === 'cyclic' && repeatCycleType === 'dayWeek')"
+                        v-if="!(repeatMode === 'cyclic' && repeatCycleType === 'nth')"
                         class="row q-gutter-xs items-center"
                         style="align-items: center"
                       >
