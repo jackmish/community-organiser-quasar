@@ -36,7 +36,14 @@ export function occursOnDay(task: any, day: string): boolean {
         task?.repeat?.eventDate ?? task?.repeat?.date ?? task.eventDate ?? task.date ?? null;
       if (!evDate) return false;
       const seed = new Date(evDate);
-      return seed.getDate() === target.getDate();
+      // If the seed specifies a day that doesn't exist in the target month
+      // (e.g. 31st) treat the occurrence as the last day of the target month.
+      const desiredDay = seed.getDate();
+      const year = target.getFullYear();
+      const month = target.getMonth();
+      const daysInTargetMonth = new Date(year, month + 1, 0).getDate();
+      const effectiveDay = Math.min(desiredDay, daysInTargetMonth);
+      return effectiveDay === target.getDate();
     }
 
     if (cycle === 'year') {
