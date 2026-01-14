@@ -159,7 +159,7 @@ watch(
           style.maxHeight = style.maxHeight || '0px';
           await nextTick();
           void el.offsetHeight;
-          style.transition = 'max-height 0.5s ease-in-out';
+          style.transition = 'max-height 0.25s ease-in-out';
           style.maxHeight = targetHeight;
           const handler = (ev: TransitionEvent) => {
             if ((ev && ev.propertyName !== 'max-height') || !el) return;
@@ -200,7 +200,7 @@ watch(
           style.maxHeight = startHeight;
           await nextTick();
           void el.offsetHeight;
-          style.transition = 'max-height 0.5s ease-in-out';
+          style.transition = 'max-height 0.25s ease-in-out';
           style.maxHeight = '0px';
           const handler = (ev: TransitionEvent) => {
             if ((ev && ev.propertyName !== 'max-height') || !el) return;
@@ -542,7 +542,7 @@ function buildHtmlFromParsed(
   display: block;
 }
 .collapse-wrapper {
-  transition: max-height 0.5s ease-in-out;
+  transition: max-height 0.25s ease-in-out;
 }
 </style>
 
