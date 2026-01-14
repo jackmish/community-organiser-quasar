@@ -12,6 +12,46 @@ const formatDate = (date: Date): string => {
   return date.toISOString().split('T')[0] ?? '';
 };
 
+// Create a sanitized snapshot suitable for history entries.
+// This avoids storing reactive proxies or circular structures which break JSON.stringify.
+function sanitizeForHistory(value: any) {
+  if (value === null || value === undefined) return value;
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') return value;
+  if (t === 'function') return '[Function]';
+  if (value instanceof Date) return value.toISOString();
+  // For objects/arrays, produce a shallow serializable summary and avoid deep traversal
+  try {
+    if (Array.isArray(value)) {
+      return value.map((v) => (typeof v === 'object' && v !== null ? '[Object]' : v));
+    }
+    const out: any = {};
+    for (const k of Object.keys(value)) {
+      try {
+        const v = value[k];
+        if (v === null || v === undefined) {
+          out[k] = v;
+        } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+          out[k] = v;
+        } else if (v instanceof Date) {
+          out[k] = v.toISOString();
+        } else if (Array.isArray(v)) {
+          out[k] = '[Array]';
+        } else if (typeof v === 'function') {
+          out[k] = '[Function]';
+        } else {
+          out[k] = '[Object]';
+        }
+      } catch (e) {
+        out[k] = '[Unserializable]';
+      }
+    }
+    return out;
+  } catch (e) {
+    return '[Unserializable]';
+  }
+}
+
 // Reactive state
 const organiserData = ref<OrganiserData>({
   days: {},
@@ -247,8 +287,8 @@ export function useDayOrganiser() {
           (task as any).history.push({
             type: 'update',
             field: key,
-            old: oldVal,
-            new: newVal,
+            old: sanitizeForHistory(oldVal),
+            new: sanitizeForHistory(newVal),
             changedAt: new Date().toISOString(),
           });
         }

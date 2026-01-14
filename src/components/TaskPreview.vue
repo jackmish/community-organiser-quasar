@@ -32,6 +32,23 @@
           </div>
         </div>
 
+        <!-- quick add moved to top of description -->
+        <div
+          v-if="(task.type_id || '') === 'Todo'"
+          class="q-mt-sm"
+          style="display: flex; gap: 8px; align-items: center"
+        >
+          <q-input
+            dense
+            outlined
+            placeholder="Quick add subtask"
+            v-model="quickSubtask"
+            @keyup.enter="addQuickSubtask"
+            style="flex: 1"
+          />
+          <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
+        </div>
+
         <div>
           <div v-for="(line, idx) in parsedLines" :key="idx">
             <div v-if="line.type === 'list'">
@@ -51,21 +68,7 @@
           </div>
         </div>
 
-        <div
-          v-if="(task.type_id || '') === 'Todo'"
-          class="q-mt-sm"
-          style="display: flex; gap: 8px; align-items: center"
-        >
-          <q-input
-            dense
-            outlined
-            placeholder="Quick add subtask"
-            v-model="quickSubtask"
-            @keyup.enter="addQuickSubtask"
-            style="flex: 1"
-          />
-          <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
-        </div>
+        
       </div>
     </q-card-section>
   </q-card>
@@ -93,8 +96,26 @@ function addQuickSubtask() {
   const text = (quickSubtask.value || '').trim();
   if (!text) return;
   const cur = props.task.description || '';
-  const needsNewline = cur !== '' && !cur.endsWith('\n');
-  const updated = `${cur}${needsNewline ? '\n' : ''}- ${text}`;
+  // Insert new subtask after the first title line when the description begins with the title;
+  // otherwise prepend at the top.
+  const title = (props.task?.name || '').trim();
+  const lines = cur.split(/\r?\n/);
+  let updated: string;
+  if (title && lines.length > 0) {
+    const first = lines[0] || '';
+    const titleMatch = new RegExp('^\\s*' + escapeRegExp(title) + '\\b', 'i');
+    if (titleMatch.test(first)) {
+      if (lines.length === 1) {
+        updated = `${first}\n- ${text}`;
+      } else {
+        updated = `${first}\n- ${text}\n${lines.slice(1).join('\n')}`;
+      }
+    } else {
+      updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
+    }
+  } else {
+    updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
+  }
   const newTask = { ...(toRaw(props.task) as any), description: updated } as Task;
   emit('update-task', newTask);
   quickSubtask.value = '';
