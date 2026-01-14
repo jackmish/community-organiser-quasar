@@ -20,12 +20,48 @@
           <div style="display: flex; gap: 8px; align-items: center">
             <q-chip
               size="sm"
-              :style="{
-                backgroundColor: priorityColor(task.priority),
-                color: priorityTextColor(task.priority),
-              }"
-              >{{ task.priority }}</q-chip
+              clickable
+              :class="priorityChipClass(task.priority)"
+              :style="priorityChipStyle(task.priority)"
             >
+              {{ task.priority }}
+              <q-menu
+                v-model="priorityMenu"
+                anchor="bottom right"
+                self="top right"
+                content-class="priority-menu"
+              >
+                <q-list style="min-width: 0; padding: 4px 0" dense>
+                  <q-item
+                    v-for="p in Object.keys(priorityDefinitions)"
+                    :key="p"
+                    clickable
+                    dense
+                    @click="selectPriority(p)"
+                    :class="['use-default', menuItemClass(p)]"
+                    :style="menuItemStyle(p)"
+                  >
+                    <q-item-section
+                      side
+                      style="
+                        width: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      "
+                    >
+                      <q-icon
+                        :name="(priorityIcons as any)[p] || 'label'"
+                        :color="priorityTextColor(p)"
+                      />
+                    </q-item-section>
+                    <q-item-section>
+                      <div :style="{ color: priorityTextColor(p), fontWeight: 600 }">{{ p }}</div>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-chip>
             <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{
               groupName
             }}</q-chip>
@@ -89,6 +125,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
   priorityDefinitions,
+  priorityIcons,
 } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
@@ -107,6 +144,19 @@ const quickSubtask = ref('');
 
 // refs to each rendered list item so we can animate height directly
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
+const priorityMenu = ref(false);
+
+function selectPriority(p: string) {
+  try {
+    const t = toRaw(props.task || ({} as any));
+    const newTask = { ...(t as any), priority: p } as Task;
+    emit('update-task', newTask);
+  } catch (e) {
+    void e;
+  } finally {
+    priorityMenu.value = false;
+  }
+}
 // fallback timers for transitionend handlers to ensure cleanup/emits always run
 const transitionFallbacks = new Map<HTMLElement, number>();
 
@@ -283,6 +333,42 @@ const previewCardStyle = computed(() => ({
 const priorityColor = (p?: string) => {
   return p ? priorityColors[p] || 'grey-4' : 'grey-4';
 };
+
+const looksLikeCssColor = (s?: string) => !!(s && /^\s*(#|rgb|hsl)/i.test(s));
+
+function priorityChipClass(p?: string) {
+  const c = priorityColor(p);
+  if (!c) return '';
+  return looksLikeCssColor(c) ? '' : `bg-${c}`;
+}
+
+function priorityChipStyle(p?: string) {
+  const c = priorityColor(p);
+  const txt = priorityTextColor(p);
+  if (looksLikeCssColor(c)) return { backgroundColor: c, color: txt } as any;
+  // If c looks like a Quasar color name (not a raw CSS color), apply only text color
+  return { color: txt } as any;
+}
+
+function menuItemStyle(p?: string) {
+  const c = priorityColor(p);
+  const txt = priorityTextColor(p);
+  if (!c) return {} as any;
+  // Use inline background/color for raw css colors and also set CSS variables
+  if (looksLikeCssColor(c))
+    return {
+      backgroundColor: c,
+      color: txt,
+      ['--priority-bg']: c,
+      ['--priority-text']: txt,
+    } as any;
+  // For Quasar color names we rely on bg-<color> class; still set text color variable
+  return { color: txt, ['--priority-text']: txt } as any;
+}
+
+function menuItemClass(p?: string) {
+  return priorityChipClass(p);
+}
 
 const groupName = computed(() => props.groupName || '');
 
@@ -594,5 +680,75 @@ function buildHtmlFromParsed(
 .task-preview .q-mb-xs {
   margin-bottom: 6px !important;
   line-height: 1.15 !important;
+}
+
+/* Compact priority menu content */
+.priority-menu {
+  min-width: 0 !important;
+  padding: 6px !important;
+}
+.priority-menu .q-item {
+  border-radius: 6px;
+  margin: 4px 6px !important;
+  padding: 6px 8px !important;
+}
+.priority-menu .q-item__section {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+/* Apply CSS variables when provided (for raw hex/rgb colors). Use !important
+   so Quasar's internal backgrounds don't override our swatches. */
+.priority-menu .q-item {
+  background: var(--priority-bg, transparent) !important;
+  color: var(--priority-text, inherit) !important;
+}
+.priority-menu .q-item__section,
+.priority-menu .q-item__label {
+  color: var(--priority-text, inherit) !important;
+}
+/* Global rules for teleported q-menu content (not scoped) */
+</style>
+
+<style>
+.priority-menu {
+  min-width: 0 !important;
+  padding: 6px !important;
+}
+.priority-menu .q-item {
+  border-radius: 6px;
+  margin: 4px 6px !important;
+  padding: 6px 8px !important;
+  background: var(--priority-bg, transparent) !important;
+  color: var(--priority-text, inherit) !important;
+}
+.priority-menu .q-item__section,
+.priority-menu .q-item__label {
+  color: var(--priority-text, inherit) !important;
+}
+/* Prefer a subtle brighten on hover for priority items, do not apply the global blue overlay. */
+/* Ensure we outrank the global menu overlay by using the teleported menu root and body-scoped selector */
+body .q-menu.priority-menu .q-item::before,
+body .q-menu.priority-menu .q-item.q-item--active::before {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Use a subtle semi-transparent white overlay on hover so the colored background brightens
+   instead of being replaced by the global blue overlay. */
+body .q-menu.priority-menu .q-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  transition: background-color 140ms ease !important;
+  z-index: 0;
+}
+body .q-menu.priority-menu .q-item:hover::after {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+body .q-menu.priority-menu .q-item.q-item--active:hover::after {
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 </style>

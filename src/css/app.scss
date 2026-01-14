@@ -37,6 +37,32 @@ $menu-bg: $inactive-blue;
   filter: none !important;
   will-change: background-color;
 }
+.q-menu,
+.q-select__popup,
+.q-dialog {
+  .q-item {
+    &:not(.use-default),
+    &:not(.use-default):hover,
+    &:not(.use-default):focus,
+    &:not(.use-default).q-item--active,
+    &:not(.use-default).q-item--active:hover,
+    &:not(.use-default) * {
+      mix-blend-mode: normal !important;
+      background-blend-mode: normal !important;
+      filter: none !important;
+      will-change: background-color;
+    }
+  }
+}
+.q-select__popup .q-item:not(.use-default),
+.q-select__popup .q-item:not(.use-default) *,
+.q-dialog .q-item:not(.use-default),
+.q-dialog .q-item:not(.use-default) * {
+  mix-blend-mode: normal !important;
+  background-blend-mode: normal !important;
+  filter: none !important;
+  will-change: background-color;
+}
 .q-menu .q-item > *,
 .q-menu .q-item .q-item__section,
 .q-menu .q-item .q-item__label,
@@ -48,39 +74,54 @@ $menu-bg: $inactive-blue;
 /* Ensure no direct backgrounds/filters are applied to items or their children
    so the ::before overlay is the only visual change on hover. This prevents
    any Quasar hover rules from making items brighter. */
-.q-menu .q-item,
-.q-menu .q-item:hover,
-.q-menu .q-item:focus,
-.q-menu .q-item--active,
-.q-menu .q-item--active:hover,
-.q-menu .q-item *,
-.q-select__popup .q-item,
-.q-select__popup .q-item *,
-.q-dialog .q-item,
-.q-dialog .q-item * {
-  background: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  filter: none !important;
-  mix-blend-mode: normal !important;
+.q-menu,
+.q-select__popup,
+.q-dialog {
+  .q-item {
+    &:not(.use-default),
+    &:not(.use-default):hover,
+    &:not(.use-default):focus,
+    &:not(.use-default).q-item--active,
+    &:not(.use-default).q-item--active:hover,
+    &:not(.use-default) * {
+      background: transparent !important;
+      background-image: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+      mix-blend-mode: normal !important;
+    }
+  }
+}
+.q-menu,
+.q-select__popup,
+.q-dialog {
+  .q-item {
+    &:not(.use-default) {
+      background: transparent !important;
+      background-image: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+      mix-blend-mode: normal !important;
+    }
+  }
 }
 
 // Use SCSS colors so hover darkens the base color instead of applying a black overlay.
 // `var(--q-primary)` can't be used with `darken()` at compile time, so we set
 // a known task-list blue and derive hover colors from it.
 
-.q-menu .q-item.q-item--active::before,
-.q-menu .q-item--active::before {
+.q-menu :not(.use-default).q-item.q-item--active::before,
+.q-menu :not(.use-default).q-item--active::before {
   background-color: $task-blue !important; /* active: task-list blue */
 }
-.q-menu .q-item:not(.q-item--active):hover::before {
+.q-menu :not(.use-default).q-item:not(.q-item--active):hover::before {
   background-color: darken(
     $inactive-blue,
     6%
   ) !important; /* non-active hover: darken inactive base */
 }
-.q-menu .q-item.q-item--active:hover::before,
-.q-menu .q-item--active:hover::before {
+.q-menu :not(.use-default).q-item.q-item--active:hover::before,
+.q-menu :not(.use-default).q-item--active:hover::before {
   background-color: darken($task-blue, 8%) !important; /* active+hover: darker active */
 }
 
