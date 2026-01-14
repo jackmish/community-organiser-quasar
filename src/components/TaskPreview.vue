@@ -93,7 +93,11 @@
                 :ref="(el) => setItemRef(el, idx)"
                 :class="{ shrinking: props.animatingLines && props.animatingLines.includes(idx) }"
               >
-                <q-item clickable class="q-pa-none" @click.stop="$emit('toggle-status', task, idx)">
+                <q-item
+                  clickable
+                  :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
+                  @click.stop="$emit('toggle-status', task, idx)"
+                >
                   <q-item-section side>
                     <q-icon
                       :name="line.checked ? 'check_circle' : 'radio_button_unchecked'"
@@ -102,6 +106,18 @@
                   </q-item-section>
                   <q-item-section>
                     <div v-html="line.html"></div>
+                  </q-item-section>
+                  <q-item-section side class="highlight-section">
+                    <q-btn
+                      dense
+                      flat
+                      round
+                      size="sm"
+                      class="highlight-btn"
+                      :icon="line.highlighted ? 'star' : 'star_border'"
+                      :color="line.highlighted ? 'amber' : 'grey-6'"
+                      @click.stop="toggleHighlight(idx)"
+                    />
                   </q-item-section>
                 </q-item>
               </div>
@@ -436,13 +452,27 @@ const isDone = computed(() => Number(props.task?.status_id) === 0);
 // parsedLines is kept in a ref and updated via a watcher so we can maintain
 // stable uids without causing side-effects inside a computed property.
 const parsedLines = ref(
-  [] as Array<{ uid: string; type: string; raw: string; html: string; checked?: boolean }>,
+  [] as Array<{
+    uid: string;
+    type: string;
+    raw: string;
+    html: string;
+    checked?: boolean;
+    highlighted?: boolean;
+  }>,
 );
 
 function computeParsedLines(desc: string) {
   const d = desc || '';
   if (!d)
-    return [] as Array<{ uid: string; type: string; raw: string; html: string; checked?: boolean }>;
+    return [] as Array<{
+      uid: string;
+      type: string;
+      raw: string;
+      html: string;
+      checked?: boolean;
+      highlighted?: boolean;
+    }>;
   const lines = d.split(/\r?\n/);
   // Build a map of previous raw->queue of uids for reuse
   const prevMap = new Map<string, string[]>();
@@ -480,9 +510,13 @@ function computeParsedLines(desc: string) {
       const content = dashMatch[1] || '';
       const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
       const checked = !!markerMatch;
-      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      // detect trailing star marker (highlight)
+      const starMatch = content.match(/\s*\*\s*$/);
+      const highlighted = !!starMatch;
+      let clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      clean = clean.replace(/\s*\*\s*$/, '');
       const html = escapeHtml(clean).replace(/\n/g, '<br/>');
-      return { uid, type: 'list', raw: ln, html, checked };
+      return { uid, type: 'list', raw: ln, html, checked, highlighted };
     }
     if (numMatch) {
       const idx = numMatch[1];
@@ -506,6 +540,51 @@ watch(
   },
   { immediate: true },
 );
+
+function toggleHighlight(idx: number) {
+  try {
+    const parsed = parsedLines.value;
+    const item = parsed[idx];
+    if (!item || item.type !== 'list') return;
+    const rawDesc = String(props.task?.description || '');
+    const rawLines = rawDesc.split(/\r?\n/);
+    // find exact matching raw line
+    let foundIdx = rawLines.findIndex((r) => r === (item?.raw || ''));
+    // fallback: try loose match by stripping list marker
+    if (foundIdx === -1) {
+      const stripped = (item?.raw || '').replace(/^\s*[-*]\s*/, '').trim();
+      foundIdx = rawLines.findIndex(
+        (r) => (r || '').replace(/^\s*[-*]\s*/, '').trim() === stripped,
+      );
+    }
+    const newLines = [...rawLines];
+    if ((item as any).highlighted) {
+      // remove trailing star if present
+      if (foundIdx >= 0) {
+        newLines[foundIdx] = (newLines[foundIdx] ?? '').replace(/\s*\*\s*$/, '');
+      }
+    } else {
+      // add star and move to top (after title if present)
+      const candidate = (item?.raw || '').replace(/\s*\*\s*$/, '') + ' *';
+      if (foundIdx >= 0) {
+        newLines.splice(foundIdx, 1);
+      }
+      const title = props.task?.name || '';
+      let insertAt = 0;
+      if (title && newLines.length > 0) {
+        const first = newLines[0] || '';
+        const titleMatch = new RegExp('^\\s*' + escapeRegExp(title) + '\\b', 'i');
+        if (titleMatch.test(first)) insertAt = 1;
+      }
+      newLines.splice(insertAt, 0, candidate);
+    }
+    const updated = newLines.join('\n');
+    const t = { ...(toRaw(props.task) as any), description: updated } as Task;
+    emit('update-task', t);
+  } catch (e) {
+    void e;
+  }
+}
 async function copyStyledTask() {
   const t = toRaw(props.task || ({} as any));
   const html = buildHtmlFromParsed(parsedLines.value, t);
@@ -534,7 +613,13 @@ async function copyStyledTask() {
 }
 
 function buildPlainTextFromParsed(
-  parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>,
+  parsed: Array<{
+    type: string;
+    raw: string;
+    html: string;
+    checked?: boolean;
+    highlighted?: boolean;
+  }>,
   task: any,
 ) {
   const lines: string[] = [];
@@ -566,7 +651,13 @@ function buildPlainTextFromParsed(
 }
 
 function buildHtmlFromParsed(
-  parsed: Array<{ type: string; raw: string; html: string; checked?: boolean }>,
+  parsed: Array<{
+    type: string;
+    raw: string;
+    html: string;
+    checked?: boolean;
+    highlighted?: boolean;
+  }>,
   task: any,
 ) {
   const esc = (s = '') =>
@@ -629,6 +720,26 @@ function buildHtmlFromParsed(
 }
 .collapse-wrapper {
   transition: max-height 0.25s ease-in-out;
+}
+</style>
+
+<style scoped>
+/* Highlight button: semi-transparent until hover */
+.highlight-btn {
+  opacity: 0.45;
+  transition: opacity 120ms ease;
+}
+.q-item:hover .highlight-btn {
+  opacity: 1;
+}
+.highlight-section {
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+}
+/* Highlighted list item visual */
+.task-preview .q-item.highlighted {
+  background-color: rgba(255, 193, 7, 0.06);
 }
 </style>
 
