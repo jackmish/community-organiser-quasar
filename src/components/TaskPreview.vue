@@ -52,17 +52,23 @@
         <div>
           <div v-for="(line, idx) in parsedLines" :key="idx">
             <div v-if="line.type === 'list'">
-              <q-item clickable class="q-pa-none" @click.stop="$emit('toggle-status', task, idx)">
-                <q-item-section side>
-                  <q-icon
-                    :name="line.checked ? 'check_circle' : 'radio_button_unchecked'"
-                    :color="line.checked ? 'green' : 'grey-6'"
-                  />
-                </q-item-section>
-                <q-item-section>
-                  <div v-html="line.html"></div>
-                </q-item-section>
-              </q-item>
+              <div
+                class="collapse-wrapper"
+                :ref="(el) => setItemRef(el, idx)"
+                :class="{ shrinking: props.animatingLines && props.animatingLines.includes(idx) }"
+              >
+                <q-item clickable class="q-pa-none" @click.stop="$emit('toggle-status', task, idx)">
+                  <q-item-section side>
+                    <q-icon
+                      :name="line.checked ? 'check_circle' : 'radio_button_unchecked'"
+                      :color="line.checked ? 'green' : 'grey-6'"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <div v-html="line.html"></div>
+                  </q-item-section>
+                </q-item>
+              </div>
             </div>
             <div v-else class="q-mb-xs" v-html="line.html"></div>
           </div>
@@ -73,7 +79,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRaw, ref, nextTick } from 'vue';
+import { computed, toRaw, ref, nextTick, watch } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import logger from 'src/utils/logger';
 import { format } from 'date-fns';
 import {
@@ -85,11 +92,77 @@ import {
 } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
-const props = defineProps<{ task: Task; groupName?: string }>();
+const props = defineProps<{ task: Task; groupName?: string; animatingLines?: number[] }>();
 const emit = defineEmits(['edit', 'close', 'toggle-status', 'update-task']);
 
 // Quick-add subtask helper
 const quickSubtask = ref('');
+
+// refs to each rendered list item so we can animate height directly
+const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
+
+function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
+  if (!el) {
+    itemRefs.value[idx] = null;
+    return;
+  }
+  // If a raw HTMLElement was passed, use it. Otherwise, if a Vue component
+  // instance was passed, prefer its $el root DOM node.
+  if (el instanceof HTMLElement) {
+    itemRefs.value[idx] = el;
+    return;
+  }
+  const maybeEl = (el as any)?.$el;
+  if (maybeEl && maybeEl instanceof HTMLElement) {
+    itemRefs.value[idx] = maybeEl;
+    return;
+  }
+  // fallback
+  itemRefs.value[idx] = null;
+}
+
+// When parent requests an animating line, collapse that element by animating
+// its explicit height/padding/margin to 0 so elements below move up naturally.
+watch(
+  () => props.animatingLines && [...(props.animatingLines || [])],
+  async (newVal, oldVal) => {
+    const added = (newVal || []).filter((i) => !(oldVal || []).includes(i));
+    for (const idx of added) {
+      const el = itemRefs.value[idx];
+      if (!el) continue;
+      try {
+        const style = el.style;
+        // capture current dimensions
+        const startHeight = el.scrollHeight + 'px';
+        style.overflow = 'hidden';
+        style.height = startHeight;
+        style.marginBottom = getComputedStyle(el).marginBottom;
+        // force layout
+        await nextTick();
+        void el.offsetHeight;
+        style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
+        // animate to collapsed (height/margin only)
+        style.height = '0px';
+        style.marginBottom = '0px';
+
+        const handler = (ev: TransitionEvent) => {
+          if ((ev && ev.propertyName !== 'height') || !el) return;
+          // cleanup inline styles after animation
+          style.removeProperty('height');
+          style.removeProperty('overflow');
+          style.removeProperty('transition');
+          style.removeProperty('padding-top');
+          style.removeProperty('padding-bottom');
+          style.removeProperty('margin-bottom');
+          el.removeEventListener('transitionend', handler);
+        };
+        el.addEventListener('transitionend', handler);
+      } catch (e) {
+        // ignore animation errors
+      }
+    }
+  },
+);
 
 function addQuickSubtask() {
   const text = (quickSubtask.value || '').trim();
@@ -340,6 +413,18 @@ function buildHtmlFromParsed(
 </script>
 
 <style scoped>
+.shrinking {
+  /* marker class for JS-driven collapse; JS handles explicit height/padding/margin animation */
+  overflow: hidden;
+}
+
+.collapse-wrapper {
+  overflow: hidden;
+  display: block;
+}
+</style>
+
+<style scoped>
 /* Date larger and blue, time green */
 .preview-datetime {
   display: flex;
@@ -368,10 +453,35 @@ function buildHtmlFromParsed(
 .task-preview .q-item {
   padding-top: 4px !important;
   padding-bottom: 4px !important;
+  /* allow smooth height-based collapse: set an ample max-height and enable transitions */
+  max-height: 200px;
+  min-height: 0 !important;
+  height: auto !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition:
+    max-height 0.5s ease-in-out,
+    padding 0.5s ease-in-out,
+    margin 0.5s ease-in-out;
+}
+.task-preview .q-item {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  /* allow smooth height-based collapse: set an ample max-height and enable transitions */
+  max-height: 1000px;
+  min-height: 0 !important;
+  height: auto !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition:
+    max-height 0.5s ease-in-out,
+    padding 0.5s ease-in-out,
+    margin 0.5s ease-in-out;
 }
 .task-preview .q-item .q-item-section {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+  min-height: 0 !important;
 }
 .task-preview .q-item .q-item-section div {
   line-height: 1.15 !important;

@@ -117,6 +117,7 @@
             <TaskPreview
               :task="taskToEdit"
               :group-name="getGroupName(taskToEdit.groupId)"
+              :animating-lines="animatingLines"
               @edit="
                 () => {
                   mode = 'edit';
@@ -534,6 +535,7 @@ const taskToEdit = ref<Task | null>(null);
 const mode = ref<'add' | 'edit' | 'preview'>('add');
 const selectedTaskId = ref<string | null>(null);
 const reloadKey = ref(0);
+const animatingLines = ref<number[]>([]);
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
@@ -1482,11 +1484,15 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         // remove marker
         lines[lineIndex] = `${prefix}${content}`;
       } else {
-        // add marker after the dash prefix
-        lines[lineIndex] = `${prefix}[x] ${content}`;
+        // animate then mark done and move this subtask to the end of the description
+        animatingLines.value = [lineIndex];
+        await new Promise((res) => setTimeout(res, 500));
+        const completedLine = `${prefix}[x] ${content}`;
+        lines.splice(lineIndex, 1);
+        lines.push(completedLine);
       }
       const newDesc = lines.join('\n');
-      // optimistic update so UI reflects change immediately
+      // update the task description after animation
       try {
         task.description = newDesc;
         if (taskToEdit.value && taskToEdit.value.id === task.id) {
@@ -1495,6 +1501,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } catch (e) {
         // ignore
       }
+      animatingLines.value = [];
       await updateTask(targetDate, task.id, { description: newDesc });
       return;
     }
@@ -1507,7 +1514,12 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       if (checked) {
         lines[lineIndex] = `${prefix}${content}`;
       } else {
-        lines[lineIndex] = `${prefix}[x] ${content}`;
+        // animate then convert numeric item into a completed bullet at the end
+        animatingLines.value = [lineIndex];
+        await new Promise((res) => setTimeout(res, 500));
+        const completedLine = `- [x] ${content}`;
+        lines.splice(lineIndex, 1);
+        lines.push(completedLine);
       }
       const newDesc = lines.join('\n');
       try {
@@ -1518,6 +1530,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } catch (e) {
         // ignore
       }
+      animatingLines.value = [];
       await updateTask(targetDate, task.id, { description: newDesc });
       return;
     }
