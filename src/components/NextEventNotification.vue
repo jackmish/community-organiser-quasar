@@ -286,6 +286,8 @@ function onClickEvent(ev: any) {
   min-width: 0;
   /* allow wrapping to next line when items don't fit */
   flex-wrap: wrap;
+  background: var(--q-primary, #0d47a1); /* use beam color variable */
+  color: white;
 }
 
 .next-events-row.collapsed {
@@ -318,9 +320,18 @@ function onClickEvent(ev: any) {
 /* panel that appears when expanded: absolutely positioned so header height doesn't change */
 .next-events-row.expanded {
   /* only change background and max-height when expanded */
-  background: #0d47a1; /* expanded blue */
   max-height: 999px;
   overflow: hidden;
+
+  border-radius: 8px;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+  padding-bottom: 8px;
+  /* increased opacity so outline is more visible */
+  box-shadow:
+    0 0 0 8px rgba(255, 230, 118, 0.72),
+    0 0 18px 2px rgba(222, 230, 222, 0.88),
+    0 8px 24px rgba(0, 0, 0, 0.82);
 }
 
 .next-events-container {
