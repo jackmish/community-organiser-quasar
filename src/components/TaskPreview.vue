@@ -1,5 +1,8 @@
 <template>
-  <q-card class="q-mb-md task-preview" :style="previewCardStyle">
+  <q-card
+    :class="['q-mb-md task-preview', { 'fixed-preview': props.fixed !== false }]"
+    :style="previewCardStyle"
+  >
     <q-card-section>
       <!-- header: title on left, copy on right -->
       <div class="row items-center justify-between q-mb-sm">
@@ -159,7 +162,12 @@ import {
 } from './theme';
 import type { Task } from '../modules/day-organiser/types';
 
-const props = defineProps<{ task: Task; groupName?: string; animatingLines?: number[] }>();
+const props = defineProps<{
+  task: Task;
+  groupName?: string;
+  animatingLines?: number[];
+  fixed?: boolean;
+}>();
 const emit = defineEmits([
   'edit',
   'close',
@@ -913,5 +921,17 @@ body .q-menu.priority-menu .q-item:hover::after {
 }
 body .q-menu.priority-menu .q-item.q-item--active:hover::after {
   background: rgba(255, 255, 255, 0.08) !important;
+}
+</style>
+
+<style>
+.task-preview.fixed-preview {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1600;
+  width: 360px;
+  max-width: calc(100% - 32px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 </style>

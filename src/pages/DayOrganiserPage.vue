@@ -106,49 +106,11 @@
           />
         </div>
         <div class="col-12 col-md-4">
-          <div class="" v-if="mode !== 'add'" style="margin-bottom: -4px">
-            <!-- remove the 'add' option here; floating Add button handles adding -->
-            <ModeSwitcher v-model="mode" :allowed-modes="['preview', 'edit']" />
-          </div>
+          <!-- ModeSwitcher moved to fixed right-side panel -->
 
           <!-- Replenishment items are rendered with other tasks (no separate right-column panel) -->
 
-          <div v-if="mode === 'preview' && taskToEdit">
-            <TaskPreview
-              :task="taskToEdit"
-              :group-name="getGroupName(taskToEdit.groupId)"
-              :animating-lines="animatingLines"
-              @line-collapsed="onLineCollapsed"
-              @line-expanded="onLineExpanded"
-              @edit="
-                () => {
-                  mode = 'edit';
-                }
-              "
-              @close="clearTaskToEdit"
-              @toggle-status="(t, i) => toggleStatus(t, i)"
-              @update-task="(t) => handleUpdateTask(t)"
-            />
-          </div>
-          <div v-else>
-            <AddTaskForm
-              :filtered-parent-options="filteredParentOptions"
-              :active-group="activeGroup"
-              :show-calendar="false"
-              :selected-date="newTask.eventDate"
-              :all-tasks="allTasks"
-              :initial-task="taskToEdit"
-              :mode="mode"
-              @update:mode="(v) => (mode = v)"
-              @add-task="handleAddTask"
-              @update-task="handleUpdateTask"
-              @delete-task="handleDeleteTask"
-              @replenish-restore="handleReplenishRestore"
-              @cancel-edit="() => clearTaskToEdit()"
-              @calendar-date-select="handleCalendarDateSelect"
-              @filter-parent-tasks="filterParentTasks"
-            />
-          </div>
+          <!-- Preview/Add form moved to fixed right-side panel -->
 
           <!-- duplicate replenishment card removed (now in tasks row right column) -->
 
@@ -212,6 +174,48 @@
       @click="clearTaskToEdit"
       title="Add new task"
     />
+
+    <!-- Fixed right-side panel: ModeSwitcher above preview/form -->
+    <div class="fixed-right-panel">
+      <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
+      <div class="fixed-content">
+        <TaskPreview
+          v-if="mode === 'preview' && taskToEdit"
+          :task="taskToEdit"
+          :group-name="getGroupName(taskToEdit.groupId)"
+          :animating-lines="animatingLines"
+          @line-collapsed="onLineCollapsed"
+          @line-expanded="onLineExpanded"
+          @edit="
+            () => {
+              mode = 'edit';
+            }
+          "
+          @close="clearTaskToEdit"
+          @toggle-status="(t, i) => toggleStatus(t, i)"
+          @update-task="(t) => handleUpdateTask(t)"
+          :fixed="false"
+        />
+        <AddTaskForm
+          v-else
+          :filtered-parent-options="filteredParentOptions"
+          :active-group="activeGroup"
+          :show-calendar="false"
+          :selected-date="newTask.eventDate"
+          :all-tasks="allTasks"
+          :initial-task="taskToEdit"
+          :mode="mode"
+          @update:mode="(v) => (mode = v)"
+          @add-task="handleAddTask"
+          @update-task="handleUpdateTask"
+          @delete-task="handleDeleteTask"
+          @replenish-restore="handleReplenishRestore"
+          @cancel-edit="() => clearTaskToEdit()"
+          @calendar-date-select="handleCalendarDateSelect"
+          @filter-parent-tasks="filterParentTasks"
+        />
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -597,8 +601,9 @@ onBeforeUnmount(() => {
   }
 });
 
-// Allowed modes depend on whether a task is selected
-const allowedModes = computed(() => (taskToEdit.value ? ['add', 'edit', 'preview'] : ['add']));
+// Allowed modes depend on whether a task is selected.
+// Do not expose the 'add' option here (floating add button handles creation).
+const allowedModes = computed(() => (taskToEdit.value ? ['preview', 'edit'] : []));
 
 // Ensure we return to 'add' mode when no task is selected
 watch(taskToEdit, (val) => {
@@ -2339,5 +2344,31 @@ onMounted(async () => {
 
 .date-black {
   color: black !important;
+}
+
+.fixed-right-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1600;
+  width: 360px;
+  max-width: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  align-items: flex-end;
+}
+.fixed-right-panel .fixed-content {
+  width: 100%;
+}
+.fixed-right-panel > .row {
+  margin-bottom: -4px;
+}
+.floating-add-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1700 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 </style>

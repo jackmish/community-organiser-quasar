@@ -6,12 +6,15 @@
       :label="opt.label"
       :icon="opt.icon"
       size="md"
-      class="q-pa-none"
+      :class="[
+        'q-pa-none',
+        modelValue === opt.value ? 'mode-switch-active' : 'mode-switch-inactive',
+      ]"
       :unelevated="modelValue === opt.value"
       :outline="modelValue !== opt.value"
       @click="emit('update:modelValue', opt.value)"
       :style="{
-        backgroundColor: modelValue === opt.value ? opt.color : 'transparent',
+        backgroundColor: modelValue === opt.value ? opt.color : undefined,
         color:
           modelValue === opt.value ? opt.textColor || 'white' : opt.color || 'rgba(0,0,0,0.87)',
         borderColor: opt.color,
@@ -57,7 +60,9 @@ const textColorMap: Record<string, string> = {
 const defaultModes = ['add', 'edit', 'preview'];
 
 const options = computed(() => {
-  const modes = props.allowedModes && props.allowedModes.length ? props.allowedModes : defaultModes;
+  // If `allowedModes` prop is provided (even as an empty array), use it as-is.
+  // Only fall back to `defaultModes` when the prop is undefined.
+  const modes = props.allowedModes !== undefined ? props.allowedModes : defaultModes;
   return modes.map((m) => ({
     label: labelMap[m] || m,
     value: m,
@@ -67,3 +72,12 @@ const options = computed(() => {
   }));
 });
 </script>
+
+<style scoped>
+.mode-switch-inactive {
+  background: white !important;
+}
+.mode-switch-active {
+  /* active background set inline via style binding to allow per-option color */
+}
+</style>
