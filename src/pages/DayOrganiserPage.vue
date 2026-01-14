@@ -536,6 +536,8 @@ const mode = ref<'add' | 'edit' | 'preview'>('add');
 const selectedTaskId = ref<string | null>(null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
+// track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
+const pendingToggles = new Map<string, boolean>();
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
@@ -1469,6 +1471,9 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   }
   // If a line index is provided, toggle only that line's checked marker inside the description
   if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
+    const pendingKey = `${task.id}:line:${lineIndex}`;
+    if (pendingToggles.get(pendingKey)) return;
+    pendingToggles.set(pendingKey, true);
     const lines = task.description.split(/\r?\n/);
     let appendedIndex: number | undefined = undefined;
     const ln = lines[lineIndex] ?? '';
@@ -1482,8 +1487,27 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const content = dashMatch[3] || '';
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
-        // remove marker
-        lines[lineIndex] = `${prefix}${content}`;
+        // unchecked: move to top behind title (second line) unless already there.
+        // Title is the first line of the description; detect if first line is non-empty.
+        const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
+        const insertIndex = hasTitleInDesc ? 1 : 0;
+        // If the user toggled the actual title line (index 0 when title present), don't move it.
+        if (lineIndex === 0 && hasTitleInDesc) {
+          lines[lineIndex] = `${prefix}${content}`;
+        } else if (lineIndex === insertIndex) {
+          // already in desired position — just remove marker in-place
+          lines[lineIndex] = `${prefix}${content}`;
+        } else {
+          // animate collapse, move, then expand at new spot
+          animatingLines.value = [lineIndex];
+          await new Promise((res) => setTimeout(res, 500));
+          const movedLine = `${prefix}${content}`;
+          // adjust insert position if removing an earlier index shifts the array
+          const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
+          lines.splice(lineIndex, 1);
+          lines.splice(adjustedIndex, 0, movedLine);
+          appendedIndex = adjustedIndex;
+        }
       } else {
         // animate then mark done and move this subtask to the end of the description
         animatingLines.value = [lineIndex];
@@ -1513,7 +1537,11 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
-      await updateTask(targetDate, task.id, { description: newDesc });
+      try {
+        await updateTask(targetDate, task.id, { description: newDesc });
+      } finally {
+        pendingToggles.delete(pendingKey);
+      }
       return;
     }
 
@@ -1523,7 +1551,23 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const content = numMatch[3] || '';
       const checked = /^\s*\[[xX]\]\s*/.test(marker);
       if (checked) {
-        lines[lineIndex] = `${prefix}${content}`;
+        // unchecked numeric item -> move to top behind title (second line) unless already there.
+        // Title is the first line of the description; detect if first line is non-empty.
+        const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
+        const insertIndex = hasTitleInDesc ? 1 : 0;
+        if (lineIndex === 0 && hasTitleInDesc) {
+          lines[lineIndex] = `${prefix}${content}`;
+        } else if (lineIndex === insertIndex) {
+          lines[lineIndex] = `${prefix}${content}`;
+        } else {
+          animatingLines.value = [lineIndex];
+          await new Promise((res) => setTimeout(res, 500));
+          const movedLine = `${prefix}${content}`;
+          const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
+          lines.splice(lineIndex, 1);
+          lines.splice(adjustedIndex, 0, movedLine);
+          appendedIndex = adjustedIndex;
+        }
       } else {
         // animate then convert numeric item into a completed bullet at the end
         animatingLines.value = [lineIndex];
@@ -1552,10 +1596,16 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
-      await updateTask(targetDate, task.id, { description: newDesc });
+      try {
+        await updateTask(targetDate, task.id, { description: newDesc });
+      } finally {
+        pendingToggles.delete(pendingKey);
+      }
       return;
     }
     // Not a list-like line: fall through to toggling whole task
+    // ensure we clear pending for safety (shouldn't reach here normally)
+    pendingToggles.delete(pendingKey);
   }
 
   // Special-case Replenishment items: toggle their base status immediately
@@ -1667,6 +1717,9 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     logger.warn('toggleStatus cyclic handling error', e);
   }
 
+  const pendingKeyTask = `${task.id}:task`;
+  if (pendingToggles.get(pendingKeyTask)) return;
+  pendingToggles.set(pendingKeyTask, true);
   // optimistic update
   try {
     task.status_id = status;
@@ -1676,7 +1729,11 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   } catch (e) {
     // ignore
   }
-  await updateTask(targetDate, task.id, { status_id: status });
+  try {
+    await updateTask(targetDate, task.id, { status_id: status });
+  } finally {
+    pendingToggles.delete(pendingKeyTask);
+  }
 };
 
 const handleActiveGroupChange = (value: { label: string; value: string | null } | null) => {
