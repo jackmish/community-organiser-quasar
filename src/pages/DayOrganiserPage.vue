@@ -1225,6 +1225,17 @@ const doneTasks = computed(() => {
       const ts = task.updatedAt ?? task.createdAt ?? task.updated_at ?? task.created_at ?? null;
       return ts ? new Date(ts).getTime() : 0;
     };
+    const hasStar = (task: any) => {
+      try {
+        const desc = (task && task.description) || '';
+        return desc.split(/\r?\n/).some((l: string) => /\*\s*$/.test(l));
+      } catch (e) {
+        return false;
+      }
+    };
+    const wa = hasStar(a) ? 1 : 0;
+    const wb = hasStar(b) ? 1 : 0;
+    if (wa !== wb) return wb - wa; // starred tasks first
     return getTime(b) - getTime(a);
   });
 });
@@ -1551,13 +1562,32 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
           appendedIndex = adjustedIndex;
         }
       } else {
-        // animate then mark done and move this subtask to the end of the description
+        // animate then mark done and move this subtask to the end (or into starred-top area)
         animatingLines.value = [lineIndex];
         await waitForLineEvent(task.id, lineIndex, 'collapsed');
-        const completedLine = `${prefix}[x] ${content}`;
+        // detect trailing star on the original content
+        const hadStar = /\s*\*\s*$/.test(content);
+        const cleanContent = content.replace(/\s*\*\s*$/, '');
+        const completedLine = `${prefix}[x] ${cleanContent}${hadStar ? ' *' : ''}`;
+        // remove the original line first
         lines.splice(lineIndex, 1);
-        lines.push(completedLine);
-        appendedIndex = lines.length - 1;
+        if (hadStar) {
+          // insert at the start of the completed-block: find first completed item index
+          const completedStart = lines.findIndex(
+            (ln: string) =>
+              /^(\s*-\s*\[[xX]\]\s*)/.test(ln) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln),
+          );
+          if (completedStart === -1) {
+            lines.push(completedLine);
+            appendedIndex = lines.length - 1;
+          } else {
+            lines.splice(completedStart, 0, completedLine);
+            appendedIndex = completedStart;
+          }
+        } else {
+          lines.push(completedLine);
+          appendedIndex = lines.length - 1;
+        }
       }
       const newDesc = lines.join('\n');
       // update the task description after animation
@@ -1612,13 +1642,29 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
           appendedIndex = adjustedIndex;
         }
       } else {
-        // animate then convert numeric item into a completed bullet at the end
+        // animate then convert numeric item into a completed bullet at the end (or into starred-top area)
         animatingLines.value = [lineIndex];
         await waitForLineEvent(task.id, lineIndex, 'collapsed');
-        const completedLine = `- [x] ${content}`;
+        const hadStar = /\s*\*\s*$/.test(content);
+        const cleanContent = content.replace(/\s*\*\s*$/, '');
+        const completedLine = `- [x] ${cleanContent}${hadStar ? ' *' : ''}`;
         lines.splice(lineIndex, 1);
-        lines.push(completedLine);
-        appendedIndex = lines.length - 1;
+        if (hadStar) {
+          const completedStart = lines.findIndex(
+            (ln: string) =>
+              /^(\s*-\s*\[[xX]\]\s*)/.test(ln) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln),
+          );
+          if (completedStart === -1) {
+            lines.push(completedLine);
+            appendedIndex = lines.length - 1;
+          } else {
+            lines.splice(completedStart, 0, completedLine);
+            appendedIndex = completedStart;
+          }
+        } else {
+          lines.push(completedLine);
+          appendedIndex = lines.length - 1;
+        }
       }
       const newDesc = lines.join('\n');
       try {

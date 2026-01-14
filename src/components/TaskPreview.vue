@@ -559,9 +559,23 @@ function toggleHighlight(idx: number) {
     }
     const newLines = [...rawLines];
     if ((item as any).highlighted) {
-      // remove trailing star if present
+      // remove trailing star if present and ensure it does not remain above other starred subtasks
       if (foundIdx >= 0) {
+        // compute other starred indices before changing the line
+        const otherStarIdxs = newLines
+          .map((l, i) => (/\s*\*\s*$/.test(l) ? i : -1))
+          .filter((i) => i >= 0 && i !== foundIdx);
+        const lastOtherStar = otherStarIdxs.length ? Math.max(...otherStarIdxs) : -1;
+        // remove trailing star marker
         newLines[foundIdx] = (newLines[foundIdx] ?? '').replace(/\s*\*\s*$/, '');
+        // If this item was above other starred items, move it below the last starred item
+        if (lastOtherStar >= 0 && foundIdx < lastOtherStar) {
+          const removed = newLines.splice(foundIdx, 1)[0];
+          if (removed !== undefined) {
+            // after removal, insert at index `lastOtherStar` which accounts for the shift
+            newLines.splice(lastOtherStar, 0, removed);
+          }
+        }
       }
     } else {
       // add star and move to top (after title if present)
