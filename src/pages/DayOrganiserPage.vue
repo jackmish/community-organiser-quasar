@@ -118,6 +118,8 @@
               :task="taskToEdit"
               :group-name="getGroupName(taskToEdit.groupId)"
               :animating-lines="animatingLines"
+              @line-collapsed="onLineCollapsed"
+              @line-expanded="onLineExpanded"
               @edit="
                 () => {
                   mode = 'edit';
@@ -538,6 +540,46 @@ const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
 const pendingToggles = new Map<string, boolean>();
+// pending promises for child line animation events
+const pendingLineEvents = new Map<string, (payload?: any) => void>();
+
+function waitForLineEvent(
+  taskId: string | number | undefined,
+  idx: number,
+  type: 'collapsed' | 'expanded',
+) {
+  if (!taskId && taskId !== 0) return Promise.resolve();
+  const key = `${taskId}:${idx}:${type}`;
+  return new Promise<void>((res) => {
+    pendingLineEvents.set(key, () => res());
+  });
+}
+
+function onLineCollapsed(payload: any) {
+  try {
+    const key = `${payload.taskId}:${payload.idx}:collapsed`;
+    const fn = pendingLineEvents.get(key);
+    if (fn) {
+      fn(payload);
+      pendingLineEvents.delete(key);
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+function onLineExpanded(payload: any) {
+  try {
+    const key = `${payload.taskId}:${payload.idx}:expanded`;
+    const fn = pendingLineEvents.get(key);
+    if (fn) {
+      fn(payload);
+      pendingLineEvents.delete(key);
+    }
+  } catch (e) {
+    // ignore
+  }
+}
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
@@ -1498,9 +1540,9 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
           // already in desired position — just remove marker in-place
           lines[lineIndex] = `${prefix}${content}`;
         } else {
-          // animate collapse, move, then expand at new spot
+          // animate collapse, wait for child to finish collapsing, then move and request expand
           animatingLines.value = [lineIndex];
-          await new Promise((res) => setTimeout(res, 500));
+          await waitForLineEvent(task.id, lineIndex, 'collapsed');
           const movedLine = `${prefix}${content}`;
           // adjust insert position if removing an earlier index shifts the array
           const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
@@ -1511,7 +1553,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } else {
         // animate then mark done and move this subtask to the end of the description
         animatingLines.value = [lineIndex];
-        await new Promise((res) => setTimeout(res, 500));
+        await waitForLineEvent(task.id, lineIndex, 'collapsed');
         const completedLine = `${prefix}[x] ${content}`;
         lines.splice(lineIndex, 1);
         lines.push(completedLine);
@@ -1530,12 +1572,13 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       // If we recorded an appendedIndex above, signal expansion now that DOM will update
       try {
         if (typeof appendedIndex !== 'undefined') {
+          await nextTick();
           animatingLines.value = [-(appendedIndex + 1)];
+          await waitForLineEvent(task.id, appendedIndex, 'expanded');
         }
       } catch (e) {
         // ignore
       }
-      await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
       try {
         await updateTask(targetDate, task.id, { description: newDesc });
@@ -1561,7 +1604,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
           lines[lineIndex] = `${prefix}${content}`;
         } else {
           animatingLines.value = [lineIndex];
-          await new Promise((res) => setTimeout(res, 500));
+          await waitForLineEvent(task.id, lineIndex, 'collapsed');
           const movedLine = `${prefix}${content}`;
           const adjustedIndex = insertIndex > lineIndex ? insertIndex - 1 : insertIndex;
           lines.splice(lineIndex, 1);
@@ -1571,7 +1614,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       } else {
         // animate then convert numeric item into a completed bullet at the end
         animatingLines.value = [lineIndex];
-        await new Promise((res) => setTimeout(res, 500));
+        await waitForLineEvent(task.id, lineIndex, 'collapsed');
         const completedLine = `- [x] ${content}`;
         lines.splice(lineIndex, 1);
         lines.push(completedLine);
@@ -1589,12 +1632,13 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       // If we recorded an appendedIndex above, signal expansion now that DOM will update
       try {
         if (typeof appendedIndex !== 'undefined') {
+          await nextTick();
           animatingLines.value = [-(appendedIndex + 1)];
+          await waitForLineEvent(task.id, appendedIndex, 'expanded');
         }
       } catch (e) {
         // ignore
       }
-      await new Promise((res) => setTimeout(res, 600));
       animatingLines.value = [];
       try {
         await updateTask(targetDate, task.id, { description: newDesc });

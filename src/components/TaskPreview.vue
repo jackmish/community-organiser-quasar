@@ -50,7 +50,7 @@
         </div>
 
         <div>
-          <div v-for="(line, idx) in parsedLines" :key="idx">
+          <div v-for="(line, idx) in parsedLines" :key="line.uid">
             <div v-if="line.type === 'list'">
               <div
                 class="collapse-wrapper"
@@ -93,13 +93,22 @@ import {
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{ task: Task; groupName?: string; animatingLines?: number[] }>();
-const emit = defineEmits(['edit', 'close', 'toggle-status', 'update-task']);
+const emit = defineEmits([
+  'edit',
+  'close',
+  'toggle-status',
+  'update-task',
+  'line-collapsed',
+  'line-expanded',
+]);
 
 // Quick-add subtask helper
 const quickSubtask = ref('');
 
 // refs to each rendered list item so we can animate height directly
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
+// fallback timers for transitionend handlers to ensure cleanup/emits always run
+const transitionFallbacks = new Map<HTMLElement, number>();
 
 function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
   if (!el) {
@@ -130,56 +139,104 @@ watch(
     for (const rawIdx of added) {
       const expand = rawIdx < 0;
       const idx = expand ? Math.abs(rawIdx) - 1 : rawIdx;
-      const el = itemRefs.value[idx];
-      if (!el) continue;
+      let el = itemRefs.value[idx];
+      if (!el) {
+        await nextTick();
+        el = itemRefs.value[idx];
+        if (!el) continue;
+      }
       try {
         const style = el.style;
+        const taskId = props.task && (props.task as any).id;
         if (expand) {
-          // expanding: animate from 0 -> full height so element appears to grow
+          // expanding: animate from the element's current collapsed state
+          // to its natural height. The collapse phase left inline styles
+          // (height:0, overflow:hidden), so measuring `el.scrollHeight` here
+          // gives the target height.
           const targetHeight = el.scrollHeight + 'px';
-          const originalMargin = getComputedStyle(el).marginBottom;
           style.overflow = 'hidden';
-          // start collapsed
-          style.height = '0px';
-          style.marginBottom = '0px';
+          // ensure start state is collapsed
+          style.maxHeight = style.maxHeight || '0px';
           await nextTick();
           void el.offsetHeight;
-          style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
-          // animate to natural height
-          style.height = targetHeight;
-          style.marginBottom = originalMargin;
+          style.transition = 'max-height 0.5s ease-in-out';
+          style.maxHeight = targetHeight;
           const handler = (ev: TransitionEvent) => {
-            if ((ev && ev.propertyName !== 'height') || !el) return;
-            style.removeProperty('height');
-            style.removeProperty('overflow');
-            style.removeProperty('transition');
-            style.removeProperty('margin-bottom');
+            if ((ev && ev.propertyName !== 'max-height') || !el) return;
+            try {
+              style.removeProperty('max-height');
+              style.removeProperty('overflow');
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
             el.removeEventListener('transitionend', handler);
+            const to = transitionFallbacks.get(el);
+            if (to) {
+              clearTimeout(to);
+              transitionFallbacks.delete(el);
+            }
+            emit('line-expanded', { idx, taskId });
           };
           el.addEventListener('transitionend', handler);
+          // fallback: ensure cleanup and emit after 700ms if transitionend doesn't fire
+          const fto = window.setTimeout(() => {
+            try {
+              style.removeProperty('max-height');
+              style.removeProperty('overflow');
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            transitionFallbacks.delete(el);
+            emit('line-expanded', { idx, taskId });
+          }, 700) as unknown as number;
+          transitionFallbacks.set(el, fto);
         } else {
           // collapsing: animate from current height -> 0
           const startHeight = el.scrollHeight + 'px';
           style.overflow = 'hidden';
-          style.height = startHeight;
-          style.marginBottom = getComputedStyle(el).marginBottom;
+          style.maxHeight = startHeight;
           await nextTick();
           void el.offsetHeight;
-          style.transition = 'height 0.5s ease-in-out, margin 0.5s ease-in-out';
-          style.height = '0px';
-          style.marginBottom = '0px';
+          style.transition = 'max-height 0.5s ease-in-out';
+          style.maxHeight = '0px';
           const handler = (ev: TransitionEvent) => {
-            if ((ev && ev.propertyName !== 'height') || !el) return;
-            style.removeProperty('height');
-            style.removeProperty('overflow');
-            style.removeProperty('transition');
-            style.removeProperty('margin-bottom');
+            if ((ev && ev.propertyName !== 'max-height') || !el) return;
+            try {
+              // Keep collapsed inline styles (max-height:0, overflow:hidden) so parent
+              // can safely move the element without it popping back to full height.
+              // Only remove the transition and opacity properties here.
+              style.removeProperty('transition');
+              // opacity not used for animation any more
+            } catch (e) {
+              void e;
+            }
             el.removeEventListener('transitionend', handler);
+            const to = transitionFallbacks.get(el);
+            if (to) {
+              clearTimeout(to);
+              transitionFallbacks.delete(el);
+            }
+            emit('line-collapsed', { idx, taskId });
           };
           el.addEventListener('transitionend', handler);
+          // fallback: ensure emit after 700ms if transitionend doesn't fire
+          const fto = window.setTimeout(() => {
+            try {
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            transitionFallbacks.delete(el);
+            emit('line-collapsed', { idx, taskId });
+          }, 700) as unknown as number;
+          transitionFallbacks.set(el, fto);
         }
       } catch (e) {
-        // ignore animation errors
+        void e;
       }
     }
   },
@@ -231,62 +288,6 @@ const groupName = computed(() => props.groupName || '');
 
 const isTimeEvent = computed(() => (props.task?.type_id || '') === 'TimeEvent');
 
-// Rendered description with simple replacements:
-// - replace '[x]' with a check emoji
-// - escape HTML, then convert newlines to <br>
-function escapeHtml(s = '') {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-const renderedDescription = computed(() => {
-  const d = props.task?.description || '';
-  // If the description begins with the title, strip that prefix for preview clarity
-  const stripped = stripTitleFrom(d, props.task?.name || '');
-  let escaped = escapeHtml(stripped);
-  escaped = escaped.replace(/\[x\]/gi, '✅');
-  escaped = escaped.replace(/\n/g, '<br/>');
-  return escaped;
-});
-
-// Parse description into lines and detect list lines (dash or numbered)
-const isDone = computed(() => Number(props.task?.status_id) === 0);
-
-const parsedLines = computed(() => {
-  const d = props.task?.description || '';
-  if (!d) return [] as Array<{ type: string; raw: string; html: string; checked?: boolean }>;
-  const lines = d.split(/\r?\n/);
-  return lines.map((ln, lineIndex) => {
-    // For the very first line, remove a leading title duplicate if present
-    if (lineIndex === 0 && props.task?.name) {
-      ln = stripTitleFrom(ln, props.task.name);
-    }
-    const dashMatch = ln.match(/^\s*-\s*(.*)$/);
-    const numMatch = ln.match(/^\s*(\d+)[.)]\s*(.*)$/);
-    if (dashMatch) {
-      const content = dashMatch[1] || '';
-      // detect [x] marker at start of the captured content and remove it from displayed text
-      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
-      const checked = !!markerMatch;
-      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
-      const html = escapeHtml(clean).replace(/\n/g, '<br/>');
-      return { type: 'list', raw: ln, html, checked };
-    }
-    if (numMatch) {
-      const idx = numMatch[1];
-      const content = numMatch[2] || '';
-      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
-      const checked = !!markerMatch;
-      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
-      let html = escapeHtml(clean).replace(/\n/g, '<br/>');
-      html = `${idx}. ${html}`;
-      return { type: 'list', raw: ln, html, checked };
-    }
-    // regular text line
-    const html = escapeHtml(ln).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
-    return { type: 'text', raw: ln, html };
-  });
-});
-
 const displayDate = computed(() => {
   const task = props.task || ({} as any);
   const dateStr = (task.date || task.eventDate || '').toString();
@@ -294,9 +295,27 @@ const displayDate = computed(() => {
   return formatDisplayDate(dateStr);
 });
 
+const eventTimeHoursDisplay = computed(() => {
+  const task = props.task || ({} as any);
+  const dateStr = (task.date || task.eventDate || '').toString();
+  const timeStr = task.eventTime || '';
+  return formatEventHoursDiff(dateStr, timeStr);
+});
+
+// Rendered description with simple replacements:
+// - replace '[x]' with a check emoji
+// - escape HTML, then convert newlines to <br>
+function escapeHtml(s = '') {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeRegExp(string = '') {
+  return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * If `text` begins with `title` (ignoring case and surrounding whitespace),
- * remove the title and any common separators that follow it (e.g. " - ", ": ", "—", newline).
+ * remove the title and any common separators that follow it (e.g. " - ", ": ", "—", "|", newline).
  */
 function stripTitleFrom(text = '', title = '') {
   if (!text || !title) return text;
@@ -309,19 +328,98 @@ function stripTitleFrom(text = '', title = '') {
   return text.replace(pattern, '');
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Compute hours diff for preview display when task has exact time
-const eventTimeHoursDisplay = computed(() => {
-  const task = props.task || ({} as any);
-  const dateStr = (task.date || task.eventDate || '').toString();
-  const timeStr = task.eventTime || '';
-  return formatEventHoursDiff(dateStr, timeStr);
+const renderedDescription = computed(() => {
+  const d = props.task?.description || '';
+  // If the description begins with the title, strip that prefix for preview clarity
+  const stripped = stripTitleFrom(d, props.task?.name || '');
+  let escaped = escapeHtml(stripped);
+  escaped = escaped.replace(/\[x\]/gi, '✅');
+  escaped = escaped.replace(/\n/g, '<br/>');
+  return escaped;
 });
 
-// Copy helper functions
+// Maintain stable uids per description line so Vue keys remain stable across
+// reorders. This prevents DOM reuse issues that caused disappearing items.
+const lastRawLines = ref<string[]>([] as string[]);
+const lastLineUids = ref<string[]>([] as string[]);
+let uidCounter = 1;
+
+// Parse description into lines and detect list lines (dash or numbered)
+const isDone = computed(() => Number(props.task?.status_id) === 0);
+
+// parsedLines is kept in a ref and updated via a watcher so we can maintain
+// stable uids without causing side-effects inside a computed property.
+const parsedLines = ref(
+  [] as Array<{ uid: string; type: string; raw: string; html: string; checked?: boolean }>,
+);
+
+function computeParsedLines(desc: string) {
+  const d = desc || '';
+  if (!d)
+    return [] as Array<{ uid: string; type: string; raw: string; html: string; checked?: boolean }>;
+  const lines = d.split(/\r?\n/);
+  // Build a map of previous raw->queue of uids for reuse
+  const prevMap = new Map<string, string[]>();
+  for (let i = 0; i < lastRawLines.value.length; i++) {
+    const raw = lastRawLines.value[i] || '';
+    const uid = lastLineUids.value[i] || '';
+    if (!prevMap.has(raw)) prevMap.set(raw, []);
+    prevMap.get(raw)!.push(uid);
+  }
+  const newUids: string[] = [];
+  for (const ln of lines) {
+    const raw = ln || '';
+    const queue = prevMap.get(raw);
+    if (queue && queue.length > 0) {
+      const reused = queue.shift();
+      newUids.push(reused ?? `line-${uidCounter++}`);
+    } else {
+      newUids.push(`line-${uidCounter++}`);
+    }
+  }
+  // persist for next run
+  lastRawLines.value = [...lines];
+  lastLineUids.value = [...newUids];
+
+  return lines.map((ln, lineIndex) => {
+    const uid = newUids[lineIndex] ?? `line-${uidCounter++}`;
+    let text = ln;
+    // For the very first line, remove a leading title duplicate if present
+    if (lineIndex === 0 && props.task?.name) {
+      text = stripTitleFrom(text, props.task.name);
+    }
+    const dashMatch = text.match(/^\s*-\s*(.*)$/);
+    const numMatch = text.match(/^\s*(\d+)[.)]\s*(.*)$/);
+    if (dashMatch) {
+      const content = dashMatch[1] || '';
+      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
+      const checked = !!markerMatch;
+      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      const html = escapeHtml(clean).replace(/\n/g, '<br/>');
+      return { uid, type: 'list', raw: ln, html, checked };
+    }
+    if (numMatch) {
+      const idx = numMatch[1];
+      const content = numMatch[2] || '';
+      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
+      const checked = !!markerMatch;
+      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
+      let html = escapeHtml(clean).replace(/\n/g, '<br/>');
+      html = `${idx}. ${html}`;
+      return { uid, type: 'list', raw: ln, html, checked };
+    }
+    const html = escapeHtml(text).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
+    return { uid, type: 'text', raw: ln, html };
+  });
+}
+
+watch(
+  () => props.task && props.task.description,
+  (d) => {
+    parsedLines.value = computeParsedLines(String(d || ''));
+  },
+  { immediate: true },
+);
 async function copyStyledTask() {
   const t = toRaw(props.task || ({} as any));
   const html = buildHtmlFromParsed(parsedLines.value, t);
@@ -444,9 +542,7 @@ function buildHtmlFromParsed(
   display: block;
 }
 .collapse-wrapper {
-  transition:
-    height 0.5s ease-in-out,
-    margin 0.5s ease-in-out;
+  transition: max-height 0.5s ease-in-out;
 }
 </style>
 
