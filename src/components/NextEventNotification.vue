@@ -1,10 +1,10 @@
 <template>
-  <div class="next-events-container q-ml-md">
-    <div class="next-events-row">
+  <div ref="containerRef" class="next-events-container q-ml-md">
+    <div :class="['next-events-row', { collapsed: collapsed, expanded: !collapsed }]">
       <template v-if="nextEvents.length">
         <div
           v-for="ev in nextEvents"
-          :key="ev.id + '-' + (ev.eventTime || '')"
+          :key="ev.id + '-' + (ev.eventTime || '') + '-' + (ev._date || '')"
           class="next-event"
           :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
           @click.prevent.stop="onClickEvent(ev)"
@@ -23,18 +23,30 @@
           No upcoming events
         </div>
       </template>
+      <!-- expand/collapse button rendered inside the notifications row so it floats relative to it -->
+      <div v-if="hasMore" class="next-events-toggle">
+        <q-btn
+          dense
+          flat
+          round
+          :icon="collapsed ? 'expand_more' : 'expand_less'"
+          @click.stop="toggleCollapsed"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useDayOrganiser } from '../modules/day-organiser';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from './theme';
 import { occursOnDay, getCycleType, getRepeatDays } from '../utils/occursOnDay';
 
 const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
   useDayOrganiser();
+
+const containerRef = ref<HTMLElement | null>(null);
 
 function refreshNotifications() {
   try {
@@ -143,7 +155,7 @@ const nextEvents = computed(() => {
   // Sort by occurrence datetime
   future.sort((a, b) => a.occ.getTime() - b.occ.getTime());
 
-  // Dedupe by task id + date + time and return up to 5
+  // Dedupe by task id + date + time and return up to 10
   const out: any[] = [];
   const seen = new Set<string>();
   for (const o of future) {
@@ -152,10 +164,58 @@ const nextEvents = computed(() => {
     seen.add(key);
     const item = { ...o.task, _date: o.dateStr };
     out.push(item);
-    if (out.length >= 5) break;
+    if (out.length >= 10) break;
   }
 
   return out;
+});
+
+// Collapse/expand behavior: default collapsed, show only a few when collapsed
+const collapsed = ref(true);
+const COLLAPSE_VISIBLE = 3;
+
+const hasMore = computed(() => (nextEvents.value || []).length > COLLAPSE_VISIBLE);
+
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value;
+  // no positioning logic — CSS handles collapsed vs expanded inline
+}
+
+// no overlay positioning needed when expanded inline
+
+// Click-away: collapse when clicking outside the container when expanded
+function handleDocumentClick(evt: MouseEvent) {
+  try {
+    const el = containerRef.value;
+    if (!el) return;
+    const target = evt.target as Node | null;
+    if (!target) return;
+    // if click is outside the trigger container, collapse
+    if (!el.contains(target)) collapsed.value = true;
+  } catch (e) {
+    // ignore
+  }
+}
+
+watch(collapsed, (val) => {
+  nextTick(() => {
+    if (!val) {
+      document.addEventListener('click', handleDocumentClick);
+      document.addEventListener('keydown', onKeyDown);
+    } else {
+      document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  });
+});
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') collapsed.value = true;
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick);
+  document.removeEventListener('keydown', onKeyDown);
 });
 
 function formatEventDisplay(ev: any) {
@@ -214,11 +274,75 @@ function onClickEvent(ev: any) {
   border: 1px solid transparent;
 }
 .next-events-row {
+  position: absolute;
+  /* original placement: leave slightly more space from the right so toggle doesn't overlap */
+  right: 56px;
+  top: 0;
   display: flex;
   gap: 8px;
   align-items: center;
-  overflow-x: auto;
-  padding: 4px 0;
+  padding: 4px 8px; /* small left/right padding so list doesn't touch edges */
+  flex: 0 0 auto;
+  min-width: 0;
+  /* allow wrapping to next line when items don't fit */
+  flex-wrap: wrap;
+}
+
+.next-events-row.collapsed {
+  max-height: 48px; /* one row height */
+  overflow: hidden;
+}
+
+.next-events-toggle {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  right: 8px;
+  top: 3px;
+  transform: none;
+  z-index: 2500;
+  /* floating appearance */
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.next-events-container {
+  position: relative;
+  width: 100%;
+  min-height: 48px; /* reserve header space so absolute row doesn't change layout */
+  overflow: visible;
+}
+
+/* panel that appears when expanded: absolutely positioned so header height doesn't change */
+.next-events-row.expanded {
+  /* only change background and max-height when expanded */
+  background: #0d47a1; /* expanded blue */
+  max-height: 999px;
+  overflow: hidden;
+}
+
+.next-events-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  overflow: visible;
+}
+
+.next-events-panel {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  display: block;
+}
+.next-events-panel-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .next-events-row .next-event {
@@ -228,9 +352,9 @@ function onClickEvent(ev: any) {
   font-weight: 600;
   line-height: 1;
   font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  right: 8px;
+  top: 8px;
+  transform: none;
 }
 .next-event-meta {
   line-height: 1;

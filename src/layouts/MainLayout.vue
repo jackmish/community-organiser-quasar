@@ -2,7 +2,7 @@
   <q-layout view="lHh Lpr lFf">
     <q-header>
       <q-toolbar>
-        <q-toolbar-title style="display: flex; align-items: center; gap: 12px">
+        <q-toolbar-title style="display: flex; align-items: center; gap: 12px; overflow: visible">
           <div style="display: flex; align-items: center; gap: 12px">
             <img
               src="icons/co21-logo.png"
@@ -20,9 +20,13 @@
               justify-content: flex-end;
               min-width: 0;
               gap: 12px;
+              overflow: visible;
+              position: relative;
             "
           >
-            <NextEventNotification />
+            <div style="flex: 1; min-width: 0; display: flex; justify-content: flex-end">
+              <NextEventNotification style="min-width: 0; width: 100%" />
+            </div>
             <div style="display: flex; align-items: center">
               <GroupSelectHeader />
             </div>
