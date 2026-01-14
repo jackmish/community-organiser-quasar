@@ -1317,7 +1317,13 @@ function onSubmit(event: Event) {
                             "
                           />
                           <div v-if="everyNDayOfMonth" class="text-caption q-mb-xs">
-                            Repeats every month on day {{ everyNDayOfMonth }}.
+                            <template v-if="everyNDayOfMonth >= 29">
+                              Repeats every month on day {{ everyNDayOfMonth }} (uses the last day
+                              of the month when that day doesn't exist).
+                            </template>
+                            <template v-else>
+                              Repeats every month on day {{ everyNDayOfMonth }}.
+                            </template>
                           </div>
                         </div>
 
