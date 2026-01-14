@@ -2194,8 +2194,8 @@ onMounted(async () => {
 /* Floating Add button styles */
 .floating-add-btn {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 0px;
+  bottom: 0px;
   z-index: 1400;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
@@ -2357,6 +2357,11 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0px;
   align-items: flex-end;
+  /* ensure the panel sits flush on the bottom-right when anchored */
+  border-bottom-right-radius: 0 !important;
+  /* also remove bottom-left and top-right rounding per user request */
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 .fixed-right-panel .fixed-content {
   width: 100%;
@@ -2366,9 +2371,14 @@ onMounted(async () => {
 }
 .floating-add-btn {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 0px;
+  bottom: 0px;
   z-index: 1700 !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  /* remove any bottom-right rounding so it sits flush with the viewport corner */
+  border-bottom-right-radius: 0 !important;
+  /* also remove bottom-left and top-right rounding */
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 </style>
