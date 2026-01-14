@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import logger from 'src/utils/logger';
 
 import { useDayOrganiser } from '../modules/day-organiser';
 
@@ -109,7 +110,7 @@ async function onAddGroup() {
     const { addGroup } = useDayOrganiser();
     await addGroup(payload.name, payload.parent, payload.color as any);
   } catch (e) {
-    console.error('addGroup failed', e);
+    logger.error('addGroup failed', e);
   }
 
   // reset and close
@@ -124,7 +125,7 @@ async function onDeleteGroup(id: string) {
     const { deleteGroup } = useDayOrganiser();
     await deleteGroup(id);
   } catch (e) {
-    console.error('deleteGroup failed', e);
+    logger.error('deleteGroup failed', e);
   }
 }
 

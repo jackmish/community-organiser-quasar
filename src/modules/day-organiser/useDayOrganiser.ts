@@ -3,6 +3,7 @@ import { getCycleType } from '../../utils/occursOnDay';
 import type { OrganiserData, DayData, Task, TaskGroup } from './types';
 import { storage } from './storage';
 import { generateGroupId } from './groupId';
+import logger from 'src/utils/logger';
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -77,19 +78,19 @@ export function useDayOrganiser() {
 
       // Debug: log loaded groups/tasks to help trace missing cyclic repeats after reload
       try {
-        console.debug(
+        logger.debug(
           '[useDayOrganiser.loadData] loaded raw data groups:',
           Array.isArray((data as any).groups) ? (data as any).groups.length : 0,
         );
         if (Array.isArray((data as any).groups) && (data as any).groups.length > 0) {
           try {
             const sample = (data as any).groups[0];
-            console.debug(
+            logger.debug(
               '[useDayOrganiser.loadData] sample group keys:',
               Object.keys(sample || {}),
             );
             if (Array.isArray(sample.tasks))
-              console.debug('[useDayOrganiser.loadData] sample group.tasks[0]:', sample.tasks[0]);
+              logger.debug('[useDayOrganiser.loadData] sample group.tasks[0]:', sample.tasks[0]);
           } catch (e) {
             // ignore
           }
@@ -147,7 +148,7 @@ export function useDayOrganiser() {
 
       const dirPath = await storage.getDataFilePathPublic();
     } catch (error) {
-      console.error('Failed to load data:', error);
+      logger.error('Failed to load data:', error);
     } finally {
       isLoading.value = false;
     }
@@ -158,7 +159,7 @@ export function useDayOrganiser() {
     try {
       await storage.saveData(organiserData.value);
     } catch (error) {
-      console.error('Failed to save data:', error);
+      logger.error('Failed to save data:', error);
       throw error;
     }
   };
@@ -224,7 +225,7 @@ export function useDayOrganiser() {
         }
       }
     } catch (err) {
-      console.error('Failed to attach task to group file structure:', err);
+      logger.error('Failed to attach task to group file structure:', err);
     }
 
     await saveData();
@@ -313,7 +314,7 @@ export function useDayOrganiser() {
         }
       }
     } catch (err) {
-      console.error('Failed to sync updated task to group:', err);
+      logger.error('Failed to sync updated task to group:', err);
     }
 
     await saveData();
@@ -332,7 +333,7 @@ export function useDayOrganiser() {
         }
       });
     } catch (err) {
-      console.error('Failed to remove task from group structures:', err);
+      logger.error('Failed to remove task from group structures:', err);
     }
 
     await saveData();
@@ -344,7 +345,7 @@ export function useDayOrganiser() {
     let task = dayData.tasks.find((t) => t.id === taskId);
     // Debug logging to help trace toggle attempts across dates
     try {
-      console.debug(
+      logger.debug(
         '[toggleTaskComplete] date=',
         date,
         'taskId=',
@@ -386,7 +387,7 @@ export function useDayOrganiser() {
           });
           // Debug: log after adding history
           try {
-            console.debug('[toggleTaskComplete] added cycleDone', {
+            logger.debug('[toggleTaskComplete] added cycleDone', {
               date,
               taskId,
               historyLen: (task as any).history.length,
@@ -404,7 +405,7 @@ export function useDayOrganiser() {
       await saveData();
       try {
         // Debug: log after save
-        console.debug('[toggleTaskComplete] saveData complete for taskId=', taskId, 'date=', date);
+        logger.debug('[toggleTaskComplete] saveData complete for taskId=', taskId, 'date=', date);
       } catch (e) {
         // ignore
       }
@@ -480,7 +481,7 @@ export function useDayOrganiser() {
       organiserData.value = data;
       await saveData();
     } catch (error) {
-      console.error('Failed to import data:', error);
+      logger.error('Failed to import data:', error);
       throw error;
     }
   };
@@ -535,7 +536,7 @@ export function useDayOrganiser() {
         }
       }
     } catch (err) {
-      console.error('undoCycleDone failed', err);
+      logger.error('undoCycleDone failed', err);
     }
     return false;
   };

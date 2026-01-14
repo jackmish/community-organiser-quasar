@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import { computed, toRaw, ref, nextTick } from 'vue';
+import logger from 'src/utils/logger';
 import { format } from 'date-fns';
 import {
   priorityColors,
@@ -250,7 +251,7 @@ async function copyStyledTask() {
       document.body.removeChild(ta);
     }
   } catch (err) {
-    console.error('Copy failed', err);
+    logger.error('Copy failed', err);
   }
 }
 

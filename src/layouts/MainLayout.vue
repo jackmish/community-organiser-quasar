@@ -86,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import 'src/utils/logger-shim';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';

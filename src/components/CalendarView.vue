@@ -230,6 +230,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import logger from 'src/utils/logger';
 import { useLongPress } from '../composables/useLongPress';
 import { occursOnDay } from 'src/utils/occursOnDay';
 import { format, addDays, startOfWeek } from 'date-fns';
@@ -439,7 +440,7 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    console.error('Failed to load holidays from cache:', error);
+    logger.error('Failed to load holidays from cache:', error);
     return false;
   }
 }
@@ -469,14 +470,14 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       // when crossing the contextBridge boundary)
       const safe = JSON.parse(JSON.stringify(cache));
       await (window as any).electronAPI.writeJsonFile(filePath, safe);
-      console.log(`Saved holidays for ${year} to APPDATA`);
+      logger.log(`Saved holidays for ${year} to APPDATA`);
     } else {
       // Save to localStorage
       const cacheKey = `holidays_PL_${year}`;
       localStorage.setItem(cacheKey, JSON.stringify(cache));
     }
   } catch (error) {
-    console.error('Failed to save holidays to cache:', error);
+    logger.error('Failed to save holidays to cache:', error);
   }
 }
 
@@ -530,7 +531,7 @@ async function fetchHolidays(year: number) {
     // Save to cache
     await saveHolidaysToCache(year, data);
   } catch (error) {
-    console.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
+    logger.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
     // Load fallback holidays
     loadFallbackHolidays(year);
   }

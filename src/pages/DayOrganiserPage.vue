@@ -467,6 +467,7 @@ function handleCalendarEdit(taskId: string | null) {
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useQuasar } from 'quasar';
+import logger from 'src/utils/logger';
 import { useDayOrganiser } from '../modules/day-organiser';
 import type { Task, TaskDuration, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
@@ -615,7 +616,7 @@ async function saveEditedGroup() {
     if (color !== undefined && color !== null) updates.color = color as any;
     await updateGroup(id, updates);
   } catch (e) {
-    console.error('updateGroup failed', e);
+    logger.error('updateGroup failed', e);
   }
   showEditGroupDialog.value = false;
   editGroupLocal.value = null;
@@ -1061,7 +1062,7 @@ const sortedTasks = computed(() => {
     }
   } catch (err) {
     // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
-    console.warn('Failed to include Todo extras for today', err);
+    logger.warn('Failed to include Todo extras for today', err);
   }
   if (activeGroup.value && activeGroup.value.value !== null) {
     tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
@@ -1145,7 +1146,7 @@ const handleReplenishRestore = async (taskId: string) => {
     // If currently in preview/edit mode, ensure the UI refreshes
     taskToEdit.value = null;
   } catch (e) {
-    console.error('Failed to restore replenish task', e);
+    logger.error('Failed to restore replenish task', e);
   }
 };
 
@@ -1315,7 +1316,7 @@ const setReplenishColor = async (task: any, colorId: string | null) => {
     if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.color_set = colorId;
     await updateTask(targetDate, task.id, { color_set: colorId });
   } catch (e) {
-    console.error('Failed to set replenish color', e);
+    logger.error('Failed to set replenish color', e);
   }
 };
 
@@ -1445,7 +1446,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   try {
     // Debug: help trace toggle attempts for cyclic occurrences
     const baseCheck = (allTasks.value || []).find((x: any) => x.id === task.id) || null;
-    console.debug(
+    logger.debug(
       '[toggleStatus] taskId=',
       task?.id,
       'instanceDate=',
@@ -1540,7 +1541,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // Handle cyclic tasks explicitly: mark occurrence done via toggleTaskComplete or undo via undoCycleDone
   try {
     if (isCyclic) {
-      console.debug('[toggleStatus] cyclic handling start', {
+      logger.debug('[toggleStatus] cyclic handling start', {
         taskId: task?.id,
         instanceDate: task?.date || task?.eventDate || null,
         targetDate,
@@ -1550,23 +1551,23 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const tAny: any = task;
       const hist = tAny.history || [];
       try {
-        console.debug('[toggleStatus] history raw:', hist);
-        console.debug(
+        logger.debug('[toggleStatus] history raw:', hist);
+        logger.debug(
           '[toggleStatus] history dates:',
           Array.isArray(hist) ? hist.map((hh: any) => ({ type: hh?.type, date: hh?.date })) : hist,
         );
-        console.debug('[toggleStatus] targetDate value/type:', targetDate, typeof targetDate);
+        logger.debug('[toggleStatus] targetDate value/type:', targetDate, typeof targetDate);
       } catch (e) {
         // ignore logging errors
       }
       const alreadyDone =
         Array.isArray(hist) &&
         hist.some((h: any) => h && h.type === 'cycleDone' && h.date === targetDate);
-      console.debug('[toggleStatus] alreadyDone=', { taskId: task.id, targetDate, alreadyDone });
+      logger.debug('[toggleStatus] alreadyDone=', { taskId: task.id, targetDate, alreadyDone });
       if (alreadyDone) {
         const undone = await undoCycleDone(targetDate, task.id);
         if (undone) {
-          console.debug('[toggleStatus] undoCycleDone succeeded', { taskId: task.id, targetDate });
+          logger.debug('[toggleStatus] undoCycleDone succeeded', { taskId: task.id, targetDate });
           const removeCycleDone = (obj: any) => {
             if (!obj || !Array.isArray(obj.history)) return;
             obj.history = obj.history.filter(
@@ -1580,12 +1581,12 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
             removeCycleDone(base);
             if (taskToEdit.value && taskToEdit.value.id === task.id)
               removeCycleDone(taskToEdit.value);
-            console.debug('[toggleStatus] optimistic undo applied', {
+            logger.debug('[toggleStatus] optimistic undo applied', {
               taskId: task.id,
               targetDate,
             });
           } catch (e) {
-            console.warn('[toggleStatus] optimistic undo failed', {
+            logger.warn('[toggleStatus] optimistic undo failed', {
               taskId: task.id,
               targetDate,
               err: e,
@@ -1596,7 +1597,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
 
       // Otherwise mark the occurrence done
-      console.debug('[toggleStatus] calling toggleTaskComplete', { taskId: task.id, targetDate });
+      logger.debug('[toggleStatus] calling toggleTaskComplete', { taskId: task.id, targetDate });
       await toggleTaskComplete(targetDate, task.id);
       // optimistic local update so UI moves task to Done list
       try {
@@ -1615,9 +1616,9 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         ensurePush(task);
         const base = (allTasks.value || []).find((x: any) => x.id === task.id);
         ensurePush(base);
-        console.debug('[toggleStatus] optimistic mark applied', { taskId: task.id, targetDate });
+        logger.debug('[toggleStatus] optimistic mark applied', { taskId: task.id, targetDate });
       } catch (e) {
-        console.warn('[toggleStatus] optimistic mark failed', {
+        logger.warn('[toggleStatus] optimistic mark failed', {
           taskId: task.id,
           targetDate,
           err: e,
@@ -1629,7 +1630,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     // reuse outer `status` (already computed) for non-cyclic toggle
   } catch (e) {
     // ignore errors when probing/recording cycleDone
-    console.warn('toggleStatus cyclic handling error', e);
+    logger.warn('toggleStatus cyclic handling error', e);
   }
 
   // optimistic update
@@ -1669,7 +1670,7 @@ const onFileSelected = async (event: Event) => {
     try {
       await importData(file);
     } catch (error) {
-      console.error('Import failed:', error);
+      logger.error('Import failed:', error);
     }
   }
 };
