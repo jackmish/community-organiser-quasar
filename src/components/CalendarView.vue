@@ -822,7 +822,8 @@ function getEventsForDay(day: string) {
 
 .calendar-day-btn {
   white-space: normal !important;
-  width: 100%;
+  width: calc(100% - 8px);
+  margin: 0 auto;
   min-height: 60px;
   background-color: white !important;
   color: black !important;

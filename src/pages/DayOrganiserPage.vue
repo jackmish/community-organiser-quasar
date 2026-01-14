@@ -2263,7 +2263,8 @@ onMounted(async () => {
 
 .calendar-day-btn {
   white-space: normal !important;
-  width: 100%;
+  width: calc(100% - 8px);
+  margin: 0 auto;
 }
 
 .calendar-day-content {
