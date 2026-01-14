@@ -50,7 +50,7 @@ class DayOrganiserStorage {
         lastModified: new Date().toISOString(),
       };
     } catch (error) {
-        logger.error('Error loading organiser data from group files:', error);
+      logger.error('Error loading organiser data from group files:', error);
       return this.getDefaultData();
     }
   }
@@ -64,7 +64,7 @@ class DayOrganiserStorage {
       // Save each group to its own file in the testing/storage/groups directory
       await saveGroupsToFiles(data.groups);
     } catch (error) {
-        logger.error('Error saving organiser data to group files:', error);
+      logger.error('Error saving organiser data to group files:', error);
       throw error;
     }
   }
@@ -74,7 +74,7 @@ class DayOrganiserStorage {
    */
   exportToFile(data: OrganiserData): void {
     // Export all group files as a zip or similar if needed, otherwise do nothing
-      logger.log('Export not implemented: all data is in testing/storage/groups');
+    logger.log('Export not implemented: all data is in testing/storage/groups');
   }
 
   /**
@@ -135,13 +135,13 @@ class DayOrganiserStorage {
               groups.push(groupData);
             } catch (err) {
               // Could not read file, skip
-                logger.error('Error reading group file:', filePath, err);
+              logger.error('Error reading group file:', filePath, err);
             }
           }
         }
       } catch (err) {
         // Could not read directory, return empty
-          logger.error('Error reading group directory:', groupDir, err);
+        logger.error('Error reading group directory:', groupDir, err);
       }
       return groups;
     } else if (typeof window !== 'undefined' && window.localStorage) {
@@ -211,7 +211,7 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
       try {
         await window.electronAPI.writeFile(filePath, JSON.stringify(group));
       } catch (err) {
-          logger.error('[saveGroupsToFiles] Error writing file:', filePath, err);
+        logger.error('[saveGroupsToFiles] Error writing file:', filePath, err);
         throw err;
       }
     }
