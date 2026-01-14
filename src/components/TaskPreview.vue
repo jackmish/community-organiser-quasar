@@ -67,8 +67,6 @@
             <div v-else class="q-mb-xs" v-html="line.html"></div>
           </div>
         </div>
-
-        
       </div>
     </q-card-section>
   </q-card>
