@@ -1850,7 +1850,7 @@ function onSubmit(event: Event) {
 /* Make the priority card background transparent so it doesn't appear as a white box */
 .priority-container {
   background: transparent !important;
-  padding: 8% 0 8px 0 !important;
+  padding: 8px 0 8px 0 !important;
   margin: 0px 0 0 0 !important;
 }
 /* Make priority container use full available row width */
