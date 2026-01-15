@@ -130,6 +130,8 @@ type TaskType = {
   // timeMode controls how the time is interpreted in the UI
   // 'event' = normal event (default), 'prepare' = preparation time, 'expiration' = expiration time
   timeMode?: 'event' | 'prepare' | 'expiration';
+  // number of days before the event (used for prepare/expiration modes)
+  timeOffsetDays?: number | null;
 };
 
 const localNewTask = ref<TaskType>({
@@ -146,6 +148,7 @@ const localNewTask = ref<TaskType>({
   eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
   eventTime: '',
   timeMode: 'event',
+  timeOffsetDays: null,
 });
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
@@ -316,6 +319,20 @@ const eventTimeMode = computed<'event' | 'prepare' | 'expiration'>({
     localNewTask.value.timeMode = v;
   },
 });
+
+const eventTimeOffsetDays = computed<number | null>({
+  get() {
+    const v = (localNewTask.value as any).timeOffsetDays;
+    return v == null ? null : Number(v);
+  },
+  set(val: number | null) {
+    (localNewTask.value as any).timeOffsetDays = val == null ? null : Number(val);
+  },
+});
+
+function setOffsetDays(n: number) {
+  (localNewTask.value as any).timeOffsetDays = Number(n);
+}
 
 // Use centralized replenish color sets from theme
 const replenishColorSets = themeReplenishColorSets;
@@ -1537,6 +1554,32 @@ function onSubmit(event: Event) {
                             inline
                             rounded
                             class="time-toggle"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        v-if="eventTimeMode !== 'event'"
+                        class="row q-mt-xs items-center"
+                        style="gap: 8px; align-items: center"
+                      >
+                        <q-input
+                          v-model.number="eventTimeOffsetDays"
+                          type="number"
+                          label="Days before"
+                          dense
+                          outlined
+                          style="max-width: 120px"
+                          min="0"
+                          placeholder="0"
+                        />
+                        <div class="row" style="gap: 6px; margin-left: 8px">
+                          <q-btn
+                            v-for="v in [1, 2, 3, 7, 14, 28]"
+                            :key="v"
+                            dense
+                            size="sm"
+                            :label="String(v)"
+                            @click="setOffsetDays(v)"
                           />
                         </div>
                       </div>
