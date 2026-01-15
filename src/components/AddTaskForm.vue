@@ -1894,6 +1894,9 @@ function onSubmit(event: Event) {
 }
 .time-toggle .q-btn__content {
   gap: 2px;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }
 
 /* Unselected: white buttons with border for contrast on blue card */
@@ -1912,10 +1915,11 @@ function onSubmit(event: Event) {
   color: var(--q-color-primary) !important;
 }
 .time-toggle .q-icon {
-  font-size: 12px !important;
-  width: 12px !important;
-  height: 12px !important;
-  margin-right: 4px !important;
+  font-size: 18px !important;
+  width: auto !important;
+  height: auto !important;
+  margin-right: 0 !important;
+  margin-bottom: 6px !important;
 }
 
 /* Active/selected */
@@ -1937,13 +1941,20 @@ function onSubmit(event: Event) {
   font-size: 12px !important;
   line-height: 1 !important;
   padding: 0 !important;
-  text-transform: capitalize !important;
+  text-transform: none !important;
 }
 ::v-deep .time-toggle .q-btn__content .q-icon,
 ::v-deep .time-toggle .q-icon {
-  font-size: 12px !important;
-  width: 12px !important;
-  height: 12px !important;
+  font-size: 18px !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 0 6px 0 !important;
+  display: block !important;
+}
+
+/* Extra override: ensure no inherited margin on q-icon inside time-toggle buttons */
+::v-deep .time-toggle .q-btn__content .q-icon:not([style]) {
+  margin: 0 !important;
 }
 /* repeat toggle uses the same styles as .time-toggle */
 
