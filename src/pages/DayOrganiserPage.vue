@@ -163,9 +163,9 @@
     <!-- First Run Dialog -->
     <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
 
-    <!-- Floating Add button: appears in edit/preview, hidden in add mode -->
+    <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
-      v-if="mode === 'edit' || mode === 'preview'"
+      v-if="panelHidden || mode !== 'add'"
       class="floating-add-btn"
       color="green"
       fab
@@ -225,9 +225,9 @@
         />
       </div>
     </div>
-    <!-- Show button when panel is hidden -->
+    <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
-      v-if="panelHidden"
+      v-if="panelHidden && mode !== 'add'"
       class="panel-show-btn"
       unelevated
       color="dark"
@@ -666,6 +666,8 @@ function clearTaskToEdit() {
   taskToEdit.value = null;
   mode.value = 'add';
   selectedTaskId.value = null;
+  // ensure the right-side panel is visible when switching to create mode
+  panelHidden.value = false;
 }
 
 function openEditGroup(g: TaskGroup) {
