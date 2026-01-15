@@ -1652,8 +1652,40 @@ function onSubmit(event: Event) {
                       </div>
                     </div>
                   </div>
-
-                  <br />
+                  <div class="priority-container">
+                    <!-- <div class="text-caption text-grey-7" style="margin-bottom: 4px">Priority</div> -->
+                    <div class="priority-grid">
+                      <div
+                        v-for="option in priorityOptions.slice().reverse()"
+                        :key="option.value"
+                        class="priority-item"
+                      >
+                        <q-btn
+                          :color="
+                            localNewTask.priority === option.value ? option.background : 'grey-3'
+                          "
+                          :text-color="
+                            localNewTask.priority === option.value ? option.textColor : 'grey-7'
+                          "
+                          :icon="option.icon"
+                          :aria-label="option.label"
+                          :size="btnSize"
+                          class="priority-btn"
+                          @click="updateTaskField('priority', option.value)"
+                          :unelevated="localNewTask.priority === option.value"
+                          :outline="localNewTask.priority !== option.value"
+                          :style="{
+                            backgroundColor:
+                              localNewTask.priority === option.value
+                                ? option.background
+                                : undefined,
+                            color:
+                              localNewTask.priority === option.value ? option.textColor : undefined,
+                          }"
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div class="row" style="gap: 12px; align-items: center">
                     <div class="col-auto">
                       <div class="row items-center" style="gap: 12px">
@@ -1728,7 +1760,7 @@ function onSubmit(event: Event) {
                   </div>
                 </div>
                 <!-- Priority and Type column to the right of date/time -->
-                <div class="col-3 col-md-4 col-sm-4 col-xs-3">
+                <div class="col-3 col-md-3 col-sm-3 col-xs-3">
                   <q-card flat bordered class="q-pa-sm q-mt-sm">
                     <div class="text-caption text-grey-7 q-mb-xs">Task type</div>
                     <div class="column q-gutter-xs">
@@ -1739,7 +1771,7 @@ function onSubmit(event: Event) {
                         :aria-label="opt.label"
                         :icon="opt.icon"
                         :size="btnSize"
-                        class="full-width priority-btn"
+                        class="full-width type-btn"
                         :outline="localNewTask.type_id !== opt.value"
                         :unelevated="localNewTask.type_id === opt.value"
                         @click="localNewTask.type_id = opt.value"
@@ -1752,42 +1784,6 @@ function onSubmit(event: Event) {
                               : undefined,
                         }"
                       />
-                    </div>
-                  </q-card>
-
-                  <q-card flat bordered class="q-pa-sm">
-                    <div class="text-caption text-grey-7 q-mb-xs">Priority</div>
-                    <div class="priority-grid">
-                      <div
-                        v-for="option in priorityOptions"
-                        :key="option.value"
-                        class="priority-item"
-                      >
-                        <q-btn
-                          :color="
-                            localNewTask.priority === option.value ? option.background : 'grey-3'
-                          "
-                          :text-color="
-                            localNewTask.priority === option.value ? option.textColor : 'grey-7'
-                          "
-                          :icon="option.icon"
-                          :label="showPriorityLabel ? option.label : ''"
-                          :aria-label="option.label"
-                          :size="btnSize"
-                          class="priority-btn"
-                          @click="updateTaskField('priority', option.value)"
-                          :unelevated="localNewTask.priority === option.value"
-                          :outline="localNewTask.priority !== option.value"
-                          :style="{
-                            backgroundColor:
-                              localNewTask.priority === option.value
-                                ? option.background
-                                : undefined,
-                            color:
-                              localNewTask.priority === option.value ? option.textColor : undefined,
-                          }"
-                        />
-                      </div>
                     </div>
                   </q-card>
                 </div>
@@ -1851,41 +1847,134 @@ function onSubmit(event: Event) {
   margin-right: 4px !important;
 }
 
-/* Grid for priority buttons: 1 column on small, 2 columns on md+ */
-.priority-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  justify-items: stretch;
-  width: 100%;
+/* Make the priority card background transparent so it doesn't appear as a white box */
+.priority-container {
+  background: transparent !important;
+  padding: 8% 0 8px 0 !important;
+  margin: 0px 0 0 0 !important;
 }
-@media (min-width: 960px) {
-  .priority-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-.priority-item {
-  display: block;
-}
-.priority-item .q-btn {
+/* Make priority container use full available row width */
+.priority-container {
   width: 100%;
 }
 
-/* Stack icon above label for priority buttons on md+ and center them */
+/* Preserve original styling for task type buttons (separate from priority buttons) */
+.type-btn {
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  width: 100%;
+  padding-top: 8px !important;
+  padding-bottom: 6px !important;
+}
+.type-btn .q-btn__content {
+  justify-content: center !important;
+}
+.type-btn .q-icon {
+  margin-right: 6px !important;
+}
+
+/* Ensure the inner content of type buttons is centered and stacked like before */
+::v-deep .type-btn .q-btn__content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+}
+::v-deep .type-btn .q-btn__content .q-icon {
+  margin-right: 0 !important;
+  margin-top: 6px !important;
+  margin-bottom: 2px !important;
+  font-size: 22px !important;
+}
+::v-deep .type-btn .q-btn__label {
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+/* Grid for priority buttons: 1 column on small, 2 columns on md+ */
+.priority-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  overflow: visible;
+  flex-wrap: wrap;
+  padding: 0;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
 @media (min-width: 960px) {
-  ::v-deep .priority-btn .q-btn__content {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
+  .priority-grid {
+    gap: 8px;
   }
-  ::v-deep .priority-btn .q-btn__content .q-icon {
-    margin-right: 0 !important;
-    margin-bottom: 6px !important;
+}
+.priority-item {
+  display: inline-block;
+}
+.priority-item .q-btn {
+  width: auto;
+  min-width: 36px;
+}
+
+/* On medium+ screens make priority buttons grow to fill the row evenly */
+@media (min-width: 600px) {
+  .priority-grid {
+    flex-wrap: nowrap;
   }
-  ::v-deep .priority-btn .q-btn__label {
-    white-space: normal !important;
-    text-align: center !important;
+  .priority-item {
+    flex: 1 1 0;
   }
+  .priority-item .q-btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* Keep border/padding stable on active/outline state to avoid layout shifts */
+.priority-item .q-btn {
+  border: 1px solid transparent !important;
+  box-sizing: border-box !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+.priority-btn.q-btn--active,
+.priority-btn.q-btn--unelevated,
+.priority-btn.q-btn--outline {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Stack icon above label for priority buttons on md+ and center them */
+::v-deep .priority-btn .q-btn__content {
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+::v-deep .priority-btn .q-btn__content .q-icon {
+  margin-right: 0 !important;
+  margin-bottom: 2px !important;
+}
+/* priority labels removed — using icons only for compact display */
+
+/* Reduce visual weight of priority buttons to fit a single row */
+.priority-btn {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  min-width: 36px !important;
+  height: auto !important;
+  min-height: 40px !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+.priority-btn .q-icon {
+  font-size: 18px !important;
+  margin-bottom: 2px !important;
 }
 
 /* Small adjustments for the time type toggle inside date/time card */
