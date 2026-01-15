@@ -176,7 +176,17 @@
     />
 
     <!-- Fixed right-side panel: ModeSwitcher above preview/form -->
-    <div class="fixed-right-panel">
+    <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
+      <!-- Hide button visible when panel is open -->
+      <q-btn
+        v-if="!panelHidden"
+        unelevated
+        color="dark"
+        class="panel-toggle-btn"
+        label="Hide"
+        icon="keyboard_arrow_down"
+        @click="panelHidden = true"
+      />
       <div class="fixed-content">
         <TaskPreview
           v-if="mode === 'preview' && taskToEdit"
@@ -215,6 +225,16 @@
         />
       </div>
     </div>
+    <!-- Show button when panel is hidden -->
+    <q-btn
+      v-if="panelHidden"
+      class="panel-show-btn"
+      unelevated
+      color="dark"
+      icon="keyboard_arrow_up"
+      label="Show"
+      @click="panelHidden = false"
+    />
   </q-page>
 </template>
 
@@ -537,6 +557,8 @@ const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
 const mode = ref<'add' | 'edit' | 'preview'>('add');
+// when true the fixed panel is moved off-screen (hidden) and only the show button is visible
+const panelHidden = ref(false);
 const selectedTaskId = ref<string | null>(null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
@@ -627,12 +649,16 @@ function setTaskToEdit(task: Task) {
   taskToEdit.value = toShow;
   // show preview when a task is clicked
   mode.value = 'preview';
+  // ensure panel is visible when selecting a task
+  panelHidden.value = false;
   selectedTaskId.value = toShow.id;
 }
 
 function editTask(task: Task) {
   taskToEdit.value = task;
   mode.value = 'edit';
+  // ensure panel is visible when entering edit
+  panelHidden.value = false;
   selectedTaskId.value = task.id;
 }
 
@@ -2194,7 +2220,7 @@ onMounted(async () => {
   position: fixed;
   right: 0px;
   bottom: 0px;
-  z-index: 1400;
+  z-index: 1900 !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
@@ -2362,7 +2388,6 @@ onMounted(async () => {
   border-top-right-radius: 0 !important;
   /* constrain panel height so it never exceeds the viewport */
   max-height: calc(100vh - 32px);
-  overflow: hidden;
 }
 .fixed-right-panel .fixed-content {
   width: 100%;
@@ -2371,6 +2396,47 @@ onMounted(async () => {
   max-height: calc(100vh - 120px);
   -webkit-overflow-scrolling: touch;
 }
+
+.fixed-right-panel .panel-toggle-btn {
+  position: absolute;
+  top: -36px;
+  right: 8px;
+  z-index: 1700;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #fff !important;
+  /* background: #37d !important; */
+  background: #356 !important;
+
+  border-radius: 8px;
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+
+/* Show button visible when the panel is hidden: fixed at bottom-right */
+.panel-show-btn {
+  position: fixed;
+  /* move left so it doesn't sit under the floating add button */
+  right: 50px;
+  bottom: 0px;
+  z-index: 1800;
+  padding: 10px 16px;
+  background: #579 !important;
+  color: #fff !important;
+  border-radius: 10px;
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+  font-weight: 600;
+}
+
+/* move panel below viewport when hidden */
+.fixed-right-panel.panel-hidden {
+  transform: translateY(calc(100% + 24px));
+  transition: transform 320ms ease-in-out;
+}
+.fixed-right-panel {
+  transition: transform 320ms ease-in-out;
+}
 .fixed-right-panel > .row {
   margin-bottom: -4px;
 }
@@ -2378,7 +2444,7 @@ onMounted(async () => {
   position: fixed;
   right: 0px;
   bottom: 0px;
-  z-index: 1700 !important;
+  z-index: 1900 !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   /* remove any bottom-right rounding so it sits flush with the viewport corner */
   border-bottom-right-radius: 0 !important;
