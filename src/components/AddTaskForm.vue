@@ -127,6 +127,9 @@ type TaskType = {
   groupId: string | undefined;
   eventDate: string;
   eventTime: string;
+  // timeMode controls how the time is interpreted in the UI
+  // 'event' = normal event (default), 'prepare' = preparation time, 'expiration' = expiration time
+  timeMode?: 'event' | 'prepare' | 'expiration';
 };
 
 const localNewTask = ref<TaskType>({
@@ -142,6 +145,7 @@ const localNewTask = ref<TaskType>({
   groupId: undefined,
   eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
   eventTime: '',
+  timeMode: 'event',
 });
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
@@ -295,6 +299,23 @@ const timeTypeOptions = [
   { label: '', value: 'wholeDay', icon: 'calendar_today' },
   { label: '', value: 'exactHour', icon: 'schedule' },
 ];
+
+// Options for interpreting the time value: event (default), prepare, expiration
+// Labels are shown inside each toggle button so the option describes its mode
+const timeModeOptions = [
+  { label: 'Event', value: 'event', icon: 'event' },
+  { label: 'Prepare', value: 'prepare', icon: 'local_shipping' },
+  { label: 'Expiration', value: 'expiration', icon: 'hourglass_empty' },
+];
+
+const eventTimeMode = computed<'event' | 'prepare' | 'expiration'>({
+  get() {
+    return localNewTask.value.timeMode || 'event';
+  },
+  set(v) {
+    localNewTask.value.timeMode = v;
+  },
+});
 
 // Use centralized replenish color sets from theme
 const replenishColorSets = themeReplenishColorSets;
@@ -494,6 +515,7 @@ watch(
         groupId: val.groupId,
         eventDate: val.date || val.eventDate || localNewTask.value.eventDate,
         eventTime: val.eventTime || '',
+        timeMode: val.timeMode || 'event',
         id: val.id,
       } as TaskType;
       // Populate repeat-related form fields from canonical `repeat` object if present
@@ -607,6 +629,7 @@ watch(
           props.selectedDate ||
           `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
         eventTime: '',
+        timeMode: 'event',
       } as TaskType;
       // Reset repeat inputs when clearing the form
       repeatMode.value = 'oneTime';
@@ -1497,6 +1520,19 @@ function onSubmit(event: Event) {
                           <q-btn-toggle
                             v-model="timeType"
                             :options="timeTypeOptions"
+                            dense
+                            inline
+                            rounded
+                            class="time-toggle"
+                          />
+                        </div>
+                      </div>
+
+                      <div class="row q-mt-sm" style="align-items: center; gap: 8px">
+                        <div class="col">
+                          <q-btn-toggle
+                            v-model="eventTimeMode"
+                            :options="timeModeOptions"
                             dense
                             inline
                             rounded
