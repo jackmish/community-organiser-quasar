@@ -1801,7 +1801,7 @@ function onSubmit(event: Event) {
 <style scoped>
 .add-task-card {
   position: relative;
-  overflow: visible;
+  overflow: hidden; /* prevent large watermark from creating horizontal scroll */
 }
 .add-watermark-text {
   position: absolute;
@@ -1817,6 +1817,8 @@ function onSubmit(event: Event) {
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
+  max-width: calc(100vw - 48px);
+  overflow: hidden;
 }
 .add-watermark-icon[data-v-] {
   /* ensure scoped styles apply to q-icon inner element */
