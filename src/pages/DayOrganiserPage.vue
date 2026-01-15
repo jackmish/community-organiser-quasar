@@ -2362,9 +2362,16 @@ onMounted(async () => {
   /* also remove bottom-left and top-right rounding per user request */
   border-bottom-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
+  /* constrain panel height so it never exceeds the viewport */
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
 }
 .fixed-right-panel .fixed-content {
   width: 100%;
+  /* make content scrollable when the panel is taller than the viewport */
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  -webkit-overflow-scrolling: touch;
 }
 .fixed-right-panel > .row {
   margin-bottom: -4px;
