@@ -1761,9 +1761,9 @@ function onSubmit(event: Event) {
                 </div>
                 <!-- Priority and Type column to the right of date/time -->
                 <div class="col-3 col-md-3 col-sm-3 col-xs-3">
-                  <q-card flat bordered class="q-pa-sm q-mt-sm">
+                  <q-card class="q-pa-sm">
                     <div class="text-caption text-grey-7 q-mb-xs">Task type</div>
-                    <div class="column q-gutter-xs">
+                    <div class="column">
                       <q-btn
                         v-for="opt in typeOptions"
                         :key="opt.value"
@@ -1771,7 +1771,7 @@ function onSubmit(event: Event) {
                         :aria-label="opt.label"
                         :icon="opt.icon"
                         :size="btnSize"
-                        class="full-width type-btn"
+                        class="full-width type-btn q-mb-sm"
                         :outline="localNewTask.type_id !== opt.value"
                         :unelevated="localNewTask.type_id === opt.value"
                         @click="localNewTask.type_id = opt.value"
