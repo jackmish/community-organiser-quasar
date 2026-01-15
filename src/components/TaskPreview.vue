@@ -7,7 +7,17 @@
       <!-- header: title on left, copy on right -->
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-h5">{{ task.name }}</div>
-        <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
+        <div style="display: flex; gap: 8px; align-items: center">
+          <q-btn
+            dense
+            unelevated
+            color="orange"
+            icon="edit"
+            label="Edit"
+            @click.stop="$emit('edit')"
+          />
+          <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
+        </div>
       </div>
       <div>
         <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">

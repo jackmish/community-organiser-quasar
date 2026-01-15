@@ -1237,6 +1237,16 @@ function onSubmit(event: Event) {
           <span style="color: #ff9800; font-weight: 600">Edit:</span>
           <span style="font-weight: 500">{{ localNewTask.name || 'Untitled' }}</span>
         </div>
+        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+          <q-btn
+            dense
+            unelevated
+            color="primary"
+            icon="visibility"
+            label="Preview"
+            @click.stop="() => emit('update:mode', 'preview')"
+          />
+        </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
         <!-- Type selector moved into Priority card below; header removed -->

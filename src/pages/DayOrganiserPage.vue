@@ -177,7 +177,6 @@
 
     <!-- Fixed right-side panel: ModeSwitcher above preview/form -->
     <div class="fixed-right-panel">
-      <ModeSwitcher v-model="mode" :allowed-modes="allowedModes" />
       <div class="fixed-content">
         <TaskPreview
           v-if="mode === 'preview' && taskToEdit"
@@ -239,7 +238,6 @@ import {
   getReplenishText as themeGetReplenishText,
 } from '../components/theme';
 import TaskPreview from '../components/TaskPreview.vue';
-import ModeSwitcher from '../components/ModeSwitcher.vue';
 import CalendarView from '../components/CalendarView.vue';
 import { useLongPress } from '../composables/useLongPress';
 
