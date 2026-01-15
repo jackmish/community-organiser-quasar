@@ -1682,7 +1682,7 @@ function onSubmit(event: Event) {
                   </div>
                 </div>
                 <!-- Priority and Type column to the right of date/time -->
-                <div class="col-4 col-md-4 col-sm-4 col-xs-4">
+                <div class="col-3 col-md-4 col-sm-4 col-xs-3">
                   <q-card flat bordered class="q-pa-sm q-mt-sm">
                     <div class="text-caption text-grey-7 q-mb-xs">Task type</div>
                     <div class="column q-gutter-xs">

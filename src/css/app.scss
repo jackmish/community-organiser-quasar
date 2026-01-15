@@ -294,3 +294,6 @@ html body .q-dialog .q-card textarea::placeholder {
 .calendar-table tbody td.calendar-cell:nth-child(7) {
   background-color: #add8e6 !important;
 }
+
+/* Responsive overrides imported separately */
+@import 'responsive-overrides.scss';
