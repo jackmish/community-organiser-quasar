@@ -60,6 +60,7 @@ const monthInput = ref<any>(null);
 const yearInput = ref<any>(null);
 const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
+const offsetInput = ref<any>(null);
 const replenishInput = ref<any>(null);
 // Auto-increment year checkbox state
 const autoIncrementYear = ref(true);
@@ -148,7 +149,7 @@ const localNewTask = ref<TaskType>({
   eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
   eventTime: '',
   timeMode: 'event',
-  timeOffsetDays: null,
+  timeOffsetDays: 7,
 });
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
@@ -533,8 +534,9 @@ watch(
         eventDate: val.date || val.eventDate || localNewTask.value.eventDate,
         eventTime: val.eventTime || '',
         timeMode: val.timeMode || 'event',
+        timeOffsetDays: val.timeOffsetDays == null ? 7 : val.timeOffsetDays,
         id: val.id,
-      } as TaskType;
+      };
       // Populate repeat-related form fields from canonical `repeat` object if present
       try {
         if (val.repeat && typeof val.repeat === 'object') {
@@ -647,7 +649,8 @@ watch(
           `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
         eventTime: '',
         timeMode: 'event',
-      } as TaskType;
+        timeOffsetDays: 7,
+      };
       // Reset repeat inputs when clearing the form
       repeatMode.value = 'oneTime';
       repeatCycleType.value = 'dayWeek';
@@ -927,15 +930,25 @@ const eventDateParts = computed(() => {
   return val;
 });
 const eventDateYear = computed({
+  // Expose only the last two digits in the input, but keep full 4-digit year in storage.
   get: () => {
-    const val = eventDateParts.value[0]
+    const full = eventDateParts.value[0]
       ? Number(eventDateParts.value[0])
       : new Date().getFullYear();
-    return val;
+    const two = String(full).slice(-2);
+    return Number(two);
   },
   set: (val: number) => {
     if (eventDateParts.value.length === 3) {
-      localNewTask.value.eventDate = `${val}-${eventDateParts.value[1]}-${eventDateParts.value[2]}`;
+      let yearNum = Number(val);
+      if (!isNaN(yearNum)) {
+        // If user provided a 2-digit year (0-99), map to current century.
+        if (yearNum >= 0 && yearNum <= 99) {
+          const baseCentury = Math.floor(new Date().getFullYear() / 100) * 100;
+          yearNum = baseCentury + yearNum;
+        }
+        localNewTask.value.eventDate = `${String(yearNum).padStart(4, '0')}-${eventDateParts.value[1]}-${eventDateParts.value[2]}`;
+      }
     }
   },
 });
@@ -1451,7 +1464,7 @@ function onSubmit(event: Event) {
                             dense
                             min="1"
                             max="31"
-                            style="max-width: 80px"
+                            style="max-width: 80px; min-width: 64px"
                           />
                           <q-input
                             ref="monthInput"
@@ -1468,7 +1481,7 @@ function onSubmit(event: Event) {
                             dense
                             min="1"
                             max="12"
-                            style="max-width: 80px"
+                            style="max-width: 80px; min-width: 64px"
                           />
                           <q-input
                             ref="yearInput"
@@ -1483,7 +1496,7 @@ function onSubmit(event: Event) {
                             label="Year"
                             outlined
                             dense
-                            style="max-width: 80px"
+                            style="max-width: 80px; min-width: 64px"
                           />
                         </div>
                         <div class="col"></div>
@@ -1563,6 +1576,7 @@ function onSubmit(event: Event) {
                         style="gap: 8px; align-items: center"
                       >
                         <q-input
+                          ref="offsetInput"
                           v-model.number="eventTimeOffsetDays"
                           type="number"
                           label="Days before"
@@ -1571,6 +1585,15 @@ function onSubmit(event: Event) {
                           style="max-width: 120px"
                           min="0"
                           placeholder="0"
+                          @focus="
+                            (e) => {
+                              const root = offsetInput.value?.$el || offsetInput.value;
+                              const inp = root?.querySelector
+                                ? root.querySelector('input')
+                                : (e.target as HTMLInputElement);
+                              if (inp && typeof inp.select === 'function') inp.select();
+                            }
+                          "
                         />
                         <div class="row" style="gap: 6px; margin-left: 8px">
                           <q-btn
