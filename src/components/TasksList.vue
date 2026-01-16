@@ -75,7 +75,14 @@
                 getEventHoursDisplay(task)
               "
               caption
-              :class="['task-desc', { 'has-date': hasDate(task) }]"
+              :class="[
+                'task-desc',
+                {
+                  'has-date': hasDate(task),
+                  'prepare-desc': task.timeMode === 'prepare',
+                  'expiration-desc': task.timeMode === 'expiration',
+                },
+              ]"
             >
               <span
                 class="priority-inline"
@@ -192,7 +199,14 @@
                 getEventHoursDisplay(task)
               "
               caption
-              :class="['task-desc', { 'has-date': hasDate(task) }]"
+              :class="[
+                'task-desc',
+                {
+                  'has-date': hasDate(task),
+                  'prepare-desc': task.timeMode === 'prepare',
+                  'expiration-desc': task.timeMode === 'expiration',
+                },
+              ]"
             >
               <span
                 class="priority-inline"
@@ -307,32 +321,50 @@ const getEventHoursDisplay = (task: any) => {
   const dateStr = task?.date || task?.eventDate || '';
   const timeStr = task?.eventTime || '';
   if (!dateStr) return '';
+
+  const formatShortDate = (s: string) => {
+    const d = parseYmdLocal(s) || new Date(s);
+    if (!d || isNaN(d.getTime())) return formatDisplayDate(s);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}.${mm}.${yy}`;
+  };
+
   // If task is a prepare/expiration reminder, show remaining days to the event
   try {
     const mode = task?.timeMode || (task && (task.timeOffsetDays ? 'prepare' : 'event')) || 'event';
     if (mode === 'prepare' || mode === 'expiration') {
-      const ev = dateStr;
-      const evD = parseYmdLocal(ev);
+      const evD = parseYmdLocal(dateStr);
       const today = new Date();
       const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       if (evD) {
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return 'Tomorrow';
-        if (diffDays > 1) return `In ${diffDays} days`;
-        // past
-        const ago = Math.abs(diffDays);
-        return `${ago} days ago`;
+        let rel = '';
+        if (diffDays === 0) rel = 'Today';
+        else if (diffDays === 1) rel = 'Tomorrow';
+        else if (diffDays > 1) rel = `In ${diffDays}days`;
+        else rel = `${Math.abs(diffDays)} days ago`;
+
+        const shortDate = formatShortDate(dateStr);
+        if (timeStr) {
+          // Prefer two-line format when both relative and exact time are present
+          return `${rel}\n${shortDate} | ${timeStr}`;
+        }
+        return `${rel}, ${shortDate}`;
       }
     }
   } catch (e) {
     // fall back to existing behavior
   }
+
+  // Event mode: if explicit time present, show date + time; otherwise use relative/single-line
   if (timeStr) {
-    // Display the actual time (HH:MM) rather than a relative difference
-    return timeStr;
+    const shortDate = formatShortDate(dateStr);
+    return `${shortDate} | ${timeStr}`;
   }
+
   // No explicit time: show relative day labels when applicable
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return formatDisplayDate(dateStr);
@@ -631,15 +663,29 @@ function confirmDelete(id: string) {
   -webkit-line-clamp: 2 !important;
 }
 .task-desc {
-  white-space: nowrap !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 1 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px;
+  white-space: nowrap !important;
+  line-height: 1.3 !important;
   margin: 0 !important;
   max-width: 100%;
+  max-height: calc(1 * 1.3em + 8px) !important; /* extra buffer to avoid clipping */
+  padding-top: 0 !important; /* reset top padding per request */
+  position: relative !important;
+  top: -4px !important;
   color: inherit; /* respect item text color */
+}
+
+.prepare-desc {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+.expiration-desc {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
 }
 /* ensure truncation applies in title rows */
 .title-row .task-desc {
