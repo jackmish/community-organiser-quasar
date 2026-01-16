@@ -1118,6 +1118,26 @@ const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
   });
 };
 
+// Parse YYYY-MM-DD into a local Date (avoids timezone shifts with ISO parsing)
+const parseYmdLocal = (s: string | undefined | null): Date | null => {
+  if (!s || typeof s !== 'string') return null;
+  const parts = s.split('-');
+  if (parts.length < 3) return null;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m - 1, d);
+};
+
+// Return offset days for a task; use the task's value or 0 when missing/invalid
+const getTimeOffsetDaysForTask = (t: any): number => {
+  const raw = t && t.timeOffsetDays;
+  if (raw === null || raw === undefined || raw === '') return 0;
+  const n = Number(raw);
+  return isNaN(n) ? 0 : Math.max(0, Math.floor(n));
+};
+
 const sortedTasks = computed(() => {
   // Filter tasks by active group (unless "All Groups" is selected)
   // Start with tasks for the currently selected date
@@ -1135,6 +1155,33 @@ const sortedTasks = computed(() => {
         if (!tasksToSort.some((existing) => existing.id === t.id)) {
           tasksToSort.push(t);
         }
+      }
+      // Also include prepare/expiration tasks from other days when viewing Today
+      try {
+        const prepExtras = allTasks.filter((t) => {
+          if (Number(t.status_id) === 0) return false;
+          if (t.type_id === 'Replenish') return false;
+          const mode = (t as any).timeMode || 'event';
+          if (mode !== 'prepare' && mode !== 'expiration') return false;
+          const ev = (t.date || t.eventDate) as string | undefined | null;
+          if (!ev) return false;
+          const evDate = parseYmdLocal(ev);
+          const todayDate = parseYmdLocal(todayStr);
+          if (!evDate || !todayDate) return false;
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const diffDays = Math.floor((evDate.getTime() - todayDate.getTime()) / msPerDay);
+          const offset = getTimeOffsetDaysForTask(t);
+          if (mode === 'prepare') {
+            return diffDays >= 0 && diffDays <= offset;
+          }
+          // expiration: show starting from eventDate - offset and continue showing after event until done
+          return diffDays <= offset;
+        });
+        for (const t of prepExtras) {
+          if (!tasksToSort.some((existing) => existing.id === t.id)) tasksToSort.push(t);
+        }
+      } catch (e) {
+        // ignore
       }
     }
   } catch (err) {
@@ -1290,6 +1337,30 @@ const tasksWithTime = computed(() => {
     } catch (e) {
       // ignore
     }
+    // time-mode visibility: if task has timeMode 'prepare' or 'expiration', decide
+    // whether it should be visible on this `day` based on its eventDate and offset
+    try {
+      const mode = t.timeMode || 'event';
+      if (mode === 'prepare' || mode === 'expiration') {
+        const ev = (t.date || t.eventDate) as string | undefined | null;
+        if (!ev) return false;
+        const offset = getTimeOffsetDaysForTask(t);
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const evDate = parseYmdLocal(ev);
+        const thisDate = parseYmdLocal(day);
+        if (!evDate || !thisDate) return false;
+        const diffDays = Math.floor((evDate.getTime() - thisDate.getTime()) / msPerDay);
+        if (mode === 'prepare') {
+          // show only in the window [eventDate - offset, eventDate]
+          if (!(diffDays >= 0 && diffDays <= offset)) return false;
+        } else if (mode === 'expiration') {
+          // show starting from eventDate - offset and continue showing after event until done
+          if (!(diffDays <= offset)) return false;
+        }
+      }
+    } catch (e) {
+      // ignore and fall back
+    }
     return !!t.eventTime;
   });
   return val;
@@ -1312,6 +1383,27 @@ const tasksWithoutTime = computed(() => {
       }
     } catch (e) {
       // ignore
+    }
+    // include prepare/expiration tasks on appropriate days even if they have no eventTime
+    try {
+      const mode = t.timeMode || 'event';
+      if (mode === 'prepare' || mode === 'expiration') {
+        const ev = (t.date || t.eventDate) as string | undefined | null;
+        if (!ev) return false;
+        const offset = getTimeOffsetDaysForTask(t);
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const evDate = parseYmdLocal(ev);
+        const thisDate = parseYmdLocal(day);
+        if (!evDate || !thisDate) return false;
+        const diffDays = Math.floor((evDate.getTime() - thisDate.getTime()) / msPerDay);
+        if (mode === 'prepare') {
+          if (!(diffDays >= 0 && diffDays <= offset)) return false;
+        } else if (mode === 'expiration') {
+          if (!(diffDays <= offset)) return false;
+        }
+      }
+    } catch (e) {
+      // ignore and fall back
     }
     return !t.eventTime;
   });

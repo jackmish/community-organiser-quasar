@@ -30,6 +30,11 @@ export interface Task {
   repeat?: Record<string, unknown> | null;
   // History of changes for this task
   history?: Array<Record<string, unknown>>;
+  // Time mode controls how the event is shown: 'event' (on date),
+  // 'prepare' (appear in days-before window), or 'expiration' (appear until done)
+  timeMode?: 'event' | 'prepare' | 'expiration';
+  // Number of days before the event when prepare/expiration modes start showing
+  timeOffsetDays?: number | null;
   // Optional per-task chosen color set id (e.g. 'set-1'..'set-12')
   color_set?: string | null;
   createdAt: string;
