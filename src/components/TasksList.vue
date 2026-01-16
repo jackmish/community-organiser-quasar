@@ -61,6 +61,7 @@
               </div>
               <div class="title-checkbox">
                 <q-checkbox
+                  class="task-checkbox"
                   :model-value="Number(task.status_id) === 0"
                   @click.stop="toggleStatus(task)"
                 />
@@ -186,6 +187,7 @@
               </div>
               <div class="title-checkbox">
                 <q-checkbox
+                  class="task-checkbox"
                   :model-value="Number(task.status_id) === 0"
                   @click.stop="toggleStatus(task)"
                 />
@@ -674,8 +676,7 @@ function confirmDelete(id: string) {
   max-width: 100%;
   max-height: calc(1 * 1.3em + 8px) !important; /* extra buffer to avoid clipping */
   padding-top: 0 !important; /* reset top padding per request */
-  position: relative !important;
-  top: -4px !important;
+
   color: inherit; /* respect item text color */
 }
 
@@ -687,6 +688,27 @@ function confirmDelete(id: string) {
   font-size: 11px !important;
   line-height: 1.2 !important;
 }
+/* Make task list checkboxes larger (30x30 inner box) */
+.task-checkbox {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.task-checkbox .q-checkbox__inner {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+}
+.task-checkbox .q-icon {
+  font-size: 14px !important;
+}
 /* ensure truncation applies in title rows */
 .title-row .task-desc {
   max-width: calc(100%);
@@ -696,6 +718,7 @@ function confirmDelete(id: string) {
 }
 /* 2x2 grid for controls: edit / delete / priority+group / done checkbox */
 .task-controls-grid {
+  top: 3px !important;
   display: grid;
   grid-template-columns: 28px 28px;
   grid-template-rows: 20px 20px;
