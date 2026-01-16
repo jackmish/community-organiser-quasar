@@ -70,7 +70,8 @@
               v-if="
                 (task.type === 'event' ||
                   task.type_id === 'TimeEvent' ||
-                  task.type === 'TimeEvent') &&
+                  task.type === 'TimeEvent' ||
+                  task.timeMode === 'event') &&
                 getEventHoursDisplay(task)
               "
               caption
@@ -90,6 +91,22 @@
                 />
               </span>
               {{ getEventHoursDisplay(task) }}
+            </q-item-label>
+            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
+              <span
+                class="priority-inline"
+                :title="task.priority"
+                :style="{
+                  backgroundColor: priorityColor(task.priority),
+                  color: priorityTextColor(task.priority),
+                }"
+              >
+                <q-icon
+                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
+                  size="12px"
+                />
+              </span>
+              {{ getDisplayDescription(task) }}
             </q-item-label>
           </div>
         </q-item-section>
@@ -169,7 +186,7 @@
             </div>
             <q-item-label
               v-if="
-                (task.type === 'event' ||
+                (task.timeMode === 'event' ||
                   task.type_id === 'TimeEvent' ||
                   task.type === 'TimeEvent') &&
                 getEventHoursDisplay(task)
@@ -204,9 +221,10 @@
                 <q-icon
                   :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
                   size="12px"
-                /> </span
-              >{{ getDisplayDescription(task) }}</q-item-label
-            >
+                />
+              </span>
+              {{ getDisplayDescription(task) }}
+            </q-item-label>
           </div>
         </q-item-section>
         <q-item-section side>
@@ -289,6 +307,28 @@ const getEventHoursDisplay = (task: any) => {
   const dateStr = task?.date || task?.eventDate || '';
   const timeStr = task?.eventTime || '';
   if (!dateStr) return '';
+  // If task is a prepare/expiration reminder, show remaining days to the event
+  try {
+    const mode = task?.timeMode || (task && (task.timeOffsetDays ? 'prepare' : 'event')) || 'event';
+    if (mode === 'prepare' || mode === 'expiration') {
+      const ev = dateStr;
+      const evD = parseYmdLocal(ev);
+      const today = new Date();
+      const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      if (evD) {
+        const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
+        const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Tomorrow';
+        if (diffDays > 1) return `In ${diffDays} days`;
+        // past
+        const ago = Math.abs(diffDays);
+        return `${ago} days ago`;
+      }
+    }
+  } catch (e) {
+    // fall back to existing behavior
+  }
   if (timeStr) {
     // Display the actual time (HH:MM) rather than a relative difference
     return timeStr;
@@ -304,6 +344,18 @@ const getEventHoursDisplay = (task: any) => {
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays === -1) return 'Yesterday';
   return formatDisplayDate(dateStr);
+};
+
+// Local YYYY-MM-DD parser to avoid timezone shifts
+const parseYmdLocal = (s: string | undefined | null): Date | null => {
+  if (!s || typeof s !== 'string') return null;
+  const parts = s.split('-');
+  if (parts.length < 3) return null;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m - 1, d);
 };
 
 const hasDate = (task: any) => {
