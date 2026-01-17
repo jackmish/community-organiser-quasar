@@ -69,6 +69,7 @@
             </div>
             <q-item-label
               v-if="
+                !isTodoType(task) &&
                 (task.type === 'event' ||
                   task.type_id === 'TimeEvent' ||
                   task.type === 'TimeEvent' ||
@@ -146,7 +147,6 @@
         :style="itemStyle(task)"
         :active="selectedTaskId === task.id"
         clickable
-        @pointerdown="() => startLongPress(task)"
         @pointerup="cancelLongPress"
         @pointercancel="cancelLongPress"
         @pointerleave="cancelLongPress"
@@ -195,6 +195,7 @@
             </div>
             <q-item-label
               v-if="
+                !isTodoType(task) &&
                 (task.timeMode === 'event' ||
                   task.type_id === 'TimeEvent' ||
                   task.type === 'TimeEvent') &&
@@ -317,6 +318,11 @@ const getGroupColor = (groupId?: string) => {
   if (!groupId) return '#1976d2';
   const g = groups.value.find((gg: any) => gg.id === groupId);
   return g?.color || '#1976d2';
+};
+
+const isTodoType = (task: any) => {
+  const t = String(task?.type || task?.type_id || '').toLowerCase();
+  return t.includes('todo');
 };
 
 const getEventHoursDisplay = (task: any) => {
