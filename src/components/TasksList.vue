@@ -572,8 +572,12 @@ function confirmDelete(id: string) {
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  margin-right: 6px;
+  /* margin-right: 6px;  */
   font-size: 12px;
+  i {
+    position: relative;
+    top: 2px;
+  }
 }
 
 .type-watermark {
