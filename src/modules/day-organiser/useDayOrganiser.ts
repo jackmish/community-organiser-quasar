@@ -518,7 +518,12 @@ export function useDayOrganiser() {
     return false;
   };
   // Add group management helpers
-  const addGroup = async (name: string, parentId?: string, color?: string): Promise<TaskGroup> => {
+  const addGroup = async (
+    name: string,
+    parentId?: string,
+    color?: string,
+    icon?: string,
+  ): Promise<TaskGroup> => {
     const now = new Date().toISOString();
     const group: TaskGroup = {
       id: generateGroupId(name),
@@ -526,6 +531,7 @@ export function useDayOrganiser() {
       createdAt: now,
       ...(parentId && { parentId }),
       ...(color && { color }),
+      ...(icon && { icon }),
     };
 
     organiserData.value.groups.push(group);
