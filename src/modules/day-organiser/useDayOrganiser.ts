@@ -98,9 +98,23 @@ export function useDayOrganiser() {
       // NOTE: legacy task form/data is no longer migrated here; stored tasks must use the
       // canonical `repeat` object. Older formats will be ignored.
 
+      // Ensure stored groups remain a flat list without nested `children` or `tasks` properties.
+      const rawGroups = Array.isArray((data as any).groups) ? (data as any).groups : [];
+      // const sanitizedGroups = rawGroups.map((g: any) => {
+      //   const copy: any = { ...g };
+      //   // normalize snake_case parent_id to camelCase parentId
+      //   if (copy.parent_id !== undefined && copy.parentId === undefined) {
+      //     copy.parentId = copy.parent_id;
+      //     delete copy.parent_id;
+      //   }
+      //   if ('children' in copy) delete copy.children;
+      //   if ('tasks' in copy) delete copy.tasks;
+      //   return copy;
+      // });
+
       organiserData.value = {
         days: Object.keys(daysMap).length ? daysMap : (data as any).days || {},
-        groups: (data as any).groups || [],
+        groups: rawGroups,
         lastModified: (data as any).lastModified || new Date().toISOString(),
       };
 
@@ -134,7 +148,8 @@ export function useDayOrganiser() {
   // Save data to storage
   const saveData = async () => {
     try {
-      await storage.saveData(organiserData.value);
+      // Persist organiserData as-is; do not mutate group objects here.
+      await storage.saveData(organiserData.value as OrganiserData);
     } catch (error) {
       logger.error('Failed to save data:', error);
       throw error;
@@ -182,28 +197,7 @@ export function useDayOrganiser() {
     const dayData = getDayData(date);
     dayData.tasks.push(task);
 
-    // Also associate task with its group file (if groupId provided)
-    try {
-      if (task.groupId) {
-        const group = organiserData.value.groups.find((g: any) => g.id === task.groupId);
-        if (group) {
-          // Ensure group has tasks array
-          if (!Array.isArray((group as any).tasks)) (group as any).tasks = [];
-          (group as any).tasks.push(task);
-        } else {
-          // If group doesn't exist, create a lightweight group entry so it can be persisted
-          const newGroup: any = {
-            id: task.groupId,
-            name: 'Unknown',
-            tasks: [task],
-            createdAt: now,
-          };
-          organiserData.value.groups.push(newGroup);
-        }
-      }
-    } catch (err) {
-      logger.error('Failed to attach task to group file structure:', err);
-    }
+    // Tasks are stored under `days`; do not nest tasks inside group objects here.
 
     await saveData();
     return task;
@@ -279,20 +273,7 @@ export function useDayOrganiser() {
       updatedAt: new Date().toISOString(),
     });
 
-    // Also update the task inside any group file so saved group data remains in sync
-    try {
-      if (task.groupId) {
-        const group: any = organiserData.value.groups.find((g: any) => g.id === task.groupId);
-        if (group && Array.isArray(group.tasks)) {
-          const idx = group.tasks.findIndex((t: any) => t.id === taskId);
-          if (idx !== -1) {
-            Object.assign(group.tasks[idx], task);
-          }
-        }
-      }
-    } catch (err) {
-      logger.error('Failed to sync updated task to group:', err);
-    }
+    // Do not mutate group objects to store task copies; tasks are canonical in `days`.
 
     await saveData();
   };
@@ -302,16 +283,7 @@ export function useDayOrganiser() {
     const dayData = getDayData(date);
     dayData.tasks = dayData.tasks.filter((t) => t.id !== taskId);
 
-    // Also remove the task from any group tasks arrays so saved group files don't contain the deleted task
-    try {
-      organiserData.value.groups.forEach((grp: any) => {
-        if (Array.isArray(grp.tasks)) {
-          grp.tasks = grp.tasks.filter((t: any) => t.id !== taskId);
-        }
-      });
-    } catch (err) {
-      logger.error('Failed to remove task from group structures:', err);
-    }
+    // Tasks are stored in days; no nested group task cleanup required.
 
     await saveData();
   };
@@ -455,6 +427,7 @@ export function useDayOrganiser() {
   const importData = async (file: File) => {
     try {
       const data = await storage.importFromFile(file);
+      // Preserve imported data shape exactly; do not normalize or remove fields.
       organiserData.value = data;
       await saveData();
     } catch (error) {
@@ -523,6 +496,7 @@ export function useDayOrganiser() {
     parentId?: string,
     color?: string,
     icon?: string,
+    shareSubgroups?: boolean,
   ): Promise<TaskGroup> => {
     const now = new Date().toISOString();
     const group: TaskGroup = {
@@ -532,6 +506,7 @@ export function useDayOrganiser() {
       ...(parentId && { parentId }),
       ...(color && { color }),
       ...(icon && { icon }),
+      ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     };
 
     organiserData.value.groups.push(group);
@@ -568,12 +543,32 @@ export function useDayOrganiser() {
     });
 
     // Move child groups to parent or root
-    organiserData.value.groups.forEach((g) => {
-      if (g.parentId === groupId) {
-        if (groupToDelete?.parentId) {
-          g.parentId = groupToDelete.parentId;
+    const normalizeId = (v: any): string | null => {
+      if (v === null || v === undefined) return null;
+      // If it's an object like { label, value } or { id }, prefer .value then .id
+      if (typeof v === 'object') {
+        const maybe = v.value ?? v.id ?? null;
+        return maybe == null ? null : String(maybe);
+      }
+      return String(v);
+    };
+
+    organiserData.value.groups.forEach((g: any) => {
+      const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
+      if (pid === String(groupId)) {
+        const newParent = groupToDelete
+          ? normalizeId(groupToDelete.parentId ?? (groupToDelete as any).parent_id ?? null)
+          : null;
+        // preserve original key style when updating (store as string or remove)
+        if (g.parentId !== undefined) {
+          if (newParent) g.parentId = newParent;
+          else delete g.parentId;
+        } else if (g.parent_id !== undefined) {
+          if (newParent) g.parent_id = newParent;
+          else delete g.parent_id;
         } else {
-          delete g.parentId;
+          // default to camelCase
+          if (newParent) g.parentId = newParent;
         }
       }
     });
@@ -582,19 +577,60 @@ export function useDayOrganiser() {
   };
 
   const getGroupsByParent = (parentId?: string): TaskGroup[] => {
-    return organiserData.value.groups.filter((g) => g.parentId === parentId);
+    const norm = parentId == null ? null : String(parentId);
+    const normalize = (v: any): string | null => {
+      if (v == null) return null;
+      if (typeof v === 'object') return (v.value ?? v.id) ? String(v.value ?? v.id) : null;
+      return String(v);
+    };
+    return organiserData.value.groups.filter((g: any) => {
+      const pid = normalize(g.parentId ?? g.parent_id ?? null);
+      if (pid == null && norm == null) return true;
+      if (pid != null && norm != null) return String(pid) === norm;
+      return false;
+    });
   };
 
-  const getGroupHierarchy = (): TaskGroup[] => {
-    const buildTree = (parentId?: string): TaskGroup[] => {
-      return organiserData.value.groups
-        .filter((g) => g.parentId === parentId)
-        .map((group) => ({
-          ...group,
-          children: buildTree(group.id),
-        })) as TaskGroup[];
+  // Derived tree representation for UI and privileges. This does NOT mutate stored group objects.
+  const groupTree = computed(() => {
+    const raw = organiserData.value.groups || [];
+    const map = new Map<string, any>();
+    // Create node wrappers that reference the original group objects (do not mutate groups)
+    const normalize = (v: any): string | null => {
+      if (v == null) return null;
+      if (typeof v === 'object') return (v.value ?? v.id) ? String(v.value ?? v.id) : null;
+      return String(v);
     };
-    return buildTree();
+
+    raw.forEach((g: any) => {
+      map.set(String(g.id), {
+        id: g.id,
+        label: g.name,
+        icon: g.icon,
+        color: g.color,
+        // store reference to original group
+        group: g,
+        parentId: normalize(g.parentId ?? g.parent_id ?? null),
+        shareSubgroups: g.shareSubgroups ?? false,
+        children: [] as any[],
+      });
+    });
+
+    const roots: any[] = [];
+    map.forEach((node) => {
+      if (node.parentId == null) {
+        roots.push(node);
+      } else {
+        const parent = map.get(String(node.parentId));
+        if (parent) parent.children.push(node);
+        else roots.push(node); // orphaned parent -> treat as root
+      }
+    });
+    return roots;
+  });
+
+  const getGroupHierarchy = (): any[] => {
+    return groupTree.value;
   };
 
   return {

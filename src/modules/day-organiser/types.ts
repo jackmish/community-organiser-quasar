@@ -4,6 +4,7 @@ export interface TaskGroup {
   id: string;
   name: string;
   color?: string;
+  shareSubgroups?: boolean;
   icon?: string;
   parentId?: string; // For hierarchical groups
   createdAt: string;

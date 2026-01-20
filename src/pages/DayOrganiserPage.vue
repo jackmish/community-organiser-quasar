@@ -136,6 +136,9 @@
             <q-select
               v-model="editGroupLocal.parentId"
               :options="groupOptions"
+              option-value="value"
+              option-label="label"
+              emit-value
               label="Parent group"
               outlined
               dense
@@ -673,7 +676,7 @@ function openEditGroup(g: TaskGroup) {
   editGroupLocal.value = {
     id: g.id,
     name: g.name,
-    parentId: (g as any).parentId || null,
+    parentId: (g as any).parentId ?? (g as any).parent_id ?? null,
     color: g.color || '#1976d2',
   };
   showEditGroupDialog.value = true;
@@ -1447,11 +1450,25 @@ const tasksWithoutTime = computed(() => {
 
 // Group options for select
 const groupOptions = computed(() => {
-  const val = groups.value.map((g) => ({
-    label: g.name,
-    value: g.id,
-  }));
-  return val;
+  const byParent: Record<string, any[]> = {};
+  (groups.value || []).forEach((g) => {
+    const key = (g as any).parentId ?? (g as any).parent_id ?? '__root__';
+    if (!byParent[key]) byParent[key] = [];
+    byParent[key].push(g);
+  });
+
+  const flat: any[] = [];
+  const walk = (parentKey: string, depth = 0) => {
+    const list = byParent[parentKey] || [];
+    list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    list.forEach((g) => {
+      flat.push({ label: `${'\u00A0'.repeat(depth * 2)}${g.name}`, value: String(g.id) });
+      walk(g.id, depth + 1);
+    });
+  };
+
+  walk('__root__', 0);
+  return flat;
 });
 
 // Active group options with "All Groups" and task counts
@@ -1468,7 +1485,7 @@ const activeGroupOptions = computed(() => {
       const taskCount = allTasks.filter((t) => t.groupId === g.id).length;
       return {
         label: `${g.name} (${taskCount})`,
-        value: g.id,
+        value: String(g.id),
       };
     }),
   ];
@@ -1479,15 +1496,26 @@ const activeGroupOptions = computed(() => {
 // Build group tree for display
 const groupTree = computed(() => {
   const buildTree = (parentId?: string): any[] => {
-    return getGroupsByParent(parentId).map((group) => ({
-      id: group.id,
+    const pidNorm = parentId == null ? undefined : String(parentId);
+    console.log('Building tree for parentId=', pidNorm);
+    const groupsForParent = getGroupsByParent(pidNorm);
+    try {
+      logger.debug('[DayOrganiserPage] buildTree parent=', pidNorm, parentId);
+    } catch (e) {
+      // ignore
+    }
+    return groupsForParent.map((group) => ({
+      id: String(group.id),
       label: group.name,
       color: group.color,
       icon: group.icon || 'folder',
-      children: buildTree(group.id),
+      // reference the original group object (do not copy or mutate it)
+      group: group,
+      children: buildTree(String(group.id)),
     }));
   };
   const val = buildTree();
+
   return val;
 });
 

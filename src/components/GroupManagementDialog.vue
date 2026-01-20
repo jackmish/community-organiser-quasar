@@ -9,15 +9,79 @@
             <div class="row q-gutter-sm items-end">
               <q-input v-model="localName" label="Group Name" outlined dense class="col" />
 
-              <q-select
-                v-model="localParent"
-                :options="groupOptions"
-                label="Parent Group (optional)"
-                outlined
-                dense
-                clearable
-                style="min-width: 180px"
-              />
+              <div style="min-width: 180px; display: flex; align-items: center">
+                <q-btn
+                  flat
+                  dense
+                  round
+                  unelevated
+                  style="flex: 1; justify-content: flex-start"
+                  @click.stop.prevent="parentMenuOpen = !parentMenuOpen"
+                >
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <q-icon
+                      :name="getIconName(localParentIcon)"
+                      :style="{ color: localParentColor || 'inherit' }"
+                    />
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{
+                      parentLabel
+                    }}</span>
+                  </div>
+                </q-btn>
+
+                <q-menu
+                  v-model="parentMenuOpen"
+                  anchor="bottom left"
+                  self="top left"
+                  :offset="[0, 6]"
+                >
+                  <div style="min-width: 300px; max-height: 60vh; overflow: auto; padding: 8px">
+                    <q-list padding>
+                      <q-item clickable v-ripple @click="clearParent">
+                        <q-item-section avatar style="min-width: 36px">
+                          <q-icon name="folder_open" />
+                        </q-item-section>
+                        <q-item-section>None (no parent)</q-item-section>
+                      </q-item>
+                    </q-list>
+
+                    <q-separator />
+
+                    <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
+                      <q-tree
+                        :nodes="groupTree"
+                        node-key="id"
+                        default-expand-all
+                        :selected="localParent ? [String(localParent)] : []"
+                        @update:selected="onParentTreeSelect"
+                      >
+                        <template #default-header="prop">
+                          <div class="row items-center full-width">
+                            <q-icon
+                              :name="getIconName(prop.node.icon)"
+                              class="q-mr-sm"
+                              :style="{ color: prop.node.color }"
+                            />
+                            <span>{{ prop.node.label }}</span>
+                          </div>
+                        </template>
+                      </q-tree>
+                    </div>
+
+                    <q-separator />
+
+                    <div
+                      style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
+                    >
+                      <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+                    </div>
+                  </div>
+                </q-menu>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
+                <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
+              </div>
 
               <q-input
                 :model-value="''"
@@ -298,8 +362,12 @@ const emit = defineEmits<{
 
 const localName = ref('');
 const localParent = ref<string | null>(null);
+const parentMenuOpen = ref(false);
+const localParentIcon = ref<string | null>(null);
+const localParentColor = ref<string | null>(null);
 const localColor = ref('#1976d2');
 const localIcon = ref<string | null>('folder');
+const localShareSubgroups = ref(false);
 const colorInput = ref<HTMLInputElement | null>(null);
 const menuVisible = ref(false);
 const paletteColors = [
@@ -389,12 +457,127 @@ function resetIcon() {
   iconMenuVisible.value = false;
 }
 
+function onParentTreeSelect(val: any) {
+  const key = Array.isArray(val) ? val[0] : val;
+  if (!key) return;
+  localParent.value = String(key);
+  // try to populate preview icon/color if available in groupTree
+  try {
+    const findNode = (nodes: any[]): any => {
+      for (const n of nodes || []) {
+        if (String(n.id) === String(key)) return n;
+        const f = findNode(n.children || []);
+        if (f) return f;
+      }
+      return null;
+    };
+    const node = findNode(props.groupTree || []);
+    if (node) {
+      localParentIcon.value = node.icon || null;
+      localParentColor.value = node.color || null;
+    }
+  } catch (e) {
+    void e;
+  }
+  parentMenuOpen.value = false;
+}
+
+function clearParent() {
+  localParent.value = null;
+  localParentIcon.value = null;
+  localParentColor.value = null;
+  parentMenuOpen.value = false;
+}
+
+// Normalize various parentId shapes to a string id or null
+const normalizeParent = (v: any): string | null => {
+  if (v == null) return null;
+  if (typeof v === 'object') {
+    const maybe = v.value ?? v.id ?? null;
+    return maybe == null ? null : String(maybe);
+  }
+  return String(v);
+};
+
+watch(
+  () => parentMenuOpen.value,
+  (open) => {
+    try {
+      if (open) {
+        const rootIds = (props.groupTree || []).map((n: any) => n.id).slice(0, 10);
+        logger.debug(
+          '[GroupManagementDialog] parentMenuOpen opened, groupTree.length=',
+          (props.groupTree || []).length,
+          'rootIds=',
+          rootIds,
+          'localParent=',
+          localParent.value,
+        );
+      }
+    } catch (e) {
+      void e;
+    }
+  },
+);
+
 const dialogVisible = computed({
   get: () => !!props.modelValue,
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
 const editingGroupId = ref<string | null>(null);
+
+const parentLabel = computed(() => {
+  if (!localParent.value) return 'Parent Group (optional)';
+  try {
+    const findNode = (nodes: any[]): any => {
+      for (const n of nodes || []) {
+        if (String(n.id) === String(localParent.value)) return n;
+        const f = findNode(n.children || []);
+        if (f) return f;
+      }
+      return null;
+    };
+    const node = findNode(props.groupTree || []);
+    if (node) return node.label || String(localParent.value);
+  } catch (e) {
+    void e;
+  }
+  const opt = (props.groupOptions || []).find(
+    (o: any) => String(o.value) === String(localParent.value),
+  );
+  return opt?.label || String(localParent.value);
+});
+
+const findNodeInTree = (nodes: any[], key: string): any => {
+  for (const n of nodes || []) {
+    if (String(n.id) === String(key)) return n;
+    const f = findNodeInTree(n.children || [], key);
+    if (f) return f;
+  }
+  return null;
+};
+
+watch(
+  () => localParent.value,
+  (v) => {
+    try {
+      if (!v) {
+        localParentIcon.value = null;
+        localParentColor.value = null;
+        return;
+      }
+      const node = findNodeInTree(props.groupTree || [], String(v));
+      if (node) {
+        localParentIcon.value = node.icon || null;
+        localParentColor.value = node.color || null;
+      }
+    } catch (e) {
+      void e;
+    }
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.modelValue,
@@ -404,6 +587,7 @@ watch(
       localParent.value = null;
       localColor.value = '#1976d2';
       localIcon.value = 'folder';
+      localShareSubgroups.value = false;
     }
   },
 );
@@ -424,10 +608,13 @@ async function onAddGroup() {
         ...(parent ? { parentId: parent } : {}),
         ...(color ? { color } : {}),
         ...(icon ? { icon } : {}),
+        ...(typeof localShareSubgroups.value === 'boolean'
+          ? { shareSubgroups: localShareSubgroups.value }
+          : {}),
       });
     } else {
       // add new
-      await addGroup(name, parent, color, icon as any);
+      await addGroup(name, parent, color, icon as any, localShareSubgroups.value);
     }
   } catch (e) {
     logger.error('add/update group failed', e);
@@ -438,6 +625,7 @@ async function onAddGroup() {
   localParent.value = null;
   localColor.value = '#1976d2';
   localIcon.value = 'folder';
+  localShareSubgroups.value = false;
   editingGroupId.value = null;
   // keep dialog open so user can add or edit more groups without reopening
 }
@@ -460,9 +648,30 @@ function startEdit(node: any) {
     const g = grpList.find((x: any) => x.id === node.id);
     editingGroupId.value = node.id;
     localName.value = g?.name || node.label || node.name || '';
-    localParent.value = g?.parentId ?? node.parentId ?? null;
+    // normalize stored parent to a plain id string (or null)
+    localParent.value = normalizeParent(
+      g?.parentId ??
+        g?.parent_id ??
+        node.parentId ??
+        (node.group && (node.group.parentId ?? node.group.parent_id)) ??
+        null,
+    );
     localColor.value = g?.color || node.color || '#1976d2';
     localIcon.value = g?.icon || node.icon || 'folder';
+    localShareSubgroups.value = Boolean(g?.shareSubgroups);
+    // populate parent preview icon/color
+    try {
+      const p = localParent.value;
+      if (p) {
+        const found = findNodeInTree(props.groupTree || [], String(p));
+        if (found) {
+          localParentIcon.value = found.icon || null;
+          localParentColor.value = found.color || null;
+        }
+      }
+    } catch (e) {
+      void e;
+    }
     // open dialog in same view (it is already open)
   } catch (e) {
     logger.error('startEdit failed', e);
