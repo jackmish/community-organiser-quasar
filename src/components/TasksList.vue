@@ -36,7 +36,10 @@
             <div class="title-main">
               <div class="title-text">
                 <q-item-label
-                  :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
+                  :class="[
+                    { 'text-strike': Number(task.status_id) === 0 && task.timeMode !== 'prepare' },
+                    'title-ellipsis',
+                  ]"
                 >
                   <strong>
                     <template v-if="(task.type_id || task.type) === 'Todo'">
@@ -46,7 +49,7 @@
                         }})&nbsp;
                       </span>
                     </template>
-                    {{ task.name }}
+                    {{ getDisplayName(task) }}
                     <span class="star-count" v-if="countStarredUndone(task) > 0">
                       <q-icon
                         v-for="n in countStarredUndone(task)"
@@ -162,7 +165,10 @@
             <div class="title-main">
               <div class="title-text">
                 <q-item-label
-                  :class="[{ 'text-strike': Number(task.status_id) === 0 }, 'title-ellipsis']"
+                  :class="[
+                    { 'text-strike': Number(task.status_id) === 0 && task.timeMode !== 'prepare' },
+                    'title-ellipsis',
+                  ]"
                 >
                   <strong>
                     <template v-if="(task.type_id || task.type) === 'Todo'">
@@ -172,7 +178,7 @@
                         }})&nbsp;
                       </span>
                     </template>
-                    {{ task.name }}
+                    {{ getDisplayName(task) }}
                     <span class="star-count" v-if="countStarredUndone(task) > 0">
                       <q-icon
                         v-for="n in countStarredUndone(task)"
@@ -396,6 +402,19 @@ const parseYmdLocal = (s: string | undefined | null): Date | null => {
   const d = Number(parts[2]);
   if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
   return new Date(y, m - 1, d);
+};
+
+const getDisplayName = (task: any) => {
+  if (!task) return '';
+  const name = task.name || '';
+  try {
+    if (Number(task.status_id) === 0 && task.timeMode === 'prepare') {
+      return `${name} [prepared]`;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return name;
 };
 
 const hasDate = (task: any) => {

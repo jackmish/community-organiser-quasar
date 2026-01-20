@@ -16,10 +16,10 @@
           <div class="row items-center" style="gap: 8px">
             <q-icon :name="getIcon(d)" :style="{ color: getIconColor(d) }" />
             <div
-              :class="{ 'text-strike': Number(d.status_id) === 0 }"
+              :class="{ 'text-strike': Number(d.status_id) === 0 && d.timeMode !== 'prepare' }"
               :style="{ color: getTextColor(d) }"
             >
-              {{ d.name }}
+              {{ getDisplayName(d) }}
             </div>
           </div>
           <div class="row items-center" style="gap: 8px">
@@ -82,6 +82,19 @@ const getIcon = (task: any) => {
   if (isCyclic(task)) return 'repeat';
   if (task.eventTime) return 'event';
   return 'label';
+};
+
+const getDisplayName = (task: any) => {
+  if (!task) return '';
+  const name = task.name || '';
+  try {
+    if (Number(task.status_id) === 0 && task.timeMode === 'prepare') {
+      return `${name} [prepared]`;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return name;
 };
 
 const getIconColor = (task: any) => {
