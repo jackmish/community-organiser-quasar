@@ -123,6 +123,12 @@ const getDoneItemStyle = (task: any) => {
     const s = findReplenishSet(task.color_set);
     if (s) return { backgroundColor: s.bg, color: s.text };
   }
+  // Style completed non-Replenish items (Todo, TimeEvent, Note, etc.) using their priority color
+  if (task.type_id !== 'Replenish') {
+    const bg = priorityColor(task.priority) || 'transparent';
+    const text = priorityTextColor(task.priority) || getContrastColor(bg);
+    return { backgroundColor: bg, color: text };
+  }
   // For cyclic finished occurrences show priority color lightly as bg
   try {
     if (isCyclic(task)) {
@@ -143,6 +149,11 @@ const hasBg = (task: any) => {
   if (task.type_id === 'Replenish') {
     const s = findReplenishSet(task.color_set);
     return !!s;
+  }
+  // Treat completed non-Replenish items as having a priority background for consistent styling
+  if (task.type_id !== 'Replenish') {
+    const bg = priorityColor(task.priority) || '';
+    return !!bg && bg !== 'transparent';
   }
   // Also treat generated cyclic instances as cyclic so they get priority styling
   if (isCyclic(task)) {
