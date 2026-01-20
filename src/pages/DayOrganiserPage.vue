@@ -218,7 +218,6 @@
           @add-task="handleAddTask"
           @update-task="handleUpdateTask"
           @delete-task="handleDeleteTask"
-          @replenish-restore="handleReplenishRestore"
           @cancel-edit="() => clearTaskToEdit()"
           @calendar-date-select="handleCalendarDateSelect"
           @filter-parent-tasks="filterParentTasks"
@@ -1257,22 +1256,7 @@ const sortedTasks = computed(() => {
   return val;
 });
 
-// Handler to restore a Replenish task to undone status
-const handleReplenishRestore = async (taskId: string) => {
-  if (!taskId) return;
-  // Find the task across all tasks
-  const tasks = allTasks?.value || [];
-  const t = tasks.find((x: any) => x.id === taskId);
-  if (!t) return;
-  const targetDate = t.date || t.eventDate || currentDate.value;
-  try {
-    await updateTask(targetDate, taskId, { status_id: 1 });
-    // If currently in preview/edit mode, ensure the UI refreshes
-    taskToEdit.value = null;
-  } catch (e) {
-    logger.error('Failed to restore replenish task', e);
-  }
-};
+// Replenish restore is now handled inside AddTaskForm component
 
 // Group tasks by whether they have time
 const replenishTasks = computed(() => {

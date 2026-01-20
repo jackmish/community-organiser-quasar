@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar, Dialog } from 'quasar';
+import { useDayOrganiser } from '../modules/day-organiser';
+import logger from 'src/utils/logger';
 import CalendarView from './CalendarView.vue';
 import {
   priorityColors as themePriorityColors,
@@ -50,7 +52,6 @@ const emit = defineEmits([
   'calendar-date-select',
   'filter-parent-tasks',
   'update:mode',
-  'replenish-restore',
   'delete-task',
 ]);
 
@@ -363,15 +364,38 @@ const replenishMatches = computed<any[]>(() => {
     .filter((t: any) => (t.name || '').toLowerCase().indexOf(q) !== -1);
 });
 
-function selectReplenishMatch(t: any) {
+async function selectReplenishMatch(t: any) {
+  try {
+    console.log('[REPLENISH] selectReplenishMatch', { id: t.id, name: t.name });
+  } catch (err) {
+    void err;
+  }
   // Immediately restore selected replenish task to undone
   selectedReplenishId.value = t.id;
   replenishQuery.value = t.name || '';
-  emit('replenish-restore', t.id);
+  try {
+    const { updateTask } = useDayOrganiser();
+    const targetDate = t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
+    console.log('[REPLENISH] restoring task id=', t.id, ' to date=', targetDate);
+    await updateTask(targetDate, t.id, { status_id: 1 });
+    // Ask parent to clear any preview/edit state
+    emit('cancel-edit');
+  } catch (e) {
+    logger.error('Failed to restore replenish task', e);
+  }
   // clear selection/input after restore
   selectedReplenishId.value = null;
   replenishQuery.value = '';
   showReplenishList.value = false;
+}
+
+function handleReplItemPointer(t: any) {
+  try {
+    console.log('[REPLENISH] handleReplItemPointer', { id: t.id, name: t.name });
+  } catch (err) {
+    void err;
+  }
+  selectReplenishMatch(t);
 }
 
 function createReplenishFromInput() {
@@ -1654,8 +1678,10 @@ function onSubmit(event: Event) {
                           <q-item
                             v-for="m in replenishMatches"
                             :key="m.id"
+                            :data-repl-id="m.id"
                             clickable
-                            @click="selectReplenishMatch(m)"
+                            @pointerdown.stop.prevent="handleReplItemPointer(m)"
+                            @click.stop.prevent="handleReplItemPointer(m)"
                             class="q-pa-sm bg-white"
                             style="border-radius: 6px; margin-bottom: 6px"
                           >
