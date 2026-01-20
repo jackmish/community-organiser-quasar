@@ -69,6 +69,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return true;
   },
 
+  // Delete a file
+  deleteFile: async (filePath) => {
+    try {
+      await fs.promises.unlink(filePath);
+      return true;
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      throw err;
+    }
+  },
+
   // Check if file exists
   fileExists: async (filePath) => {
     try {

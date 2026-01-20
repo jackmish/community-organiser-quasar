@@ -9,6 +9,7 @@ declare global {
       readJsonFile: (filePath: string) => Promise<any>;
       writeJsonFile: (filePath: string, data: any) => Promise<boolean>;
       writeFile: (filePath: string, data: string) => Promise<boolean>;
+      deleteFile: (filePath: string) => Promise<boolean>;
       fileExists: (filePath: string) => Promise<boolean>;
       getAppDataPath: () => Promise<string>;
       joinPath: (...paths: string[]) => string;
@@ -220,5 +221,91 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
     localStorage.setItem('day-organiser-groups', JSON.stringify(groups, null, 2));
   } else {
     throw new Error('No supported storage method available.');
+  }
+}
+
+/**
+ * Settings helper: load settings from appdata/settings.json or localStorage
+ */
+export async function loadSettings(): Promise<any> {
+  if (window.electronAPI && window.electronAPI.getAppDataPath && window.electronAPI.joinPath && window.electronAPI.readJsonFile) {
+    const appDataDir = await window.electronAPI.getAppDataPath();
+    const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
+    try {
+      await window.electronAPI.ensureDir(settingsDir);
+    } catch (e) {
+      void e;
+    }
+    const settingsPath = window.electronAPI.joinPath(settingsDir, 'settings.json');
+    try {
+      const exists = await window.electronAPI.fileExists(settingsPath);
+      if (!exists) return {};
+      const data = await window.electronAPI.readJsonFile(settingsPath);
+      return data || {};
+    } catch (err) {
+      logger.error('[loadSettings] failed', err);
+      return {};
+    }
+  } else if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const s = localStorage.getItem('day-organiser-settings');
+      return s ? JSON.parse(s) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
+/**
+ * Settings helper: save settings to appdata/settings.json or localStorage
+ */
+export async function saveSettings(settings: any): Promise<void> {
+  if (window.electronAPI && window.electronAPI.getAppDataPath && window.electronAPI.joinPath && window.electronAPI.writeJsonFile) {
+    const appDataDir = await window.electronAPI.getAppDataPath();
+    const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
+    try {
+      await window.electronAPI.ensureDir(settingsDir);
+    } catch (e) {
+      void e;
+    }
+    const settingsPath = window.electronAPI.joinPath(settingsDir, 'settings.json');
+    try {
+      await window.electronAPI.writeJsonFile(settingsPath, settings);
+    } catch (err) {
+      logger.error('[saveSettings] failed', err);
+      throw err;
+    }
+  } else if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      localStorage.setItem('day-organiser-settings', JSON.stringify(settings));
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Delete a group's file from disk (if running in Electron).
+ */
+export async function deleteGroupFile(groupId: string): Promise<void> {
+  if (window.electronAPI && window.electronAPI.joinPath && window.electronAPI.deleteFile) {
+    const appDataDir = await window.electronAPI.getAppDataPath();
+    const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
+    const filename = getGroupFilename(groupId);
+    const filePath = window.electronAPI.joinPath(groupDir, filename);
+    try {
+      const exists = await window.electronAPI.fileExists(filePath);
+      if (exists) {
+        await window.electronAPI.deleteFile(filePath);
+        logger.log('[deleteGroupFile] removed file', filePath);
+      }
+    } catch (err) {
+      logger.error('[deleteGroupFile] failed to delete', filePath, err);
+      throw err;
+    }
+  } else {
+    // Nothing to do for localStorage or unsupported environments
+    return;
   }
 }

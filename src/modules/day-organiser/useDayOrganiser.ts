@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { getCycleType } from '../../utils/occursOnDay';
 import type { OrganiserData, DayData, Task, TaskGroup } from './types';
 import { storage } from './storage';
@@ -121,11 +121,21 @@ export function useDayOrganiser() {
       // If no activeGroup was set previously, default to the first group (if any)
       try {
         const grpList = organiserData.value.groups || [];
-        if (
-          (!activeGroup.value || activeGroup.value === null) &&
-          Array.isArray(grpList) &&
-          grpList.length > 0
-        ) {
+        // Try to restore active group from persisted settings first
+        try {
+          const settings = await (await import('./storage')).loadSettings();
+          const requestedId = settings?.activeGroupId ?? null;
+          if (requestedId) {
+            const found = grpList.find((g: any) => String(g.id) === String(requestedId));
+            if (found) {
+              activeGroup.value = { label: found.name || String(found.id), value: found.id };
+            }
+          }
+        } catch (e) {
+          // fallback to default first group
+        }
+
+        if ((!activeGroup.value || activeGroup.value === null) && Array.isArray(grpList) && grpList.length > 0) {
           const fg = grpList[0];
           if (fg) {
             const fid = (fg as any).id;
@@ -144,6 +154,26 @@ export function useDayOrganiser() {
       isLoading.value = false;
     }
   };
+
+  // Persist activeGroup changes to settings (debounced-ish behavior not necessary here)
+  try {
+    watch(
+      () => activeGroup.value,
+      async (val) => {
+        try {
+          const settingsMod = await import('./storage');
+          const existing = (await settingsMod.loadSettings()) || {};
+          const toSave = { ...existing, activeGroupId: val?.value ?? null };
+          await settingsMod.saveSettings(toSave);
+        } catch (err) {
+          logger.error('Failed to persist activeGroup setting', err);
+        }
+      },
+      { immediate: false },
+    );
+  } catch (e) {
+    void e;
+  }
 
   // Save data to storage
   const saveData = async () => {
@@ -530,7 +560,12 @@ export function useDayOrganiser() {
   const deleteGroup = async (groupId: string): Promise<void> => {
     const groupToDelete = organiserData.value.groups.find((g) => g.id === groupId);
 
-    // Remove group
+    // Determine whether the group has any associated tasks before removal
+    const groupHasTasks = Object.values(organiserData.value.days).some((day) =>
+      day.tasks.some((task: any) => String(task.groupId) === String(groupId)),
+    );
+
+    // Remove group from persisted list
     organiserData.value.groups = organiserData.value.groups.filter((g) => g.id !== groupId);
 
     // Remove groupId from all tasks
@@ -574,6 +609,20 @@ export function useDayOrganiser() {
     });
 
     await saveData();
+
+    // If the deleted group had no tasks, remove its file from disk
+    try {
+      if (!groupHasTasks) {
+        // dynamically import storage delete helper to avoid circular imports
+        const storageMod = await import('./storage');
+        if (storageMod && typeof storageMod.deleteGroupFile === 'function') {
+          await storageMod.deleteGroupFile(groupId);
+        }
+      }
+    } catch (err) {
+      // Log but do not block deletion flow
+      logger.error('Failed to delete group file for', groupId, err);
+    }
   };
 
   const getGroupsByParent = (parentId?: string): TaskGroup[] => {
