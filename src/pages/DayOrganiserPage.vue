@@ -1584,18 +1584,7 @@ const handleUpdateTask = async (updatedTask: any) => {
   if (updated) {
     mode.value = 'preview';
     selectedTaskId.value = id;
-    // ensure current date syncs to the task's date
-    try {
-      // Do not change the active calendar day when updating a simple 'Todo' task
-      // or when updating a cyclic task instance. Only sync the current date
-      // for actual calendar events (non-cyclic, non-Todo).
-      const isCyclicUpdated = Boolean(getCycleType(updated));
-      if ((updated as any).type_id !== 'Todo' && !isCyclicUpdated) {
-        setCurrentDate((updated as any).date || (updated as any).eventDate || null);
-      }
-    } catch (e) {
-      // ignore
-    }
+    // Do not change the active calendar day after updating a task
   } else {
     // fallback: no task found, ensure we return to add mode
     mode.value = 'add';
