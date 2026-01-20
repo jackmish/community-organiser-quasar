@@ -367,6 +367,22 @@ const getEventHoursDisplay = (task: any) => {
 
   // Event mode: if explicit time present, show date + time; otherwise use relative/single-line
   if (timeStr) {
+    // Prefer a relative label for dates that are near (Today/Tomorrow/weekday)
+    try {
+      const evD = parseYmdLocal(dateStr);
+      if (evD) {
+        const today = new Date();
+        const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
+        const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
+        if (diffDays === 0) return `Today | ${timeStr}`;
+        if (diffDays === 1) return `Tomorrow | ${timeStr}`;
+        if (diffDays > 1 && diffDays <= 6)
+          return `${evD.toLocaleDateString(undefined, { weekday: 'long' })} | ${timeStr}`;
+      }
+    } catch (e) {
+      // fall back to short date formatting
+    }
     const shortDate = formatShortDate(dateStr);
     return `${shortDate} | ${timeStr}`;
   }
