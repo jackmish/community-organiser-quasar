@@ -1158,9 +1158,10 @@ const sortedTasks = computed(() => {
       // Also include prepare/expiration tasks from other days when viewing Today
       try {
         const prepExtras = allTasks.filter((t) => {
-          if (Number(t.status_id) === 0) return false;
+          // Keep 'prepare' reminders visible even if they are marked done (status_id === 0)
           if (t.type_id === 'Replenish') return false;
           const mode = (t as any).timeMode || 'event';
+          if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
           if (mode !== 'prepare' && mode !== 'expiration') return false;
           const ev = (t.date || t.eventDate) as string | undefined | null;
           if (!ev) return false;
@@ -1285,11 +1286,15 @@ const replenishTasks = computed(() => {
 const doneTasks = computed(() => {
   const day = currentDate.value;
   const done = sortedTasks.value.filter((t) => {
-    if (Number(t.status_id) === 0) return true;
     try {
+      // Determine effective timeMode (task instance or base task)
+      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
+      // Exclude 'prepare' mode tasks from Done list even if marked done
+      if (mode === 'prepare') return false;
+      if (Number(t.status_id) === 0) return true;
       const cycle = getCycleType(t);
       if (!cycle) return false;
-      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
       const hist = (base as any).history || [];
       return hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day);
     } catch (e) {
@@ -1338,7 +1343,14 @@ const tasksWithTime = computed(() => {
   const day = currentDate.value;
   const val = sortedTasks.value.filter((t) => {
     if (t.type_id === 'Replenish') return false;
-    if (Number(t.status_id) === 0) return false;
+    // Keep 'prepare' mode tasks visible even if their status is done
+    try {
+      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
+      if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
+    } catch (e) {
+      // ignore
+    }
     try {
       const cycle = getCycleType(t);
       if (cycle) {
@@ -1385,7 +1397,14 @@ const tasksWithoutTime = computed(() => {
   const day = currentDate.value;
   const val = sortedTasks.value.filter((t) => {
     if (t.type_id === 'Replenish') return false;
-    if (Number(t.status_id) === 0) return false;
+    // Keep 'prepare' mode tasks visible even if their status is done
+    try {
+      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
+      if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
+    } catch (e) {
+      // ignore
+    }
     try {
       const cycle = getCycleType(t);
       if (cycle) {
@@ -1628,6 +1647,20 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     : currentDate.value;
   // status used for non-cyclic optimistic toggles — declare in outer scope
   let status = Number(task.status_id) === 0 ? 1 : 0;
+  // If this is a 'prepare' time-mode task and user is trying to mark it done,
+  // notify the user that preparation was recorded. Do NOT return here so the
+  // status update still proceeds; the Done list will exclude prepare tasks.
+  if (status === 0 && task.timeMode === 'prepare') {
+    try {
+      $q.notify({
+        type: 'info',
+        message: `Preparation recorded${task && task.name ? ': ' + task.name : ''}`,
+        position: 'top',
+      });
+    } catch (e) {
+      // ignore notification errors
+    }
+  }
   try {
     // Debug: help trace toggle attempts for cyclic occurrences
     const baseCheck = (allTasks.value || []).find((x: any) => x.id === task.id) || null;
