@@ -127,8 +127,6 @@
             <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
           </div>
         </q-item-section>
-
-        <q-icon v-if="Number(task.status_id) === 0" class="done-floating" name="done" />
       </q-item>
     </template>
 
@@ -804,15 +802,7 @@ function confirmDelete(id: string) {
   line-height: 1.25em !important;
   max-height: calc(2 * 1.25em + 4px) !important; /* buffer to avoid clipping descenders */
 }
-.done-floating {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 20px;
-  pointer-events: none;
-  color: inherit;
-}
+
 .selected-task {
   border-radius: 6px;
   /* visual 4px solid border (no transparency) using a static blue */
