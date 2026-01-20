@@ -1258,16 +1258,30 @@ const sortedTasks = computed(() => {
 
 // Replenish restore is now handled inside AddTaskForm component
 
-// Group tasks by whether they have time
+// Replenishment list: show all active Replenish tasks regardless of date
 const replenishTasks = computed(() => {
-  // only show replenish tasks that are not done
-  const val = sortedTasks.value.filter(
-    (t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0,
-  );
-  return val;
+  try {
+    const all = allTasks.value || [];
+    let val = all.filter((t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0);
+    if (activeGroup.value && activeGroup.value.value !== null) {
+      val = val.filter((t) => t.groupId === activeGroup.value!.value);
+    }
+    // sort by name for stable display
+    val = val.sort((a: any, b: any) => {
+      const na = (a.name || '').toLowerCase();
+      const nb = (b.name || '').toLowerCase();
+      if (na < nb) return -1;
+      if (na > nb) return 1;
+      return 0;
+    });
+    return val;
+  } catch (e) {
+    return [];
+  }
 });
 
 // Tasks that are marked done (status_id === 0) or cyclic occurrences marked done via history
+// Include Replenish tasks from allTasks (date-independent) so they appear in the Done list
 const doneTasks = computed(() => {
   const day = currentDate.value;
   const done = sortedTasks.value.filter((t) => {
@@ -1282,6 +1296,24 @@ const doneTasks = computed(() => {
       return false;
     }
   });
+
+  try {
+    const all = allTasks.value || [];
+    let replenishDone = all.filter(
+      (t: any) => t.type_id === 'Replenish' && Number(t.status_id) === 0,
+    );
+    if (activeGroup.value && activeGroup.value.value !== null) {
+      replenishDone = replenishDone.filter((t: any) => t.groupId === activeGroup.value!.value);
+    }
+    // Merge replenishDone into done, avoiding duplicates by id
+    const existingIds = new Set(done.map((d: any) => d.id));
+    for (const r of replenishDone) {
+      if (!existingIds.has(r.id)) done.push(r);
+    }
+  } catch (e) {
+    // ignore
+  }
+
   return [...done].sort((a, b) => {
     const getTime = (task: any) => {
       const ts = task.updatedAt ?? task.createdAt ?? task.updated_at ?? task.created_at ?? null;
