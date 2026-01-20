@@ -439,7 +439,7 @@ async function onAddGroup() {
   localColor.value = '#1976d2';
   localIcon.value = 'folder';
   editingGroupId.value = null;
-  dialogVisible.value = false;
+  // keep dialog open so user can add or edit more groups without reopening
 }
 
 async function onDeleteGroup(id: string) {
