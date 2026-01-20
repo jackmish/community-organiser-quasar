@@ -2,10 +2,42 @@
   <q-dialog v-model="dialogVisible">
     <q-card style="min-width: 720px; max-width: 900px">
       <q-card-section>
-        <div class="text-h6">Manage Groups</div>
+        <div class="row items-center" style="gap: 12px">
+          <div class="text-h6">Manage Groups</div>
+          <div style="margin-left: auto; display: flex; gap: 6px; align-items: center">
+            Privilage Mode:
+            <q-btn
+              dense
+              :flat="privilegeMode !== 'preview'"
+              :unelevated="privilegeMode === 'preview'"
+              label="Preview"
+              @click.prevent="privilegeMode = 'preview'"
+              class="mode-btn"
+              :class="{ active: privilegeMode === 'preview' }"
+            />
+            <q-btn
+              dense
+              :flat="privilegeMode !== 'edit'"
+              :unelevated="privilegeMode === 'edit'"
+              label="Edit"
+              @click.prevent="privilegeMode = 'edit'"
+              class="mode-btn"
+              :class="{ active: privilegeMode === 'edit' }"
+            />
+            <q-btn
+              dense
+              :flat="privilegeMode !== 'remove'"
+              :unelevated="privilegeMode === 'remove'"
+              label="Remove"
+              @click.prevent="privilegeMode = 'remove'"
+              class="mode-btn"
+              :class="{ active: privilegeMode === 'remove' }"
+            />
+          </div>
+        </div>
 
         <q-card-section class="q-pt-sm">
-          <q-form @submit.prevent="onAddGroup" class="q-mb-md">
+          <q-form v-if="privilegeMode === 'edit'" @submit.prevent="onAddGroup" class="q-mb-md">
             <div class="row q-gutter-sm items-end">
               <q-input v-model="localName" label="Group Name" outlined dense class="col" />
 
@@ -313,6 +345,7 @@
               <span>{{ prop.node.label }}</span>
               <q-space />
               <q-btn
+                v-if="privilegeMode !== 'preview'"
                 flat
                 dense
                 round
@@ -323,7 +356,7 @@
               />
 
               <div style="display: flex; gap: 6px; align-items: center">
-                <template v-if="pendingDeleteId === prop.node.id">
+                <template v-if="privilegeMode === 'remove' && pendingDeleteId === prop.node.id">
                   <q-btn
                     dense
                     color="negative"
@@ -340,7 +373,7 @@
                     @click.stop.prevent="cancelPendingDelete"
                   />
                 </template>
-                <template v-else>
+                <template v-else-if="privilegeMode === 'remove'">
                   <q-btn
                     flat
                     dense
@@ -349,6 +382,9 @@
                     size="sm"
                     @click.stop.prevent="markPendingDelete(prop.node.id)"
                   />
+                </template>
+                <template v-else>
+                  <!-- no delete controls in preview/edit modes -->
                 </template>
               </div>
             </div>
@@ -391,6 +427,7 @@ const localColor = ref('#1976d2');
 const localIcon = ref<string | null>('folder');
 const localShareSubgroups = ref(false);
 const pendingDeleteId = ref<string | null>(null);
+const privilegeMode = ref<'preview' | 'edit' | 'remove'>('edit');
 const colorInput = ref<HTMLInputElement | null>(null);
 const menuVisible = ref(false);
 const paletteColors = [
@@ -536,6 +573,24 @@ watch(
           'localParent=',
           localParent.value,
         );
+      }
+    } catch (e) {
+      void e;
+    }
+  },
+);
+
+// Clear/adjust UI state when switching privilege mode
+watch(
+  () => privilegeMode.value,
+  (m) => {
+    try {
+      if (m !== 'remove') pendingDeleteId.value = null;
+      if (m !== 'edit') {
+        // hide creation/edit state when not in edit mode
+        editingGroupId.value = null;
+        localName.value = '';
+        localParent.value = null;
       }
     } catch (e) {
       void e;
@@ -901,5 +956,16 @@ function close() {
   color: rgba(0, 0, 0, 0.87) !important;
   fill: rgba(0, 0, 0, 0.87) !important;
   -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* Mode buttons: ensure active one has visible background */
+.mode-btn {
+  border-radius: 4px;
+  padding: 4px 8px;
+  background-color: #246 !important;
+  &.active {
+    background-color: #222 !important;
+    color: #fff !important;
+  }
 }
 </style>
