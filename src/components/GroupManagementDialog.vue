@@ -223,7 +223,17 @@
                 </template>
               </q-input>
 
-              <q-btn type="submit" color="primary" icon="add" dense />
+              <div style="display: flex; gap: 8px; align-items: center">
+                <q-btn v-if="!editingGroupId" type="submit" color="primary" icon="add" dense />
+                <q-btn v-else type="submit" color="primary" icon="save" dense />
+                <q-btn
+                  v-if="editingGroupId"
+                  flat
+                  label="Cancel"
+                  color="primary"
+                  @click.prevent="cancelEdit"
+                />
+              </div>
             </div>
           </q-form>
         </q-card-section>
@@ -233,11 +243,20 @@
             <div class="row items-center full-width">
               <q-icon
                 :name="getIconName(prop.node.icon)"
-                :color="prop.node.color"
                 class="q-mr-sm"
+                :style="{ color: prop.node.color }"
               />
               <span>{{ prop.node.label }}</span>
               <q-space />
+              <q-btn
+                flat
+                dense
+                round
+                icon="edit"
+                size="sm"
+                @click.stop.prevent="startEdit(prop.node)"
+                class="q-mr-sm"
+              />
               <q-btn
                 flat
                 dense
@@ -375,6 +394,8 @@ const dialogVisible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
+const editingGroupId = ref<string | null>(null);
+
 watch(
   () => props.modelValue,
   (v) => {
@@ -389,25 +410,35 @@ watch(
 
 async function onAddGroup() {
   if (!localName.value.trim()) return;
-  const payload: { name: string; parent?: string; color?: string; icon?: string } = {
-    name: localName.value.trim(),
-    color: localColor.value,
-  };
-  if (localIcon.value) payload.icon = localIcon.value;
-  if (localParent.value) payload.parent = localParent.value;
+  const name = localName.value.trim();
+  const color = localColor.value;
+  const icon = localIcon.value || undefined;
+  const parent = localParent.value || undefined;
 
   try {
-    const { addGroup } = useDayOrganiser();
-    await addGroup(payload.name, payload.parent, payload.color as any, payload.icon as any);
+    const { addGroup, updateGroup } = useDayOrganiser();
+    if (editingGroupId.value) {
+      // update existing
+      await updateGroup(editingGroupId.value, {
+        name,
+        ...(parent ? { parentId: parent } : {}),
+        ...(color ? { color } : {}),
+        ...(icon ? { icon } : {}),
+      });
+    } else {
+      // add new
+      await addGroup(name, parent, color, icon as any);
+    }
   } catch (e) {
-    logger.error('addGroup failed', e);
+    logger.error('add/update group failed', e);
   }
 
-  // reset and close
+  // reset form and exit edit mode
   localName.value = '';
   localParent.value = null;
   localColor.value = '#1976d2';
   localIcon.value = 'folder';
+  editingGroupId.value = null;
   dialogVisible.value = false;
 }
 
@@ -415,9 +446,35 @@ async function onDeleteGroup(id: string) {
   try {
     const { deleteGroup } = useDayOrganiser();
     await deleteGroup(id);
+    if (editingGroupId.value === id) cancelEdit();
   } catch (e) {
     logger.error('deleteGroup failed', e);
   }
+}
+
+function startEdit(node: any) {
+  try {
+    const { groups } = useDayOrganiser();
+    // `groups` is a computed ref; access `.value` to get the underlying array
+    const grpList = Array.isArray(groups as any) ? (groups as any) : (groups as any).value || [];
+    const g = grpList.find((x: any) => x.id === node.id);
+    editingGroupId.value = node.id;
+    localName.value = g?.name || node.label || node.name || '';
+    localParent.value = g?.parentId ?? node.parentId ?? null;
+    localColor.value = g?.color || node.color || '#1976d2';
+    localIcon.value = g?.icon || node.icon || 'folder';
+    // open dialog in same view (it is already open)
+  } catch (e) {
+    logger.error('startEdit failed', e);
+  }
+}
+
+function cancelEdit() {
+  editingGroupId.value = null;
+  localName.value = '';
+  localParent.value = null;
+  localColor.value = '#1976d2';
+  localIcon.value = 'folder';
 }
 
 function onColorInput(e: Event) {

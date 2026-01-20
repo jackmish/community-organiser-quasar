@@ -1483,7 +1483,7 @@ const groupTree = computed(() => {
       id: group.id,
       label: group.name,
       color: group.color,
-      icon: 'folder',
+      icon: group.icon || 'folder',
       children: buildTree(group.id),
     }));
   };

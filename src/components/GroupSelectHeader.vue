@@ -19,7 +19,10 @@
         @update:model-value="onChange"
       >
         <template #prepend>
-          <q-icon name="folder_open" />
+          <q-icon
+            :name="selectedOption?.icon || 'folder_open'"
+            :style="{ color: selectedOption?.color || 'inherit' }"
+          />
         </template>
       </q-select>
     </template>
@@ -55,6 +58,8 @@ const options = computed(() => {
   const groupOptions = (groups.value || []).map((gg: any) => ({
     label: gg.name,
     value: String(gg.id),
+    icon: gg.icon || 'folder',
+    color: gg.color || null,
   }));
   const manage = { label: 'Manage Groups...', value: '__manage_groups__' } as any;
 
@@ -69,10 +74,28 @@ const options = computed(() => {
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label = (cur as any).label || (found && found.name) || curVal;
-      combined.push({ label, value: curVal });
+      combined.push({
+        label,
+        value: curVal,
+        icon: found?.icon || 'folder',
+        color: found?.color || null,
+      });
     }
   }
   return combined.concat(manage);
+});
+
+const selectedOption = computed(() => {
+  try {
+    if (!options.value) return null;
+    if (!localValue.value) return options.value[0] || null;
+    return (
+      options.value.find((o: any) => String(o.value) === String(localValue.value)) ||
+      options.value[0]
+    );
+  } catch (e) {
+    return null;
+  }
 });
 
 const selectKey = computed(
