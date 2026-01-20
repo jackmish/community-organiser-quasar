@@ -321,14 +321,36 @@
                 @click.stop.prevent="startEdit(prop.node)"
                 class="q-mr-sm"
               />
-              <q-btn
-                flat
-                dense
-                round
-                icon="delete"
-                size="sm"
-                @click.stop="onDeleteGroup(prop.node.id)"
-              />
+
+              <div style="display: flex; gap: 6px; align-items: center">
+                <template v-if="pendingDeleteId === prop.node.id">
+                  <q-btn
+                    dense
+                    color="negative"
+                    flat
+                    label="Confirm"
+                    size="sm"
+                    @click.stop.prevent="confirmDelete(prop.node.id)"
+                  />
+                  <q-btn
+                    dense
+                    flat
+                    label="Cancel"
+                    size="sm"
+                    @click.stop.prevent="cancelPendingDelete"
+                  />
+                </template>
+                <template v-else>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    size="sm"
+                    @click.stop.prevent="markPendingDelete(prop.node.id)"
+                  />
+                </template>
+              </div>
             </div>
           </template>
         </q-tree>
@@ -368,6 +390,7 @@ const localParentColor = ref<string | null>(null);
 const localColor = ref('#1976d2');
 const localIcon = ref<string | null>('folder');
 const localShareSubgroups = ref(false);
+const pendingDeleteId = ref<string | null>(null);
 const colorInput = ref<HTMLInputElement | null>(null);
 const menuVisible = ref(false);
 const paletteColors = [
@@ -637,6 +660,28 @@ async function onDeleteGroup(id: string) {
     if (editingGroupId.value === id) cancelEdit();
   } catch (e) {
     logger.error('deleteGroup failed', e);
+  }
+}
+
+function markPendingDelete(id: string) {
+  pendingDeleteId.value = id;
+  // auto-clear pending state after a short timeout
+  setTimeout(() => {
+    if (pendingDeleteId.value === id) pendingDeleteId.value = null;
+  }, 6000);
+}
+
+function cancelPendingDelete() {
+  pendingDeleteId.value = null;
+}
+
+async function confirmDelete(id: string) {
+  try {
+    await onDeleteGroup(id);
+  } catch (e) {
+    void e;
+  } finally {
+    pendingDeleteId.value = null;
   }
 }
 
