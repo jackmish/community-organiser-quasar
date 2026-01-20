@@ -117,7 +117,8 @@ const nextEvents = computed(() => {
   for (const t of allTasks) {
     const done = Number(t.status_id) === 0;
     const cycleType = getCycleType(t);
-    if (!cycleType && done) continue;
+    // Include non-cyclic 'prepare' reminders even if marked done; otherwise skip non-cyclic done tasks
+    if (!cycleType && done && t.timeMode !== 'prepare') continue;
 
     const addOccurrence = (dateStr: string) => {
       // compute local Date for this occurrence
