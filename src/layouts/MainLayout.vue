@@ -88,6 +88,7 @@
 <script setup lang="ts">
 import 'src/utils/logger-shim';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
 import { useDayOrganiser } from '../modules/day-organiser';
@@ -102,6 +103,7 @@ let clockTimer: any = null;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const menuOpen = ref(false);
+let headerManageHandler: any = null;
 
 onMounted(() => {
   clockTimer = setInterval(() => {
@@ -161,6 +163,35 @@ onMounted(async () => {
   window.addEventListener('offline', () => {
     isOnline.value = false; // Immediately mark offline
   });
+  // Ensure 'Manage Groups' selection in header opens the dialog in DayOrganiserPage.
+  try {
+    const router = useRouter();
+    const route = useRoute();
+    headerManageHandler = () => {
+      try {
+        if (route.path === '/') {
+          // dispatch immediately and again after a short delay to be robust
+          window.dispatchEvent(new Event('group:manage'));
+          setTimeout(() => window.dispatchEvent(new Event('group:manage')), 300);
+          return;
+        }
+        router.push('/').then(() => {
+          // ensure page has a chance to mount, then dispatch
+          window.dispatchEvent(new Event('group:manage'));
+          setTimeout(() => window.dispatchEvent(new Event('group:manage')), 400);
+        });
+      } catch (e) {
+        try {
+          window.dispatchEvent(new Event('group:manage'));
+        } catch (err) {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('group:manage-request', headerManageHandler as EventListener);
+  } catch (e) {
+    // ignore
+  }
 });
 
 function refreshNotifications() {
@@ -197,6 +228,12 @@ function openAbout() {
 onUnmounted(() => {
   window.removeEventListener('online', updateOnlineStatus);
   window.removeEventListener('offline', updateOnlineStatus);
+  try {
+    if (headerManageHandler)
+      window.removeEventListener('group:manage-request', headerManageHandler as EventListener);
+  } catch (e) {
+    // ignore
+  }
 });
 
 // NextEventNotification component handles computation and display

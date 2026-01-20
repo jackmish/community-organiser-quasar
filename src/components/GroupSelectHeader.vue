@@ -24,6 +24,20 @@
             :style="{ color: selectedOption?.color || 'inherit' }"
           />
         </template>
+
+        <template #option="scope">
+          <q-item clickable v-ripple @click.stop.prevent="scope.toggleOption(scope.opt)">
+            <q-item-section avatar style="min-width: 36px">
+              <q-icon
+                :name="scope.opt?.icon || 'folder'"
+                :style="{ color: scope.opt?.color || 'inherit' }"
+              />
+            </q-item-section>
+            <q-item-section>
+              <div>{{ scope.opt?.label }}</div>
+            </q-item-section>
+          </q-item>
+        </template>
       </q-select>
     </template>
     <template v-else>
@@ -154,7 +168,7 @@ watch(
 
 const onChange = (val: any) => {
   if (val === '__manage_groups__') {
-    window.dispatchEvent(new Event('group:manage'));
+    window.dispatchEvent(new Event('group:manage-request'));
     localValue.value = prevValue;
     return;
   }
