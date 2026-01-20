@@ -42,13 +42,9 @@
                   ]"
                 >
                   <strong>
-                    <template v-if="(task.type_id || task.type) === 'Todo'">
-                      <span v-if="countTodoSubtasks(task).total > 0">
-                        ({{ countTodoSubtasks(task).done }}/{{
-                          countTodoSubtasks(task).total
-                        }})&nbsp;
-                      </span>
-                    </template>
+                    <span v-if="countTodoSubtasks(task).total > 0">
+                      ({{ countTodoSubtasks(task).done }}/{{ countTodoSubtasks(task).total }})&nbsp;
+                    </span>
                     {{ getDisplayName(task) }}
                     <span class="star-count" v-if="countStarredUndone(task) > 0">
                       <q-icon
@@ -171,13 +167,9 @@
                   ]"
                 >
                   <strong>
-                    <template v-if="(task.type_id || task.type) === 'Todo'">
-                      <span v-if="countTodoSubtasks(task).total > 0">
-                        ({{ countTodoSubtasks(task).done }}/{{
-                          countTodoSubtasks(task).total
-                        }})&nbsp;
-                      </span>
-                    </template>
+                    <span v-if="countTodoSubtasks(task).total > 0">
+                      ({{ countTodoSubtasks(task).done }}/{{ countTodoSubtasks(task).total }})&nbsp;
+                    </span>
                     {{ getDisplayName(task) }}
                     <span class="star-count" v-if="countStarredUndone(task) > 0">
                       <q-icon
@@ -442,50 +434,7 @@ const getDisplayDescription = (task: any) => {
   return desc;
 };
 
-const countTodoSubtasks = (task: any) => {
-  const desc = (task?.description || '') + '';
-  if (!desc) return { done: 0, total: 0 };
-  const lines = desc.split(/\r?\n/);
-  let total = 0;
-  let done = 0;
-  // Treat hyphen/numbered list items as checklist lines. A list item may
-  // include an explicit checkbox ([ ], [x], [✓]) or omit the brackets entirely.
-  // Match leading bullet/number, optionally followed by a checkbox; capture the
-  // checkbox mark if present.
-  const listItemRe = /^\s*(?:[-*+]|(?:\d+[.)]))\s*(?:\[\s*([^\]\s])?\s*\])?/;
-  for (const l of lines) {
-    const m = l.match(listItemRe);
-    if (m) {
-      total += 1;
-      const mark = m[1];
-      if (mark) {
-        const lower = mark.toLowerCase();
-        if (lower === 'x' || mark === '✓' || mark === '✔' || mark === '☑') done += 1;
-      }
-    }
-  }
-  return { done, total };
-};
-
-const countStarredUndone = (task: any) => {
-  const desc = (task?.description || '') + '';
-  if (!desc) return 0;
-  const lines = desc.split(/\r?\n/);
-  let count = 0;
-  const listItemRe = /^\s*(?:[-*+]|(?:\d+[.)]))\s*(?:\[\s*([^\]\s])?\s*\])?/;
-  for (const l of lines) {
-    const m = l.match(listItemRe);
-    if (m) {
-      const mark = m[1];
-      const checked =
-        mark &&
-        (String(mark).toLowerCase() === 'x' || mark === '✓' || mark === '✔' || mark === '☑');
-      const hasStar = /\*\s*$/.test(l);
-      if (!checked && hasStar) count += 1;
-    }
-  }
-  return count;
-};
+import { countTodoSubtasks, countStarredUndone } from 'src/utils/todo';
 
 const itemStyle = (task: any) => {
   if (!task) return {};

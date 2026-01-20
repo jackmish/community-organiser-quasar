@@ -83,7 +83,7 @@
 
         <!-- quick add moved to top of description -->
         <div
-          v-if="(task.type_id || '') === 'Todo'"
+          v-if="(task.type_id || '') === 'Todo' || (task.type_id || '') === 'TimeEvent'"
           class="q-mt-sm"
           style="display: flex; gap: 8px; align-items: center"
         >
