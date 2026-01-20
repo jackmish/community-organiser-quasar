@@ -135,7 +135,11 @@ export function useDayOrganiser() {
           // fallback to default first group
         }
 
-        if ((!activeGroup.value || activeGroup.value === null) && Array.isArray(grpList) && grpList.length > 0) {
+        if (
+          (!activeGroup.value || activeGroup.value === null) &&
+          Array.isArray(grpList) &&
+          grpList.length > 0
+        ) {
           const fg = grpList[0];
           if (fg) {
             const fid = (fg as any).id;

@@ -228,7 +228,12 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
  * Settings helper: load settings from appdata/settings.json or localStorage
  */
 export async function loadSettings(): Promise<any> {
-  if (window.electronAPI && window.electronAPI.getAppDataPath && window.electronAPI.joinPath && window.electronAPI.readJsonFile) {
+  if (
+    window.electronAPI &&
+    window.electronAPI.getAppDataPath &&
+    window.electronAPI.joinPath &&
+    window.electronAPI.readJsonFile
+  ) {
     const appDataDir = await window.electronAPI.getAppDataPath();
     const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
     try {
@@ -261,7 +266,12 @@ export async function loadSettings(): Promise<any> {
  * Settings helper: save settings to appdata/settings.json or localStorage
  */
 export async function saveSettings(settings: any): Promise<void> {
-  if (window.electronAPI && window.electronAPI.getAppDataPath && window.electronAPI.joinPath && window.electronAPI.writeJsonFile) {
+  if (
+    window.electronAPI &&
+    window.electronAPI.getAppDataPath &&
+    window.electronAPI.joinPath &&
+    window.electronAPI.writeJsonFile
+  ) {
     const appDataDir = await window.electronAPI.getAppDataPath();
     const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
     try {

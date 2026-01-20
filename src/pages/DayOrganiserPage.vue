@@ -1192,7 +1192,36 @@ const sortedTasks = computed(() => {
     logger.warn('Failed to include Todo extras for today', err);
   }
   if (activeGroup.value && activeGroup.value.value !== null) {
-    tasksToSort = tasksToSort.filter((task) => task.groupId === activeGroup.value!.value);
+    const activeId = String(activeGroup.value.value);
+    const getGroupById = (id: any) =>
+      (groups.value || []).find((g: any) => String(g.id) === String(id));
+    const isVisibleForActive = (candidateId: any) => {
+      if (candidateId == null) return false;
+      const cid = String(candidateId);
+      if (cid === activeId) return true;
+
+      const node = getGroupById(cid);
+      if (!node) return false;
+
+      // If node is direct child of active group, show it regardless of shareSubgroups
+      const parentId = node.parentId ?? (node as any).parent_id ?? null;
+      if (parentId == null) return false;
+      if (String(parentId) === activeId) return true;
+
+      // For deeper descendants, require each ancestor between the node and the active group
+      // to have shareSubgroups === true. Walk upwards from the node's parent.
+      let cur = getGroupById(parentId);
+      while (cur) {
+        if (!cur.shareSubgroups) return false;
+        const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
+        if (curParent == null) return false;
+        if (String(curParent) === activeId) return true;
+        cur = getGroupById(curParent);
+      }
+      return false;
+    };
+
+    tasksToSort = tasksToSort.filter((task) => isVisibleForActive(task.groupId));
   }
 
   // Remove tasks that are stored on this date but are cyclic and shouldn't occur today
@@ -1268,7 +1297,30 @@ const replenishTasks = computed(() => {
     const all = allTasks.value || [];
     let val = all.filter((t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0);
     if (activeGroup.value && activeGroup.value.value !== null) {
-      val = val.filter((t) => t.groupId === activeGroup.value!.value);
+      const activeId = String(activeGroup.value.value);
+      const getGroupById = (id: any) =>
+        (groups.value || []).find((g: any) => String(g.id) === String(id));
+      const isVisibleForActive = (candidateId: any) => {
+        if (candidateId == null) return false;
+        const cid = String(candidateId);
+        if (cid === activeId) return true;
+        const node = getGroupById(cid);
+        if (!node) return false;
+        const parentId = node.parentId ?? (node as any).parent_id ?? null;
+        if (parentId == null) return false;
+        if (String(parentId) === activeId) return true;
+        let cur = getGroupById(parentId);
+        while (cur) {
+          if (!cur.shareSubgroups) return false;
+          const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
+          if (curParent == null) return false;
+          if (String(curParent) === activeId) return true;
+          cur = getGroupById(curParent);
+        }
+        return false;
+      };
+
+      val = val.filter((t) => isVisibleForActive(t.groupId));
     }
     // sort by name for stable display
     val = val.sort((a: any, b: any) => {
@@ -1311,7 +1363,25 @@ const doneTasks = computed(() => {
       (t: any) => t.type_id === 'Replenish' && Number(t.status_id) === 0,
     );
     if (activeGroup.value && activeGroup.value.value !== null) {
-      replenishDone = replenishDone.filter((t: any) => t.groupId === activeGroup.value!.value);
+      const activeId = String(activeGroup.value.value);
+      const getGroupById = (id: any) =>
+        (groups.value || []).find((g: any) => String(g.id) === String(id));
+      const isVisibleForActive = (candidateId: any) => {
+        if (candidateId == null) return false;
+        const cid = String(candidateId);
+        if (cid === activeId) return true;
+        let cur = getGroupById(cid);
+        while (cur) {
+          const pid = cur.parentId ?? (cur as any).parent_id ?? null;
+          if (pid == null) return false;
+          if (String(pid) === activeId) return Boolean(cur.shareSubgroups);
+          if (!cur.shareSubgroups) return false;
+          cur = getGroupById(pid);
+        }
+        return false;
+      };
+
+      replenishDone = replenishDone.filter((t: any) => isVisibleForActive(t.groupId));
     }
     // Merge replenishDone into done, avoiding duplicates by id
     const existingIds = new Set(done.map((d: any) => d.id));
