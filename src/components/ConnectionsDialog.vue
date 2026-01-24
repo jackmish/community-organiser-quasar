@@ -63,6 +63,7 @@
                     <span class="text-caption text-grey-7 q-ml-sm">({{ d.type }})</span>
                   </div>
                   <div class="col-auto">
+                    <q-btn dense flat label="Connect" color="primary" @click="connectDevice(d)" />
                     <q-btn dense flat icon="delete" color="negative" @click="removeDevice(d.id)" />
                   </div>
                 </div>
@@ -76,11 +77,14 @@
         <q-btn flat label="Close" color="primary" @click="close" />
       </q-card-actions>
     </q-card>
+    <BluetoothScanModal v-model:modelValue="showScanModal" @connect="onDeviceSelected" />
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useQuasar } from 'quasar';
+import BluetoothScanModal from './BluetoothScanModal.vue';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -101,6 +105,12 @@ const addMenuStyle = ref<Record<string, string>>({
 });
 
 function createDevice(type: string) {
+  // For Bluetooth, open the scanner modal so user can choose a device
+  if (type === 'Bluetooth') {
+    showScanModal.value = true;
+    addMenu.value = false;
+    return;
+  }
   const id = String(Date.now());
   devices.value.push({ id, name: `${type} Device ${devices.value.length + 1}`, type });
   addMenu.value = false;
@@ -140,6 +150,42 @@ function removeDevice(id: string) {
 
 function close() {
   dialogVisible.value = false;
+}
+
+// Scan modal handling
+const $q = useQuasar();
+const showScanModal = ref(false);
+
+function onDeviceSelected(device: any) {
+  // device expected to contain { id, name, ... }
+  if (!device || !device.id) {
+    $q.notify({ type: 'negative', message: 'Invalid device selected' });
+    return;
+  }
+  devices.value.push({ id: device.id, name: device.name || device.id, type: 'Bluetooth' });
+  showScanModal.value = false;
+  $q.notify({ type: 'positive', message: `Added device ${device.name || device.id}` });
+}
+
+async function connectDevice(d: any) {
+  try {
+    $q.notify({ type: 'info', message: `Connecting to ${d.name}...` });
+    const ble = (window as any).electronBLE;
+    if (ble && typeof ble.connect === 'function') {
+      const res = await ble.connect(d.id);
+      if (res && res.status === 'connected') {
+        $q.notify({ type: 'positive', message: `Connected to ${d.name}` });
+      } else if (res && res.error) {
+        $q.notify({ type: 'negative', message: `Connect failed: ${res.error}` });
+      } else {
+        $q.notify({ type: 'positive', message: `Connect result: ${JSON.stringify(res)}` });
+      }
+    } else {
+      $q.notify({ type: 'warning', message: 'BLE connect not available in this runtime' });
+    }
+  } catch (e: any) {
+    $q.notify({ type: 'negative', message: `Connect error: ${e?.message || e}` });
+  }
 }
 </script>
 
