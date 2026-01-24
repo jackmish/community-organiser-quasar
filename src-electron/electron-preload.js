@@ -96,3 +96,131 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Join paths
   joinPath: (...paths) => path.join(...paths),
 });
+
+// BLE bridge: IPC for main-process BLE adapter and Web Bluetooth helpers for renderer
+let _webScan = null;
+let _webScanHandler = null;
+
+contextBridge.exposeInMainWorld('electronBLE', {
+  // Main-process IPC wrappers (if native adapter present)
+  startScan: () => ipcRenderer.invoke('ble:start-scan'),
+  stopScan: () => ipcRenderer.invoke('ble:stop-scan'),
+  connect: (id) => ipcRenderer.invoke('ble:connect', id),
+  disconnect: (id) => ipcRenderer.invoke('ble:disconnect', id),
+
+  // Web Bluetooth availability
+  webBluetoothAvailable: () => typeof navigator !== 'undefined' && !!navigator.bluetooth,
+
+  // Request a device via the browser prompt filtered by service UUID (returns minimal info)
+  requestDevice: async (serviceUuid) => {
+    if (
+      !(
+        typeof navigator !== 'undefined' &&
+        navigator.bluetooth &&
+        navigator.bluetooth.requestDevice
+      )
+    )
+      return null;
+    try {
+      const options = serviceUuid
+        ? { filters: [{ services: [serviceUuid] }], optionalServices: [serviceUuid] }
+        : { acceptAllDevices: true };
+      const device = await navigator.bluetooth.requestDevice(options);
+      return {
+        id: device.id,
+        name: device.name || null,
+        uuids: device.uuids || [],
+      };
+    } catch (err) {
+      console.warn('requestDevice failed', err);
+      return null;
+    }
+  },
+
+  // Start a low-level LE advertisement scan. Discovered devices are emitted as window events 'web-ble-device'
+  startScanWeb: async (serviceUuid) => {
+    if (
+      !(
+        typeof navigator !== 'undefined' &&
+        navigator.bluetooth &&
+        navigator.bluetooth.requestLEScan
+      )
+    )
+      return false;
+    try {
+      const options = serviceUuid
+        ? { filters: [{ services: [serviceUuid] }], keepRepeatedDevices: true }
+        : { acceptAllAdvertisements: true, keepRepeatedDevices: true };
+
+      // remove any existing scan
+      if (_webScan && typeof _webScan.stop === 'function') {
+        try {
+          _webScan.stop();
+        } catch (e) {
+          console.warn('stop existing webScan failed', e);
+        }
+        _webScan = null;
+      }
+
+      _webScan = await navigator.bluetooth.requestLEScan(options);
+
+      _webScanHandler = (event) => {
+        const device = {
+          id:
+            event.device && event.device.id
+              ? event.device.id
+              : `${event.device && event.device.name ? event.device.name : 'unknown'}:${event.rssi || 0}`,
+          name: (event.device && event.device.name) || null,
+          rssi: event.rssi || null,
+          serviceUuids: event.uuids || [],
+          manufacturerData: (() => {
+            try {
+              const obj = {};
+              for (const [key, value] of event.manufacturerData.entries()) {
+                // value is a DataView/ArrayBufferView - convert to hex string
+                const buf = new Uint8Array(value.buffer || value);
+                obj[key] = Array.from(buf)
+                  .map((b) => b.toString(16).padStart(2, '0'))
+                  .join('');
+              }
+              return obj;
+            } catch (e) {
+              return {};
+            }
+          })(),
+        };
+        window.dispatchEvent(new CustomEvent('web-ble-device', { detail: device }));
+      };
+
+      navigator.bluetooth.addEventListener('advertisementreceived', _webScanHandler);
+      return true;
+    } catch (err) {
+      console.warn('startScanWeb failed', err);
+      return false;
+    }
+  },
+
+  stopScanWeb: () => {
+    try {
+      if (_webScan && typeof _webScan.stop === 'function') {
+        try {
+          _webScan.stop();
+        } catch (e) {
+          console.warn('stop webScan failed', e);
+        }
+        _webScan = null;
+      }
+      if (_webScanHandler && navigator && navigator.bluetooth) {
+        try {
+          navigator.bluetooth.removeEventListener('advertisementreceived', _webScanHandler);
+        } catch (e) {
+          console.warn('removeEventListener failed', e);
+        }
+        _webScanHandler = null;
+      }
+      return true;
+    } catch (err) {
+      return false;
+    }
+  },
+});
