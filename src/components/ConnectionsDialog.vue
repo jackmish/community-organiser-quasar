@@ -36,24 +36,14 @@
                       <q-item-section>Bluetooth</q-item-section>
                     </q-item>
 
-                    <q-item
-                      clickable
-                      role="button"
-                      @click="createDevice('LAN')"
-                      style="padding: 8px 12px; cursor: pointer"
-                    >
+                    <q-item class="inactive" aria-disabled="true" style="padding: 8px 12px">
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="wifi" />
                       </q-item-section>
                       <q-item-section>Wi‑Fi area / LAN</q-item-section>
                     </q-item>
 
-                    <q-item
-                      clickable
-                      role="button"
-                      @click="createDevice('Internet')"
-                      style="padding: 8px 12px; cursor: pointer"
-                    >
+                    <q-item class="inactive" aria-disabled="true" style="padding: 8px 12px">
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="cloud" />
                       </q-item-section>
@@ -180,5 +170,11 @@ function close() {
 }
 .connections-menu .q-item:hover {
   background: rgba(0, 0, 0, 0.04);
+}
+/* Inactive (disabled) inline menu items: visually muted and not interactive */
+.connections-menu .inactive {
+  opacity: 0.56;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 </style>
