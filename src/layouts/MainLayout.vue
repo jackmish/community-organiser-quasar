@@ -61,8 +61,17 @@
         >
           <q-menu v-model="menuOpen" anchor="bottom right" self="top right" style="width: auto">
             <q-list style="min-width: 160px">
-              <q-item clickable v-ripple @click="handleConnectionClick">
-                <q-item-section>Connection</q-item-section>
+              <q-item
+                clickable
+                v-ripple
+                @click="
+                  () => {
+                    showConnectionsDialog = true;
+                    menuOpen = false;
+                  }
+                "
+              >
+                <q-item-section>Connections</q-item-section>
               </q-item>
               <q-item clickable v-ripple @click="openSettings">
                 <q-item-section>Settings</q-item-section>
@@ -75,6 +84,7 @@
         </q-btn>
 
         <AppConfigDialog v-model="showConfigDialog" />
+        <ConnectionsDialog v-model="showConnectionsDialog" />
         <AboutDialog v-model="showAboutDialog" />
       </q-toolbar>
     </q-header>
@@ -95,6 +105,7 @@ import { useDayOrganiser } from '../modules/day-organiser';
 import GroupSelectHeader from 'src/components/GroupSelectHeader.vue';
 import AppConfigDialog from 'src/components/AppConfigDialog.vue';
 import AboutDialog from 'src/components/AboutDialog.vue';
+import ConnectionsDialog from 'src/components/ConnectionsDialog.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
@@ -102,6 +113,7 @@ const now = ref(new Date());
 let clockTimer: any = null;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
+const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
 let headerManageHandler: any = null;
 
