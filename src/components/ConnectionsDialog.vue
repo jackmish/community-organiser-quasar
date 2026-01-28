@@ -139,6 +139,35 @@
               </div>
             </div>
           </div>
+          <div class="q-mt-md">
+            <div class="text-subtitle2 q-mb-sm">Internet services</div>
+            <div class="row items-center q-gutter-sm">
+              <div class="col text-white">
+                <div class="text-caption text-white q-mt-xs">
+                  App is downloading data from services/APIs:
+                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.35; color: inherit">
+                    <li>
+                      https://date.nager.at/api/v3/PublicHolidays/{year}/PL — public holidays
+                      (country code PL). Once data is downloaded, it is stored locally.
+                    </li>
+                    <li>
+                      https://www.google.com/favicon.ico — detect online status - method will be
+                      changed, as for now it just works.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="col-auto">
+                <q-btn
+                  dense
+                  outline
+                  color="primary"
+                  label="Manage"
+                  @click="() => notify('info', 'Internet settings not implemented')"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </q-card-section>
 
