@@ -140,11 +140,51 @@
             </div>
           </div>
           <div class="q-mt-md">
+            <div class="row items-center q-gutter-sm">
+              <div class="col">
+                Automatic local backup
+
+                <q-toggle
+                  class="q-ml-sm"
+                  dense
+                  v-model="autoBackupEnabled"
+                  @update:model-value="onAutoToggle"
+                />
+              </div>
+            </div>
+            <div v-if="autoBackupEnabled" class="q-mt-sm">
+              <div class="row items-center q-gutter-sm">
+                <div class="col-auto">Hours</div>
+                <div class="col-auto" style="width: 80px">
+                  <q-input dense type="number" v-model.number="autoBackupHours" min="0" />
+                </div>
+                <div class="col-auto">Minutes</div>
+                <div class="col-auto" style="width: 80px">
+                  <q-input dense type="number" v-model.number="autoBackupMinutes" min="0" />
+                </div>
+                <div class="col text-caption q-ml-md">
+                  Minimum: 1min. Default: 1h. Last automatic backup:
+                  <strong>{{ formattedLastAutoBackup }}</strong> | Next backup:
+                  <strong>{{ nextInText }}</strong>
+                </div>
+              </div>
+              <div class="q-mt-xs text-caption text-white">
+                <div></div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+          <div class="q-mt-md">
             <div class="text-subtitle2 q-mb-sm">Internet services</div>
             <div class="row items-center q-gutter-sm">
               <div class="col text-white">
-                <div class="text-caption text-white q-mt-xs">
+                <div
+                  class="text-caption text-white q-mt-xs"
+                  style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                >
                   App is downloading data from following services/APIs:
+                </div>
+                <div class="text-caption text-white q-mt-xs">
                   <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.35; color: inherit">
                     <li>
                       https://date.nager.at/api/v3/PublicHolidays/{year}/PL — public holidays
@@ -188,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useQuasar, Notify } from 'quasar';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 
@@ -264,6 +304,49 @@ const showScanModal = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 const ownDeviceName = ref<string>('');
 
+// Automatic backup settings
+const autoBackupEnabled = ref<boolean>(false);
+const autoBackupHours = ref<number>(1); // default 1 hour
+const autoBackupMinutes = ref<number>(0);
+const lastAutoBackup = ref<number | null>(null);
+const autoTimerId = ref<any>(null);
+const autoBackupStatus = ref<string>('idle');
+const now = ref<number>(Date.now());
+
+const formattedLastAutoBackup = computed(() => {
+  if (!lastAutoBackup.value) return 'never';
+  try {
+    return new Date(lastAutoBackup.value).toLocaleString();
+  } catch (e) {
+    return String(lastAutoBackup.value);
+  }
+});
+
+function formatDurationMs(ms: number) {
+  if (ms <= 0) return 'due now';
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const parts: string[] = [];
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+  if (parts.length === 0) parts.push(`${totalSec}s`);
+  return parts.join(' ');
+}
+
+const nextInText = computed(() => {
+  if (!autoBackupEnabled.value) return 'disabled';
+  const periodMin = getAutoPeriodMinutes();
+  const periodMs = periodMin * 60 * 1000;
+  if (!lastAutoBackup.value) return `in ${formatDurationMs(periodMs)}`;
+  const nextTs = lastAutoBackup.value + periodMs;
+  const diff = nextTs - now.value;
+  if (diff <= 0) return 'due now';
+  return `in ${formatDurationMs(diff)}`;
+});
+
 function normalizePrefix(name: string) {
   return String(name || '')
     .trim()
@@ -272,7 +355,7 @@ function normalizePrefix(name: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-async function loadSavedDeviceName() {
+async function loadSettings() {
   try {
     const api = (window as any).electronAPI;
     const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
@@ -282,15 +365,51 @@ async function loadSavedDeviceName() {
     const exists = await api.fileExists(settingsFile);
     if (!exists) return;
     const data = await api.readJsonFile(settingsFile);
-    if (data && typeof data.ownDeviceName === 'string') {
-      ownDeviceName.value = data.ownDeviceName;
+    if (data) {
+      if (typeof data.ownDeviceName === 'string') ownDeviceName.value = data.ownDeviceName;
+      if (typeof data.autoBackupEnabled === 'boolean')
+        autoBackupEnabled.value = data.autoBackupEnabled;
+      if (typeof data.autoBackupHours === 'number') autoBackupHours.value = data.autoBackupHours;
+      if (typeof data.autoBackupMinutes === 'number')
+        autoBackupMinutes.value = data.autoBackupMinutes;
+      if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
     }
   } catch (e) {
-    console.warn('loadSavedDeviceName failed', e);
+    console.warn('loadSettings failed', e);
   }
 }
 
-async function saveDeviceNameToAppData(name: string) {
+/**
+ * Load group files from the app data `storage/group` directory and return as array
+ */
+async function loadGroupsFromAppData(): Promise<any[]> {
+  try {
+    const api = (window as any).electronAPI;
+    if (!api || typeof api.getAppDataPath !== 'function') return [];
+    const appPath = await api.getAppDataPath();
+    const groupDir = api.joinPath(appPath, 'storage', 'group');
+    await api.ensureDir(groupDir);
+    const groups: any[] = [];
+    const files: string[] = await api.readDir(groupDir);
+    for (const f of files || []) {
+      if (typeof f === 'string' && f.startsWith('group-') && f.endsWith('.json')) {
+        try {
+          const p = api.joinPath(groupDir, f);
+          const data = await api.readJsonFile(p);
+          groups.push(data);
+        } catch (e) {
+          console.warn('Failed reading group file', f, e);
+        }
+      }
+    }
+    return groups;
+  } catch (e) {
+    console.warn('loadGroupsFromAppData failed', e);
+    return [];
+  }
+}
+
+async function saveSettings() {
   try {
     const api = (window as any).electronAPI;
     const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
@@ -298,18 +417,37 @@ async function saveDeviceNameToAppData(name: string) {
     const settingsDir = api.joinPath(appPath, 'co21');
     const settingsFile = api.joinPath(settingsDir, 'settings.json');
     await api.ensureDir(settingsDir);
-    await api.writeJsonFile(settingsFile, { ownDeviceName: name });
+    const payload: any = {
+      ownDeviceName: ownDeviceName.value || '',
+      autoBackupEnabled: !!autoBackupEnabled.value,
+      autoBackupHours: Number(autoBackupHours.value || 0),
+      autoBackupMinutes: Number(autoBackupMinutes.value || 0),
+    };
+    if (lastAutoBackup.value) payload.lastAutoBackup = lastAutoBackup.value;
+    await api.writeJsonFile(settingsFile, payload);
   } catch (e) {
-    console.warn('saveDeviceNameToAppData failed', e);
+    console.warn('saveSettings failed', e);
   }
 }
 
 onMounted(() => {
-  loadSavedDeviceName();
+  loadSettings();
+  // start periodic check for automatic backups
+  autoTimerId.value = setInterval(() => {
+    now.value = Date.now();
+    void checkAutoBackup();
+  }, 30 * 1000);
+});
+
+onBeforeUnmount(() => {
+  if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 
 watch(ownDeviceName, (val) => {
-  saveDeviceNameToAppData(val || '');
+  void saveSettings();
+});
+watch([autoBackupEnabled, autoBackupHours, autoBackupMinutes], () => {
+  void saveSettings();
 });
 
 function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: string) {
@@ -353,14 +491,10 @@ const exportWithPicker = async () => {
     exportState.value = 'exporting';
     exportMessage.value = 'Exporting...';
 
-    // ensure directory exists and create zip archive containing connections.json
+    // ensure directory exists and create zip archive containing groups from app data
     await api.ensureDir(folder);
-    const plain = devices.value.map((d: any) => ({
-      id: String(d.id),
-      name: String(d.name || ''),
-      type: d.type || null,
-    }));
-    const jsonString = JSON.stringify({ devices: plain }, null, 2);
+    const groups = await loadGroupsFromAppData();
+    const jsonString = JSON.stringify({ groups: Array.isArray(groups) ? groups : [] }, null, 2);
     await api.exportZip(folder, name, jsonString);
 
     exportState.value = 'done';
@@ -385,6 +519,65 @@ const triggerImport = () => {
     el.click();
   }
 };
+
+function onAutoToggle(v: boolean) {
+  // when enabling, set last auto backup time to now to avoid immediate run
+  if (v) lastAutoBackup.value = Date.now();
+  void saveSettings();
+}
+
+function getAutoPeriodMinutes() {
+  const total = Number(autoBackupHours.value || 0) * 60 + Number(autoBackupMinutes.value || 0);
+  return Math.max(1, Math.floor(total));
+}
+
+async function performAutoBackup() {
+  try {
+    autoBackupStatus.value = 'exporting';
+    const api = (window as any).electronAPI;
+    const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
+    if (!appPath) {
+      autoBackupStatus.value = 'no app path';
+      return;
+    }
+    const backupsDir = api.joinPath(appPath, 'co21', 'backups');
+    await api.ensureDir(backupsDir);
+    const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
+    const name = `${prefix}-auto-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+    // read groups from app data storage and export those
+    const groups = await loadGroupsFromAppData();
+    const jsonString = JSON.stringify({ groups: Array.isArray(groups) ? groups : [] }, null, 2);
+    await api.exportZip(backupsDir, name, jsonString);
+    lastAutoBackup.value = Date.now();
+    await saveSettings();
+    autoBackupStatus.value = 'done';
+    notify('positive', `Automatic backup saved: ${name}`);
+  } catch (e: any) {
+    autoBackupStatus.value = 'error';
+    console.warn('performAutoBackup failed', e);
+    notify('negative', `Automatic backup failed: ${e?.message || e}`);
+  }
+}
+
+async function checkAutoBackup() {
+  try {
+    if (!autoBackupEnabled.value) return;
+    const period = getAutoPeriodMinutes();
+    const now = Date.now();
+    if (!lastAutoBackup.value) {
+      // initialize last run to now and skip immediate backup
+      lastAutoBackup.value = now;
+      await saveSettings();
+      return;
+    }
+    const elapsedMin = (now - lastAutoBackup.value) / 60000;
+    if (elapsedMin >= period) {
+      await performAutoBackup();
+    }
+  } catch (e) {
+    console.warn('checkAutoBackup failed', e);
+  }
+}
 
 const overrideBackup = () => {
   try {
@@ -513,4 +706,6 @@ async function connectDevice(d: any) {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* No custom toggle styling — use theme defaults */
 </style>

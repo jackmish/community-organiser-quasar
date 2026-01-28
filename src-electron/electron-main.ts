@@ -121,8 +121,10 @@ ipcMain.handle(
       const outStream = fs.createWriteStream(zipPath);
       zipfile.outputStream.pipe(outStream);
 
-      // Add JSON content as connections.json
-      zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), 'connections.json');
+      // Use a JSON filename derived from the zip filename (replace .zip with .json)
+      const internalName = String(filename).replace(/\.zip$/i, '.json');
+      const entryName = internalName || 'backup.json';
+      zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), entryName);
       zipfile.end();
 
       await new Promise<void>((resolve, reject) => {
