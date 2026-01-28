@@ -93,6 +93,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Get app data path
   getAppDataPath: () => ipcRenderer.invoke('get-app-data-path'),
 
+  // Show native folder chooser (returns selected folder path or null)
+  showOpenFolder: async () => {
+    try {
+      return await ipcRenderer.invoke('dialog:select-folder');
+    } catch (e) {
+      console.warn('showOpenFolder failed', e);
+      return null;
+    }
+  },
+
   // Join paths
   joinPath: (...paths) => path.join(...paths),
 });

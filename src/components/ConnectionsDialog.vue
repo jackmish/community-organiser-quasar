@@ -70,12 +70,86 @@
               </q-item-section>
             </q-item>
           </div>
+          <div class="q-mt-md">
+            <div class="text-subtitle2 q-mb-sm">Backup</div>
+            <div class="row items-center q-gutter-sm">
+              <div class="col">
+                Make manual backup, merge current state with data from file, or totally replace
+                current data with data from file
+              </div>
+              <div
+                class="col-auto"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                  justify-content: center;
+                "
+              >
+                <div style="display: flex; align-items: center">
+                  <q-btn
+                    dense
+                    unelevated
+                    color="primary"
+                    label="Export"
+                    class="q-mr-sm"
+                    @click="exportWithPicker"
+                  />
+                  <q-btn
+                    dense
+                    outline
+                    color="secondary"
+                    label="Import"
+                    class="q-mr-sm"
+                    @click="triggerImport"
+                  />
+                  <q-btn
+                    dense
+                    unelevated
+                    color="negative"
+                    label="Override"
+                    class="q-ml-sm"
+                    @click="overrideBackup"
+                  />
+                </div>
+                <div
+                  v-if="exportState !== 'idle'"
+                  style="margin-top: 6px; width: 100%; text-align: left"
+                >
+                  <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
+                    <q-spinner v-if="exportState === 'exporting'" size="18" />
+                    <q-icon
+                      v-else-if="exportState === 'done'"
+                      name="check"
+                      color="positive"
+                      size="18"
+                    />
+                    <q-icon
+                      v-else-if="exportState === 'error'"
+                      name="error"
+                      color="negative"
+                      size="18"
+                    />
+                    <span>{{ exportMessage }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </q-card-section>
 
       <q-card-actions align="right">
-        <q-btn flat label="Close" color="primary" @click="close" />
+        <q-space />
+        <q-btn dense flat label="Close" color="primary" @click="close" />
       </q-card-actions>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="application/json"
+        style="display: none"
+        @change="onFileSelected"
+      />
     </q-card>
     <BluetoothScanModal v-model:modelValue="showScanModal" @connect="onDeviceSelected" />
   </q-dialog>
@@ -83,7 +157,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useQuasar } from 'quasar';
+import { useQuasar, Notify } from 'quasar';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -155,36 +229,170 @@ function close() {
 // Scan modal handling
 const $q = useQuasar();
 const showScanModal = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
+
+function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: string) {
+  try {
+    if (typeof (Notify as any)?.create === 'function') {
+      (Notify as any).create({ type, message });
+      return;
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    if ($q && typeof ($q.notify as any) === 'function') {
+      ($q.notify as any)({ type, message });
+      return;
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    // last resort
+    alert(message);
+  } catch (e) {
+    // ignore
+  }
+}
+
+const exportState = ref<'idle' | 'exporting' | 'done' | 'error'>('idle');
+const exportMessage = ref<string>('');
+
+const exportWithPicker = async () => {
+  try {
+    const api = (window as any).electronAPI;
+    const folder = typeof api.showOpenFolder === 'function' ? await api.showOpenFolder() : null;
+    if (!folder) return; // user cancelled
+
+    const name = `connections-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const full = api.joinPath(folder, name);
+
+    exportState.value = 'exporting';
+    exportMessage.value = 'Exporting...';
+
+    // ensure directory exists
+    const dir = folder;
+    await api.ensureDir(dir);
+    const plain = devices.value.map((d: any) => ({
+      id: String(d.id),
+      name: String(d.name || ''),
+      type: d.type || null,
+    }));
+    await api.writeJsonFile(full, { devices: plain });
+
+    exportState.value = 'done';
+    exportMessage.value = 'Exported';
+    setTimeout(() => {
+      exportState.value = 'idle';
+      exportMessage.value = '';
+    }, 3500);
+  } catch (e: any) {
+    exportState.value = 'error';
+    exportMessage.value = 'Export failed';
+    setTimeout(() => {
+      exportState.value = 'idle';
+      exportMessage.value = '';
+    }, 5000);
+  }
+};
+const triggerImport = () => {
+  const el = fileInput.value;
+  if (el) {
+    el.value = '';
+    el.click();
+  }
+};
+
+const overrideBackup = () => {
+  try {
+    // Show a dialog with only a cancel/close option to indicate feature isn't ready
+    if ($q && typeof ($q.dialog as any) === 'function') {
+      ($q.dialog as any)({
+        title: 'Override connections',
+        message: "Override functionality isn't ready; it will be implemented if needed.",
+        cancel: true,
+        ok: false,
+        persistent: true,
+      });
+      return;
+    }
+    notify('info', "Override functionality isn't ready; it will be implemented if needed");
+  } catch (e) {
+    try {
+      notify('negative', 'Override cancelled');
+    } catch (ee) {
+      console.warn('notify failed', ee);
+    }
+  }
+};
+
+const onFileSelected = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      let txt = '';
+      if (typeof reader.result === 'string') {
+        txt = reader.result;
+      } else if (reader.result instanceof ArrayBuffer) {
+        txt = new TextDecoder().decode(new Uint8Array(reader.result));
+      } else if (reader.result) {
+        try {
+          txt = String(reader.result);
+        } catch (ee) {
+          txt = '';
+        }
+      }
+      const parsed = JSON.parse(txt || '{}');
+      if (parsed && Array.isArray(parsed.devices)) {
+        devices.value = parsed.devices.map((d: any) => ({
+          id: String(d.id),
+          name: String(d.name || d.id),
+          type: d.type || 'imported',
+        }));
+        notify('positive', 'Imported connections');
+      } else {
+        notify('negative', 'Invalid backup format');
+      }
+    } catch (err: any) {
+      notify('negative', `Import error: ${err?.message || err}`);
+    }
+  };
+  if (file) reader.readAsText(file);
+};
 
 function onDeviceSelected(device: any) {
   // device expected to contain { id, name, ... }
   if (!device || !device.id) {
-    $q.notify({ type: 'negative', message: 'Invalid device selected' });
+    notify('negative', 'Invalid device selected');
     return;
   }
   devices.value.push({ id: device.id, name: device.name || device.id, type: 'Bluetooth' });
   showScanModal.value = false;
-  $q.notify({ type: 'positive', message: `Added device ${device.name || device.id}` });
+  notify('positive', `Added device ${device.name || device.id}`);
 }
 
 async function connectDevice(d: any) {
   try {
-    $q.notify({ type: 'info', message: `Connecting to ${d.name}...` });
+    notify('info', `Connecting to ${d.name}...`);
     const ble = (window as any).electronBLE;
     if (ble && typeof ble.connect === 'function') {
       const res = await ble.connect(d.id);
       if (res && res.status === 'connected') {
-        $q.notify({ type: 'positive', message: `Connected to ${d.name}` });
+        notify('positive', `Connected to ${d.name}`);
       } else if (res && res.error) {
-        $q.notify({ type: 'negative', message: `Connect failed: ${res.error}` });
+        notify('negative', `Connect failed: ${res.error}`);
       } else {
-        $q.notify({ type: 'positive', message: `Connect result: ${JSON.stringify(res)}` });
+        notify('positive', `Connect result: ${JSON.stringify(res)}`);
       }
     } else {
-      $q.notify({ type: 'warning', message: 'BLE connect not available in this runtime' });
+      notify('warning', 'BLE connect not available in this runtime');
     }
   } catch (e: any) {
-    $q.notify({ type: 'negative', message: `Connect error: ${e?.message || e}` });
+    notify('negative', `Connect error: ${e?.message || e}`);
   }
 }
 </script>

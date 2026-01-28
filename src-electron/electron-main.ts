@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -92,6 +92,15 @@ function createWindow() {
 // Handle IPC requests
 ipcMain.handle('get-app-data-path', () => {
   return app.getPath('userData');
+});
+
+// Show native folder chooser and return selected path or null
+ipcMain.handle('dialog:select-folder', async (event) => {
+  const res = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  if (res.canceled || !res.filePaths || res.filePaths.length === 0) return null;
+  return res.filePaths[0];
 });
 
 app.whenReady().then(createWindow);
