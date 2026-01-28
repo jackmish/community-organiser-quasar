@@ -124,7 +124,50 @@ ipcMain.handle(
       // Use a JSON filename derived from the zip filename (replace .zip with .json)
       const internalName = String(filename).replace(/\.zip$/i, '.json');
       const entryName = internalName || 'backup.json';
-      zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), entryName);
+
+      // Try to generate a cleaned (pretty) JSON and add it under the canonical
+      // internal filename. If compression fails, fall back to the original JSON.
+      try {
+        const parsed = JSON.parse(jsonString);
+
+        const compressHistory = (obj: any): any => {
+          if (!obj || typeof obj !== 'object') return obj;
+          if (Array.isArray(obj)) return obj.map(compressHistory);
+          // Traverse groups/tasks/history pattern defensively
+          for (const k of Object.keys(obj)) {
+            const v = obj[k];
+            if (k === 'history' && Array.isArray(v)) {
+              obj[k] = v.map((entry: any) => {
+                if (!entry || typeof entry !== 'object') return entry;
+                ['old', 'new'].forEach((field) => {
+                  const val = entry[field];
+                  if (Array.isArray(val) && val.length > 5) {
+                    const allPlaceholders = val.every(
+                      (it: any) => typeof it === 'string' && it.startsWith('[Object]'),
+                    );
+                    if (allPlaceholders) {
+                      // remove useless placeholder data entirely
+                      delete entry[field];
+                    }
+                  }
+                });
+                return entry;
+              });
+            } else if (typeof v === 'object' && v !== null) {
+              compressHistory(v);
+            }
+          }
+          return obj;
+        };
+
+        const pretty = compressHistory(parsed);
+        const prettyStr = JSON.stringify(pretty, null, 2);
+        zipfile.addBuffer(Buffer.from(prettyStr, 'utf8'), entryName);
+      } catch (e) {
+        // If pretty generation fails, add original JSON so export still works.
+        console.warn('Failed to generate cleaned JSON for export, falling back to raw JSON:', e);
+        zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), entryName);
+      }
       zipfile.end();
 
       await new Promise<void>((resolve, reject) => {

@@ -15,17 +15,31 @@ const formatDate = (date: Date): string => {
 
 // Create a sanitized snapshot suitable for history entries.
 // This avoids storing reactive proxies or circular structures which break JSON.stringify.
-function sanitizeForHistory(value: any) {
+function sanitizeForHistory(value: any, depth = 2): any {
   if (value === null || value === undefined) return value;
   const t = typeof value;
   if (t === 'string' || t === 'number' || t === 'boolean') return value;
   if (t === 'function') return '[Function]';
   if (value instanceof Date) return value.toISOString();
-  // For objects/arrays, produce a shallow serializable summary and avoid deep traversal
+
+  // Depth-limited serialization for objects/arrays to preserve useful fields
+  // while avoiding deep traversal / circular refs.
   try {
     if (Array.isArray(value)) {
-      return value.map((v) => (typeof v === 'object' && v !== null ? '[Object]' : v));
+      if (depth <= 0) return '[Array]';
+      return value.map((v) =>
+        v === null || v === undefined
+          ? v
+          : typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+            ? v
+            : v instanceof Date
+              ? v.toISOString()
+              : sanitizeForHistory(v, depth - 1),
+      );
     }
+
+    if (depth <= 0) return '[Object]';
+
     const out: any = {};
     for (const k of Object.keys(value)) {
       try {
@@ -37,11 +51,11 @@ function sanitizeForHistory(value: any) {
         } else if (v instanceof Date) {
           out[k] = v.toISOString();
         } else if (Array.isArray(v)) {
-          out[k] = '[Array]';
+          out[k] = sanitizeForHistory(v, depth - 1);
         } else if (typeof v === 'function') {
           out[k] = '[Function]';
         } else {
-          out[k] = '[Object]';
+          out[k] = sanitizeForHistory(v, depth - 1);
         }
       } catch (e) {
         out[k] = '[Unserializable]';
@@ -290,13 +304,26 @@ export function useDayOrganiser() {
         const oldVal = (task as any)[key];
         const newVal = (updates as any)[key];
         if (oldVal !== newVal) {
-          (task as any).history.push({
+          const oldSan = sanitizeForHistory(oldVal);
+          const newSan = sanitizeForHistory(newVal);
+
+          // If sanitizer produced generic placeholders like '[Object]' or '[Array]'
+          // omit those fields from history so backups do not contain useless
+          // placeholder strings. Keep history entry to indicate an update.
+          const entry: any = {
             type: 'update',
             field: key,
-            old: sanitizeForHistory(oldVal),
-            new: sanitizeForHistory(newVal),
             changedAt: new Date().toISOString(),
-          });
+          };
+
+          const isPlaceholder = (v: any) =>
+            typeof v === 'string' &&
+            (v === '[Object]' || v === '[Array]' || v === '[Unserializable]');
+
+          if (!isPlaceholder(oldSan)) entry.old = oldSan;
+          if (!isPlaceholder(newSan)) entry.new = newSan;
+
+          (task as any).history.push(entry);
         }
       } catch (e) {
         // ignore
