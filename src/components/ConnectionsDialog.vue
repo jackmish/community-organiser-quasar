@@ -436,7 +436,7 @@ onMounted(() => {
   autoTimerId.value = setInterval(() => {
     now.value = Date.now();
     void checkAutoBackup();
-  }, 30 * 1000);
+  }, 60 * 1000);
 });
 
 onBeforeUnmount(() => {
@@ -551,11 +551,9 @@ async function performAutoBackup() {
     lastAutoBackup.value = Date.now();
     await saveSettings();
     autoBackupStatus.value = 'done';
-    notify('positive', `Automatic backup saved: ${name}`);
   } catch (e: any) {
     autoBackupStatus.value = 'error';
     console.warn('performAutoBackup failed', e);
-    notify('negative', `Automatic backup failed: ${e?.message || e}`);
   }
 }
 
