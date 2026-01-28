@@ -105,6 +105,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Join paths
   joinPath: (...paths) => path.join(...paths),
+  // Create a zip containing provided JSON (main process will write file)
+  exportZip: async (folder, zipName, jsonString) => {
+    try {
+      return await ipcRenderer.invoke('export:zip', folder, zipName, jsonString);
+    } catch (e) {
+      console.warn('exportZip failed', e);
+      throw e;
+    }
+  },
 });
 
 // BLE bridge: IPC for main-process BLE adapter and Web Bluetooth helpers for renderer

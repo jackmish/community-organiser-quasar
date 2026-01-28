@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
 
 app.setName('CO21 - Community Organiser');
@@ -102,6 +104,39 @@ ipcMain.handle('dialog:select-folder', async (event) => {
   if (res.canceled || !res.filePaths || res.filePaths.length === 0) return null;
   return res.filePaths[0];
 });
+
+// Create a .zip archive containing a single JSON file named 'connections.json'
+ipcMain.handle(
+  'export:zip',
+  async (event, folder: string, filename: string, jsonString: string) => {
+    try {
+      if (!folder) throw new Error('No folder provided');
+      await fsPromises.mkdir(folder, { recursive: true });
+      const zipPath = path.join(folder, filename);
+      const yazlMod: any = await import('yazl');
+      const ZipFile = yazlMod.ZipFile || (yazlMod && yazlMod.default && yazlMod.default.ZipFile);
+      const zipfile = new ZipFile();
+
+      // Pipe output stream to file
+      const outStream = fs.createWriteStream(zipPath);
+      zipfile.outputStream.pipe(outStream);
+
+      // Add JSON content as connections.json
+      zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), 'connections.json');
+      zipfile.end();
+
+      await new Promise<void>((resolve, reject) => {
+        outStream.on('close', () => resolve());
+        outStream.on('error', (err) => reject(err));
+      });
+
+      return zipPath;
+    } catch (err) {
+      console.error('export:zip failed', err);
+      throw err;
+    }
+  },
+);
 
 app.whenReady().then(createWindow);
 

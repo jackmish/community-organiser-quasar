@@ -71,7 +71,7 @@
                   }
                 "
               >
-                <q-item-section>Connections</q-item-section>
+                <q-item-section>Connections and data</q-item-section>
               </q-item>
               <q-item clickable v-ripple @click="openSettings">
                 <q-item-section>Settings</q-item-section>

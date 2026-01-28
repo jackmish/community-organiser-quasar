@@ -2,7 +2,10 @@
   <q-dialog v-model="dialogVisible">
     <q-card style="min-width: 420px; max-width: 90vw">
       <q-card-section>
-        <div class="text-h6">Connections</div>
+        <div class="text-h6">Connections and data</div>
+        <div class="q-mt-sm">
+          <q-input dense outlined v-model="ownDeviceName" label="Your device name" />
+        </div>
       </q-card-section>
 
       <q-card-section class="q-pt-sm">
@@ -99,7 +102,7 @@
                     dense
                     outline
                     color="secondary"
-                    label="Import"
+                    label="Merge"
                     class="q-mr-sm"
                     @click="triggerImport"
                   />
@@ -156,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useQuasar, Notify } from 'quasar';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 
@@ -230,6 +233,55 @@ function close() {
 const $q = useQuasar();
 const showScanModal = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+const ownDeviceName = ref<string>('');
+
+function normalizePrefix(name: string) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+async function loadSavedDeviceName() {
+  try {
+    const api = (window as any).electronAPI;
+    const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
+    if (!appPath) return;
+    const settingsDir = api.joinPath(appPath, 'co21');
+    const settingsFile = api.joinPath(settingsDir, 'settings.json');
+    const exists = await api.fileExists(settingsFile);
+    if (!exists) return;
+    const data = await api.readJsonFile(settingsFile);
+    if (data && typeof data.ownDeviceName === 'string') {
+      ownDeviceName.value = data.ownDeviceName;
+    }
+  } catch (e) {
+    console.warn('loadSavedDeviceName failed', e);
+  }
+}
+
+async function saveDeviceNameToAppData(name: string) {
+  try {
+    const api = (window as any).electronAPI;
+    const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
+    if (!appPath) return;
+    const settingsDir = api.joinPath(appPath, 'co21');
+    const settingsFile = api.joinPath(settingsDir, 'settings.json');
+    await api.ensureDir(settingsDir);
+    await api.writeJsonFile(settingsFile, { ownDeviceName: name });
+  } catch (e) {
+    console.warn('saveDeviceNameToAppData failed', e);
+  }
+}
+
+onMounted(() => {
+  loadSavedDeviceName();
+});
+
+watch(ownDeviceName, (val) => {
+  saveDeviceNameToAppData(val || '');
+});
 
 function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: string) {
   try {
@@ -265,21 +317,22 @@ const exportWithPicker = async () => {
     const folder = typeof api.showOpenFolder === 'function' ? await api.showOpenFolder() : null;
     if (!folder) return; // user cancelled
 
-    const name = `connections-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
+    const name = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
     const full = api.joinPath(folder, name);
 
     exportState.value = 'exporting';
     exportMessage.value = 'Exporting...';
 
-    // ensure directory exists
-    const dir = folder;
-    await api.ensureDir(dir);
+    // ensure directory exists and create zip archive containing connections.json
+    await api.ensureDir(folder);
     const plain = devices.value.map((d: any) => ({
       id: String(d.id),
       name: String(d.name || ''),
       type: d.type || null,
     }));
-    await api.writeJsonFile(full, { devices: plain });
+    const jsonString = JSON.stringify({ devices: plain }, null, 2);
+    await api.exportZip(folder, name, jsonString);
 
     exportState.value = 'done';
     exportMessage.value = 'Exported';
