@@ -246,27 +246,44 @@
                         >Edit</q-item-section
                       >
                     </q-item>
-                    <q-item
-                      clickable
-                      v-ripple
-                      @click.stop="
-                        () => {
-                          confirmDelete(item.id);
-                          openItemMenuId = null;
-                        }
-                      "
-                      style="
-                        background: rgba(183, 28, 28, 1) !important;
-                        color: rgba(255, 255, 255, 0.95) !important;
-                      "
-                    >
-                      <q-item-section avatar style="min-width: 36px">
-                        <q-icon name="delete" color="#b71c1c" />
-                      </q-item-section>
-                      <q-item-section style="color: rgba(255, 255, 255, 0.95) !important"
-                        >Delete</q-item-section
+                    <template v-if="pendingDeleteId !== item.id">
+                      <q-item
+                        clickable
+                        v-ripple
+                        @click.stop="
+                          () => {
+                            requestDelete(item.id);
+                          }
+                        "
+                        style="background: #b71c1c !important; color: #ffffff !important"
                       >
-                    </q-item>
+                        <q-item-section avatar style="min-width: 36px">
+                          <q-icon name="delete" color="#ffffff" />
+                        </q-item-section>
+                        <q-item-section style="color: #ffffff !important">Delete</q-item-section>
+                      </q-item>
+                    </template>
+                    <template v-else>
+                      <q-item>
+                        <q-item-section>
+                          <div style="display: flex; align-items: center; gap: 8px">
+                            <div style="flex: 1; font-weight: 600; color: rgba(0, 0, 0, 0.95)">
+                              Confirm delete?
+                            </div>
+                            <div style="display: flex; gap: 6px">
+                              <q-btn
+                                dense
+                                flat
+                                color="negative"
+                                label="Delete"
+                                @click.stop="() => performDelete(item.id)"
+                              />
+                              <q-btn dense flat label="Cancel" @click.stop="cancelDelete" />
+                            </div>
+                          </div>
+                        </q-item-section>
+                      </q-item>
+                    </template>
                   </q-list>
                 </q-menu>
               </div>
@@ -305,6 +322,7 @@ const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
 import { useDayOrganiser } from '../modules/day-organiser/useDayOrganiser';
+const { groups, activeGroup } = useDayOrganiser();
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -315,19 +333,27 @@ import {
   highlightIcon,
 } from './theme';
 
-const { groups, activeGroup } = useDayOrganiser();
-
-setLongPressHandler((t: any) => {
-  emit('edit-task', t);
-});
-
 const openItemMenuId = ref<string | null>(null);
+const pendingDeleteId = ref<string | null>(null);
 
 function onItemMenuToggle(val: boolean, id: string) {
   if (val) openItemMenuId.value = id;
   else if (openItemMenuId.value === id) openItemMenuId.value = null;
 }
 
+function requestDelete(id: string) {
+  pendingDeleteId.value = id;
+}
+
+function performDelete(id: string) {
+  pendingDeleteId.value = null;
+  openItemMenuId.value = null;
+  emit('delete-task', id);
+}
+
+function cancelDelete() {
+  pendingDeleteId.value = null;
+}
 const mergedTasks = computed(() => {
   const out: any[] = [];
   if (props.hiddenGroups && props.hiddenGroups.length > 0) {
