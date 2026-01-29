@@ -361,8 +361,40 @@ const mergedTasks = computed(() => {
       out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
     });
   }
-  out.push(...(props.tasksWithTime || []));
-  out.push(...(props.tasksWithoutTime || []));
+  // If an active group is selected and it's a child, exclude tasks that belong
+  // to any ancestor (parent) groups so parent tasks don't appear inside child view.
+  const activeId = activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
+
+  const isAncestor = (ancestorId: any, childId: any) => {
+    if (!ancestorId || !childId) return false;
+    let cur = groups.value.find((g: any) => String(g.id) === String(childId));
+    while (cur) {
+      const pid = cur.parentId ?? cur.parent_id ?? null;
+      if (pid == null) return false;
+      if (String(pid) === String(ancestorId)) return true;
+      cur = groups.value.find((g: any) => String(g.id) === String(pid));
+    }
+    return false;
+  };
+
+  const filterTask = (t: any) => {
+    if (!t) return false;
+    if (!activeId) return true;
+    // if active is a child of someone, we don't want tasks from its ancestors
+    // so exclude tasks whose groupId is an ancestor of the active group
+    try {
+      const taskGroupId = t.groupId ?? t.group_id ?? null;
+      if (!taskGroupId) return true;
+      // if the task's group is an ancestor of the active group, filter it out
+      if (isAncestor(taskGroupId, activeId)) return false;
+    } catch (e) {
+      // fall through
+    }
+    return true;
+  };
+
+  out.push(...(props.tasksWithTime || []).filter(filterTask));
+  out.push(...(props.tasksWithoutTime || []).filter(filterTask));
   return out;
 });
 
