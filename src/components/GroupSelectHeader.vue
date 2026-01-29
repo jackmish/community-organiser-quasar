@@ -68,6 +68,17 @@
           </div>
         </q-menu>
       </div>
+      <q-btn
+        v-if="parentButtonVisible"
+        flat
+        dense
+        round
+        icon="arrow_upward"
+        title="Go to parent group"
+        @click.stop.prevent="goToParent"
+      >
+        <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
+      </q-btn>
     </template>
     <template v-else>
       <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
@@ -294,6 +305,30 @@ function onTreeSelect(val: any) {
 function openManage() {
   window.dispatchEvent(new Event('group:manage-request'));
   menuOpen.value = false;
+}
+
+const parentGroup = computed(() => {
+  try {
+    const cur = activeGroup.value as any;
+    const gid = cur ? String(cur.value ?? cur.id ?? cur) : null;
+    if (!gid) return null;
+    const g = (groups.value || []).find((gg: any) => String(gg.id) === String(gid));
+    if (!g) return null;
+    const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
+    if (!pid) return null;
+    return (groups.value || []).find((gg: any) => String(gg.id) === String(pid)) || null;
+  } catch (e) {
+    return null;
+  }
+});
+
+const parentButtonVisible = computed(() => Boolean(parentGroup.value));
+const parentName = computed(() => (parentGroup.value ? parentGroup.value.name : null));
+
+function goToParent() {
+  const p = parentGroup.value;
+  if (!p) return;
+  activeGroup.value = { label: p.name || String(p.id), value: p.id };
 }
 
 watch(

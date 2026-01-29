@@ -308,6 +308,8 @@ function selectHiddenGroup(g: any) {
   }
 }
 
+// parent navigation handled elsewhere in the UI
+
 const isTodoType = (task: any) => {
   const t = String(task?.type || task?.type_id || '').toLowerCase();
   return t.includes('todo');
