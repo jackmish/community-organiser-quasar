@@ -12,7 +12,17 @@
       <template v-for="item in mergedTasks" :key="item.id">
         <q-item v-if="item.__isHiddenGroup" class="q-pa-sm task-card hidden-group-item">
           <q-item-section>
-            <div style="flex: 1 1 auto">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
+              <q-avatar
+                size="40"
+                :style="{ background: item._group.color || getGroupColor(item._group.id) }"
+              >
+                <q-icon
+                  :name="item._group.icon || getGroupIcon(item._group.id) || 'group'"
+                  size="18"
+                  color="white"
+                />
+              </q-avatar>
               <div class="title-main">
                 <div class="title-text">
                   <q-item-label class="title-ellipsis"
@@ -24,45 +34,53 @@
             </div>
           </q-item-section>
           <q-item-section side>
-            <div style="display: flex; gap: 6px; align-items: center">
-              <q-chip
+            <div class="priority-summary-grid">
+              <span
                 v-if="item._group.critical > 0"
-                dense
-                outline
-                color="#b71c1c"
-                text-color="white"
-                >{{ item._group.critical }} C</q-chip
+                class="priority-summary"
+                :style="{ background: '#b71c1c', color: 'white' }"
               >
-              <q-chip
+                <q-icon name="warning" size="14px" /> {{ item._group.critical }}
+              </span>
+              <span
                 v-if="item._group.high > 0"
-                dense
-                outline
+                class="priority-summary"
                 :style="{
                   background: themePriorityColors.high,
                   color: themePriorityTextColor('high'),
                 }"
-                >{{ item._group.high }} H</q-chip
               >
-              <q-chip
+                <q-icon
+                  :name="themePriorityDefinitions['high']?.icon || 'priority_high'"
+                  size="14px"
+                />
+                {{ item._group.high }}
+              </span>
+              <span
                 v-if="item._group.medium > 0"
-                dense
-                outline
+                class="priority-summary"
                 :style="{
                   background: themePriorityColors.medium,
                   color: themePriorityTextColor('medium'),
                 }"
-                >{{ item._group.medium }} M</q-chip
               >
-              <q-chip
+                <q-icon :name="themePriorityDefinitions['medium']?.icon || 'label'" size="14px" />
+                {{ item._group.medium }}
+              </span>
+              <span
                 v-if="item._group.low > 0"
-                dense
-                outline
+                class="priority-summary"
                 :style="{
                   background: themePriorityColors.low,
                   color: themePriorityTextColor('low'),
                 }"
-                >{{ item._group.low }} L</q-chip
               >
+                <q-icon
+                  :name="themePriorityDefinitions['low']?.icon || 'label_outline'"
+                  size="14px"
+                />
+                {{ item._group.low }}
+              </span>
             </div>
           </q-item-section>
         </q-item>
@@ -268,6 +286,12 @@ const getGroupColor = (groupId?: string) => {
   if (!groupId) return '#1976d2';
   const g = groups.value.find((gg: any) => gg.id === groupId);
   return g?.color || '#1976d2';
+};
+
+const getGroupIcon = (groupId?: string) => {
+  if (!groupId) return null;
+  const g = groups.value.find((gg: any) => gg.id === groupId);
+  return g?.icon || null;
 };
 
 const isTodoType = (task: any) => {
@@ -782,5 +806,44 @@ function confirmDelete(id: string) {
   border-radius: 6px;
   padding: 6px 8px;
   margin-bottom: 6px;
+}
+
+.priority-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.priority-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0px;
+  align-items: center;
+  justify-items: end;
+}
+
+/* Round only the outer corners of the 2x2 grid */
+.priority-summary-grid > .priority-summary:nth-child(1) {
+  border-top-left-radius: 8px;
+}
+.priority-summary-grid > .priority-summary:nth-child(2) {
+  border-top-right-radius: 8px;
+}
+.priority-summary-grid > .priority-summary:nth-child(3) {
+  border-bottom-left-radius: 8px;
+}
+.priority-summary-grid > .priority-summary:nth-child(4) {
+  border-bottom-right-radius: 8px;
+}
+
+/* compact the hidden-group q-item padding on top/right/bottom */
+.hidden-group-item {
+  padding: 0px !important;
+  /* make left side appear pill-like */
+  border-top-left-radius: 26px !important;
+  border-bottom-left-radius: 26px !important;
 }
 </style>
