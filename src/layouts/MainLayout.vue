@@ -27,8 +27,37 @@
             <div style="flex: 1; min-width: 0; display: flex; justify-content: flex-end">
               <NextEventNotification style="min-width: 0; width: 100%" />
             </div>
-            <div style="display: flex; align-items: center">
-              <GroupSelectHeader />
+            <div style="margin-left: 12px; display: inline-block">
+              <div
+                class="header-today"
+                style="
+                  display: inline-block;
+                  font-size: 0.9rem;
+                  background: #ffffff;
+                  color: #212121;
+                  padding: 6px 10px;
+                  border-radius: 6px;
+                  align-items: center;
+                "
+              >
+                <div
+                  class="text-caption"
+                  style="color: #424242; margin-right: 6px; display: inline-block"
+                >
+                  <span style="color: #757575; font-weight: 700"
+                    >{{ currentDateWeekday }},&nbsp;</span
+                  >
+                  <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
+                </div>
+                <div
+                  class="text-caption"
+                  style="color: #424242; display: inline-block; margin-left: 6px"
+                >
+                  |&nbsp;<span style="color: #2e7d32; font-weight: 700">{{
+                    currentTimeDisplay
+                  }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </q-toolbar-title>
@@ -101,18 +130,15 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import pkg from '../../package.json';
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from 'vue-router';
-import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
+import { format } from 'date-fns';
 import { useDayOrganiser } from '../modules/day-organiser';
-import GroupSelectHeader from 'src/components/GroupSelectHeader.vue';
 import AppConfigDialog from 'src/components/AppConfigDialog.vue';
 import AboutDialog from 'src/components/AboutDialog.vue';
 import ConnectionsDialog from 'src/components/ConnectionsDialog.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
-const now = ref(new Date());
-let clockTimer: any = null;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
@@ -120,16 +146,16 @@ const menuOpen = ref(false);
 let headerManageHandler: any = null;
 const appVersion = ref<string>(pkg?.version || 'unknown');
 
+const now = ref(new Date());
+let clockTimer: any = null;
 onMounted(() => {
   clockTimer = setInterval(() => {
     now.value = new Date();
   }, 1000);
 });
-
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer);
 });
-
 const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
 const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
 const currentTimeDisplay = computed(() => format(now.value, 'HH:mm'));

@@ -29,40 +29,9 @@
                     <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
-                  <div style="margin-left: 12px; display: inline-block">
-                    <div
-                      class="header-today"
-                      style="
-                        display: inline-block;
-                        font-size: 0.9rem;
-                        background: #ffffff;
-                        color: #212121;
-                        padding: 6px 10px;
-                        border-radius: 6px;
-                        align-items: center;
-                      "
-                    >
-                      <div
-                        class="text-caption"
-                        style="color: #424242; margin-right: 6px; display: inline-block"
-                      >
-                        <span style="color: #757575; font-weight: 700"
-                          >{{ currentDateWeekday }},&nbsp;</span
-                        >
-                        <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
-                      </div>
-                      <div
-                        class="text-caption"
-                        style="color: #424242; display: inline-block; margin-left: 6px"
-                      >
-                        |&nbsp;<span style="color: #2e7d32; font-weight: 700">{{
-                          currentTimeDisplay
-                        }}</span>
-                      </div>
-                    </div>
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <GroupSelectHeader />
                   </div>
-
-                  <!-- group select moved to main header -->
                 </div>
               </div>
             </q-card-section>
@@ -262,6 +231,7 @@ import {
 import TaskPreview from '../components/TaskPreview.vue';
 import CalendarView from '../components/CalendarView.vue';
 import { useLongPress } from '../composables/useLongPress';
+import GroupSelectHeader from '../components/GroupSelectHeader.vue';
 
 const getWeekDays = (startDate: Date) => {
   return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), 'yyyy-MM-dd'));
