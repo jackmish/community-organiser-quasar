@@ -75,9 +75,60 @@
                 </q-list>
               </q-menu>
             </q-chip>
-            <q-chip v-if="task.groupId" size="sm" icon="folder" class="q-ml-sm">{{
-              groupName
-            }}</q-chip>
+            <div class="q-ml-sm">
+              <q-chip
+                size="sm"
+                icon="folder"
+                class="q-pointer"
+                clickable
+                @click.stop="groupMenu = true"
+              >
+                {{ groupName || 'No group' }}
+              </q-chip>
+              <q-menu v-model="groupMenu" anchor="bottom right" self="top right" class="group-menu">
+                <q-list dense separator>
+                  <q-item clickable dense @click="selectGroup(null)">
+                    <q-item-section
+                      side
+                      style="
+                        width: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      "
+                    >
+                      <q-icon name="clear" />
+                    </q-item-section>
+                    <q-item-section>
+                      <div style="font-weight: 600">No group</div>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item
+                    v-for="g in groups || []"
+                    :key="g.id"
+                    clickable
+                    dense
+                    @click="selectGroup(g.id)"
+                  >
+                    <q-item-section
+                      side
+                      style="
+                        width: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      "
+                    >
+                      <q-icon name="folder" />
+                    </q-item-section>
+                    <q-item-section>
+                      <div style="font-weight: 600">{{ g.name }}</div>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </div>
           </div>
         </div>
 
@@ -170,6 +221,7 @@ import {
   priorityIcons,
   highlightIcon,
 } from './theme';
+import { useDayOrganiser } from '../modules/day-organiser';
 import type { Task } from '../modules/day-organiser/types';
 
 const props = defineProps<{
@@ -194,6 +246,8 @@ const quickSubtaskStar = ref(false);
 // refs to each rendered list item so we can animate height directly
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
 const priorityMenu = ref(false);
+const groupMenu = ref(false);
+const { groups } = useDayOrganiser();
 // track pending transition fallback timers per element
 const transitionFallbacks = new Map<HTMLElement, number>();
 
@@ -204,6 +258,21 @@ function selectPriority(p: string) {
     emit('update-task', t);
   } finally {
     priorityMenu.value = false;
+  }
+}
+
+async function selectGroup(gid: string | null) {
+  try {
+    const { updateTask } = useDayOrganiser();
+    const date = (props.task && (props.task.date || props.task.eventDate)) || '';
+    if (!props.task || !props.task.id) return;
+    const updates: any = {};
+    updates.groupId = gid == null ? undefined : gid;
+    await updateTask(date, props.task.id, updates);
+  } catch (e) {
+    logger.error('Failed to update task group', e);
+  } finally {
+    groupMenu.value = false;
   }
 }
 
