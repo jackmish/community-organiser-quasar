@@ -208,6 +208,69 @@
                 <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(item)" />
               </div>
 
+              <div class="controls-menu">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="more_vert"
+                  class="menu-btn"
+                  @click.stop="openItemMenuId = item.id"
+                />
+                <q-menu
+                  class="use-default"
+                  :model-value="openItemMenuId === item.id"
+                  @update:model-value="(val) => onItemMenuToggle(val, item.id)"
+                  anchor="top right"
+                  self="top right"
+                >
+                  <q-list padding>
+                    <q-item
+                      clickable
+                      v-ripple
+                      @click.stop="
+                        () => {
+                          editTask(item);
+                          openItemMenuId = null;
+                        }
+                      "
+                      style="
+                        background: rgba(255, 152, 0, 1) !important;
+                        color: rgba(0, 0, 0, 0.95) !important;
+                      "
+                    >
+                      <q-item-section avatar style="min-width: 36px">
+                        <q-icon name="edit" color="#ff9800" />
+                      </q-item-section>
+                      <q-item-section style="color: rgba(0, 0, 0, 0.95) !important"
+                        >Edit</q-item-section
+                      >
+                    </q-item>
+                    <q-item
+                      clickable
+                      v-ripple
+                      @click.stop="
+                        () => {
+                          confirmDelete(item.id);
+                          openItemMenuId = null;
+                        }
+                      "
+                      style="
+                        background: rgba(183, 28, 28, 1) !important;
+                        color: rgba(255, 255, 255, 0.95) !important;
+                      "
+                    >
+                      <q-item-section avatar style="min-width: 36px">
+                        <q-icon name="delete" color="#b71c1c" />
+                      </q-item-section>
+                      <q-item-section style="color: rgba(255, 255, 255, 0.95) !important"
+                        >Delete</q-item-section
+                      >
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </div>
+
               <div class="group-name">{{ getGroupName(item.groupId || item.group_id) }}</div>
             </div>
           </q-item-section>
@@ -257,6 +320,13 @@ const { groups, activeGroup } = useDayOrganiser();
 setLongPressHandler((t: any) => {
   emit('edit-task', t);
 });
+
+const openItemMenuId = ref<string | null>(null);
+
+function onItemMenuToggle(val: boolean, id: string) {
+  if (val) openItemMenuId.value = id;
+  else if (openItemMenuId.value === id) openItemMenuId.value = null;
+}
 
 const mergedTasks = computed(() => {
   const out: any[] = [];
@@ -729,6 +799,11 @@ function confirmDelete(id: string) {
   grid-column: 1;
   grid-row: 1;
 }
+/* place menu button in top-right cell */
+.task-controls-grid .controls-menu {
+  grid-column: 2;
+  grid-row: 1;
+}
 /* group name spans both columns on second row */
 .task-controls-grid .group-name {
   grid-column: 1 / 3;
@@ -755,6 +830,15 @@ function confirmDelete(id: string) {
 .edit-btn {
   color: rgba(0, 0, 0, 0.9) !important;
 }
+/* ensure menu (more) icon matches edit icon color */
+.menu-btn .q-icon {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+.menu-btn {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+/* menu button should match edit button color */
+/* menu button uses default icon color (inherit) */
 /* Slightly smaller text for task cards to match compact notification style */
 .task-card {
   font-size: 13px;

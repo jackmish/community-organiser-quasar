@@ -241,12 +241,12 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 }
 
 /* Minor cleanup: ensure popups/dialogs keep white text by default */
-.q-menu,
-.q-select__popup,
-.q-popover,
-.q-dialog__inner {
-  color: #ffffff !important;
-}
+// .q-menu,
+// .q-select__popup,
+// .q-popover,
+// .q-dialog__inner {
+//   color: #ffffff !important;
+// }
 
 /* Force outlined field pseudo-element borders to white */
 .q-field--outlined .q-field__control::before,
@@ -269,7 +269,7 @@ html body .q-select .q-field,
 html body .group-select--header .q-field,
 html body .q-dialog .q-card .q-field,
 html body .q-dialog__inner .q-field,
-.q-select {
+.q-select:not(.use-default) {
   background: #26b !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
