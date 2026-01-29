@@ -10,7 +10,12 @@
   >
     <template v-if="mergedTasks.length > 0">
       <template v-for="item in mergedTasks" :key="item.id">
-        <q-item v-if="item.__isHiddenGroup" class="q-pa-sm task-card hidden-group-item">
+        <q-item
+          v-if="item.__isHiddenGroup"
+          class="q-pa-sm task-card hidden-group-item"
+          clickable
+          @click.stop="selectHiddenGroup(item._group)"
+        >
           <q-item-section>
             <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
               <q-avatar
@@ -247,7 +252,7 @@ import {
   highlightIcon,
 } from './theme';
 
-const { groups } = useDayOrganiser();
+const { groups, activeGroup } = useDayOrganiser();
 
 setLongPressHandler((t: any) => {
   emit('edit-task', t);
@@ -293,6 +298,15 @@ const getGroupIcon = (groupId?: string) => {
   const g = groups.value.find((gg: any) => gg.id === groupId);
   return g?.icon || null;
 };
+
+function selectHiddenGroup(g: any) {
+  if (!g) return;
+  try {
+    activeGroup.value = { label: g.name || String(g.id), value: g.id };
+  } catch (e) {
+    // ignore
+  }
+}
 
 const isTodoType = (task: any) => {
   const t = String(task?.type || task?.type_id || '').toLowerCase();
