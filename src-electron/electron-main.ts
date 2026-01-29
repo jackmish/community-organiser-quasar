@@ -22,7 +22,13 @@ try {
       console.log('Main: read package version', packageAppVersion);
       try {
         // set app version for consistency (cast to any to avoid typing issues)
-        (app as any).setVersion && (app as any).setVersion(String(pkgJson.version));
+        if ((app as any).setVersion) {
+          try {
+            (app as any).setVersion(String(pkgJson.version));
+          } catch (e) {
+            void e;
+          }
+        }
       } catch (e) {
         // ignore
       }
