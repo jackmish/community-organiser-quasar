@@ -38,10 +38,13 @@
             <q-card-section v-if="sortedTasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
             </q-card-section>
+
+            <!-- hidden groups are rendered inside TasksList now -->
             <TasksList
               :key="reloadKey"
               :tasks-with-time="tasksWithTime"
               :tasks-without-time="tasksWithoutTime"
+              :hidden-groups="hiddenGroupSummary.groups"
               :selected-task-id="selectedTaskId"
               @task-click="handleTaskClick"
               @toggle-status="toggleStatus"
@@ -510,6 +513,88 @@ const allTasks = computed(() => {
   }
 });
 
+// Summary of tasks from child groups that hide tasks from parent
+const hiddenGroupSummary = computed(() => {
+  try {
+    if (!activeGroup.value || activeGroup.value.value === null)
+      return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
+    const activeId = String(activeGroup.value.value);
+    const getGroupById = (id: any) =>
+      (groups.value || []).find((g: any) => String(g.id) === String(id));
+
+    // Find groups that have hideTasksFromParent === true and are direct children of activeGroup
+    const hiddenGroupIds = new Set<string>();
+    (groups.value || []).forEach((g: any) => {
+      try {
+        if (!g || !g.id) return;
+        if (!g.hideTasksFromParent) return;
+        const parent = g.parentId ?? g.parent_id ?? null;
+        if (parent && String(parent) === activeId) hiddenGroupIds.add(String(g.id));
+      } catch (e) {
+        void e;
+      }
+    });
+
+    if (hiddenGroupIds.size === 0)
+      return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
+
+    // Initialize per-group counters
+    const groupsMap = new Map<string, any>();
+    for (const id of Array.from(hiddenGroupIds)) {
+      const g = getGroupById(id) || { id, name: '(unknown)' };
+      groupsMap.set(String(id), {
+        id: String(id),
+        name: g.name || String(id),
+        total: 0,
+        low: 0,
+        medium: 0,
+        high: 0,
+        critical: 0,
+      });
+    }
+
+    const all = allTasks.value || [];
+    for (const t of all) {
+      try {
+        if (!t || !t.groupId) continue;
+        const gid = String(t.groupId);
+        if (!hiddenGroupIds.has(gid)) continue;
+        if (Number(t.status_id) === 0) continue; // skip done
+        const p = t.priority || 'medium';
+        const entry = groupsMap.get(gid);
+        if (!entry) continue;
+        entry[p] = (entry[p] || 0) + 1;
+        entry.total++;
+      } catch (e) {
+        void e;
+      }
+    }
+
+    // Build final list and totals
+    const groupsArr = Array.from(groupsMap.values()).sort((a: any, b: any) =>
+      String(a.name).localeCompare(String(b.name)),
+    );
+    const totals: { total: number; low: number; medium: number; high: number; critical: number } = {
+      total: 0,
+      low: 0,
+      medium: 0,
+      high: 0,
+      critical: 0,
+    };
+    for (const g of groupsArr) {
+      totals.total += g.total || 0;
+      totals.low += g.low || 0;
+      totals.medium += g.medium || 0;
+      totals.high += g.high || 0;
+      totals.critical += g.critical || 0;
+    }
+
+    return { ...totals, groups: groupsArr };
+  } catch (e) {
+    return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
+  }
+});
+
 const fileInput = ref<HTMLInputElement | null>(null);
 const showGroupDialog = ref(false);
 const groupMenu = ref(false);
@@ -646,7 +731,7 @@ function openEditGroup(g: TaskGroup) {
   editGroupLocal.value = {
     id: g.id,
     name: g.name,
-    parentId: (g as any).parentId ?? (g as any).parent_id ?? null,
+    parentId: g.parentId ?? g.parent_id ?? null,
     color: g.color || '#1976d2',
   };
   showEditGroupDialog.value = true;
@@ -1174,7 +1259,7 @@ const sortedTasks = computed(() => {
       if (!node) return false;
 
       // If node is direct child of active group, show it unless the child hides tasks from parent
-      const parentId = node.parentId ?? (node as any).parent_id ?? null;
+      const parentId = node.parentId ?? node.parent_id ?? null;
       if (parentId == null) return false;
       if (String(parentId) === activeId) {
         if (node.hideTasksFromParent) return false;
@@ -1190,7 +1275,7 @@ const sortedTasks = computed(() => {
         // if the child requests hiding from its immediate parent, do not show
         if (childNode && childNode.hideTasksFromParent) return false;
         if (!cur.shareSubgroups) return false;
-        const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
+        const curParent = cur.parentId ?? cur.parent_id ?? null;
         if (curParent == null) return false;
         if (String(curParent) === activeId) return true;
         childNode = cur;
@@ -1284,7 +1369,7 @@ const replenishTasks = computed(() => {
         if (cid === activeId) return true;
         const node = getGroupById(cid);
         if (!node) return false;
-        const parentId = node.parentId ?? (node as any).parent_id ?? null;
+        const parentId = node.parentId ?? node.parent_id ?? null;
         if (parentId == null) return false;
         if (String(parentId) === activeId) {
           if (node.hideTasksFromParent) return false;
@@ -1295,7 +1380,7 @@ const replenishTasks = computed(() => {
         while (cur) {
           if (childNode && childNode.hideTasksFromParent) return false;
           if (!cur.shareSubgroups) return false;
-          const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
+          const curParent = cur.parentId ?? cur.parent_id ?? null;
           if (curParent == null) return false;
           if (String(curParent) === activeId) return true;
           childNode = cur;
@@ -1357,7 +1442,7 @@ const doneTasks = computed(() => {
         let childNode: any = getGroupById(cid);
         let cur = getGroupById(cid);
         while (cur) {
-          const pid = cur.parentId ?? (cur as any).parent_id ?? null;
+          const pid = cur.parentId ?? cur.parent_id ?? null;
           if (pid == null) return false;
           // if current node is direct child of active, respect its hide flag
           if (String(pid) === activeId) {
@@ -1513,7 +1598,7 @@ const tasksWithoutTime = computed(() => {
 const groupOptions = computed(() => {
   const byParent: Record<string, any[]> = {};
   (groups.value || []).forEach((g) => {
-    const key = (g as any).parentId ?? (g as any).parent_id ?? '__root__';
+    const key = g.parentId ?? g.parent_id ?? '__root__';
     if (!byParent[key]) byParent[key] = [];
     byParent[key].push(g);
   });
@@ -2371,6 +2456,19 @@ onMounted(async () => {
   align-items: center !important;
   height: 100% !important;
   padding-top: 0 !important;
+
+  /* Hidden children list should follow task element width rules */
+  .hidden-children-list__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0;
+  }
+  .hidden-children-list .task-card {
+    min-width: 280px;
+    max-width: 360px;
+    flex: 0 0 320px;
+  }
   padding-bottom: 0 !important;
 }
 

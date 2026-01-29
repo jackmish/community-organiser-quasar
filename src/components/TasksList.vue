@@ -8,253 +8,194 @@
       align-items: start;
     "
   >
-    <template v-if="tasksWithTime.length > 0">
-      <q-item
-        v-for="task in tasksWithTime"
-        :key="task.id"
-        class="q-pa-sm task-card"
-        :class="{
-          'bg-grey-2': Number(task.status_id) === 0,
-          'selected-task': selectedTaskId === task.id,
-        }"
-        :style="itemStyle(task)"
-        :active="selectedTaskId === task.id"
-        clickable
-        @pointerdown="() => startLongPress(task)"
-        @pointerup="cancelLongPress"
-        @pointercancel="cancelLongPress"
-        @pointerleave="cancelLongPress"
-        @click="handleTaskClick(task)"
-      >
-        <q-icon
-          v-if="typeIcons[task.type_id || task.type]"
-          :name="typeIcons[task.type_id || task.type]"
-          class="type-watermark"
-        />
-        <q-item-section class="title-row">
-          <div style="flex: 1 1 auto">
-            <div class="title-main">
-              <div class="title-text">
-                <q-item-label
-                  :class="[
-                    { 'text-strike': Number(task.status_id) === 0 && task.timeMode !== 'prepare' },
-                    'title-ellipsis',
-                  ]"
+    <template v-if="mergedTasks.length > 0">
+      <template v-for="item in mergedTasks" :key="item.id">
+        <q-item v-if="item.__isHiddenGroup" class="q-pa-sm task-card hidden-group-item">
+          <q-item-section>
+            <div style="flex: 1 1 auto">
+              <div class="title-main">
+                <div class="title-text">
+                  <q-item-label class="title-ellipsis"
+                    ><strong>{{ item._group.name }}</strong></q-item-label
+                  >
+                  <div class="text-caption">{{ item._group.total }} tasks</div>
+                </div>
+              </div>
+            </div>
+          </q-item-section>
+          <q-item-section side>
+            <div style="display: flex; gap: 6px; align-items: center">
+              <q-chip
+                v-if="item._group.critical > 0"
+                dense
+                outline
+                color="#b71c1c"
+                text-color="white"
+                >{{ item._group.critical }} C</q-chip
+              >
+              <q-chip
+                v-if="item._group.high > 0"
+                dense
+                outline
+                :style="{
+                  background: themePriorityColors.high,
+                  color: themePriorityTextColor('high'),
+                }"
+                >{{ item._group.high }} H</q-chip
+              >
+              <q-chip
+                v-if="item._group.medium > 0"
+                dense
+                outline
+                :style="{
+                  background: themePriorityColors.medium,
+                  color: themePriorityTextColor('medium'),
+                }"
+                >{{ item._group.medium }} M</q-chip
+              >
+              <q-chip
+                v-if="item._group.low > 0"
+                dense
+                outline
+                :style="{
+                  background: themePriorityColors.low,
+                  color: themePriorityTextColor('low'),
+                }"
+                >{{ item._group.low }} L</q-chip
+              >
+            </div>
+          </q-item-section>
+        </q-item>
+
+        <q-item
+          v-else
+          class="q-pa-sm task-card"
+          :class="{
+            'bg-grey-2': Number(item.status_id) === 0,
+            'selected-task': selectedTaskId === item.id,
+          }"
+          :style="itemStyle(item)"
+          :active="selectedTaskId === item.id"
+          clickable
+          @pointerdown="() => startLongPress(item)"
+          @pointerup="cancelLongPress"
+          @pointercancel="cancelLongPress"
+          @pointerleave="cancelLongPress"
+          @click="handleTaskClick(item)"
+        >
+          <q-icon
+            v-if="typeIcons[item.type_id || item.type]"
+            :name="typeIcons[item.type_id || item.type]"
+            class="type-watermark"
+          />
+          <q-item-section class="title-row">
+            <div style="flex: 1 1 auto">
+              <div class="title-main">
+                <div class="title-text">
+                  <q-item-label
+                    :class="[
+                      {
+                        'text-strike': Number(item.status_id) === 0 && item.timeMode !== 'prepare',
+                      },
+                      'title-ellipsis',
+                    ]"
+                  >
+                    <strong>
+                      <span v-if="countTodoSubtasks(item).total > 0">
+                        ({{ countTodoSubtasks(item).done }}/{{
+                          countTodoSubtasks(item).total
+                        }})&nbsp;
+                      </span>
+                      {{ getDisplayName(item) }}
+                      <span class="star-count" v-if="countStarredUndone(item) > 0">
+                        <q-icon
+                          v-for="n in countStarredUndone(item)"
+                          :key="`s-${item.id}-${n}`"
+                          :name="highlightIcon"
+                          color="amber"
+                          size="14px"
+                        />
+                      </span>
+                    </strong>
+                  </q-item-label>
+                </div>
+                <div class="title-checkbox">
+                  <q-checkbox
+                    class="task-checkbox"
+                    :model-value="Number(item.status_id) === 0"
+                    @click.stop="toggleStatus(item)"
+                  />
+                </div>
+              </div>
+              <q-item-label
+                v-if="
+                  !isTodoType(item) &&
+                  (item.type === 'event' ||
+                    item.type_id === 'TimeEvent' ||
+                    item.type === 'TimeEvent' ||
+                    item.timeMode === 'event') &&
+                  getEventHoursDisplay(item)
+                "
+                caption
+                :class="[
+                  'task-desc',
+                  {
+                    'has-date': hasDate(item),
+                    'prepare-desc': item.timeMode === 'prepare',
+                    'expiration-desc': item.timeMode === 'expiration',
+                  },
+                ]"
+              >
+                <span
+                  class="priority-inline"
+                  :title="item.priority"
+                  :style="{
+                    backgroundColor: priorityColor(item.priority),
+                    color: priorityTextColor(item.priority),
+                  }"
                 >
-                  <strong>
-                    <span v-if="countTodoSubtasks(task).total > 0">
-                      ({{ countTodoSubtasks(task).done }}/{{ countTodoSubtasks(task).total }})&nbsp;
-                    </span>
-                    {{ getDisplayName(task) }}
-                    <span class="star-count" v-if="countStarredUndone(task) > 0">
-                      <q-icon
-                        v-for="n in countStarredUndone(task)"
-                        :key="`s-${task.id}-${n}`"
-                        :name="highlightIcon"
-                        color="amber"
-                        size="14px"
-                      />
-                    </span>
-                  </strong>
-                </q-item-label>
-              </div>
-              <div class="title-checkbox">
-                <q-checkbox
-                  class="task-checkbox"
-                  :model-value="Number(task.status_id) === 0"
-                  @click.stop="toggleStatus(task)"
-                />
-              </div>
-            </div>
-            <q-item-label
-              v-if="
-                !isTodoType(task) &&
-                (task.type === 'event' ||
-                  task.type_id === 'TimeEvent' ||
-                  task.type === 'TimeEvent' ||
-                  task.timeMode === 'event') &&
-                getEventHoursDisplay(task)
-              "
-              caption
-              :class="[
-                'task-desc',
-                {
-                  'has-date': hasDate(task),
-                  'prepare-desc': task.timeMode === 'prepare',
-                  'expiration-desc': task.timeMode === 'expiration',
-                },
-              ]"
-            >
-              <span
-                class="priority-inline"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              {{ getEventHoursDisplay(task) }}
-            </q-item-label>
-            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
-              <span
-                class="priority-inline"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              {{ getDisplayDescription(task) }}
-            </q-item-label>
-          </div>
-        </q-item-section>
-        <q-item-section side>
-          <div class="task-controls-grid">
-            <div class="controls-edit">
-              <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
-            </div>
-
-            <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
-          </div>
-        </q-item-section>
-      </q-item>
-    </template>
-
-    <!-- <q-separator v-if="tasksWithTime.length > 0 && tasksWithoutTime.length > 0" class="q-my-md" /> -->
-
-    <template v-if="tasksWithoutTime.length > 0">
-      <q-item
-        v-for="task in tasksWithoutTime"
-        :key="task.id"
-        class="q-pa-sm task-card"
-        :class="{
-          'bg-grey-2': Number(task.status_id) === 0,
-          'selected-task': selectedTaskId === task.id,
-        }"
-        :style="itemStyle(task)"
-        :active="selectedTaskId === task.id"
-        clickable
-        @pointerup="cancelLongPress"
-        @pointercancel="cancelLongPress"
-        @pointerleave="cancelLongPress"
-        @click="handleTaskClick(task)"
-      >
-        <q-icon
-          v-if="typeIcons[task.type_id || task.type]"
-          :name="typeIcons[task.type_id || task.type]"
-          class="type-watermark"
-        />
-        <q-item-section class="title-row">
-          <div style="flex: 1 1 auto">
-            <div class="title-main">
-              <div class="title-text">
-                <q-item-label
-                  :class="[
-                    { 'text-strike': Number(task.status_id) === 0 && task.timeMode !== 'prepare' },
-                    'title-ellipsis',
-                  ]"
+                  <q-icon
+                    :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
+                    size="12px"
+                  />
+                </span>
+                {{ getEventHoursDisplay(item) }}
+              </q-item-label>
+              <q-item-label v-else-if="getDisplayDescription(item)" caption class="task-desc">
+                <span
+                  class="priority-inline"
+                  :title="item.priority"
+                  :style="{
+                    backgroundColor: priorityColor(item.priority),
+                    color: priorityTextColor(item.priority),
+                  }"
                 >
-                  <strong>
-                    <span v-if="countTodoSubtasks(task).total > 0">
-                      ({{ countTodoSubtasks(task).done }}/{{ countTodoSubtasks(task).total }})&nbsp;
-                    </span>
-                    {{ getDisplayName(task) }}
-                    <span class="star-count" v-if="countStarredUndone(task) > 0">
-                      <q-icon
-                        v-for="n in countStarredUndone(task)"
-                        :key="`s2-${task.id}-${n}`"
-                        :name="highlightIcon"
-                        color="amber"
-                        size="14px"
-                      />
-                    </span>
-                  </strong>
-                </q-item-label>
-              </div>
-              <div class="title-checkbox">
-                <q-checkbox
-                  class="task-checkbox"
-                  :model-value="Number(task.status_id) === 0"
-                  @click.stop="toggleStatus(task)"
-                />
-              </div>
+                  <q-icon
+                    :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
+                    size="12px"
+                  />
+                </span>
+                {{ getDisplayDescription(item) }}
+              </q-item-label>
             </div>
-            <q-item-label
-              v-if="
-                !isTodoType(task) &&
-                (task.timeMode === 'event' ||
-                  task.type_id === 'TimeEvent' ||
-                  task.type === 'TimeEvent') &&
-                getEventHoursDisplay(task)
-              "
-              caption
-              :class="[
-                'task-desc',
-                {
-                  'has-date': hasDate(task),
-                  'prepare-desc': task.timeMode === 'prepare',
-                  'expiration-desc': task.timeMode === 'expiration',
-                },
-              ]"
-            >
-              <span
-                class="priority-inline"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              {{ getEventHoursDisplay(task) }}
-            </q-item-label>
-            <q-item-label v-else-if="getDisplayDescription(task)" caption class="task-desc">
-              <span
-                class="priority-inline"
-                :title="task.priority"
-                :style="{
-                  backgroundColor: priorityColor(task.priority),
-                  color: priorityTextColor(task.priority),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions[task.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              {{ getDisplayDescription(task) }}
-            </q-item-label>
-          </div>
-        </q-item-section>
-        <q-item-section side>
-          <div class="task-controls-grid">
-            <div class="controls-edit">
-              <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(task)" />
+          </q-item-section>
+          <q-item-section side>
+            <div class="task-controls-grid">
+              <div class="controls-edit">
+                <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(item)" />
+              </div>
+
+              <div class="group-name">{{ getGroupName(item.groupId || item.group_id) }}</div>
             </div>
-            <div class="group-name">{{ getGroupName(task.groupId || task.group_id) }}</div>
-          </div>
-        </q-item-section>
-      </q-item>
+          </q-item-section>
+        </q-item>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 import { useLongPress } from '../composables/useLongPress';
 
@@ -262,6 +203,7 @@ const props = defineProps<{
   tasksWithTime: any[];
   tasksWithoutTime: any[];
   selectedTaskId: string | null;
+  hiddenGroups?: any[];
 }>();
 
 const emit = defineEmits<{
@@ -291,6 +233,18 @@ const { groups } = useDayOrganiser();
 
 setLongPressHandler((t: any) => {
   emit('edit-task', t);
+});
+
+const mergedTasks = computed(() => {
+  const out: any[] = [];
+  if (props.hiddenGroups && props.hiddenGroups.length > 0) {
+    props.hiddenGroups.forEach((g: any) => {
+      out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
+    });
+  }
+  out.push(...(props.tasksWithTime || []));
+  out.push(...(props.tasksWithoutTime || []));
+  return out;
 });
 
 const priorityColor = (priority: any) => themePriorityColors[priority] || 'transparent';
@@ -463,6 +417,8 @@ const itemStyle = (task: any) => {
     borderLeft: `4px solid ${typeColor}`,
   } as Record<string, string>;
 };
+
+// (no local aliases needed; imported theme helpers are used)
 
 function handleTaskClick(task: any) {
   if (longPressTriggered.value) {
