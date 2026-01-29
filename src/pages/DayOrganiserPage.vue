@@ -1173,19 +1173,27 @@ const sortedTasks = computed(() => {
       const node = getGroupById(cid);
       if (!node) return false;
 
-      // If node is direct child of active group, show it regardless of shareSubgroups
+      // If node is direct child of active group, show it unless the child hides tasks from parent
       const parentId = node.parentId ?? (node as any).parent_id ?? null;
       if (parentId == null) return false;
-      if (String(parentId) === activeId) return true;
+      if (String(parentId) === activeId) {
+        if (node.hideTasksFromParent) return false;
+        return true;
+      }
 
-      // For deeper descendants, require each ancestor between the node and the active group
-      // to have shareSubgroups === true. Walk upwards from the node's parent.
+      // For deeper descendants, walk upwards from the node's parent and ensure
+      // none of the intermediate child nodes request hiding from their parent,
+      // and each ancestor has shareSubgroups === true.
+      let childNode: any = node;
       let cur = getGroupById(parentId);
       while (cur) {
+        // if the child requests hiding from its immediate parent, do not show
+        if (childNode && childNode.hideTasksFromParent) return false;
         if (!cur.shareSubgroups) return false;
         const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
         if (curParent == null) return false;
         if (String(curParent) === activeId) return true;
+        childNode = cur;
         cur = getGroupById(curParent);
       }
       return false;
@@ -1278,13 +1286,19 @@ const replenishTasks = computed(() => {
         if (!node) return false;
         const parentId = node.parentId ?? (node as any).parent_id ?? null;
         if (parentId == null) return false;
-        if (String(parentId) === activeId) return true;
+        if (String(parentId) === activeId) {
+          if (node.hideTasksFromParent) return false;
+          return true;
+        }
+        let childNode: any = node;
         let cur = getGroupById(parentId);
         while (cur) {
+          if (childNode && childNode.hideTasksFromParent) return false;
           if (!cur.shareSubgroups) return false;
           const curParent = cur.parentId ?? (cur as any).parent_id ?? null;
           if (curParent == null) return false;
           if (String(curParent) === activeId) return true;
+          childNode = cur;
           cur = getGroupById(curParent);
         }
         return false;
@@ -1340,12 +1354,19 @@ const doneTasks = computed(() => {
         if (candidateId == null) return false;
         const cid = String(candidateId);
         if (cid === activeId) return true;
+        let childNode: any = getGroupById(cid);
         let cur = getGroupById(cid);
         while (cur) {
           const pid = cur.parentId ?? (cur as any).parent_id ?? null;
           if (pid == null) return false;
-          if (String(pid) === activeId) return Boolean(cur.shareSubgroups);
+          // if current node is direct child of active, respect its hide flag
+          if (String(pid) === activeId) {
+            if (childNode && childNode.hideTasksFromParent) return false;
+            return Boolean(cur.shareSubgroups);
+          }
+          if (childNode && childNode.hideTasksFromParent) return false;
           if (!cur.shareSubgroups) return false;
+          childNode = cur;
           cur = getGroupById(pid);
         }
         return false;
@@ -2123,7 +2144,14 @@ const onFileSelected = async (event: Event) => {
 const handleAddGroup = async () => {
   if (!newGroupName.value.trim()) return;
 
-  const group = await addGroup(newGroupName.value, newGroupParent.value, newGroupColor.value);
+  const group = await addGroup(
+    newGroupName.value,
+    newGroupParent.value,
+    newGroupColor.value,
+    undefined,
+    undefined,
+    false,
+  );
 
   // Set as default and active if it's the first group
   if (!defaultGroupId.value) {
@@ -2141,7 +2169,7 @@ const handleAddGroup = async () => {
 };
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await addGroup(data.name, undefined, data.color);
+  const group = await addGroup(data.name, undefined, data.color, undefined, undefined, false);
   defaultGroupId.value = group.id;
   activeGroup.value = {
     label: group.name,

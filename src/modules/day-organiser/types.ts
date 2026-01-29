@@ -5,6 +5,7 @@ export interface TaskGroup {
   name: string;
   color?: string;
   shareSubgroups?: boolean;
+  hideTasksFromParent?: boolean;
   icon?: string;
   parentId?: string; // For hierarchical groups
   createdAt: string;

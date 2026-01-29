@@ -617,6 +617,7 @@ export function useDayOrganiser() {
     color?: string,
     icon?: string,
     shareSubgroups?: boolean,
+    hideTasksFromParent?: boolean,
   ): Promise<TaskGroup> => {
     const now = new Date().toISOString();
     const group: TaskGroup = {
@@ -627,6 +628,7 @@ export function useDayOrganiser() {
       ...(color && { color }),
       ...(icon && { icon }),
       ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
+      ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
     };
 
     organiserData.value.groups.push(group);
@@ -751,6 +753,7 @@ export function useDayOrganiser() {
         group: g,
         parentId: normalize(g.parentId ?? g.parent_id ?? null),
         shareSubgroups: g.shareSubgroups ?? false,
+        hideTasksFromParent: g.hideTasksFromParent ?? false,
         children: [] as any[],
       });
     });

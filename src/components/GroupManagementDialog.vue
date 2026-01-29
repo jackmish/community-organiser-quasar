@@ -115,6 +115,10 @@
                 <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
               </div>
 
+              <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
+                <q-checkbox v-model="localHideTasksInParent" label="Hide tasks from parent" dense />
+              </div>
+
               <q-input
                 :model-value="''"
                 label="Color"
@@ -426,6 +430,7 @@ const localParentColor = ref<string | null>(null);
 const localColor = ref('#1976d2');
 const localIcon = ref<string | null>('folder');
 const localShareSubgroups = ref(false);
+const localHideTasksInParent = ref(false);
 const pendingDeleteId = ref<string | null>(null);
 const privilegeMode = ref<'preview' | 'edit' | 'remove'>('edit');
 const colorInput = ref<HTMLInputElement | null>(null);
@@ -666,6 +671,7 @@ watch(
       localColor.value = '#1976d2';
       localIcon.value = 'folder';
       localShareSubgroups.value = false;
+      localHideTasksInParent.value = false;
     }
   },
 );
@@ -689,10 +695,20 @@ async function onAddGroup() {
         ...(typeof localShareSubgroups.value === 'boolean'
           ? { shareSubgroups: localShareSubgroups.value }
           : {}),
+        ...(typeof localHideTasksInParent.value === 'boolean'
+          ? { hideTasksFromParent: localHideTasksInParent.value }
+          : {}),
       });
     } else {
       // add new
-      await addGroup(name, parent, color, icon as any, localShareSubgroups.value);
+      await addGroup(
+        name,
+        parent,
+        color,
+        icon as any,
+        localShareSubgroups.value,
+        localHideTasksInParent.value,
+      );
     }
   } catch (e) {
     logger.error('add/update group failed', e);
@@ -704,6 +720,7 @@ async function onAddGroup() {
   localColor.value = '#1976d2';
   localIcon.value = 'folder';
   localShareSubgroups.value = false;
+  localHideTasksInParent.value = false;
   editingGroupId.value = null;
   // keep dialog open so user can add or edit more groups without reopening
 }
@@ -759,6 +776,7 @@ function startEdit(node: any) {
     localColor.value = g?.color || node.color || '#1976d2';
     localIcon.value = g?.icon || node.icon || 'folder';
     localShareSubgroups.value = Boolean(g?.shareSubgroups);
+    localHideTasksInParent.value = Boolean(g?.hideTasksFromParent);
     // populate parent preview icon/color
     try {
       const p = localParent.value;
