@@ -1133,6 +1133,15 @@ onMounted(() => {
 
 function onSubmit(event: Event) {
   event.preventDefault();
+  // Prevent creating Notes — show message instead
+  if (localNewTask.value.type_id === 'NoteLater') {
+    try {
+      $q.notify({ type: 'info', message: 'Notes needs to be redesigned and coded in some future' });
+    } catch (e) {
+      // ignore notify failures
+    }
+    return;
+  }
   // If this is a Replenish task and the user typed a query, use it as the name
   if (
     localNewTask.value.type_id === 'Replenish' &&
@@ -1634,112 +1643,132 @@ function onSubmit(event: Event) {
                   </div>
                   <br />
                   <div>
-                    <q-input
-                      v-if="!isReplenish"
-                      ref="descriptionInput"
-                      :model-value="localNewTask.description"
-                      label="Description"
-                      outlined
-                      type="textarea"
-                      rows="1"
-                      class="col"
-                      @update:model-value="(val) => updateTaskField('description', val)"
-                    />
-                    <!-- Title is auto-generated from description; input removed -->
-
-                    <!-- Replenish special field: search existing or create new (moved above submit buttons) -->
-                    <div
-                      v-if="isReplenish && mode === 'add'"
-                      class="q-pa-sm col"
-                      style="position: relative"
-                    >
-                      <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
-                      <q-input
-                        ref="replenishInput"
-                        v-model="replenishQuery"
-                        @update:model-value="onReplenishInput"
-                        @focus="onReplenishFocus"
-                        label="Search existing Replenish or type a new title"
-                        outlined
-                        dense
-                        class="col"
-                      />
-                      <div
-                        v-if="
-                          showReplenishList &&
-                          replenishQuery &&
-                          replenishQuery.trim() &&
-                          replenishMatches.length
-                        "
-                        class="q-mt-sm"
-                        :style="replenishListStyle"
-                      >
-                        <q-list dense separator>
-                          <q-item
-                            v-for="m in replenishMatches"
-                            :key="m.id"
-                            :data-repl-id="m.id"
-                            clickable
-                            @pointerdown.stop.prevent="handleReplItemPointer(m)"
-                            @click.stop.prevent="handleReplItemPointer(m)"
-                            class="q-pa-sm bg-white"
-                            style="border-radius: 6px; margin-bottom: 6px"
-                          >
-                            <q-item-section>
-                              <div class="text-body1">{{ m.name }}</div>
-                            </q-item-section>
-                          </q-item>
-                        </q-list>
-                      </div>
-                    </div>
-
-                    <!-- Color chooser for Replenish tasks (moved above submit buttons) -->
-                    <div
-                      v-if="isReplenish && (props.mode === 'add' || props.mode === 'edit')"
-                      class="q-pa-sm col"
-                    >
-                      <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
-                      <div class="row" style="gap: 8px; align-items: center">
-                        <div style="flex: 0 1 auto">
-                          <div
-                            v-for="(row, ridx) in replenishColorRows"
-                            :key="ridx"
-                            class="row"
-                            style="gap: 8px; align-items: center; margin-bottom: 6px"
-                          >
-                            <div
-                              v-for="cs in row"
-                              :key="cs.id"
-                              class="row items-center"
-                              style="gap: 6px"
-                            >
-                              <div
-                                class="color-swatch"
-                                :style="{
-                                  background: cs.bg,
-                                  border:
-                                    cs.id === (localNewTask as any).color_set
-                                      ? '2px solid #000'
-                                      : '1px solid rgba(0,0,0,0.08)',
-                                }"
-                                @click.stop="(localNewTask as any).color_set = cs.id"
-                              ></div>
+                    <div v-if="localNewTask.type_id === 'NoteLater'" class="q-pa-sm col">
+                      <q-card flat bordered class="notes-disabled-card q-pa-md">
+                        <div class="row items-center" style="gap: 12px">
+                          <q-icon name="construction" size="36px" />
+                          <div>
+                            <div class="text-subtitle1" style="font-weight: 700">
+                              Notes disabled
+                            </div>
+                            <div class="text-body2" style="font-weight: 600">
+                              Notes needs to be redesigned and coded in some future
+                            </div>
+                            <div class="text-caption" style="margin-top: 6px">
+                              Under construction — coming later
                             </div>
                           </div>
                         </div>
-                        <div style="flex: 0 0 auto">
-                          <q-btn
-                            flat
-                            dense
-                            round
-                            icon="clear"
-                            @click.stop="
-                              () => {
-                                (localNewTask as any).color_set = null;
-                              }
-                            "
-                            title="Use default"
-                          />
+                      </q-card>
+                    </div>
+                    <div v-else>
+                      <q-input
+                        v-if="!isReplenish"
+                        ref="descriptionInput"
+                        :model-value="localNewTask.description"
+                        label="Description"
+                        outlined
+                        type="textarea"
+                        rows="1"
+                        class="col"
+                        @update:model-value="(val) => updateTaskField('description', val)"
+                      />
+                      <!-- Title is auto-generated from description; input removed -->
+
+                      <!-- Replenish special field: search existing or create new (moved above submit buttons) -->
+                      <div
+                        v-if="isReplenish && mode === 'add'"
+                        class="q-pa-sm col"
+                        style="position: relative"
+                      >
+                        <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
+                        <q-input
+                          ref="replenishInput"
+                          v-model="replenishQuery"
+                          @update:model-value="onReplenishInput"
+                          @focus="onReplenishFocus"
+                          label="Search existing Replenish or type a new title"
+                          outlined
+                          dense
+                          class="col"
+                        />
+                        <div
+                          v-if="
+                            showReplenishList &&
+                            replenishQuery &&
+                            replenishQuery.trim() &&
+                            replenishMatches.length
+                          "
+                          class="q-mt-sm"
+                          :style="replenishListStyle"
+                        >
+                          <q-list dense separator>
+                            <q-item
+                              v-for="m in replenishMatches"
+                              :key="m.id"
+                              :data-repl-id="m.id"
+                              clickable
+                              @pointerdown.stop.prevent="handleReplItemPointer(m)"
+                              @click.stop.prevent="handleReplItemPointer(m)"
+                              class="q-pa-sm bg-white"
+                              style="border-radius: 6px; margin-bottom: 6px"
+                            >
+                              <q-item-section>
+                                <div class="text-body1">{{ m.name }}</div>
+                              </q-item-section>
+                            </q-item>
+                          </q-list>
+                        </div>
+                      </div>
+
+                      <!-- Color chooser for Replenish tasks (moved above submit buttons) -->
+                      <div
+                        v-if="isReplenish && (props.mode === 'add' || props.mode === 'edit')"
+                        class="q-pa-sm col"
+                      >
+                        <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
+                        <div class="row" style="gap: 8px; align-items: center">
+                          <div style="flex: 0 1 auto">
+                            <div
+                              v-for="(row, ridx) in replenishColorRows"
+                              :key="ridx"
+                              class="row"
+                              style="gap: 8px; align-items: center; margin-bottom: 6px"
+                            >
+                              <div
+                                v-for="cs in row"
+                                :key="cs.id"
+                                class="row items-center"
+                                style="gap: 6px"
+                              >
+                                <div
+                                  class="color-swatch"
+                                  :style="{
+                                    background: cs.bg,
+                                    border:
+                                      cs.id === (localNewTask as any).color_set
+                                        ? '2px solid #000'
+                                        : '1px solid rgba(0,0,0,0.08)',
+                                  }"
+                                  @click.stop="(localNewTask as any).color_set = cs.id"
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div style="flex: 0 0 auto">
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              icon="clear"
+                              @click.stop="
+                                () => {
+                                  (localNewTask as any).color_set = null;
+                                }
+                              "
+                              title="Use default"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2041,6 +2070,24 @@ function onSubmit(event: Event) {
   border-color: transparent !important;
   box-shadow: none !important;
   transform: none !important;
+}
+
+/* Notes disabled card styling (orange + black, under construction) */
+.notes-disabled-card {
+  background: linear-gradient(180deg, #ffb74d 0%, #ff9800 100%);
+  color: #000000;
+  border: 2px dashed rgba(0, 0, 0, 0.6) !important;
+}
+.notes-disabled-card .q-icon {
+  color: #000000;
+}
+.notes-disabled-card .text-subtitle1,
+.notes-disabled-card .text-body2,
+.notes-disabled-card .text-caption {
+  color: #000000 !important;
+}
+.notes-disabled-card {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 /* Stack icon above label for priority buttons on md+ and center them */
