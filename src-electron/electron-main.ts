@@ -4,12 +4,33 @@ import os from 'os';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
+// Fix for ES modules - __dirname is not defined; derive from import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.setName('CO21 - Community Organiser');
 console.log('App data path:', app.getPath('userData'));
-// Fix for ES modules - __dirname is not defined
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Read package.json version (best-effort). Keep this simple and cast where needed.
+let packageAppVersion: string | undefined;
+try {
+  const pkgPath = path.resolve(process.cwd(), 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    const pkgRaw = fs.readFileSync(pkgPath, 'utf8');
+    const pkgJson = JSON.parse(pkgRaw);
+    if (pkgJson && pkgJson.version) {
+      packageAppVersion = String(pkgJson.version);
+      console.log('Main: read package version', packageAppVersion);
+      try {
+        // set app version for consistency (cast to any to avoid typing issues)
+        (app as any).setVersion && (app as any).setVersion(String(pkgJson.version));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+} catch (e) {
+  console.warn('Main: failed to read package.json', e);
+}
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
@@ -76,6 +97,20 @@ function createWindow() {
 
   mainWindow.loadURL(process.env.APP_URL || '');
 
+  // Inject app version and name into renderer global scope after page load
+  // Inject app version/name into renderer after page load so UI can read it synchronously.
+  mainWindow.webContents.on('did-finish-load', () => {
+    try {
+      const ver = JSON.stringify(packageAppVersion || app.getVersion());
+      const name = JSON.stringify(app.getName());
+      mainWindow?.webContents.executeJavaScript(
+        `window.APP_VERSION = ${ver}; window.APP_NAME = ${name};`,
+      );
+    } catch (e) {
+      console.warn('Failed to inject app version into renderer', e);
+    }
+  });
+
   if (process.env.DEBUGGING) {
     // if on DEV or Production with debug enabled
     mainWindow.webContents.openDevTools();
@@ -95,6 +130,9 @@ function createWindow() {
 ipcMain.handle('get-app-data-path', () => {
   return app.getPath('userData');
 });
+
+// Synchronous handler so preload can obtain the package version before renderer starts
+// (removed) synchronous IPC handler — preload should not need to synchronously query main
 
 // Show native folder chooser and return selected path or null
 ipcMain.handle('dialog:select-folder', async (event) => {

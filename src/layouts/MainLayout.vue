@@ -77,7 +77,7 @@
                 <q-item-section>Settings</q-item-section>
               </q-item>
               <q-item clickable v-ripple @click="openAbout">
-                <q-item-section>About</q-item-section>
+                <q-item-section>About v{{ appVersion }}</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -98,6 +98,8 @@
 <script setup lang="ts">
 import 'src/utils/logger-shim';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import pkg from '../../package.json';
+// Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from 'vue-router';
 import { format } from 'date-fns';
 import NextEventNotification from '../components/NextEventNotification.vue';
@@ -116,6 +118,7 @@ const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
 let headerManageHandler: any = null;
+const appVersion = ref<string>(pkg?.version || 'unknown');
 
 onMounted(() => {
   clockTimer = setInterval(() => {
@@ -201,6 +204,8 @@ onMounted(async () => {
       }
     };
     window.addEventListener('group:manage-request', headerManageHandler as EventListener);
+    // Pull injected app version (set by main process) if available
+    // appVersion is populated from preload; nothing else required
   } catch (e) {
     // ignore
   }
@@ -246,6 +251,7 @@ onUnmounted(() => {
   } catch (e) {
     // ignore
   }
+  // no-op: no version listeners registered
 });
 
 // NextEventNotification component handles computation and display

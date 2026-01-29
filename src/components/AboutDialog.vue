@@ -18,17 +18,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, watchEffect } from 'vue';
+import pkg from '../../package.json';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
 
-const dialogVisible = computed({
-  get: () => !!props.modelValue,
-  set: (v: boolean) => emit('update:modelValue', v),
-});
+const dialogVisible = ref(!!props.modelValue);
+watchEffect(() => emit('update:modelValue', dialogVisible.value));
 
-const version = (window as any)?.APP_VERSION || 'unknown';
+const version = ref<string>(pkg?.version || 'unknown');
 
 function close() {
   dialogVisible.value = false as any;

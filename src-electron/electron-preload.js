@@ -36,6 +36,41 @@ const path = require('path');
 // Debug: confirm preload script is loaded
 console.log('Electron preload script loaded!');
 window.testPreload = true;
+// Preload no longer attempts to read package.json or call synchronous IPC for version.
+// The main process will inject `window.APP_VERSION` / `window.APP_NAME` after load.
+// For simplicity and reliability, read package.json synchronously from the project
+// root here and expose `window.APP_VERSION`/`window.APP_NAME` before renderer runs.
+try {
+  // Try several likely locations for package.json. If a file is missing or
+  // contains invalid JSON (partial file in build output), skip it and try next.
+  const candidates = [
+    path.resolve(process.cwd(), 'package.json'),
+    path.resolve(__dirname, '..', 'package.json'),
+    path.resolve(__dirname, '../../package.json'),
+  ];
+  for (const pkgPath of candidates) {
+    try {
+      if (!fs.existsSync(pkgPath)) continue;
+      const pkgRaw = fs.readFileSync(pkgPath, 'utf8');
+      if (!pkgRaw || !pkgRaw.trim()) continue;
+      let pkgJson;
+      try {
+        pkgJson = JSON.parse(pkgRaw);
+      } catch (parseErr) {
+        console.warn('preload: failed to parse package.json at', pkgPath, parseErr);
+        continue;
+      }
+      if (pkgJson && pkgJson.version) window.APP_VERSION = String(pkgJson.version);
+      if (pkgJson && pkgJson.name) window.APP_NAME = String(pkgJson.name);
+      console.log('preload: read package.json from', pkgPath);
+      break;
+    } catch (inner) {
+      void inner;
+    }
+  }
+} catch (e) {
+  void e;
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   readDir: async (dirPath) => {
@@ -48,10 +83,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readJsonFile: async (filePath) => {
     try {
       const data = await fs.promises.readFile(filePath, 'utf-8');
-      return JSON.parse(data);
+      if (!data || !data.trim()) return null;
+      try {
+        return JSON.parse(data);
+      } catch (parseError) {
+        console.warn('readJsonFile: invalid JSON at', filePath, parseError);
+        return null;
+      }
     } catch (error) {
-      console.error('Error reading file:', error);
-      throw error;
+      console.warn('readJsonFile: failed to read', filePath, error);
+      return null;
     }
   },
 
