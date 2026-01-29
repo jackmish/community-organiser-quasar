@@ -196,8 +196,38 @@ export function useDayOrganiser() {
   // Save data to storage
   const saveData = async () => {
     try {
-      // Persist organiserData as-is; do not mutate group objects here.
-      await storage.saveData(organiserData.value as OrganiserData);
+      // Persist organiserData: assemble groups with current tasks so disk files
+      // reflect the canonical tasks stored in `days`.
+      try {
+        const groupsOrig = Array.isArray(organiserData.value.groups)
+          ? organiserData.value.groups
+          : [];
+        // shallow copy groups and ensure tasks array exists
+        const groupsForSave = groupsOrig.map((g: any) => ({ ...(g || {}), tasks: [] }));
+        const groupIndex = new Map<string, any>();
+        for (const g of groupsForSave) {
+          groupIndex.set(String(g.id), g);
+        }
+        // Collect tasks from days and push into matching group tasks arrays
+        for (const dKey of Object.keys(organiserData.value.days)) {
+          const day = organiserData.value.days[dKey];
+          if (!day || !Array.isArray(day.tasks)) continue;
+          for (const t of day.tasks) {
+            const gid = t && (t.groupId ?? null);
+            if (gid != null && groupIndex.has(String(gid))) {
+              groupIndex.get(String(gid)).tasks.push(t);
+            }
+          }
+        }
+        const dataToSave: OrganiserData = {
+          ...organiserData.value,
+          groups: groupsForSave,
+        };
+        await storage.saveData(dataToSave);
+      } catch (err) {
+        // Fallback: persist organiserData as-is
+        await storage.saveData(organiserData.value as OrganiserData);
+      }
     } catch (error) {
       logger.error('Failed to save data:', error);
       throw error;
@@ -341,11 +371,40 @@ export function useDayOrganiser() {
 
   // Delete a task
   const deleteTask = async (date: string, taskId: string): Promise<void> => {
-    const dayData = getDayData(date);
-    dayData.tasks = dayData.tasks.filter((t) => t.id !== taskId);
+    // First try to remove from the provided date bucket (fast path)
+    try {
+      const dayData = organiserData.value.days[date];
+      if (dayData && Array.isArray(dayData.tasks)) {
+        const before = dayData.tasks.length;
+        dayData.tasks = dayData.tasks.filter((t) => t.id !== taskId);
+        if (dayData.tasks.length < before) {
+          await saveData();
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore and continue to global search
+    }
 
-    // Tasks are stored in days; no nested group task cleanup required.
+    // If not found in the provided date bucket, search across all days and remove the task
+    let removed = false;
+    try {
+      for (const dKey of Object.keys(organiserData.value.days)) {
+        const d = organiserData.value.days[dKey];
+        if (!d || !Array.isArray(d.tasks)) continue;
+        const before = d.tasks.length;
+        d.tasks = d.tasks.filter((t) => t.id !== taskId);
+        if (d.tasks.length < before) removed = true;
+      }
+      if (removed) {
+        await saveData();
+        return;
+      }
+    } catch (err) {
+      logger.error('Failed to remove task across days', err);
+    }
 
+    // If nothing removed, still persist to ensure consistency
     await saveData();
   };
 
