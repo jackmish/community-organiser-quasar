@@ -701,14 +701,14 @@ async function onAddGroup() {
       });
     } else {
       // add new
-      await addGroup(
+      await addGroup({
         name,
-        parent,
+        parentId: parent,
         color,
-        icon as any,
-        localShareSubgroups.value,
-        localHideTasksInParent.value,
-      );
+        icon: icon as any,
+        shareSubgroups: localShareSubgroups.value,
+        hideTasksFromParent: localHideTasksInParent.value,
+      });
     }
   } catch (e) {
     logger.error('add/update group failed', e);

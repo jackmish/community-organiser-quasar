@@ -2,15 +2,17 @@ import type { OrganiserData, TaskGroup } from '../day-organiser/types';
 import { generateGroupId } from './groupId';
 import { normalizeId as normalizeGroupId } from './groupUtils';
 
-export function addGroup(
-  organiserData: OrganiserData,
-  name: string,
-  parentId?: string,
-  color?: string,
-  icon?: string,
-  shareSubgroups?: boolean,
-  hideTasksFromParent?: boolean,
-): TaskGroup {
+export type CreateGroupInput = {
+  name: string;
+  parentId?: string | undefined;
+  color?: string | undefined;
+  icon?: string | undefined;
+  shareSubgroups?: boolean | undefined;
+  hideTasksFromParent?: boolean | undefined;
+};
+
+export function addGroup(organiserData: OrganiserData, payload: CreateGroupInput): TaskGroup {
+  const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent } = payload;
   const now = new Date().toISOString();
   const group: TaskGroup = {
     id: generateGroupId(name),
@@ -21,7 +23,7 @@ export function addGroup(
     ...(icon && { icon }),
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
-  } as TaskGroup;
+  };
 
   if (!Array.isArray(organiserData.groups)) organiserData.groups = [];
   organiserData.groups.push(group);

@@ -2229,14 +2229,12 @@ const onFileSelected = async (event: Event) => {
 const handleAddGroup = async () => {
   if (!newGroupName.value.trim()) return;
 
-  const group = await addGroup(
-    newGroupName.value,
-    newGroupParent.value,
-    newGroupColor.value,
-    undefined,
-    undefined,
-    false,
-  );
+  const group = await addGroup({
+    name: newGroupName.value,
+    parentId: newGroupParent.value,
+    color: newGroupColor.value,
+    hideTasksFromParent: false,
+  });
 
   // Set as default and active if it's the first group
   if (!defaultGroupId.value) {
@@ -2254,7 +2252,7 @@ const handleAddGroup = async () => {
 };
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await addGroup(data.name, undefined, data.color, undefined, undefined, false);
+  const group = await addGroup({ name: data.name, color: data.color, hideTasksFromParent: false });
   defaultGroupId.value = group.id;
   activeGroup.value = {
     label: group.name,

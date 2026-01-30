@@ -8,6 +8,7 @@ import {
   updateGroup as updateGroupService,
   deleteGroup as deleteGroupService,
 } from '../group/groupService';
+import type { CreateGroupInput } from '../group/groupService';
 import logger from 'src/utils/logger';
 import {
   normalizeId as normalizeGroupId,
@@ -621,23 +622,8 @@ export function useDayOrganiser() {
     return false;
   };
   // Group management helpers (delegated to groupService)
-  const addGroup = async (
-    name: string,
-    parentId?: string,
-    color?: string,
-    icon?: string,
-    shareSubgroups?: boolean,
-    hideTasksFromParent?: boolean,
-  ): Promise<TaskGroup> => {
-    const group = addGroupService(
-      organiserData.value,
-      name,
-      parentId,
-      color,
-      icon,
-      shareSubgroups,
-      hideTasksFromParent,
-    );
+  const addGroup = async (groupInput: CreateGroupInput): Promise<TaskGroup> => {
+    const group = addGroupService(organiserData.value, groupInput);
     await saveData();
     return group;
   };
