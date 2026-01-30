@@ -1040,9 +1040,7 @@ function getEventsForDay(day: string) {
 
 /* Past days (yesterday and older) — light gray background */
 .calendar-day-btn.calendar-past {
-  background-color: #e0e9ff !important;
-  color: #666 !important;
-  border-color: #e0e0e0 !important;
+  background-color: transparent !important;
 }
 .calendar-day-btn.calendar-past .calendar-day-number {
   color: #444 !important;
