@@ -3,7 +3,11 @@ import { getCycleType } from '../../utils/occursOnDay';
 import type { Task } from '../task/types';
 import type { DayData, OrganiserData, TaskGroup } from './types';
 import { storage } from './storage';
-import { generateGroupId } from '../group/groupId';
+import {
+  addGroup as addGroupService,
+  updateGroup as updateGroupService,
+  deleteGroup as deleteGroupService,
+} from '../group/groupService';
 import logger from 'src/utils/logger';
 import {
   normalizeId as normalizeGroupId,
@@ -616,7 +620,7 @@ export function useDayOrganiser() {
     }
     return false;
   };
-  // Add group management helpers
+  // Group management helpers (delegated to groupService)
   const addGroup = async (
     name: string,
     parentId?: string,
@@ -625,20 +629,15 @@ export function useDayOrganiser() {
     shareSubgroups?: boolean,
     hideTasksFromParent?: boolean,
   ): Promise<TaskGroup> => {
-    const now = new Date().toISOString();
-    const group: TaskGroup = {
-      id: generateGroupId(name),
+    const group = addGroupService(
+      organiserData.value,
       name,
-      createdAt: now,
-      ...(parentId && { parentId }),
-      ...(color && { color }),
-      ...(icon && { icon }),
-      ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
-      ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
-    };
-
-    organiserData.value.groups.push(group);
-    // Save using storage.ts logic (handles Electron and browser)
+      parentId,
+      color,
+      icon,
+      shareSubgroups,
+      hideTasksFromParent,
+    );
     await saveData();
     return group;
   };
@@ -647,70 +646,23 @@ export function useDayOrganiser() {
     groupId: string,
     updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
   ): Promise<void> => {
-    const group = organiserData.value.groups.find((g: TaskGroup) => g.id === groupId);
-    if (!group) {
-      throw new Error('Group not found');
-    }
-    Object.assign(group, updates);
+    updateGroupService(organiserData.value, groupId, updates);
     await saveData();
   };
 
   const deleteGroup = async (groupId: string): Promise<void> => {
-    const groupToDelete = organiserData.value.groups.find((g: TaskGroup) => g.id === groupId);
-
-    // Determine whether the group has any associated tasks before removal
-    const groupHasTasks = Object.values(organiserData.value.days).some((day) =>
-      day.tasks.some((task: any) => String(task.groupId) === String(groupId)),
-    );
-
-    // Remove group from persisted list
-    organiserData.value.groups = organiserData.value.groups.filter(
-      (g: TaskGroup) => g.id !== groupId,
-    );
-
-    // Remove groupId from all tasks
-    Object.values(organiserData.value.days).forEach((day) => {
-      day.tasks.forEach((task) => {
-        if (task.groupId === groupId) {
-          delete task.groupId;
-        }
-      });
-    });
-
-    // Move child groups to parent or root
-    organiserData.value.groups.forEach((g: TaskGroup) => {
-      const pid = normalizeGroupId(g.parentId ?? g.parent_id ?? null);
-      if (pid === String(groupId)) {
-        const newParent = groupToDelete
-          ? normalizeGroupId(groupToDelete.parentId ?? (groupToDelete as any).parent_id ?? null)
-          : null;
-        // preserve original key style when updating (store as string or remove)
-        if (g.parentId !== undefined) {
-          if (newParent) g.parentId = newParent;
-          else delete g.parentId;
-        } else if (g.parent_id !== undefined) {
-          if (newParent) g.parent_id = newParent;
-          else delete g.parent_id;
-        } else {
-          // default to camelCase
-          if (newParent) g.parentId = newParent;
-        }
-      }
-    });
-
+    const { groupHasTasks } = deleteGroupService(organiserData.value, groupId);
     await saveData();
 
     // If the deleted group had no tasks, remove its file from disk
     try {
       if (!groupHasTasks) {
-        // dynamically import storage delete helper to avoid circular imports
         const storageMod = await import('./storage');
         if (storageMod && typeof storageMod.deleteGroupFile === 'function') {
           await storageMod.deleteGroupFile(groupId);
         }
       }
     } catch (err) {
-      // Log but do not block deletion flow
       logger.error('Failed to delete group file for', groupId, err);
     }
   };
