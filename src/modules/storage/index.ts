@@ -1,19 +1,11 @@
 import type { OrganiserData } from '../day-organiser/types';
 import logger from 'src/utils/logger';
+import type { ElectronAPI } from './types';
 
 declare global {
+  // Augment Window so existing code that uses `window.electronAPI` keeps working.
   interface Window {
-    electronAPI?: {
-      readJsonFile: (filePath: string) => Promise<any>;
-      writeJsonFile: (filePath: string, data: any) => Promise<boolean>;
-      writeFile: (filePath: string, data: string) => Promise<boolean>;
-      deleteFile: (filePath: string) => Promise<boolean>;
-      fileExists: (filePath: string) => Promise<boolean>;
-      getAppDataPath: () => Promise<string>;
-      joinPath: (...paths: string[]) => string;
-      ensureDir: (dirPath: string) => Promise<boolean>;
-      readDir: (dirPath: string) => Promise<string[]>;
-    };
+    electronAPI?: ElectronAPI;
   }
 }
 
