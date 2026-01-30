@@ -1,4 +1,4 @@
-import type { TaskGroup } from './types';
+import type { TaskGroup } from './TaskGroup';
 
 // Normalize various possible id shapes into a string id or null
 export const normalizeId = (v: any): string | null => {

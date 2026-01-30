@@ -10,6 +10,3 @@ export interface TaskGroup {
   parent_id?: string | null;
   createdAt: string;
 }
-
-// Re-exporting minimal task-related types is intentionally omitted here;
-// `Task` and day-organiser types remain in `src/modules/day-organiser/types.ts`.

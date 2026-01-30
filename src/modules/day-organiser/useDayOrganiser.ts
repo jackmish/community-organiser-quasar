@@ -2,13 +2,13 @@ import { ref, computed, watch } from 'vue';
 import { getCycleType } from '../../utils/occursOnDay';
 import type { OrganiserData, DayData, Task, TaskGroup } from './types';
 import { storage } from './storage';
-import { generateGroupId } from '../groups/groupId';
+import { generateGroupId } from '../group/groupId';
 import logger from 'src/utils/logger';
 import {
   normalizeId as normalizeGroupId,
   getGroupsByParent as getGroupsByParentUtil,
   buildGroupTree,
-} from '../groups/groupUtils';
+} from '../group/groupUtils';
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
