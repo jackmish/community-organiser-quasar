@@ -1,4 +1,5 @@
-import type { OrganiserData, DayData, Task } from '../task/types';
+import type { Task } from '../task/types';
+import type { DayData, OrganiserData } from './types';
 import logger from 'src/utils/logger';
 // Do not import Node.js path module in renderer
 

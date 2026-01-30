@@ -36,14 +36,4 @@ export interface Task {
   updatedAt: string;
 }
 
-export interface DayData {
-  date: string; // YYYY-MM-DD
-  tasks: Task[];
-  notes?: string;
-}
-
-export interface OrganiserData {
-  days: Record<string, DayData>;
-  groups: TaskGroup[];
-  lastModified: string;
-}
+// DayData and OrganiserData moved to `src/modules/day-organiser/types.ts`

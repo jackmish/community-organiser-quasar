@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue';
 import { getCycleType } from '../../utils/occursOnDay';
-import type { OrganiserData, DayData, Task, TaskGroup } from '../task/types';
+import type { Task } from '../task/types';
+import type { DayData, OrganiserData, TaskGroup } from './types';
 import { storage } from './storage';
 import { generateGroupId } from '../group/groupId';
 import logger from 'src/utils/logger';

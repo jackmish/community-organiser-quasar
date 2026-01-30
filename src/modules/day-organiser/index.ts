@@ -1,3 +1,4 @@
 export { useDayOrganiser } from './useDayOrganiser';
 export { storage } from './storage';
-export type { Task, DayData, OrganiserData, TaskDuration, TaskGroup } from '../task/types';
+export type { Task, TaskDuration } from '../task/types';
+export type { DayData, OrganiserData, TaskGroup } from './types';
