@@ -1,17 +1,7 @@
 export type TaskDuration = 0 | 1.0 | 2.0 | 3.0 | 4.0 | 5.0 | 6.0;
 
-export interface TaskGroup {
-  id: string;
-  name: string;
-  color?: string;
-  shareSubgroups?: boolean;
-  hideTasksFromParent?: boolean;
-  icon?: string;
-  parentId?: string; // For hierarchical groups
-  // legacy snake_case field from older exports
-  parent_id?: string | null;
-  createdAt: string;
-}
+import type { TaskGroup } from '../groups/types';
+export type { TaskGroup };
 
 export interface Task {
   id: string;

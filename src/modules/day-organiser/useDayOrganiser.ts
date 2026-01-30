@@ -2,8 +2,13 @@ import { ref, computed, watch } from 'vue';
 import { getCycleType } from '../../utils/occursOnDay';
 import type { OrganiserData, DayData, Task, TaskGroup } from './types';
 import { storage } from './storage';
-import { generateGroupId } from './groupId';
+import { generateGroupId } from '../groups/groupId';
 import logger from 'src/utils/logger';
+import {
+  normalizeId as normalizeGroupId,
+  getGroupsByParent as getGroupsByParentUtil,
+  buildGroupTree,
+} from '../groups/groupUtils';
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -670,21 +675,11 @@ export function useDayOrganiser() {
     });
 
     // Move child groups to parent or root
-    const normalizeId = (v: any): string | null => {
-      if (v === null || v === undefined) return null;
-      // If it's an object like { label, value } or { id }, prefer .value then .id
-      if (typeof v === 'object') {
-        const maybe = v.value ?? v.id ?? null;
-        return maybe == null ? null : String(maybe);
-      }
-      return String(v);
-    };
-
     organiserData.value.groups.forEach((g: any) => {
-      const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
+      const pid = normalizeGroupId(g.parentId ?? g.parent_id ?? null);
       if (pid === String(groupId)) {
         const newParent = groupToDelete
-          ? normalizeId(groupToDelete.parentId ?? (groupToDelete as any).parent_id ?? null)
+          ? normalizeGroupId(groupToDelete.parentId ?? (groupToDelete as any).parent_id ?? null)
           : null;
         // preserve original key style when updating (store as string or remove)
         if (g.parentId !== undefined) {
@@ -718,58 +713,11 @@ export function useDayOrganiser() {
   };
 
   const getGroupsByParent = (parentId?: string): TaskGroup[] => {
-    const norm = parentId == null ? null : String(parentId);
-    const normalize = (v: any): string | null => {
-      if (v == null) return null;
-      if (typeof v === 'object') return (v.value ?? v.id) ? String(v.value ?? v.id) : null;
-      return String(v);
-    };
-    return organiserData.value.groups.filter((g: any) => {
-      const pid = normalize(g.parentId ?? g.parent_id ?? null);
-      if (pid == null && norm == null) return true;
-      if (pid != null && norm != null) return String(pid) === norm;
-      return false;
-    });
+    return getGroupsByParentUtil(organiserData.value.groups, parentId);
   };
 
   // Derived tree representation for UI and privileges. This does NOT mutate stored group objects.
-  const groupTree = computed(() => {
-    const raw = organiserData.value.groups || [];
-    const map = new Map<string, any>();
-    // Create node wrappers that reference the original group objects (do not mutate groups)
-    const normalize = (v: any): string | null => {
-      if (v == null) return null;
-      if (typeof v === 'object') return (v.value ?? v.id) ? String(v.value ?? v.id) : null;
-      return String(v);
-    };
-
-    raw.forEach((g: any) => {
-      map.set(String(g.id), {
-        id: g.id,
-        label: g.name,
-        icon: g.icon,
-        color: g.color,
-        // store reference to original group
-        group: g,
-        parentId: normalize(g.parentId ?? g.parent_id ?? null),
-        shareSubgroups: g.shareSubgroups ?? false,
-        hideTasksFromParent: g.hideTasksFromParent ?? false,
-        children: [] as any[],
-      });
-    });
-
-    const roots: any[] = [];
-    map.forEach((node) => {
-      if (node.parentId == null) {
-        roots.push(node);
-      } else {
-        const parent = map.get(String(node.parentId));
-        if (parent) parent.children.push(node);
-        else roots.push(node); // orphaned parent -> treat as root
-      }
-    });
-    return roots;
-  });
+  const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
 
   const getGroupHierarchy = (): any[] => {
     return groupTree.value;
