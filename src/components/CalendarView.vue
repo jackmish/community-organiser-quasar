@@ -117,6 +117,7 @@
                     { 'calendar-holiday': !!getHoliday(day) },
                     { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
                     { 'calendar-selected': day === selectedDate },
+                    { 'calendar-past': day <= format(addDays(new Date(), -1), 'yyyy-MM-dd') },
                   ]"
                 >
                   <div class="calendar-day-content">
@@ -1035,5 +1036,15 @@ function getEventsForDay(day: string) {
   word-break: break-word;
   line-height: 1;
   text-transform: none !important;
+}
+
+/* Past days (yesterday and older) — light gray background */
+.calendar-day-btn.calendar-past {
+  background-color: #e0e9ff !important;
+  color: #666 !important;
+  border-color: #e0e0e0 !important;
+}
+.calendar-day-btn.calendar-past .calendar-day-number {
+  color: #444 !important;
 }
 </style>
