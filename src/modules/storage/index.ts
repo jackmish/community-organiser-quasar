@@ -134,7 +134,7 @@ export async function getGroupFilesDirectory(): Promise<string> {
   if (window.electronAPI) {
     return await window.electronAPI.getAppDataPath();
   }
-  return 'e:/Dev/laragon/www/recruitment-tasks/_Learning/MinorProjects/CommunityOrganiser/community-organiser-quasar/testing/storage/groups';
+  return '';
 }
 
 export async function saveGroupsToFiles(groups: any[]): Promise<void> {
