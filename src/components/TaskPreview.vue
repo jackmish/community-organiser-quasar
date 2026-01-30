@@ -222,7 +222,7 @@ import {
   highlightIcon,
 } from './theme';
 import { useDayOrganiser } from '../modules/day-organiser';
-import type { Task } from '../modules/day-organiser/types';
+import type { Task } from '../modules/task/types';
 
 const props = defineProps<{
   task: Task;

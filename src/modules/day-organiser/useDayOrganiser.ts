@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue';
 import { getCycleType } from '../../utils/occursOnDay';
-import type { OrganiserData, DayData, Task, TaskGroup } from './types';
+import type { OrganiserData, DayData, Task, TaskGroup } from '../task/types';
 import { storage } from './storage';
 import { generateGroupId } from '../group/groupId';
 import logger from 'src/utils/logger';
@@ -646,7 +646,7 @@ export function useDayOrganiser() {
     groupId: string,
     updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
   ): Promise<void> => {
-    const group = organiserData.value.groups.find((g) => g.id === groupId);
+    const group = organiserData.value.groups.find((g: TaskGroup) => g.id === groupId);
     if (!group) {
       throw new Error('Group not found');
     }
@@ -655,7 +655,7 @@ export function useDayOrganiser() {
   };
 
   const deleteGroup = async (groupId: string): Promise<void> => {
-    const groupToDelete = organiserData.value.groups.find((g) => g.id === groupId);
+    const groupToDelete = organiserData.value.groups.find((g: TaskGroup) => g.id === groupId);
 
     // Determine whether the group has any associated tasks before removal
     const groupHasTasks = Object.values(organiserData.value.days).some((day) =>
@@ -663,7 +663,9 @@ export function useDayOrganiser() {
     );
 
     // Remove group from persisted list
-    organiserData.value.groups = organiserData.value.groups.filter((g) => g.id !== groupId);
+    organiserData.value.groups = organiserData.value.groups.filter(
+      (g: TaskGroup) => g.id !== groupId,
+    );
 
     // Remove groupId from all tasks
     Object.values(organiserData.value.days).forEach((day) => {
@@ -675,7 +677,7 @@ export function useDayOrganiser() {
     });
 
     // Move child groups to parent or root
-    organiserData.value.groups.forEach((g: any) => {
+    organiserData.value.groups.forEach((g: TaskGroup) => {
       const pid = normalizeGroupId(g.parentId ?? g.parent_id ?? null);
       if (pid === String(groupId)) {
         const newParent = groupToDelete

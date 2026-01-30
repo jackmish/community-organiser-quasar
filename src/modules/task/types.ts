@@ -1,4 +1,4 @@
-export type TaskDuration = 0 | 1.0 | 2.0 | 3.0 | 4.0 | 5.0 | 6.0;
+export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 import type { TaskGroup } from '../group/TaskGroup';
 export type { TaskGroup };
@@ -11,7 +11,7 @@ export interface Task {
   category: 'work' | 'personal' | 'meeting' | 'other';
   priority: 'low' | 'medium' | 'high' | 'critical';
   // Numeric status code for the task lifecycle (e.g. 0 = done, 1 = just created)
-  status_id?: number | string;
+  status_id?: number | string | undefined;
   // Type of task, e.g. 'TimeEvent' or 'Todo'
   type_id?: string;
   // Alternate event date field; some code uses `eventDate` instead of `date`
