@@ -2,7 +2,7 @@
   <q-card
     flat
     :class="['q-pa-sm q-mb-md', size === 'small' ? 'replenish-small' : 'replenish-default']"
-    style="background: transparent; border-radius: 8px"
+    :style="containerStyle"
   >
     <!-- <div class="row items-center" style="gap: 8px">
       <q-icon name="shopping_cart" color="primary" />
@@ -48,6 +48,21 @@ const props = defineProps<{
 }>();
 
 const size = props.size || 'default';
+
+import { computed } from 'vue';
+
+// Compute a container style so the whole ReplenishmentList card can span
+// multiple columns in the parent grid. For small mode: 1-3 items -> span 1,
+// 4-6 -> span 2, 7-9 -> span 3, etc.
+const containerStyle = computed(() => {
+  const base: any = { background: 'transparent', borderRadius: '8px' };
+  if (size !== 'small') return base;
+  const n = Array.isArray(props.replenishTasks) ? props.replenishTasks.length : 0;
+  const span = Math.max(1, Math.ceil(n / 3));
+  // Set gridColumn to span N so the card consumes multiple columns in the parent's grid
+  base.gridColumn = `span ${span}`;
+  return base;
+});
 
 const emit = defineEmits<{
   (e: 'toggle-status', task: any): void;
