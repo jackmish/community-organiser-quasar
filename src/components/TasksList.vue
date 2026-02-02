@@ -11,13 +11,11 @@
     <template v-if="mergedTasks.length > 0">
       <template v-for="item in mergedTasks" :key="item.id">
         <template v-if="item.__isReplenish">
-          <q-card-section>
-            <ReplenishmentList
-              :replenish-tasks="item._items"
-              @toggle-status="$emit('toggle-status', $event)"
-              @edit-task="$emit('edit-task', $event)"
-            />
-          </q-card-section>
+          <ReplenishmentList
+            :replenish-tasks="item._items"
+            @toggle-status="$emit('toggle-status', $event)"
+            @edit-task="$emit('edit-task', $event)"
+          />
         </template>
         <template v-else-if="item.__isHiddenGroup">
           <q-item

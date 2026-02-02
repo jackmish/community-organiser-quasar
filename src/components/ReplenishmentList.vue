@@ -1,10 +1,10 @@
 <template>
-  <q-card flat class="q-pa-sm q-mb-md" style="background: #e8f5ff; border-radius: 8px">
-    <div class="row items-center" style="gap: 8px">
+  <q-card flat class="q-pa-sm q-mb-md" style="background: transparent; border-radius: 8px">
+    <!-- <div class="row items-center" style="gap: 8px">
       <q-icon name="shopping_cart" color="primary" />
       <div class="text-subtitle2 text-primary"><strong>Replenishment</strong></div>
-    </div>
-    <div class="replenish-grid q-mt-sm">
+    </div> -->
+    <div class="replenish-grid">
       <div
         v-for="r in props.replenishTasks"
         :key="r.id"
@@ -70,7 +70,6 @@ function onDoneClick(task: any) {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-top: 8px;
 }
 .replenish-item {
   cursor: pointer;
