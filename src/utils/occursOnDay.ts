@@ -81,6 +81,20 @@ export function occursOnDay(task: any, day: string): boolean {
     return false;
   }
 
-  // Not cyclic: falls back to one-time match by date
-  return (task.date || task.eventDate) === day;
+  // Not cyclic: falls back to one-time match by date. If `date`/`eventDate` is
+  // missing, use the task's creation timestamp (`createdAt` / `created_at`) and
+  // compare only the YYYY-MM-DD portion so ISO datetimes still match.
+  const ev = task.date ?? task.eventDate ?? task.createdAt ?? task.created_at ?? null;
+  if (!ev) return false;
+  if (ev instanceof Date) {
+    const y = ev.getFullYear();
+    const m = String(ev.getMonth() + 1).padStart(2, '0');
+    const d = String(ev.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}` === day;
+  }
+  if (typeof ev === 'string') {
+    const datePart = ev.indexOf('T') !== -1 ? ev.split('T')[0] : ev;
+    return datePart === day;
+  }
+  return false;
 }

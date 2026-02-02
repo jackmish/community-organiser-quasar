@@ -385,8 +385,15 @@ const mergedTasks = computed(() => {
     try {
       const taskGroupId = t.groupId ?? t.group_id ?? null;
       if (!taskGroupId) return true;
-      // if the task's group is an ancestor of the active group, filter it out
-      if (isAncestor(taskGroupId, activeId)) return false;
+      // Only include tasks that belong to the active group itself or its descendants.
+      // Exclude tasks from ancestor groups and sibling groups.
+      const taskG = String(taskGroupId);
+      const activeG = String(activeId);
+      if (taskG === activeG) return true;
+      // if the task's group is a descendant of the active group, include it
+      if (isAncestor(activeG, taskG)) return true;
+      // otherwise exclude (ancestors, siblings, or unrelated groups)
+      return false;
     } catch (e) {
       // fall through
     }

@@ -55,6 +55,37 @@ const emit = defineEmits([
   'delete-task',
 ]);
 
+// Group menu state for edit-mode group changing
+const groupMenu = ref(false);
+const { groups, updateTask } = useDayOrganiser();
+
+async function selectGroupForEdit(gid: string | null) {
+  try {
+    // Use localNewTask eventDate (fallback to selectedDate prop)
+    const date = localNewTask.value.eventDate || props.selectedDate || '';
+    const taskId = localNewTask.value.id;
+    if (!taskId) return;
+    const updates: any = { groupId: gid == null ? undefined : gid };
+    await updateTask(date, taskId, updates);
+    // Also reflect immediately in the form state
+    localNewTask.value.groupId = gid == null ? undefined : gid;
+  } catch (e) {
+    logger.error('Failed to change task group (edit mode)', e);
+  } finally {
+    groupMenu.value = false;
+  }
+}
+
+async function selectGroupForAdd(gid: string | null) {
+  try {
+    localNewTask.value.groupId = gid == null ? undefined : gid;
+  } catch (e) {
+    logger.error('Failed to change task group (add mode)', e);
+  } finally {
+    groupMenu.value = false;
+  }
+}
+
 // Input refs
 const dayInput = ref<any>(null);
 const monthInput = ref<any>(null);
@@ -1868,13 +1899,144 @@ function onSubmit(event: Event) {
                             <q-btn flat dense label="No" @click.stop="cancelDeleteConfirm" />
                           </div>
                         </div>
-                        <div
-                          v-if="activeGroup && activeGroup.value"
-                          class="text-caption text-grey-7 q-ml-md"
-                        >
+                        <div v-if="mode === 'add'" class="text-caption text-grey-7 q-ml-md">
                           <q-icon name="info" size="xs" class="q-mr-xs" />
                           Task will be added to:
-                          <strong>{{ activeGroup.label.split(' (')[0] }}</strong>
+                          <div style="display: inline-block; margin-left: 8px">
+                            <q-chip
+                              size="sm"
+                              icon="folder"
+                              class="q-pointer"
+                              clickable
+                              @click.stop="groupMenu = true"
+                            >
+                              {{
+                                (localNewTask.groupId &&
+                                  (groups || []).find((g) => g.id === localNewTask.groupId)
+                                    ?.name) ||
+                                (activeGroup && activeGroup.label.split(' (')[0]) ||
+                                'No group'
+                              }}
+                            </q-chip>
+                            <q-menu
+                              v-model="groupMenu"
+                              anchor="bottom right"
+                              self="top right"
+                              class="group-menu"
+                            >
+                              <q-list dense separator>
+                                <q-item clickable dense @click="() => selectGroupForAdd(null)">
+                                  <q-item-section
+                                    side
+                                    style="
+                                      width: 36px;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    "
+                                  >
+                                    <q-icon name="clear" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <div style="font-weight: 600">No group</div>
+                                  </q-item-section>
+                                </q-item>
+                                <q-separator />
+                                <q-item
+                                  v-for="g in groups || []"
+                                  :key="g.id"
+                                  clickable
+                                  dense
+                                  @click="() => selectGroupForAdd(g.id)"
+                                >
+                                  <q-item-section
+                                    side
+                                    style="
+                                      width: 36px;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    "
+                                  >
+                                    <q-icon name="folder" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <div style="font-weight: 600">{{ g.name }}</div>
+                                  </q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+                          </div>
+                        </div>
+
+                        <div v-else-if="mode === 'edit'" class="text-caption text-grey-7 q-ml-md">
+                          <q-icon name="info" size="xs" class="q-mr-xs" />
+                          Task will be updated in:
+                          <div style="display: inline-block; margin-left: 8px">
+                            <q-chip
+                              size="sm"
+                              icon="folder"
+                              class="q-pointer"
+                              clickable
+                              @click.stop="groupMenu = true"
+                            >
+                              {{
+                                (localNewTask.groupId &&
+                                  (groups || []).find((g) => g.id === localNewTask.groupId)
+                                    ?.name) ||
+                                activeGroup?.label?.split(' (')[0] ||
+                                'No group'
+                              }}
+                            </q-chip>
+                            <q-menu
+                              v-model="groupMenu"
+                              anchor="bottom right"
+                              self="top right"
+                              class="group-menu"
+                            >
+                              <q-list dense separator>
+                                <q-item clickable dense @click="() => selectGroupForEdit(null)">
+                                  <q-item-section
+                                    side
+                                    style="
+                                      width: 36px;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    "
+                                  >
+                                    <q-icon name="clear" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <div style="font-weight: 600">No group</div>
+                                  </q-item-section>
+                                </q-item>
+                                <q-separator />
+                                <q-item
+                                  v-for="g in groups || []"
+                                  :key="g.id"
+                                  clickable
+                                  dense
+                                  @click="() => selectGroupForEdit(g.id)"
+                                >
+                                  <q-item-section
+                                    side
+                                    style="
+                                      width: 36px;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    "
+                                  >
+                                    <q-icon name="folder" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <div style="font-weight: 600">{{ g.name }}</div>
+                                  </q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+                          </div>
                         </div>
                       </div>
                     </div>

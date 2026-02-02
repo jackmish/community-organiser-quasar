@@ -1246,46 +1246,44 @@ const sortedTasks = computed(() => {
     // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
     logger.warn('Failed to include Todo extras for today', err);
   }
-  if (activeGroup.value && activeGroup.value.value !== null) {
+  // Helper to check whether a task group is visible for the current active group.
+  const isVisibleForActive = (candidateId: any) => {
+    if (!activeGroup.value || activeGroup.value.value === null) return true;
+    if (candidateId == null) return false;
     const activeId = String(activeGroup.value.value);
+    const cid = String(candidateId);
+    if (cid === activeId) return true;
+
     const getGroupById = (id: any) =>
       (groups.value || []).find((g: any) => String(g.id) === String(id));
-    const isVisibleForActive = (candidateId: any) => {
-      if (candidateId == null) return false;
-      const cid = String(candidateId);
-      if (cid === activeId) return true;
+    const node = getGroupById(cid);
+    if (!node) return false;
 
-      const node = getGroupById(cid);
-      if (!node) return false;
+    // If node is direct child of active group, show it unless the child hides tasks from parent
+    const parentId = node.parentId ?? node.parent_id ?? null;
+    if (parentId == null) return false;
+    if (String(parentId) === activeId) {
+      if (node.hideTasksFromParent) return false;
+      return true;
+    }
 
-      // If node is direct child of active group, show it unless the child hides tasks from parent
-      const parentId = node.parentId ?? node.parent_id ?? null;
-      if (parentId == null) return false;
-      if (String(parentId) === activeId) {
-        if (node.hideTasksFromParent) return false;
-        return true;
-      }
-
-      // For deeper descendants, walk upwards from the node's parent and ensure
-      // none of the intermediate child nodes request hiding from their parent,
-      // and each ancestor has shareSubgroups === true.
-      let childNode: any = node;
-      let cur = getGroupById(parentId);
-      while (cur) {
-        // if the child requests hiding from its immediate parent, do not show
-        if (childNode && childNode.hideTasksFromParent) return false;
-        if (!cur.shareSubgroups) return false;
-        const curParent = cur.parentId ?? cur.parent_id ?? null;
-        if (curParent == null) return false;
-        if (String(curParent) === activeId) return true;
-        childNode = cur;
-        cur = getGroupById(curParent);
-      }
-      return false;
-    };
-
-    tasksToSort = tasksToSort.filter((task) => isVisibleForActive(task.groupId));
-  }
+    // For deeper descendants, walk upwards from the node's parent and ensure
+    // none of the intermediate child nodes request hiding from their parent,
+    // and each ancestor has shareSubgroups === true.
+    let childNode: any = node;
+    let cur = getGroupById(parentId);
+    while (cur) {
+      // if the child requests hiding from its immediate parent, do not show
+      if (childNode && childNode.hideTasksFromParent) return false;
+      if (!cur.shareSubgroups) return false;
+      const curParent = cur.parentId ?? cur.parent_id ?? null;
+      if (curParent == null) return false;
+      if (String(curParent) === activeId) return true;
+      childNode = cur;
+      cur = getGroupById(curParent);
+    }
+    return false;
+  };
 
   // Remove tasks that are stored on this date but are cyclic and shouldn't occur today
   try {
@@ -1321,10 +1319,13 @@ const sortedTasks = computed(() => {
           const clone = { ...t, eventDate: day };
           // mark as generated instance so UI can show it differently if needed
           (clone as any).__isCyclicInstance = true;
-          tasksToSort.push(clone);
+          // Respect group visibility for generated occurrences
+          if (isVisibleForActive(clone.groupId)) tasksToSort.push(clone);
         }
       }
     }
+    // Ensure tasks list respects active group visibility after merging generated items
+    tasksToSort = tasksToSort.filter((task) => isVisibleForActive(task.groupId));
   } catch (e) {
     // ignore errors here
   }
@@ -1731,8 +1732,9 @@ const getDisplayDescription = (task: Task): string => {
 };
 
 const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
-  // Check if active group is selected (and not "All Groups")
-  if (!activeGroup.value || activeGroup.value.value === null) {
+  // Ensure there's a group to assign: prefer payload.groupId, otherwise active group
+  const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
+  if (groupIdToUse === null || groupIdToUse === undefined) {
     $q.notify({
       type: 'warning',
       message: 'Please select an active group first (not "All Groups")',
@@ -1748,7 +1750,7 @@ const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => 
   const taskData: any = {
     ...taskPayload,
     date: currentDate.value,
-    groupId: activeGroup.value.value,
+    groupId: groupIdToUse,
   };
 
   const created = await addTask(currentDate.value, taskData);
