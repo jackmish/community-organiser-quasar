@@ -10,85 +10,95 @@
   >
     <template v-if="mergedTasks.length > 0">
       <template v-for="item in mergedTasks" :key="item.id">
-        <q-item
-          v-if="item.__isHiddenGroup"
-          class="q-pa-sm task-card hidden-group-item"
-          clickable
-          @click.stop="selectHiddenGroup(item._group)"
-        >
-          <q-item-section>
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
-              <q-avatar
-                size="40"
-                :style="{ background: item._group.color || getGroupColor(item._group.id) }"
-              >
-                <q-icon
-                  :name="item._group.icon || getGroupIcon(item._group.id) || 'group'"
-                  size="18"
-                  color="white"
-                />
-              </q-avatar>
-              <div class="title-main">
-                <div class="title-text">
-                  <q-item-label class="title-ellipsis"
-                    ><strong>{{ item._group.name }}</strong></q-item-label
-                  >
-                  <div class="text-caption">{{ item._group.total }} tasks</div>
+        <template v-if="item.__isReplenish">
+          <q-card-section>
+            <ReplenishmentList
+              :replenish-tasks="item._items"
+              @toggle-status="$emit('toggle-status', $event)"
+              @edit-task="$emit('edit-task', $event)"
+            />
+          </q-card-section>
+        </template>
+        <template v-else-if="item.__isHiddenGroup">
+          <q-item
+            class="q-pa-sm task-card hidden-group-item"
+            clickable
+            @click.stop="selectHiddenGroup(item._group)"
+          >
+            <q-item-section>
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
+                <q-avatar
+                  size="40"
+                  :style="{ background: item._group.color || getGroupColor(item._group.id) }"
+                >
+                  <q-icon
+                    :name="item._group.icon || getGroupIcon(item._group.id) || 'group'"
+                    size="18"
+                    color="white"
+                  />
+                </q-avatar>
+                <div class="title-main">
+                  <div class="title-text">
+                    <q-item-label class="title-ellipsis"
+                      ><strong>{{ item._group.name }}</strong></q-item-label
+                    >
+                    <div class="text-caption">{{ item._group.total }} tasks</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </q-item-section>
-          <q-item-section side>
-            <div class="priority-summary-grid">
-              <span
-                v-if="item._group.critical > 0"
-                class="priority-summary"
-                :style="{ background: '#b71c1c', color: 'white' }"
-              >
-                <q-icon name="warning" size="14px" /> {{ item._group.critical }}
-              </span>
-              <span
-                v-if="item._group.high > 0"
-                class="priority-summary"
-                :style="{
-                  background: themePriorityColors.high,
-                  color: themePriorityTextColor('high'),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions['high']?.icon || 'priority_high'"
-                  size="14px"
-                />
-                {{ item._group.high }}
-              </span>
-              <span
-                v-if="item._group.medium > 0"
-                class="priority-summary"
-                :style="{
-                  background: themePriorityColors.medium,
-                  color: themePriorityTextColor('medium'),
-                }"
-              >
-                <q-icon :name="themePriorityDefinitions['medium']?.icon || 'label'" size="14px" />
-                {{ item._group.medium }}
-              </span>
-              <span
-                v-if="item._group.low > 0"
-                class="priority-summary"
-                :style="{
-                  background: themePriorityColors.low,
-                  color: themePriorityTextColor('low'),
-                }"
-              >
-                <q-icon
-                  :name="themePriorityDefinitions['low']?.icon || 'label_outline'"
-                  size="14px"
-                />
-                {{ item._group.low }}
-              </span>
-            </div>
-          </q-item-section>
-        </q-item>
+            </q-item-section>
+            <q-item-section side>
+              <div class="priority-summary-grid">
+                <span
+                  v-if="item._group.critical > 0"
+                  class="priority-summary"
+                  :style="{ background: '#b71c1c', color: 'white' }"
+                >
+                  <q-icon name="warning" size="14px" /> {{ item._group.critical }}
+                </span>
+                <span
+                  v-if="item._group.high > 0"
+                  class="priority-summary"
+                  :style="{
+                    background: themePriorityColors.high,
+                    color: themePriorityTextColor('high'),
+                  }"
+                >
+                  <q-icon
+                    :name="themePriorityDefinitions['high']?.icon || 'priority_high'"
+                    size="14px"
+                  />
+                  {{ item._group.high }}
+                </span>
+                <span
+                  v-if="item._group.medium > 0"
+                  class="priority-summary"
+                  :style="{
+                    background: themePriorityColors.medium,
+                    color: themePriorityTextColor('medium'),
+                  }"
+                >
+                  <q-icon :name="themePriorityDefinitions['medium']?.icon || 'label'" size="14px" />
+                  {{ item._group.medium }}
+                </span>
+                <span
+                  v-if="item._group.low > 0"
+                  class="priority-summary"
+                  :style="{
+                    background: themePriorityColors.low,
+                    color: themePriorityTextColor('low'),
+                  }"
+                >
+                  <q-icon
+                    :name="themePriorityDefinitions['low']?.icon || 'label_outline'"
+                    size="14px"
+                  />
+                  {{ item._group.low }}
+                </span>
+              </div>
+            </q-item-section>
+          </q-item>
+        </template>
 
         <q-item
           v-else
@@ -301,12 +311,14 @@
 import { ref, computed } from 'vue';
 
 import { useLongPress } from '../composables/useLongPress';
+import ReplenishmentList from './ReplenishmentList.vue';
 
 const props = defineProps<{
   tasksWithTime: any[];
   tasksWithoutTime: any[];
   selectedTaskId: string | null;
   hiddenGroups?: any[];
+  replenishTasks?: any[];
 }>();
 
 const emit = defineEmits<{
@@ -360,6 +372,10 @@ const mergedTasks = computed(() => {
     props.hiddenGroups.forEach((g: any) => {
       out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
     });
+  }
+  // Replenishment floating card: insert as a full-width sentinel before tasks
+  if (props.replenishTasks && props.replenishTasks.length > 0) {
+    out.push({ __isReplenish: true, id: 'replenish-card', _items: props.replenishTasks });
   }
   // If an active group is selected and it's a child, exclude tasks that belong
   // to any ancestor (parent) groups so parent tasks don't appear inside child view.

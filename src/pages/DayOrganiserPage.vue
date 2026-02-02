@@ -45,6 +45,7 @@
               :tasks-with-time="tasksWithTime"
               :tasks-without-time="tasksWithoutTime"
               :hidden-groups="hiddenGroupSummary.groups"
+              :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
               @task-click="handleTaskClick"
               @toggle-status="toggleStatus"
@@ -53,13 +54,8 @@
             />
           </q-card>
         </div>
-        <!-- Right column for Replenishment list -->
+        <!-- Right column for other lists (Done tasks) -->
         <div class="col-12 replenish-column">
-          <ReplenishmentList
-            :replenish-tasks="replenishTasks"
-            @toggle-status="toggleStatus"
-            @edit-task="editTask"
-          />
           <div class="q-mt-sm">
             <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
           </div>
