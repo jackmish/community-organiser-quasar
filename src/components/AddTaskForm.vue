@@ -1102,6 +1102,18 @@ const descriptionInput = ref<any>(null);
 
 // When creating new tasks, keep the form open after save by default
 const stayAfterSave = ref(false);
+
+// When user switches into Replenish type while in add mode, automatically
+// enable "Stay after save" so creating multiple replenish items is easier.
+watch(isReplenish, (newVal, oldVal) => {
+  try {
+    if (newVal && !oldVal && props.mode === 'add') {
+      stayAfterSave.value = true;
+    }
+  } catch (e) {
+    // ignore
+  }
+});
 function adjustDescriptionHeight() {
   nextTick(() => {
     try {
