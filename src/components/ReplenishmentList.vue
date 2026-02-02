@@ -1,5 +1,9 @@
 <template>
-  <q-card flat class="q-pa-sm q-mb-md" style="background: transparent; border-radius: 8px">
+  <q-card
+    flat
+    :class="['q-pa-sm q-mb-md', size === 'small' ? 'replenish-small' : 'replenish-default']"
+    style="background: transparent; border-radius: 8px"
+  >
     <!-- <div class="row items-center" style="gap: 8px">
       <q-icon name="shopping_cart" color="primary" />
       <div class="text-subtitle2 text-primary"><strong>Replenishment</strong></div>
@@ -40,7 +44,10 @@ import {
 
 const props = defineProps<{
   replenishTasks: any[];
+  size?: 'default' | 'small';
 }>();
+
+const size = props.size || 'default';
 
 const emit = defineEmits<{
   (e: 'toggle-status', task: any): void;
@@ -88,5 +95,30 @@ function onDoneClick(task: any) {
   border-radius: 6px;
   padding: 6px 8px;
   margin-bottom: 6px;
+}
+
+/* Small mode (compact) */
+.replenish-small .replenish-grid {
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+}
+.replenish-small .replenish-item {
+  padding: 4px;
+  min-height: 22px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.replenish-small .replenish-item .text-body1 {
+  font-size: 11px;
+  line-height: 1;
+}
+.replenish-small q-icon {
+  font-size: 14px;
+}
+
+/* Default mode keeps original spacing but provide a named class for clarity */
+.replenish-default .replenish-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 </style>

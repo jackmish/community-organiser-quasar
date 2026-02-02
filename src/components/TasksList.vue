@@ -13,6 +13,7 @@
         <template v-if="item.__isReplenish">
           <ReplenishmentList
             :replenish-tasks="item._items"
+            :size="'small'"
             @toggle-status="$emit('toggle-status', $event)"
             @edit-task="$emit('edit-task', $event)"
           />

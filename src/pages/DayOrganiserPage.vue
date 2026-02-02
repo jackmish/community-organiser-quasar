@@ -183,6 +183,7 @@
           :show-calendar="false"
           :selected-date="newTask.eventDate"
           :all-tasks="allTasks"
+          :replenish-tasks="replenishTasks"
           :initial-task="taskToEdit"
           :mode="mode"
           @update:mode="(v) => (mode = v)"

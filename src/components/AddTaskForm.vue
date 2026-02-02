@@ -4,6 +4,7 @@ import { useQuasar, Dialog } from 'quasar';
 import { useDayOrganiser } from '../modules/day-organiser';
 import logger from 'src/utils/logger';
 import CalendarView from './CalendarView.vue';
+import ReplenishmentList from './ReplenishmentList.vue';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -24,6 +25,10 @@ const props = defineProps({
   activeGroup: {
     type: Object as () => { label: string; value: string | null } | null,
     default: null,
+  },
+  replenishTasks: {
+    type: Array,
+    default: () => [],
   },
   showCalendar: {
     type: Boolean,
@@ -55,6 +60,8 @@ const emit = defineEmits([
   'filter-parent-tasks',
   'update:mode',
   'delete-task',
+  'toggle-status',
+  'edit-task',
 ]);
 
 // Group menu state for edit-mode group changing
@@ -428,6 +435,17 @@ const replenishMatches = computed<any[]>(() => {
   return (props.allTasks || [])
     .filter((t: any) => t.type_id === 'Replenish')
     .filter((t: any) => (t.name || '').toLowerCase().indexOf(q) !== -1);
+});
+
+const smallReplenishTasks = computed(() => {
+  // Prefer parent-provided filtered replenish list when available
+  if (
+    props.replenishTasks &&
+    Array.isArray(props.replenishTasks) &&
+    props.replenishTasks.length > 0
+  )
+    return props.replenishTasks;
+  return (props.allTasks || []).filter((t: any) => (t.type_id || t.type) === 'Replenish');
 });
 
 // Return true when a replenish match is already present for the current selected date
@@ -1407,6 +1425,14 @@ function onSubmit(event: Event) {
       {{ watermarkIcon }}
     </i>
     <q-card-section>
+      <div v-if="isReplenish && (mode === 'edit' || mode === 'add')" style="margin-bottom: 8px">
+        <ReplenishmentList
+          :replenish-tasks="smallReplenishTasks"
+          :size="'small'"
+          @toggle-status="$emit('toggle-status', $event)"
+          @edit-task="$emit('edit-task', $event)"
+        />
+      </div>
       <div
         v-if="mode === 'edit'"
         class="row items-center q-mb-lg"
@@ -2163,6 +2189,7 @@ function onSubmit(event: Event) {
 </template>
 
 <style scoped>
+/* Replenishment sizing now handled by ReplenishmentList component via `size` prop */
 .add-task-card {
   position: relative;
   overflow: hidden; /* prevent large watermark from creating horizontal scroll */
