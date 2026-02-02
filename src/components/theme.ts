@@ -120,3 +120,18 @@ export const getReplenishText = (id?: string | null) => {
   const s = findReplenishSet(id);
   return s ? s.text : 'inherit';
 };
+
+// Colors for task types (used across components)
+export const typeColors: Record<string, string> = {
+  TimeEvent: '#2196f3',
+  Todo: '#4caf50',
+  NoteLater: '#9e9e9e',
+  Replenish: '#c9a676',
+};
+
+export const typeTextColors: Record<string, string> = {
+  TimeEvent: 'white',
+  Todo: 'white',
+  NoteLater: 'white',
+  Replenish: '#212121',
+};

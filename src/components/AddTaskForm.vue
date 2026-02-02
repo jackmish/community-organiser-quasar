@@ -12,6 +12,8 @@ import {
   getReplenishBg as themeGetReplenishBg,
   getReplenishText as themeGetReplenishText,
   formatEventHoursDiff,
+  typeColors as themeTypeColors,
+  typeTextColors as themeTypeTextColors,
 } from './theme';
 
 const props = defineProps({
@@ -317,9 +319,32 @@ const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
 // Submit button appearance based on mode
 const submitColor = computed(() => {
+  // When creating a Replenish item, prefer the selected replenish set
+  try {
+    if (props.mode === 'add' && isReplenish.value) {
+      const cs = (localNewTask as any).color_set;
+      const bg = (themeGetReplenishBg as any)(cs);
+      return bg && bg !== 'transparent' ? bg : themeTypeColors.Replenish || '#f5efe6';
+    }
+  } catch (e) {
+    // fall back
+  }
   if (props.mode === 'add') return '#4caf50';
   if (props.mode === 'edit') return '#ff9800';
   return 'primary';
+});
+
+const submitTextColor = computed(() => {
+  try {
+    if (props.mode === 'add' && isReplenish.value) {
+      const cs = (localNewTask as any).color_set;
+      const txt = (themeGetReplenishText as any)(cs);
+      return txt && txt !== 'inherit' ? txt : themeTypeTextColors.Replenish || '#212121';
+    }
+  } catch (e) {
+    // ignore
+  }
+  return '#ffffff';
 });
 
 const submitIcon = computed(() => {
@@ -1871,11 +1896,10 @@ function onSubmit(event: Event) {
                           unelevated
                           :icon="submitIcon || undefined"
                           :label="
-                            mode === 'add' ? 'Add Task' : mode === 'edit' ? 'Update' : 'Preview'
+                            mode === 'add' ? 'New item' : mode === 'edit' ? 'Update' : 'Preview'
                           "
                           :disable="mode === 'preview'"
-                          :style="{ backgroundColor: submitColor, color: '#ffffff' }"
-                          class="text-white"
+                          :style="`background: ${submitColor} !important; background-color: ${submitColor} !important; border-color: ${submitColor} !important; color: ${submitTextColor} !important;`"
                         />
 
                         <q-btn
