@@ -80,8 +80,10 @@ export const priorityIcons: Record<string, string> = {
 
 // Replenishment color sets used across components
 export const replenishColorSets: Array<{ id: string; bg: string; text: string }> = [
+  { id: 'set-0', bg: '#8B5E3C', text: '#ffffff' },
   { id: 'set-1', bg: '#b71c1c', text: '#ffffff' },
   { id: 'set-4', bg: '#ff5252', text: '#000000' },
+  { id: 'set-14', bg: '#ff9800', text: '#000000' },
   { id: 'set-3', bg: '#ff8a80', text: '#000000' },
   { id: 'set-5', bg: '#fdd835', text: '#000000' },
   { id: 'set-8', bg: '#ffeb3b', text: '#000000' },
@@ -101,6 +103,7 @@ export const replenishColorSets: Array<{ id: string; bg: string; text: string }>
   { id: 'set-25', bg: '#000000', text: '#ffffff' },
   { id: 'set-27', bg: '#9e9e9e', text: '#000000' },
   { id: 'set-28', bg: '#ffffff', text: '#000000' },
+  { id: 'set-29', bg: '#efe6d6', text: '#000000' },
 ];
 
 export const findReplenishSet = (id?: string | null) => {

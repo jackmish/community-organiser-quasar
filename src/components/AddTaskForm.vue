@@ -370,14 +370,18 @@ function setOffsetDays(n: number) {
 // Use centralized replenish color sets from theme
 const replenishColorSets = themeReplenishColorSets;
 
-// Split into two rows for display
+// Split into four rows for display and include a transparent 'x' swatch
 const replenishColorRows = computed(() => {
-  const n = replenishColorSets.length;
-  const per = Math.ceil(n / 3);
+  // include a transparent option at the start
+  const transparent = { id: 'transparent', bg: 'transparent', text: '#000000' };
+  const all = [transparent, ...replenishColorSets];
+  const n = all.length;
+  const per = Math.ceil(n / 4);
   return [
-    replenishColorSets.slice(0, per),
-    replenishColorSets.slice(per, per * 2),
-    replenishColorSets.slice(per * 2),
+    all.slice(0, per),
+    all.slice(per, per * 2),
+    all.slice(per * 2, per * 3),
+    all.slice(per * 3),
   ];
 });
 
@@ -1786,32 +1790,35 @@ function onSubmit(event: Event) {
                               >
                                 <div
                                   class="color-swatch"
-                                  :style="{
-                                    background: cs.bg,
-                                    border:
-                                      cs.id === (localNewTask as any).color_set
-                                        ? '2px solid #000'
-                                        : '1px solid rgba(0,0,0,0.08)',
-                                  }"
-                                  @click.stop="(localNewTask as any).color_set = cs.id"
-                                ></div>
+                                  :style="
+                                    cs.id === 'transparent'
+                                      ? {
+                                          background: 'transparent',
+                                          border:
+                                            (localNewTask as any).color_set == null
+                                              ? '2px solid #000'
+                                              : '1px dashed rgba(0,0,0,0.12)',
+                                        }
+                                      : {
+                                          background: cs.bg,
+                                          border:
+                                            cs.id === (localNewTask as any).color_set
+                                              ? '2px solid #000'
+                                              : '1px solid rgba(0,0,0,0.08)',
+                                        }
+                                  "
+                                  @click.stop="
+                                    (localNewTask as any).color_set =
+                                      cs.id === 'transparent' ? undefined : cs.id
+                                  "
+                                  :title="cs.id === 'transparent' ? 'Transparent' : cs.id"
+                                >
+                                  <q-icon v-if="cs.id === 'transparent'" name="close" size="14px" />
+                                </div>
                               </div>
                             </div>
                           </div>
-                          <div style="flex: 0 0 auto">
-                            <q-btn
-                              flat
-                              dense
-                              round
-                              icon="clear"
-                              @click.stop="
-                                () => {
-                                  (localNewTask as any).color_set = null;
-                                }
-                              "
-                              title="Use default"
-                            />
-                          </div>
+                          <!-- removed redundant clear button: transparent swatch unsets color -->
                         </div>
                       </div>
                     </div>
