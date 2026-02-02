@@ -427,7 +427,7 @@ const typeColors: Record<string, string> = {
   TimeEvent: '#2196f3', // blue
   Todo: '#4caf50', // green
   NoteLater: '#9e9e9e', // grey
-  Replenish: '#ffeb3b', // yellow
+  Replenish: '#c9a676', // yellow
 };
 
 const getGroupName = (groupId?: string) => {
