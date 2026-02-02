@@ -243,6 +243,12 @@ const modeAccentColor = computed(() => {
 
 // Card background style depending on mode; draw an 8px solid border on all sides using mode color
 const cardStyle = computed(() => {
+  // If the current task type is Replenish, use a light yellow background
+  if (isReplenish.value) {
+    const bg = '#f5efe6'; // latte-like light beige
+    const accent = '#c9a676';
+    return { backgroundColor: bg, border: `8px solid ${accent}` };
+  }
   const bg = props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
   const accent = modeAccentColor.value || '#000000';
   return { backgroundColor: bg, border: `8px solid ${accent}` };
