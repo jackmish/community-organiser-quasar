@@ -430,6 +430,29 @@ const replenishMatches = computed<any[]>(() => {
     .filter((t: any) => (t.name || '').toLowerCase().indexOf(q) !== -1);
 });
 
+// Return true when a replenish match is already present for the current selected date
+function replenishAlreadyAdded(m: any) {
+  try {
+    const name = (m && m.name && String(m.name).trim().toLowerCase()) || '';
+    if (!name) return false;
+    const sel = String(props.selectedDate || '').trim();
+    return (props.allTasks || []).some((t: any) => {
+      if ((t.type_id || t.type) !== 'Replenish') return false;
+      // exact id match
+      if (t.id && m.id && String(t.id) === String(m.id)) return true;
+      const tn = (t.name || '').trim().toLowerCase();
+      if (tn !== name) return false;
+      // if selected date provided, check task date matches selected date
+      const taskDate = t.date || t.eventDate || '';
+      if (sel) return String(taskDate || '') === sel;
+      // otherwise treat same-name replenish task as present
+      return true;
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
 async function selectReplenishMatch(t: any) {
   try {
     console.log('[REPLENISH] selectReplenishMatch', { id: t.id, name: t.name });
@@ -1794,6 +1817,15 @@ function onSubmit(event: Event) {
                               <q-item-section>
                                 <div class="text-body1">{{ m.name }}</div>
                               </q-item-section>
+                              <q-item-section side style="display: flex; align-items: center">
+                                <q-icon
+                                  v-if="replenishAlreadyAdded(m)"
+                                  name="check_circle"
+                                  :color="(themeTypeColors as any).Replenish || '#c9a676'"
+                                  size="18px"
+                                  :title="'Already added for selected date'"
+                                />
+                              </q-item-section>
                             </q-item>
                           </q-list>
                         </div>
@@ -1950,7 +1982,7 @@ function onSubmit(event: Event) {
                         </div>
                         <div v-if="mode === 'add'" class="text-caption text-grey-7 q-ml-md">
                           <q-icon name="info" size="xs" class="q-mr-xs" />
-                          Task will be added to:
+                          Group:
                           <div style="display: inline-block; margin-left: 8px">
                             <q-chip
                               size="sm"
