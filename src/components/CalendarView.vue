@@ -122,8 +122,13 @@
                 >
                   <div class="calendar-day-content">
                     <div class="calendar-top">
-                      <div class="calendar-day-number">
-                        {{ new Date(day).getDate() }}
+                      <div class="calendar-day-row">
+                        <div class="calendar-day-number">
+                          {{ new Date(day).getDate() }}
+                        </div>
+                        <div v-if="getWeekLabel(day)" class="calendar-week-inline">
+                          {{ getWeekLabel(day) }}
+                        </div>
                       </div>
                       <div
                         v-if="day === format(new Date(), 'yyyy-MM-dd')"
@@ -145,9 +150,6 @@
                       </div>
                       <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
                         {{ getHoliday(day)?.localName }}
-                      </div>
-                      <div v-else-if="getWeekLabel(day)" class="calendar-week-label">
-                        {{ getWeekLabel(day) }}
                       </div>
                     </div>
                     <!-- Render events for this day (including cyclic repeats) -->
@@ -787,6 +789,25 @@ function getEventsForDay(day: string) {
     .map((t: any) => ({ ...t, date: day }));
 }
 </script>
+
+<style scoped>
+.calendar-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.calendar-week-inline {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.82em;
+  color: rgba(0, 0, 0, 0.6);
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+}
+</style>
 
 <style scoped>
 .calendar-table {
