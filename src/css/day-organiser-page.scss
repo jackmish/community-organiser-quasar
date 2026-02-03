@@ -1,0 +1,373 @@
+/* Styles extracted from DayOrganiserPage.vue */
+
+.selected-task {
+  border: 2px solid var(--q-primary, #1976d2);
+  border-radius: 6px;
+  background-color: rgba(25, 118, 210, 0.06);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.06);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.task-card {
+  min-width: 280px;
+  max-width: 360px;
+  flex: 0 0 320px;
+}
+
+.task-list-card {
+  background-color: #0d47a1;
+}
+
+.task-list-header {
+  color: #ffffff;
+  background-color: #1976d2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.task-list-header .group-select-wrapper {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  margin-right: 0;
+}
+
+.task-list-header .group-select-wrapper .q-field {
+  min-width: 220px;
+  max-width: 320px;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.task-list-header .row.items-center.justify-between {
+  margin-top: 0 !important;
+  align-items: center !important;
+  width: 100%;
+}
+
+.task-list-header .group-select-wrapper .q-field,
+.task-list-header .group-select-wrapper .q-btn {
+  margin-top: 0 !important;
+  align-self: center !important;
+}
+
+.task-list-header .group-select-wrapper .q-field__control {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding-top: 0 !important;
+
+  .hidden-children-list__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0;
+  }
+  .hidden-children-list .task-card {
+    min-width: 280px;
+    max-width: 360px;
+    flex: 0 0 320px;
+  }
+  padding-bottom: 0 !important;
+}
+
+.task-list-header > .row.items-center.justify-between {
+  width: 100%;
+}
+
+.task-list-header .group-select-wrapper .q-field__label {
+  display: none !important;
+}
+
+.task-list-header .group-select-wrapper input,
+.task-list-header .group-select-wrapper textarea,
+.task-list-header .group-select-wrapper .q-select__input {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.task-list-header .q-btn,
+.task-list-header .q-btn .q-icon {
+  color: #ffffff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.task-list-card .task-list-header .date-black {
+  color: #bbdefb !important;
+}
+
+.task-list-header .text-weight-bold {
+  color: #ffffff;
+}
+
+.time-diff-white {
+  color: #ffffff !important;
+}
+.time-diff-lightblue {
+  color: #bbdefb !important;
+}
+.time-diff-default {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.replenish-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.replenish-item {
+  cursor: pointer;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 8px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-card,
+.replenish-item {
+  position: relative;
+}
+
+.floating-add-btn {
+  position: fixed;
+  right: 0px;
+  bottom: 0px;
+  z-index: 1900 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.done-floating {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  pointer-events: none;
+  color: inherit;
+}
+
+.done-item {
+  filter: grayscale(10%);
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tasks-row {
+  align-items: flex-start;
+}
+.tasks-column {
+  flex: 1 1 0;
+}
+.replenish-column {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 420px;
+  min-width: 220px;
+}
+
+@media (max-width: 767px) {
+  .replenish-column {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Calendar styles */
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.calendar-table th {
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.calendar-cell {
+  padding: 4px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.calendar-day-btn {
+  white-space: normal !important;
+  width: calc(100% - 8px);
+  margin: 0 auto;
+}
+
+.calendar-day-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.calendar-day-number {
+  font-size: 1.3em;
+  font-weight: 500;
+}
+
+.calendar-today-label {
+  font-size: 0.9em;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.calendar-week-label {
+  font-size: 0.9em;
+  color: white;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+  text-transform: none !important;
+}
+
+.calendar-green-label {
+  color: black !important;
+  background-color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.calendar-year-label-above {
+  font-size: 0.75em;
+  color: #1976d2;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  min-height: 14px;
+}
+
+.calendar-month-label-above {
+  font-size: 1.2em;
+  color: #1976d2;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  min-height: 20px;
+}
+
+.calendar-year-inline {
+  font-size: 0.75em;
+  margin-left: 6px;
+}
+
+.first-day-of-month {
+  border-left: 5px solid #1976d2 !important;
+  border-top: 5px solid #1976d2 !important;
+}
+
+.after-first-in-row {
+  border-top: 5px solid #1976d2 !important;
+}
+
+.new-month-start {
+  padding-top: 48px;
+}
+
+.date-black {
+  color: black !important;
+}
+
+.fixed-right-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1600;
+  width: 360px;
+  max-width: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  align-items: flex-end;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  max-height: calc(100vh - 32px);
+}
+.fixed-right-panel .fixed-content {
+  width: 100%;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.fixed-right-panel .panel-toggle-btn {
+  position: absolute;
+  top: -36px;
+  right: 8px;
+  z-index: 1700;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #fff !important;
+  background: #356 !important;
+  border-radius: 8px;
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+
+.panel-show-btn {
+  position: fixed;
+  right: 50px;
+  bottom: 0px;
+  z-index: 1800;
+  padding: 10px 16px;
+  background: #579 !important;
+  color: #fff !important;
+  border-radius: 10px;
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+  font-weight: 600;
+}
+
+.fixed-right-panel.panel-hidden {
+  transform: translateY(calc(100% + 24px));
+  transition: transform 320ms ease-in-out;
+}
+.fixed-right-panel {
+  transition: transform 320ms ease-in-out;
+}
+.fixed-right-panel > .row {
+  margin-bottom: -4px;
+}
+.floating-add-btn {
+  position: fixed;
+  right: 0px;
+  bottom: 0px;
+  z-index: 1900 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}

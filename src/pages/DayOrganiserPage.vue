@@ -145,10 +145,7 @@
       @click="clearTaskToEdit"
       title="Add new task"
     />
-
-    <!-- Fixed right-side panel: ModeSwitcher above preview/form -->
     <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
-      <!-- Hide button visible when panel is open -->
       <q-btn
         v-if="!panelHidden"
         unelevated
