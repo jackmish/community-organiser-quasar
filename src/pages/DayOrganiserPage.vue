@@ -217,82 +217,10 @@ import TaskPreview from '../components/TaskPreview.vue';
 import CalendarView from '../components/CalendarView.vue';
 import { useLongPress } from '../composables/useLongPress';
 import GroupSelectHeader from '../components/GroupSelectHeader.vue';
+import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 
-// Helper to get time difference display for the year input area
-const getTimeDifferenceDisplay = (dayDate: string) => {
-  if (!dayDate) return 'Select a date';
-
-  const date = new Date(dayDate);
-  const todayDate = new Date();
-
-  // Normalize both dates to midnight for accurate day comparison
-  const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayNormalized = new Date(
-    todayDate.getFullYear(),
-    todayDate.getMonth(),
-    todayDate.getDate(),
-  );
-
-  const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (daysDiff === 0) return 'TODAY';
-  if (daysDiff === 1) return 'TOMORROW';
-  if (daysDiff === -1) return 'YESTERDAY';
-
-  if (daysDiff > 0) {
-    // Future date
-    const weeksDiff = Math.floor(daysDiff / 7);
-
-    if (weeksDiff >= 1) {
-      const remainingDays = daysDiff % 7;
-      if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        const dayText = remainingDays === 1 ? 'day' : 'days';
-        return `In ${weeksDiff} ${weekText} ${remainingDays} ${dayText}`;
-      }
-      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-      return `In ${weeksDiff} ${weekText}`;
-    }
-
-    const dayText = daysDiff === 1 ? 'day' : 'days';
-    return `In ${daysDiff} ${dayText}`;
-  } else {
-    // Past date
-    const absDaysDiff = Math.abs(daysDiff);
-    const weeksDiff = Math.floor(absDaysDiff / 7);
-
-    if (weeksDiff >= 1) {
-      const remainingDays = absDaysDiff % 7;
-      if (remainingDays > 0) {
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        const dayText = remainingDays === 1 ? 'day' : 'days';
-        return `${weeksDiff} ${weekText} ${remainingDays} ${dayText} ago`;
-      }
-      const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-      return `${weeksDiff} ${weekText} ago`;
-    }
-
-    const dayText = absDaysDiff === 1 ? 'day' : 'days';
-    return `${absDaysDiff} ${dayText} ago`;
-  }
-};
-
-// Return a CSS class for the time-diff label: delegate to shared helper
-const getTimeDiffClass = (dayDate: string) => timeDiffClassFor(getTimeDifferenceDisplay(dayDate));
-
-// Current clock for top-right display
-const now = ref(new Date());
-let clockTimer: any = null;
-onMounted(() => {
-  clockTimer = setInterval(() => {
-    now.value = new Date();
-  }, 1000);
-});
-onBeforeUnmount(() => {
-  if (clockTimer) clearInterval(clockTimer);
-});
+// Use shared view composable for clock and time-diff helpers
+const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
 
 function selectCalendarDate(dateString: string) {
   // Block rapid clicks
