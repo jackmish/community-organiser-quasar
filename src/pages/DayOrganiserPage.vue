@@ -2199,61 +2199,6 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   }
 };
 
-const handleActiveGroupChange = (value: { label: string; value: string | null } | null) => {
-  activeGroup.value = value;
-};
-
-const handleUpdateNotes = async (notes: string | number | null) => {
-  if (notes !== null && notes !== undefined) {
-    await updateDayNotes(currentDate.value, String(notes));
-  }
-};
-
-const handleExport = () => {
-  exportData();
-};
-
-const handleImport = () => {
-  fileInput.value?.click();
-};
-
-const onFileSelected = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (file) {
-    try {
-      await importData(file);
-    } catch (error) {
-      logger.error('Import failed:', error);
-    }
-  }
-};
-
-const handleAddGroup = async () => {
-  if (!newGroupName.value.trim()) return;
-
-  const group = await addGroup({
-    name: newGroupName.value,
-    parentId: newGroupParent.value,
-    color: newGroupColor.value,
-    hideTasksFromParent: false,
-  });
-
-  // Set as default and active if it's the first group
-  if (!defaultGroupId.value) {
-    defaultGroupId.value = group.id;
-    activeGroup.value = {
-      label: group.name,
-      value: group.id,
-    };
-  }
-
-  // Reset form
-  newGroupName.value = '';
-  newGroupParent.value = undefined;
-  newGroupColor.value = '#1976d2';
-};
-
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
   const group = await addGroup({ name: data.name, color: data.color, hideTasksFromParent: false });
   defaultGroupId.value = group.id;
