@@ -1264,7 +1264,7 @@ const activeGroupOptions = computed(() => {
 const groupTree = computed(() => {
   const buildTree = (parentId?: string): any[] => {
     const pidNorm = parentId == null ? undefined : String(parentId);
-    console.log('Building tree for parentId=', pidNorm);
+    // debug: removed console logging
     const groupsForParent = getGroupsByParent(pidNorm);
     try {
       logger.debug('[DayOrganiserPage] buildTree parent=', pidNorm, parentId);

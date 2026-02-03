@@ -472,18 +472,12 @@ function replenishAlreadyAdded(m: any) {
 }
 
 async function selectReplenishMatch(t: any) {
-  try {
-    console.log('[REPLENISH] selectReplenishMatch', { id: t.id, name: t.name });
-  } catch (err) {
-    void err;
-  }
   // Immediately restore selected replenish task to undone
   selectedReplenishId.value = t.id;
   replenishQuery.value = t.name || '';
   try {
     const { updateTask } = useDayOrganiser();
     const targetDate = t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
-    console.log('[REPLENISH] restoring task id=', t.id, ' to date=', targetDate);
     await updateTask(targetDate, t.id, { status_id: 1 });
     // Ask parent to clear any preview/edit state
     emit('cancel-edit');
@@ -497,11 +491,6 @@ async function selectReplenishMatch(t: any) {
 }
 
 function handleReplItemPointer(t: any) {
-  try {
-    console.log('[REPLENISH] handleReplItemPointer', { id: t.id, name: t.name });
-  } catch (err) {
-    void err;
-  }
   selectReplenishMatch(t);
 }
 

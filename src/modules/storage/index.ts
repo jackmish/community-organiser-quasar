@@ -82,7 +82,6 @@ class DayOrganiserStorage {
             try {
               const groupData = await window.electronAPI.readJsonFile(filePath);
               groups.push(groupData);
-              console.log('Loaded group from file:', filePath);
             } catch (err) {
               logger.error('Error reading group file:', filePath, err);
             }
