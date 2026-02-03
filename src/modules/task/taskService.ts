@@ -91,8 +91,19 @@ export const updateTask = (
   updates: Partial<Omit<Task, 'id' | 'createdAt'>>,
 ): void => {
   const getAllDays = organiserData.days;
-  let task: any = getAllDays[date]?.tasks?.find((t) => t.id === taskId);
+  let task: any = null;
+  let foundDayKey: string | null = null;
 
+  // Try quick path: find in provided date bucket
+  if (getAllDays[date] && Array.isArray(getAllDays[date].tasks)) {
+    const found = getAllDays[date].tasks.find((t) => t.id === taskId);
+    if (found) {
+      task = found;
+      foundDayKey = date;
+    }
+  }
+
+  // Fallback: search all days
   if (!task) {
     for (const dKey of Object.keys(getAllDays)) {
       const d = getAllDays[dKey];
@@ -100,6 +111,7 @@ export const updateTask = (
       const found = d.tasks.find((t) => t.id === taskId);
       if (found) {
         task = found;
+        foundDayKey = dKey;
         break;
       }
     }
@@ -145,6 +157,39 @@ export const updateTask = (
   });
 
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+  // If the update included a date/eventDate and it's different from the current day,
+  // move the task to the target day so it appears under the new date bucket.
+  try {
+    const targetDate = (updates as any).date || (updates as any).eventDate || date;
+    if (targetDate && foundDayKey && String(targetDate) !== String(foundDayKey)) {
+      // Remove from old day (use locals to satisfy TS narrowing)
+      const oldDay = getAllDays[String(foundDayKey)];
+      if (oldDay && Array.isArray(oldDay.tasks)) {
+        oldDay.tasks = oldDay.tasks.filter((t) => t.id !== taskId);
+      }
+      // Ensure target day exists
+      const targetKey = String(targetDate);
+      let newDay = getAllDays[targetKey];
+      if (!newDay) {
+        newDay = { date: targetKey, tasks: [], notes: '' };
+        getAllDays[targetKey] = newDay;
+      }
+      // Ensure task's date fields reflect the new day
+      try {
+        const key = targetKey;
+        task.date = key;
+        task.eventDate = key;
+      } catch (e) {
+        // ignore
+      }
+      // Push task into new day's tasks
+      if (Array.isArray(newDay.tasks)) {
+        newDay.tasks.push(task);
+      }
+    }
+  } catch (e) {
+    // ignore move failures
+  }
 };
 
 export const deleteTask = (organiserData: OrganiserData, date: string, taskId: string): boolean => {

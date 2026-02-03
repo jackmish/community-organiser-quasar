@@ -992,7 +992,8 @@ function updateEventDateMonth(val: number | string | null) {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-    let year = eventDateYear.value;
+    // Use full 4-digit year from eventDateParts to avoid two-digit-year pitfalls
+    let year = Number(eventDateParts.value[0]) || currentYear;
     const day = eventDateDay.value;
     // Auto-increment year if enabled and month < current month
     if (autoIncrementYear.value) {
@@ -1611,8 +1612,7 @@ function onSubmit(event: Event) {
                         >
                           <q-input
                             ref="dayInput"
-                            :model-value="eventDateDay"
-                            @update:model-value="updateEventDateDay"
+                            v-model.number="eventDateDay"
                             @focus="
                               (e) =>
                                 (e.target as HTMLInputElement)?.select &&
@@ -1628,8 +1628,7 @@ function onSubmit(event: Event) {
                           />
                           <q-input
                             ref="monthInput"
-                            :model-value="eventDateMonth"
-                            @update:model-value="updateEventDateMonth"
+                            v-model.number="eventDateMonth"
                             @focus="
                               (e) =>
                                 (e.target as HTMLInputElement)?.select &&
@@ -1645,8 +1644,7 @@ function onSubmit(event: Event) {
                           />
                           <q-input
                             ref="yearInput"
-                            :model-value="eventDateYear"
-                            @update:model-value="updateEventDateYear"
+                            v-model.number="eventDateYear"
                             @focus="
                               (e) =>
                                 (e.target as HTMLInputElement)?.select &&

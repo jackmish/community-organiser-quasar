@@ -1743,14 +1743,18 @@ const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => 
   // Validate payload
   if (!taskPayload || !taskPayload.name) return;
 
-  // Build task data and add to the currently displayed day
+  // Determine which date the task should belong to: prefer explicit payload.date or payload.eventDate
+  const targetDate =
+    (taskPayload && (taskPayload.date || taskPayload.eventDate)) || currentDate.value;
+
+  // Build task data and add to the computed day
   const taskData: any = {
     ...taskPayload,
-    date: currentDate.value,
+    date: taskPayload?.date || taskPayload?.eventDate || targetDate,
     groupId: groupIdToUse,
   };
 
-  const created = await addTask(currentDate.value, taskData);
+  const created = await addTask(targetDate, taskData);
   if (opts && opts.preview && created) {
     taskToEdit.value = created as any;
     mode.value = 'preview';
