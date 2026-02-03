@@ -1,78 +1,74 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue';
 import { timeDiffClassFor } from 'src/components/theme';
 
-export function useDayOrganiserView() {
+type UseDayOrganiserView = {
+  now: Ref<Date>;
+  getTimeDifferenceDisplay: (dayDate?: string | Date | null) => string;
+  getTimeDiffClass: (dayDate?: string | Date | null) => string;
+};
+
+function normalizeToMidnight(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function toDate(input?: string | Date | null): Date | null {
+  if (input == null || input === '') return null;
+  const dt = input instanceof Date ? input : new Date(String(input));
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+
+function formatRelativeDays(daysDiff: number): string {
+  if (daysDiff === 0) return 'TODAY';
+  if (daysDiff === 1) return 'TOMORROW';
+  if (daysDiff === -1) return 'YESTERDAY';
+
+  if (daysDiff > 0) {
+    const weeks = Math.floor(daysDiff / 7);
+    if (weeks >= 1) {
+      const rem = daysDiff % 7;
+      if (rem > 0)
+        return `In ${weeks} ${weeks === 1 ? 'week' : 'weeks'} ${rem} ${rem === 1 ? 'day' : 'days'}`;
+      return `In ${weeks} ${weeks === 1 ? 'week' : 'weeks'}`;
+    }
+    return `In ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`;
+  }
+
+  const abs = Math.abs(daysDiff);
+  const weeks = Math.floor(abs / 7);
+  if (weeks >= 1) {
+    const rem = abs % 7;
+    if (rem > 0)
+      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ${rem} ${rem === 1 ? 'day' : 'days'} ago`;
+    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+  }
+  return `${abs} ${abs === 1 ? 'day' : 'days'} ago`;
+}
+
+export function useDayOrganiserView(): UseDayOrganiserView {
   const now = ref<Date>(new Date());
-  let clockTimer: any = null;
+  let timer: ReturnType<typeof setInterval> | null = null;
 
   onMounted(() => {
-    clockTimer = setInterval(() => {
-      now.value = new Date();
-    }, 1000);
+    timer = setInterval(() => (now.value = new Date()), 1000);
   });
 
   onBeforeUnmount(() => {
-    if (clockTimer) clearInterval(clockTimer);
+    if (timer) clearInterval(timer);
   });
 
-  function getTimeDifferenceDisplay(dayDate: string) {
-    if (!dayDate) return 'Select a date';
+  function getTimeDifferenceDisplay(dayDate?: string | Date | null) {
+    const d = toDate(dayDate);
+    if (!d) return 'Select a date';
 
-    const date = new Date(dayDate);
-    const todayDate = new Date();
+    const dateMid = normalizeToMidnight(d);
+    const todayMid = normalizeToMidnight(new Date());
 
-    const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayNormalized = new Date(
-      todayDate.getFullYear(),
-      todayDate.getMonth(),
-      todayDate.getDate(),
-    );
-
-    const daysDiff = Math.floor(
-      (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (daysDiff === 0) return 'TODAY';
-    if (daysDiff === 1) return 'TOMORROW';
-    if (daysDiff === -1) return 'YESTERDAY';
-
-    if (daysDiff > 0) {
-      const weeksDiff = Math.floor(daysDiff / 7);
-
-      if (weeksDiff >= 1) {
-        const remainingDays = daysDiff % 7;
-        if (remainingDays > 0) {
-          const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-          const dayText = remainingDays === 1 ? 'day' : 'days';
-          return `In ${weeksDiff} ${weekText} ${remainingDays} ${dayText}`;
-        }
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        return `In ${weeksDiff} ${weekText}`;
-      }
-
-      const dayText = daysDiff === 1 ? 'day' : 'days';
-      return `In ${daysDiff} ${dayText}`;
-    } else {
-      const absDaysDiff = Math.abs(daysDiff);
-      const weeksDiff = Math.floor(absDaysDiff / 7);
-
-      if (weeksDiff >= 1) {
-        const remainingDays = absDaysDiff % 7;
-        if (remainingDays > 0) {
-          const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-          const dayText = remainingDays === 1 ? 'day' : 'days';
-          return `${weeksDiff} ${weekText} ${remainingDays} ${dayText} ago`;
-        }
-        const weekText = weeksDiff === 1 ? 'week' : 'weeks';
-        return `${weeksDiff} ${weekText} ago`;
-      }
-
-      const dayText = absDaysDiff === 1 ? 'day' : 'days';
-      return `${absDaysDiff} ${dayText} ago`;
-    }
+    const daysDiff = Math.floor((dateMid.getTime() - todayMid.getTime()) / (1000 * 60 * 60 * 24));
+    return formatRelativeDays(daysDiff);
   }
 
-  function getTimeDiffClass(dayDate: string) {
+  function getTimeDiffClass(dayDate?: string | Date | null) {
     return timeDiffClassFor(getTimeDifferenceDisplay(dayDate));
   }
 
@@ -80,5 +76,5 @@ export function useDayOrganiserView() {
     now,
     getTimeDifferenceDisplay,
     getTimeDiffClass,
-  } as const;
+  };
 }
