@@ -1,3 +1,9 @@
 {
-  "extends": "./.quasar/tsconfig.json"
+  "extends": "./.quasar/tsconfig.json",
+  "exclude": [
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "tests",
+    "tests/**"
+  ]
 }
