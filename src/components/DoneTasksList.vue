@@ -4,7 +4,7 @@
       <q-icon name="check" color="grey-7" />
       <div class="text-subtitle2"><strong>Done</strong></div>
     </div>
-    <div class="q-mt-sm">
+    <div class="q-mt-sm done-items-grid">
       <div
         v-for="d in props.doneTasks"
         :key="d.id"
@@ -61,6 +61,7 @@ import {
   getReplenishBg,
   getReplenishText,
 } from './theme';
+import { typeIcons } from './theme';
 import { getCycleType } from 'src/utils/occursOnDay';
 
 // Replenish color data imported from theme
@@ -78,7 +79,13 @@ const isCyclic = (task: any) => {
 
 const getIcon = (task: any) => {
   if (!task) return 'task';
-  if (task.type_id === 'Replenish') return 'shopping_cart';
+  // Prefer icons defined in the shared theme mapping
+  try {
+    const t = task.type_id || task.type || '';
+    if (t && typeIcons[t]) return typeIcons[t];
+  } catch (e) {
+    // ignore and fall back
+  }
   if (isCyclic(task)) return 'repeat';
   if (task.eventTime) return 'event';
   return 'label';
@@ -206,7 +213,13 @@ const getContrastColor = (hex: string) => {
   background: transparent;
   border-radius: 6px;
   padding: 6px 8px;
-  margin-bottom: 6px;
+  width: 100%;
+}
+
+.done-items-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 
 .done-item--has-bg {

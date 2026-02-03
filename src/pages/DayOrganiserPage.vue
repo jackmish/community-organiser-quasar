@@ -54,12 +54,6 @@
             />
           </q-card>
         </div>
-        <!-- Right column for other lists (Done tasks) -->
-        <div class="col-12 replenish-column">
-          <div class="q-mt-sm">
-            <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
-          </div>
-        </div>
       </div>
 
       <div class="row q-col-gutter-md q-mt-md">
@@ -74,6 +68,10 @@
           />
         </div>
         <div class="col-12 col-md-4">
+          <div class="q-mb-md">
+            <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
+          </div>
+
           <!-- ModeSwitcher moved to fixed right-side panel -->
 
           <!-- Replenishment items are rendered with other tasks (no separate right-column panel) -->
