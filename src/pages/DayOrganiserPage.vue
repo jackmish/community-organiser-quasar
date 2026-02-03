@@ -207,106 +207,18 @@
 </template>
 
 <script setup lang="ts">
-import { format, addDays, startOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 
 import AddTaskForm from '../components/AddTaskForm.vue';
-import ReplenishmentList from '../components/ReplenishmentList.vue';
+
 import DoneTasksList from '../components/DoneTasksList.vue';
 import GroupManagementDialog from '../components/GroupManagementDialog.vue';
 import TasksList from '../components/TasksList.vue';
-import {
-  priorityColors as themePriorityColors,
-  priorityTextColor as themePriorityTextColor,
-  priorityDefinitions as themePriorityDefinitions,
-  timeDiffClassFor,
-  formatDisplayDate,
-  formatEventHoursDiff,
-  findReplenishSet,
-  getReplenishBg as themeGetReplenishBg,
-  getReplenishText as themeGetReplenishText,
-} from '../components/theme';
+import { timeDiffClassFor, formatDisplayDate } from '../components/theme';
 import TaskPreview from '../components/TaskPreview.vue';
 import CalendarView from '../components/CalendarView.vue';
 import { useLongPress } from '../composables/useLongPress';
 import GroupSelectHeader from '../components/GroupSelectHeader.vue';
-
-const getWeekDays = (startDate: Date) => {
-  return Array.from({ length: 7 }, (_, i) => format(addDays(startDate, i), 'yyyy-MM-dd'));
-};
-
-// (calendar month/year display helpers removed — CalendarView handles these)
-
-// Helper to check if a week should have margin-top (new month started in this week)
-const shouldWeekHaveMargin = (week: string[], weekIndex: number, allWeeks: string[][]) => {
-  if (weekIndex === 0) return false; // First week never has margin
-
-  // Check if this week contains the 1st of a month
-  const hasFirstOfMonth = week.some((day) => new Date(day).getDate() === 1);
-  if (!hasFirstOfMonth) return false;
-
-  // Get the previous week
-  const previousWeek = allWeeks[weekIndex - 1];
-  if (!previousWeek) return false;
-
-  // Check if the previous week has any day from a different month than the 1st in current week
-  const firstDayOfMonth = week.find((day) => new Date(day).getDate() === 1);
-  if (!firstDayOfMonth) return false;
-
-  const newMonth = new Date(firstDayOfMonth).getMonth();
-
-  // If any day in previous week is from a different month, add margin
-  const hasDifferentMonth = previousWeek.some((day) => new Date(day).getMonth() !== newMonth);
-
-  return hasDifferentMonth;
-};
-
-// Helper to check if day is 1-7 of month AND month started in previous week
-const isNewMonthStart = (day: string, week: string[], weekIndex: number, allWeeks: string[][]) => {
-  const dayDate = new Date(day);
-  const dayOfMonth = dayDate.getDate();
-
-  // Must be day 1-7 of the month
-  if (dayOfMonth > 7) return false;
-
-  // Check if day 1 of this month is in the current week
-  const firstDayOfMonth = week.some(
-    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth(),
-  );
-
-  // Only apply padding if day 1 is in THIS week (not in a previous week)
-  if (!firstDayOfMonth) return false;
-
-  // Check if this is the first week (no previous week)
-  if (weekIndex === 0) {
-    // Only apply if day 1 is not the first day of the week
-    return week.indexOf(day) > 0;
-  }
-
-  // Check if previous week has days from a different month
-  const previousWeek = allWeeks[weekIndex - 1];
-  if (!previousWeek) return false;
-
-  const currentMonth = dayDate.getMonth();
-  const hasPreviousMonth = previousWeek.some((d) => new Date(d).getMonth() !== currentMonth);
-
-  return hasPreviousMonth;
-};
-
-// Helper to check if day comes after the 1st in the same row
-const isAfterFirstInRow = (day: string, week: string[]) => {
-  const dayIndex = week.indexOf(day);
-  if (dayIndex === -1) return false;
-
-  // Check if there's a day 1 before this day in the same week
-  for (let i = 0; i < dayIndex; i++) {
-    const currentDay = week[i];
-    if (currentDay && new Date(currentDay).getDate() === 1) {
-      return true;
-    }
-  }
-
-  return false;
-};
 
 // Helper to get time difference display for the year input area
 const getTimeDifferenceDisplay = (dayDate: string) => {
@@ -372,23 +284,6 @@ const getTimeDifferenceDisplay = (dayDate: string) => {
 // Return a CSS class for the time-diff label: delegate to shared helper
 const getTimeDiffClass = (dayDate: string) => timeDiffClassFor(getTimeDifferenceDisplay(dayDate));
 
-// Return a short display for hours difference when a task has exact time
-const getEventHoursDisplay = (task: any) => {
-  const dateStr = task?.date || task?.eventDate || '';
-  const timeStr = task?.eventTime || '';
-  return formatEventHoursDiff(dateStr, timeStr);
-};
-
-const today = new Date();
-const calendarBaseDate = ref(new Date()); // The base date for calendar display
-const calendarViewDays = ref(42); // Default to 42 days view
-
-const calendarCurrentWeek = computed(() => {
-  const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  const val = getWeekDays(weekStart);
-  return val;
-});
-
 // Current clock for top-right display
 const now = ref(new Date());
 let clockTimer: any = null;
@@ -399,35 +294,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   if (clockTimer) clearInterval(clockTimer);
-});
-
-const currentDateDisplay = computed(() => {
-  return format(now.value, 'EEEE, dd.MM.yyyy');
-});
-const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
-const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
-const currentTimeDisplay = computed(() => {
-  return format(now.value, 'HH:mm');
-});
-const calendarNextWeek = computed(() => {
-  const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  const nextWeekStart = addDays(weekStart, 7);
-  const val = getWeekDays(nextWeekStart);
-  return val;
-});
-
-// Generate all visible weeks based on selected view
-const allCalendarWeeks = computed(() => {
-  const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  const numWeeks = calendarViewDays.value / 7;
-  const weeks = [];
-
-  for (let i = 0; i < numWeeks; i++) {
-    const weekStartDate = addDays(weekStart, i * 7);
-    weeks.push(getWeekDays(weekStartDate));
-  }
-
-  return weeks;
 });
 
 function selectCalendarDate(dateString: string) {
@@ -463,10 +329,9 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar';
 import logger from 'src/utils/logger';
 import { useDayOrganiser } from '../modules/day-organiser';
-import type { Task, TaskDuration, TaskGroup } from '../modules/day-organiser';
+import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/utils/occursOnDay';
-import TaskTypeSelector from '../components/TaskTypeSelector.vue';
 
 const $q = useQuasar();
 
@@ -479,18 +344,16 @@ const {
   deleteTask,
   toggleTaskComplete,
   updateTask,
-  updateDayNotes,
-  exportData,
-  importData,
+
   getTasksInRange,
   setCurrentDate,
-  goToToday,
+
   nextDay,
   prevDay,
   groups,
   activeGroup,
   addGroup,
-  deleteGroup,
+
   getGroupsByParent,
   previewTaskId,
   previewTaskPayload,
@@ -589,10 +452,8 @@ const hiddenGroupSummary = computed(() => {
   }
 });
 
-const fileInput = ref<HTMLInputElement | null>(null);
 const showGroupDialog = ref(false);
-const groupMenu = ref(false);
-const groupMenuBtn = ref<any>(null);
+
 const showEditGroupDialog = ref(false);
 const editGroupLocal = ref<{
   id: string;
@@ -601,9 +462,7 @@ const editGroupLocal = ref<{
   color?: string;
 } | null>(null);
 const showFirstRunDialog = ref(false);
-const newGroupName = ref('');
-const newGroupParent = ref<string | undefined>(undefined);
-const newGroupColor = ref('#1976d2');
+
 const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
 const taskToEdit = ref<Task | null>(null);
@@ -719,17 +578,6 @@ function clearTaskToEdit() {
   selectedTaskId.value = null;
   // ensure the right-side panel is visible when switching to create mode
   panelHidden.value = false;
-}
-
-function openEditGroup(g: TaskGroup) {
-  editGroupLocal.value = {
-    id: g.id,
-    name: g.name,
-    parentId: g.parentId ?? g.parent_id ?? null,
-    color: g.color || '#1976d2',
-  };
-  showEditGroupDialog.value = true;
-  groupMenu.value = false;
 }
 
 async function saveEditedGroup() {
@@ -866,17 +714,12 @@ function handleCalendarPreview(payload: any) {
 }
 
 // Refs for date inputs
-const dayInput = ref<any>(null);
-const monthInput = ref<any>(null);
-const yearInput = ref<any>(null);
-const hourInput = ref<any>(null);
-const minuteInput = ref<any>(null);
-const autoIncrementYear = ref(true);
+
 const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
-const isUpdatingDate = ref(false);
+
 const isClickBlocked = ref(false);
 // Long-press handling via composable
-const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
+const { longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Register page's edit handler with the composable
 setLongPressHandler(editTask);
@@ -889,190 +732,6 @@ function handleTaskClick(task: Task) {
   }
   setTaskToEdit(task);
 }
-
-function handleReplenishClick(task: Task) {
-  if (longPressTriggered.value) {
-    longPressTriggered.value = false;
-    return;
-  }
-  toggleStatus(task);
-}
-
-// Computed properties for separate date inputs
-const eventDateYear = computed(() => {
-  const dateStr = newTask.value.eventDate;
-  let val;
-  if (!dateStr) val = new Date().getFullYear();
-  else {
-    const parts = dateStr.split('-');
-    val = parseInt(parts[0] || '0', 10);
-  }
-  return val;
-});
-
-const eventDateMonth = computed(() => {
-  const dateStr = newTask.value.eventDate;
-  let val;
-  if (!dateStr) val = new Date().getMonth() + 1;
-  else {
-    const parts = dateStr.split('-');
-    val = parseInt(parts[1] || '0', 10);
-  }
-  return val;
-});
-
-const eventDateDay = computed(() => {
-  const dateStr = newTask.value.eventDate;
-  let val;
-  if (!dateStr) val = new Date().getDate();
-  else {
-    const parts = dateStr.split('-');
-    val = parseInt(parts[2] || '0', 10);
-  }
-  return val;
-});
-
-// Update functions for separate date inputs
-const updateEventDateMonth = (value: string | number | null) => {
-  if (!value || isUpdatingDate.value) return;
-  isUpdatingDate.value = true;
-
-  try {
-    const month = Number(value);
-    if (month < 1 || month > 12) return;
-
-    let year = eventDateYear.value;
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
-
-    // Auto-adjust year if enabled
-    if (autoIncrementYear.value) {
-      const yearDifference = year - currentYear;
-
-      if (month >= currentMonth) {
-        // If month is same or higher, set to current year
-        year = currentYear;
-      } else if (yearDifference <= 1) {
-        // If month is lower and year difference is 1 or less, increment by 1
-        year = currentYear + 1;
-      }
-      // Otherwise keep the year as is (if difference > 1)
-    }
-
-    const day = eventDateDay.value;
-    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
-    newTask.value.eventDate = newDate;
-
-    // Sync calendar view only if the date is not visible in current view
-    const allVisibleDays = allCalendarWeeks.value.flat();
-    if (!allVisibleDays.includes(newDate)) {
-      calendarBaseDate.value = new Date(year, month - 1, day);
-    }
-
-    // Auto-focus to hour input after filling month (when month is 2 digits)
-    if (String(value).length >= 2) {
-      setTimeout(() => {
-        hourInput.value?.$el?.querySelector('input')?.focus();
-      }, 0);
-    }
-  } finally {
-    isUpdatingDate.value = false;
-  }
-};
-
-const updateEventDateYear = (value: string | number | null) => {
-  if (!value || isUpdatingDate.value) return;
-  isUpdatingDate.value = true;
-
-  try {
-    const year = Number(value);
-    const month = eventDateMonth.value;
-    const day = eventDateDay.value;
-    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
-    newTask.value.eventDate = newDate;
-
-    // Sync calendar view only if the date is not visible in current view
-    const allVisibleDays = allCalendarWeeks.value.flat();
-    if (!allVisibleDays.includes(newDate)) {
-      calendarBaseDate.value = new Date(year, month - 1, day);
-    }
-  } finally {
-    isUpdatingDate.value = false;
-  }
-};
-
-const updateEventDateDay = (value: string | number | null) => {
-  if (!value || isUpdatingDate.value) return;
-  isUpdatingDate.value = true;
-
-  try {
-    const day = Number(value);
-    if (day < 1 || day > 31) return;
-    const year = eventDateYear.value;
-    const month = eventDateMonth.value;
-    const newDate = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
-    newTask.value.eventDate = newDate;
-
-    // Sync calendar view only if the date is not visible in current view
-    const allVisibleDays = allCalendarWeeks.value.flat();
-    if (!allVisibleDays.includes(newDate)) {
-      calendarBaseDate.value = new Date(year, month - 1, day);
-    }
-
-    // Auto-focus to month input after filling day (when day is 2 digits)
-    if (String(value).length >= 2) {
-      setTimeout(() => {
-        monthInput.value?.$el?.querySelector('input')?.focus();
-      }, 0);
-    }
-  } finally {
-    isUpdatingDate.value = false;
-  }
-};
-
-// Time inputs
-const eventTimeHour = computed(() => {
-  if (!newTask.value.eventTime) return '';
-  const val = Number(newTask.value.eventTime.split(':')[0]);
-  return val;
-});
-
-const eventTimeMinute = computed(() => {
-  if (!newTask.value.eventTime) return '';
-  const val = Number(newTask.value.eventTime.split(':')[1]);
-  return val;
-});
-
-const updateEventTimeHour = (value: string | number | null) => {
-  if (value === null || value === '') return;
-  const hour = Number(value);
-  if (hour < 0 || hour > 23) return;
-
-  // Automatically switch to "Exact Hour" when user enters hour
-  timeType.value = 'exactHour';
-
-  const minute = eventTimeMinute.value || 0;
-  newTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-
-  // Auto-focus to minute input after filling hour (when hour is 2 digits)
-  if (String(value).length >= 2) {
-    setTimeout(() => {
-      minuteInput.value?.$el?.querySelector('input')?.focus();
-    }, 0);
-  }
-};
-
-const updateEventTimeMinute = (value: string | number | null) => {
-  if (value === null || value === '') return;
-  const minute = Number(value);
-  if (minute < 0 || minute > 59) return;
-
-  // Automatically switch to "Exact Hour" when user enters minute
-  timeType.value = 'exactHour';
-
-  const hour = eventTimeHour.value || 0;
-  newTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-};
 
 // Watch timeType to clear time when "Whole Day" is selected
 watch(timeType, (newValue) => {
@@ -1100,37 +759,6 @@ const typeOptions = [
   { label: 'Note/Later', value: 'Note/Later', icon: 'note' },
   { label: 'TimeEvent', value: 'TimeEvent', icon: 'event' },
   { label: 'Replenishment', value: 'Replenishment', icon: 'shopping_cart' },
-];
-
-const priorityOptions = [
-  {
-    label: 'Lo',
-    value: 'low',
-    icon: 'low_priority',
-    color: themePriorityColors.low,
-    textColor: themePriorityTextColor('low'),
-  },
-  {
-    label: 'Med',
-    value: 'medium',
-    icon: 'drag_handle',
-    color: themePriorityColors.medium,
-    textColor: themePriorityTextColor('medium'),
-  },
-  {
-    label: 'Hi',
-    value: 'high',
-    icon: 'priority_high',
-    color: themePriorityColors.high,
-    textColor: themePriorityTextColor('high'),
-  },
-  {
-    label: 'Crit',
-    value: 'critical',
-    icon: 'warning',
-    color: themePriorityColors.critical,
-    textColor: themePriorityTextColor('critical'),
-  },
 ];
 
 const parentTaskOptions = computed(() => {
@@ -1663,66 +1291,10 @@ const groupTree = computed(() => {
 // Return weekday and compact date (e.g., "Tuesday, 23.12.2025")
 const formatDateOnly = (date: string) => formatDisplayDate(date);
 
-// Return weekday (e.g., "Monday")
-const formatWeekday = (date: string) => {
-  const dateObj = new Date(date);
-  return dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-};
-
-const priorityColor = (priority: Task['priority']) => themePriorityColors[priority];
-const priorityTextColor = (priority: Task['priority']) => themePriorityTextColor(priority);
-
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return 'Unknown';
   const group = groups.value.find((g) => g.id === groupId);
   return group ? group.name : 'Unknown';
-};
-
-const getGroupColor = (groupId?: string): string => {
-  if (!groupId) return '#1976d2';
-  const group = groups.value.find((g) => g.id === groupId);
-  return group?.color || '#1976d2';
-};
-
-// Replenish colors and helpers live in the shared theme
-const getReplenishBg = (task: any) => themeGetReplenishBg(task.color_set);
-const getReplenishText = (task: any) => themeGetReplenishText(task.color_set);
-
-const setReplenishColor = async (task: any, colorId: string | null) => {
-  // For generated cyclic instances prefer the instance's eventDate (or current view)
-  const targetDate =
-    task && task.__isCyclicInstance
-      ? task.eventDate || currentDate.value
-      : task.date || task.eventDate || currentDate.value;
-  try {
-    // optimistic UI
-    task.color_set = colorId;
-    if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.color_set = colorId;
-    await updateTask(targetDate, task.id, { color_set: colorId });
-  } catch (e) {
-    logger.error('Failed to set replenish color', e);
-  }
-};
-
-const getDisplayDescription = (task: Task): string => {
-  const desc = (task.description || '').trim();
-  const name = (task.name || '').trim();
-  if (!desc) return '';
-  if (!name) return desc;
-
-  // If description equals the name exactly, hide it
-  if (desc === name) return '';
-
-  // If description starts with the name followed by separators, strip the leading name
-  if (desc.startsWith(name)) {
-    const remainder = desc
-      .slice(name.length)
-      .replace(/^[\s\-:\u2013\u2014]+/, '')
-      .trim();
-    return remainder || '';
-  }
-
-  return desc;
 };
 
 const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
@@ -2204,57 +1776,6 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
     value: group.id,
   };
   showFirstRunDialog.value = false;
-};
-
-const handleDeleteGroup = async (groupId: string) => {
-  await deleteGroup(groupId);
-
-  // If deleted group was the active one, set a new active group
-  if (activeGroup.value?.value === groupId) {
-    if (groups.value.length > 0) {
-      const firstGroup = groups.value[0];
-      if (firstGroup) {
-        activeGroup.value = {
-          label: firstGroup.name,
-          value: firstGroup.id,
-        };
-        defaultGroupId.value = firstGroup.id;
-      }
-    } else {
-      activeGroup.value = null;
-      defaultGroupId.value = undefined;
-    }
-  }
-
-  // If deleted group was the default, set a new default
-  if (defaultGroupId.value === groupId && groups.value.length > 0) {
-    defaultGroupId.value = groups.value[0]?.id;
-  } else if (groups.value.length === 0) {
-    defaultGroupId.value = undefined;
-  }
-};
-
-const showDataLocation = async () => {
-  if (window.electronAPI) {
-    const appDataPath = await window.electronAPI.getAppDataPath();
-    const dataFile = window.electronAPI.joinPath(appDataPath, 'organiser-data.json');
-
-    $q.dialog({
-      title: 'Data Storage Location',
-      message: `Your data is automatically saved to:\n\n${dataFile}`,
-      html: true,
-      ok: {
-        label: 'Close',
-        color: 'primary',
-      },
-    });
-  } else {
-    $q.notify({
-      message: 'Running in web mode - data is stored in browser localStorage',
-      color: 'info',
-      position: 'top',
-    });
-  }
 };
 
 onMounted(async () => {
