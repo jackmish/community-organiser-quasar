@@ -4,12 +4,12 @@ import os from 'os';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
+import logger from 'src/utils/logger';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.setName('CO21 - Community Organiser');
-console.log('App data path:', app.getPath('userData'));
 // Read package.json version (best-effort). Keep this simple and cast where needed.
 let packageAppVersion: string | undefined;
 try {
@@ -19,31 +19,28 @@ try {
     const pkgJson = JSON.parse(pkgRaw);
     if (pkgJson && pkgJson.version) {
       packageAppVersion = String(pkgJson.version);
-      console.log('Main: read package version', packageAppVersion);
       try {
         // set app version for consistency (cast to any to avoid typing issues)
         if ((app as any).setVersion) {
           try {
             (app as any).setVersion(String(pkgJson.version));
           } catch (e) {
-            void e;
+            logger.error('setVersion invocation failed', e);
           }
         }
       } catch (e) {
-        // ignore
+        logger.error('Setting app version failed', e);
       }
     }
   }
 } catch (e) {
-  console.warn('Main: failed to read package.json', e);
+  logger.error('Failed to read package.json for app version', e);
 }
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 
 let mainWindow: BrowserWindow | undefined;
-
-console.log('Electron app name:', app.getName());
 
 function createWindow() {
   /**
@@ -113,7 +110,7 @@ function createWindow() {
         `window.APP_VERSION = ${ver}; window.APP_NAME = ${name};`,
       );
     } catch (e) {
-      console.warn('Failed to inject app version into renderer', e);
+      logger.error('Failed to inject APP_VERSION/APP_NAME into renderer', e);
     }
   });
 
@@ -208,8 +205,8 @@ ipcMain.handle(
         const prettyStr = JSON.stringify(pretty, null, 2);
         zipfile.addBuffer(Buffer.from(prettyStr, 'utf8'), entryName);
       } catch (e) {
+        logger.error('Pretty JSON generation failed for export; falling back to original', e);
         // If pretty generation fails, add original JSON so export still works.
-        console.warn('Failed to generate cleaned JSON for export, falling back to raw JSON:', e);
         zipfile.addBuffer(Buffer.from(jsonString, 'utf8'), entryName);
       }
       zipfile.end();
@@ -221,7 +218,7 @@ ipcMain.handle(
 
       return zipPath;
     } catch (err) {
-      console.error('export:zip failed', err);
+      logger.error('export:zip failed', err);
       throw err;
     }
   },

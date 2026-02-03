@@ -473,7 +473,6 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       // when crossing the contextBridge boundary)
       const safe = JSON.parse(JSON.stringify(cache));
       await (window as any).electronAPI.writeJsonFile(filePath, safe);
-      logger.log(`Saved holidays for ${year} to APPDATA`);
     } else {
       // Save to localStorage
       const cacheKey = `holidays_PL_${year}`;

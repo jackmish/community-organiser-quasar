@@ -230,6 +230,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useQuasar, Notify } from 'quasar';
+import logger from 'src/utils/logger';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -375,7 +376,7 @@ async function loadSettings() {
       if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
     }
   } catch (e) {
-    console.warn('loadSettings failed', e);
+    logger.error('loadSettings failed', e);
   }
 }
 
@@ -398,13 +399,13 @@ async function loadGroupsFromAppData(): Promise<any[]> {
           const data = await api.readJsonFile(p);
           groups.push(data);
         } catch (e) {
-          console.warn('Failed reading group file', f, e);
+          logger.error('Error reading group file', f, e);
         }
       }
     }
     return groups;
   } catch (e) {
-    console.warn('loadGroupsFromAppData failed', e);
+    logger.error('loadGroupsFromAppData failed', e);
     return [];
   }
 }
@@ -426,7 +427,7 @@ async function saveSettings() {
     if (lastAutoBackup.value) payload.lastAutoBackup = lastAutoBackup.value;
     await api.writeJsonFile(settingsFile, payload);
   } catch (e) {
-    console.warn('saveSettings failed', e);
+    logger.error('saveSettings failed', e);
   }
 }
 
@@ -457,7 +458,7 @@ function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: str
       return;
     }
   } catch (e) {
-    // ignore
+    logger.error('notify: Notify.create failed', e);
   }
   try {
     if ($q && typeof ($q.notify as any) === 'function') {
@@ -465,13 +466,13 @@ function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: str
       return;
     }
   } catch (e) {
-    // ignore
+    logger.error('notify: $q.notify failed', e);
   }
   try {
     // last resort
     alert(message);
   } catch (e) {
-    // ignore
+    logger.error('notify: alert fallback failed', e);
   }
 }
 
@@ -553,7 +554,6 @@ async function performAutoBackup() {
     autoBackupStatus.value = 'done';
   } catch (e: any) {
     autoBackupStatus.value = 'error';
-    console.warn('performAutoBackup failed', e);
   }
 }
 
@@ -573,7 +573,7 @@ async function checkAutoBackup() {
       await performAutoBackup();
     }
   } catch (e) {
-    console.warn('checkAutoBackup failed', e);
+    logger.error('checkAutoBackup failed', e);
   }
 }
 
@@ -592,10 +592,11 @@ const overrideBackup = () => {
     }
     notify('info', "Override functionality isn't ready; it will be implemented if needed");
   } catch (e) {
+    logger.error('overrideBackup failed', e);
     try {
       notify('negative', 'Override cancelled');
     } catch (ee) {
-      console.warn('notify failed', ee);
+      logger.error('notify negative failed', ee);
     }
   }
 };

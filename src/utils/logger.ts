@@ -1,30 +1,15 @@
 // Lightweight logger wrapper used across the app.
 // In development this forwards to console; in production it's a noop.
-const enabled = !import.meta.env?.PROD;
-
-const noop = () => {};
+// Non-error logging is disabled per project policy; only `error` remains.
+const noop = (..._args: any[]) => {};
 
 const logger = {
-  log: (...args: any[]) => {
-    if (enabled) console.log(...args);
-  },
-  debug: (...args: any[]) => {
-    if (enabled) {
-      if (console.debug) {
-        console.debug(...args);
-      } else {
-        console.log(...args);
-      }
-    }
-  },
-  info: (...args: any[]) => {
-    if (enabled) console.info(...args);
-  },
-  warn: (...args: any[]) => {
-    if (enabled) console.warn(...args);
-  },
+  log: noop,
+  debug: noop,
+  info: noop,
+  warn: noop,
   error: (...args: any[]) => {
-    if (enabled) console.error(...args);
+    console.error(...args);
   },
 };
 

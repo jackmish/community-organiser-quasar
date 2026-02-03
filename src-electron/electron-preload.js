@@ -33,8 +33,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-// Debug: confirm preload script is loaded
-console.log('Electron preload script loaded!');
+// Debug: preload script loaded (debug logging removed)
 window.testPreload = true;
 // Preload no longer attempts to read package.json or call synchronous IPC for version.
 // The main process will inject `window.APP_VERSION` / `window.APP_NAME` after load.
@@ -57,19 +56,18 @@ try {
       try {
         pkgJson = JSON.parse(pkgRaw);
       } catch (parseErr) {
-        console.warn('preload: failed to parse package.json at', pkgPath, parseErr);
         continue;
       }
       if (pkgJson && pkgJson.version) window.APP_VERSION = String(pkgJson.version);
       if (pkgJson && pkgJson.name) window.APP_NAME = String(pkgJson.name);
-      console.log('preload: read package.json from', pkgPath);
+      // debug: preload read package.json (log removed)
       break;
     } catch (inner) {
-      void inner;
+      // ignored parse error for this candidate
     }
   }
 } catch (e) {
-  void e;
+  // overall preload package.json resolution failed (ignored)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -87,11 +85,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       try {
         return JSON.parse(data);
       } catch (parseError) {
-        console.warn('readJsonFile: invalid JSON at', filePath, parseError);
         return null;
       }
     } catch (error) {
-      console.warn('readJsonFile: failed to read', filePath, error);
       return null;
     }
   },
@@ -139,7 +135,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     try {
       return await ipcRenderer.invoke('dialog:select-folder');
     } catch (e) {
-      console.warn('showOpenFolder failed', e);
       return null;
     }
   },
@@ -147,14 +142,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Join paths
   joinPath: (...paths) => path.join(...paths),
   // Create a zip containing provided JSON (main process will write file)
-  exportZip: async (folder, zipName, jsonString) => {
-    try {
-      return await ipcRenderer.invoke('export:zip', folder, zipName, jsonString);
-    } catch (e) {
-      console.warn('exportZip failed', e);
-      throw e;
-    }
-  },
+  exportZip: (folder, zipName, jsonString) =>
+    ipcRenderer.invoke('export:zip', folder, zipName, jsonString),
 });
 
 // BLE bridge: IPC for main-process BLE adapter and Web Bluetooth helpers for renderer
@@ -192,7 +181,6 @@ contextBridge.exposeInMainWorld('electronBLE', {
         uuids: device.uuids || [],
       };
     } catch (err) {
-      console.warn('requestDevice failed', err);
       return null;
     }
   },
@@ -217,7 +205,7 @@ contextBridge.exposeInMainWorld('electronBLE', {
         try {
           _webScan.stop();
         } catch (e) {
-          console.warn('stop existing webScan failed', e);
+          console.error('Failed to stop previous web scan', e);
         }
         _webScan = null;
       }
@@ -255,7 +243,6 @@ contextBridge.exposeInMainWorld('electronBLE', {
       navigator.bluetooth.addEventListener('advertisementreceived', _webScanHandler);
       return true;
     } catch (err) {
-      console.warn('startScanWeb failed', err);
       return false;
     }
   },
@@ -266,7 +253,7 @@ contextBridge.exposeInMainWorld('electronBLE', {
         try {
           _webScan.stop();
         } catch (e) {
-          console.warn('stop webScan failed', e);
+          console.error('Failed to stop existing web scan', e);
         }
         _webScan = null;
       }
@@ -274,7 +261,7 @@ contextBridge.exposeInMainWorld('electronBLE', {
         try {
           navigator.bluetooth.removeEventListener('advertisementreceived', _webScanHandler);
         } catch (e) {
-          console.warn('removeEventListener failed', e);
+          console.error('Failed to remove web scan advertisement listener', e);
         }
         _webScanHandler = null;
       }

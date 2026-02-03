@@ -34,9 +34,7 @@ class DayOrganiserStorage {
     }
   }
 
-  exportToFile(data: OrganiserData): void {
-    logger.log('Export not implemented: all data is in testing/storage/groups');
-  }
+  exportToFile(data: OrganiserData): void {}
 
   async importFromFile(file: File): Promise<OrganiserData> {
     return new Promise((resolve, reject) => {
@@ -229,7 +227,6 @@ export async function deleteGroupFile(groupId: string): Promise<void> {
       const exists = await window.electronAPI.fileExists(filePath);
       if (exists) {
         await window.electronAPI.deleteFile(filePath);
-        logger.log('[deleteGroupFile] removed file', filePath);
       }
     } catch (err) {
       logger.error('[deleteGroupFile] failed to delete', filePath, err);
