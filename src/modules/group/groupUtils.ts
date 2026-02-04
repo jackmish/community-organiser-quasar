@@ -49,3 +49,40 @@ export const buildGroupTree = (groups: TaskGroup[] = []) => {
   });
   return roots;
 };
+
+// Determine whether a candidate group id should be visible when `activeGroupValue` is selected.
+export const isVisibleForActive = (
+  groups: TaskGroup[] = [],
+  activeGroupValue: any,
+  candidateId: any,
+) => {
+  if (!activeGroupValue || activeGroupValue.value === null) return true;
+  if (candidateId == null) return false;
+  const activeId = String(activeGroupValue.value ?? activeGroupValue);
+  const cid = String(candidateId);
+  if (cid === activeId) return true;
+
+  const getGroupById = (id: any) => (groups || []).find((g: any) => String(g.id) === String(id));
+  const node = getGroupById(cid);
+  if (!node) return false;
+
+  const parentId = node.parentId ?? node.parent_id ?? null;
+  if (parentId == null) return false;
+  if (String(parentId) === activeId) {
+    if (node.hideTasksFromParent) return false;
+    return true;
+  }
+
+  let childNode: any = node;
+  let cur = getGroupById(parentId);
+  while (cur) {
+    if (childNode && childNode.hideTasksFromParent) return false;
+    if (!cur.shareSubgroups) return false;
+    const curParent = cur.parentId ?? cur.parent_id ?? null;
+    if (curParent == null) return false;
+    if (String(curParent) === activeId) return true;
+    childNode = cur;
+    cur = getGroupById(curParent);
+  }
+  return false;
+};

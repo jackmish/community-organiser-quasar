@@ -261,6 +261,7 @@ import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/utils/occursOnDay';
 import { createGroupUiHandlers } from 'src/modules/group/uiHandlers';
+import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUtils';
 
 const $q = useQuasar();
 
@@ -554,44 +555,8 @@ const sortedTasks = computed(() => {
     // Ignore: if getTasksInRange isn't available or fails, fall back to just today's tasks
     logger.warn('Failed to include Todo extras for today', err);
   }
-  // Helper to check whether a task group is visible for the current active group.
-  const isVisibleForActive = (candidateId: any) => {
-    if (!activeGroup.value || activeGroup.value.value === null) return true;
-    if (candidateId == null) return false;
-    const activeId = String(activeGroup.value.value);
-    const cid = String(candidateId);
-    if (cid === activeId) return true;
-
-    const getGroupById = (id: any) =>
-      (groups.value || []).find((g: any) => String(g.id) === String(id));
-    const node = getGroupById(cid);
-    if (!node) return false;
-
-    // If node is direct child of active group, show it unless the child hides tasks from parent
-    const parentId = node.parentId ?? node.parent_id ?? null;
-    if (parentId == null) return false;
-    if (String(parentId) === activeId) {
-      if (node.hideTasksFromParent) return false;
-      return true;
-    }
-
-    // For deeper descendants, walk upwards from the node's parent and ensure
-    // none of the intermediate child nodes request hiding from their parent,
-    // and each ancestor has shareSubgroups === true.
-    let childNode: any = node;
-    let cur = getGroupById(parentId);
-    while (cur) {
-      // if the child requests hiding from its immediate parent, do not show
-      if (childNode && childNode.hideTasksFromParent) return false;
-      if (!cur.shareSubgroups) return false;
-      const curParent = cur.parentId ?? cur.parent_id ?? null;
-      if (curParent == null) return false;
-      if (String(curParent) === activeId) return true;
-      childNode = cur;
-      cur = getGroupById(curParent);
-    }
-    return false;
-  };
+  const isVisibleForActive = (candidateId: any) =>
+    groupIsVisible(groups.value, activeGroup.value, candidateId);
 
   // Remove tasks that are stored on this date but are cyclic and shouldn't occur today
   try {
@@ -669,36 +634,7 @@ const replenishTasks = computed(() => {
     const all = allTasks.value || [];
     let val = all.filter((t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0);
     if (activeGroup.value && activeGroup.value.value !== null) {
-      const activeId = String(activeGroup.value.value);
-      const getGroupById = (id: any) =>
-        (groups.value || []).find((g: any) => String(g.id) === String(id));
-      const isVisibleForActive = (candidateId: any) => {
-        if (candidateId == null) return false;
-        const cid = String(candidateId);
-        if (cid === activeId) return true;
-        const node = getGroupById(cid);
-        if (!node) return false;
-        const parentId = node.parentId ?? node.parent_id ?? null;
-        if (parentId == null) return false;
-        if (String(parentId) === activeId) {
-          if (node.hideTasksFromParent) return false;
-          return true;
-        }
-        let childNode: any = node;
-        let cur = getGroupById(parentId);
-        while (cur) {
-          if (childNode && childNode.hideTasksFromParent) return false;
-          if (!cur.shareSubgroups) return false;
-          const curParent = cur.parentId ?? cur.parent_id ?? null;
-          if (curParent == null) return false;
-          if (String(curParent) === activeId) return true;
-          childNode = cur;
-          cur = getGroupById(curParent);
-        }
-        return false;
-      };
-
-      val = val.filter((t) => isVisibleForActive(t.groupId));
+      val = val.filter((t) => groupIsVisible(groups.value, activeGroup.value, t.groupId));
     }
     // sort by name for stable display
     val = val.sort((a: any, b: any) => {
@@ -741,32 +677,9 @@ const doneTasks = computed(() => {
       (t: any) => t.type_id === 'Replenish' && Number(t.status_id) === 0,
     );
     if (activeGroup.value && activeGroup.value.value !== null) {
-      const activeId = String(activeGroup.value.value);
-      const getGroupById = (id: any) =>
-        (groups.value || []).find((g: any) => String(g.id) === String(id));
-      const isVisibleForActive = (candidateId: any) => {
-        if (candidateId == null) return false;
-        const cid = String(candidateId);
-        if (cid === activeId) return true;
-        let childNode: any = getGroupById(cid);
-        let cur = getGroupById(cid);
-        while (cur) {
-          const pid = cur.parentId ?? cur.parent_id ?? null;
-          if (pid == null) return false;
-          // if current node is direct child of active, respect its hide flag
-          if (String(pid) === activeId) {
-            if (childNode && childNode.hideTasksFromParent) return false;
-            return Boolean(cur.shareSubgroups);
-          }
-          if (childNode && childNode.hideTasksFromParent) return false;
-          if (!cur.shareSubgroups) return false;
-          childNode = cur;
-          cur = getGroupById(pid);
-        }
-        return false;
-      };
-
-      replenishDone = replenishDone.filter((t: any) => isVisibleForActive(t.groupId));
+      replenishDone = replenishDone.filter((t: any) =>
+        groupIsVisible(groups.value, activeGroup.value, t.groupId),
+      );
     }
     // Merge replenishDone into done, avoiding duplicates by id
     const existingIds = new Set(done.map((d: any) => d.id));
