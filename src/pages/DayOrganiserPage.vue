@@ -219,6 +219,7 @@ import { useLongPress } from '../composables/useLongPress';
 import GroupSelectHeader from '../components/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
+import { createTaskUiHandlers } from 'src/modules/task/uiHandlers';
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -326,6 +327,16 @@ const pendingToggles = new Map<string, boolean>();
 const { pendingLineEvents, waitForLineEvent, onLineCollapsed, onLineExpanded } =
   createLineEventHandlers();
 
+// task UI handlers moved to module
+const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
+  taskToEdit,
+  mode,
+  panelHidden,
+  selectedTaskId,
+  currentDate,
+  setCurrentDate,
+});
+
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
 let organiserGroupManageHandler: any = null;
@@ -342,54 +353,12 @@ onBeforeUnmount(() => {
   }
 });
 
-// Allowed modes depend on whether a task is selected.
-// Do not expose the 'add' option here (floating add button handles creation).
-const allowedModes = computed(() => (taskToEdit.value ? ['preview', 'edit'] : []));
-
 // Ensure we return to 'add' mode when no task is selected
 watch(taskToEdit, (val) => {
   if (!val && mode.value !== 'add') {
     mode.value = 'add';
   }
 });
-
-function setTaskToEdit(task: Task) {
-  // If this is a cyclic/occurring task, attach the current visible date
-  // so the preview shows the occurrence date rather than the base creation date.
-  let toShow: Task = task;
-  try {
-    const cycle = getCycleType(task);
-    if (cycle) {
-      toShow = { ...(task as any) } as Task;
-      (toShow as any).date = currentDate.value;
-    }
-  } catch (e) {
-    // ignore and fall back to the original task
-  }
-
-  taskToEdit.value = toShow;
-  // show preview when a task is clicked
-  mode.value = 'preview';
-  // ensure panel is visible when selecting a task
-  panelHidden.value = false;
-  selectedTaskId.value = toShow.id;
-}
-
-function editTask(task: Task) {
-  taskToEdit.value = task;
-  mode.value = 'edit';
-  // ensure panel is visible when entering edit
-  panelHidden.value = false;
-  selectedTaskId.value = task.id;
-}
-
-function clearTaskToEdit() {
-  taskToEdit.value = null;
-  mode.value = 'add';
-  selectedTaskId.value = null;
-  // ensure the right-side panel is visible when switching to create mode
-  panelHidden.value = false;
-}
 
 async function saveEditedGroup() {
   if (!editGroupLocal.value) return;
