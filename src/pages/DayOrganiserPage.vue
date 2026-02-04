@@ -260,6 +260,7 @@ import { useDayOrganiser } from '../modules/day-organiser';
 import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/utils/occursOnDay';
+import { createGroupUiHandlers } from 'src/modules/group/uiHandlers';
 
 const $q = useQuasar();
 
@@ -281,6 +282,7 @@ const {
   groups,
   activeGroup,
   addGroup,
+  updateGroup,
 
   getGroupsByParent,
   hiddenGroupSummary,
@@ -360,28 +362,11 @@ watch(taskToEdit, (val) => {
   }
 });
 
-async function saveEditedGroup() {
-  if (!editGroupLocal.value) return;
-  const { id, name, parentId, color } = editGroupLocal.value;
-  if (!name || !name.trim()) return;
-  try {
-    const { updateGroup } = useDayOrganiser();
-    const updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>> = {};
-    updates.name = name.trim();
-    if (parentId !== undefined && parentId !== null) updates.parentId = parentId as any;
-    if (color !== undefined && color !== null) updates.color = color as any;
-    await updateGroup(id, updates);
-  } catch (e) {
-    logger.error('updateGroup failed', e);
-  }
-  showEditGroupDialog.value = false;
-  editGroupLocal.value = null;
-}
-
-function cancelEditGroup() {
-  showEditGroupDialog.value = false;
-  editGroupLocal.value = null;
-}
+const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
+  editGroupLocal,
+  showEditGroupDialog,
+  updateGroup,
+});
 
 // When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
 watch(mode, (val) => {
