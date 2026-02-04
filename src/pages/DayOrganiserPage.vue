@@ -222,6 +222,7 @@ import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
 import { createTaskUiHandlers, createTaskViewHelpers } from 'src/modules/task/uiHandlers';
 import { createCalendarHandlers } from 'src/modules/task/calendarHandlers';
 import { createTaskComputed } from 'src/modules/task/computedTaskLists';
+import { createTaskCrudHandlers } from 'src/modules/task/taskCrudHandlers';
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -490,65 +491,19 @@ const getGroupName = (groupId?: string): string => {
   return group ? group.name : 'Unknown';
 };
 
-const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
-  // Ensure there's a group to assign: prefer payload.groupId, otherwise active group
-  const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
-  if (groupIdToUse === null || groupIdToUse === undefined) {
-    $q.notify({
-      type: 'warning',
-      message: 'Please select an active group first (not "All Groups")',
-      position: 'top',
-    });
-    return;
-  }
-
-  // Validate payload
-  if (!taskPayload || !taskPayload.name) return;
-
-  // Determine which date the task should belong to: prefer explicit payload.date or payload.eventDate
-  const targetDate =
-    (taskPayload && (taskPayload.date || taskPayload.eventDate)) || currentDate.value;
-
-  // Build task data and add to the computed day
-  const taskData: any = {
-    ...taskPayload,
-    date: taskPayload?.date || taskPayload?.eventDate || targetDate,
-    groupId: groupIdToUse,
-  };
-
-  const created = await addTask(targetDate, taskData);
-  if (opts && opts.preview && created) {
-    taskToEdit.value = created as any;
-    mode.value = 'preview';
-    selectedTaskId.value = created.id;
-    try {
-      setCurrentDate((created as any).date || (created as any).eventDate || null);
-    } catch (e) {
-      // ignore
-    }
-  }
-};
-
-const handleUpdateTask = async (updatedTask: any) => {
-  if (!updatedTask || !updatedTask.id) return;
-  const { id, ...rest } = updatedTask;
-  // Determine which date bucket the task belongs to: prefer explicit `date`, then `eventDate`, otherwise current view
-  const targetDate =
-    (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
-  await updateTask(targetDate, id, rest);
-  // Find the updated task in the global task list and show it in preview
-  const updated = (allTasks.value || []).find((t) => t.id === id) || null;
-  taskToEdit.value = updated as any;
-  if (updated) {
-    mode.value = 'preview';
-    selectedTaskId.value = id;
-    // Do not change the active calendar day after updating a task
-  } else {
-    // fallback: no task found, ensure we return to add mode
-    mode.value = 'add';
-    selectedTaskId.value = null;
-  }
-};
+// Extract add/update handlers into a task CRUD module
+const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
+  addTask,
+  updateTask,
+  setCurrentDate,
+  activeGroup,
+  currentDate,
+  allTasks,
+  $q,
+  taskToEdit,
+  mode,
+  selectedTaskId,
+});
 
 const handleDeleteTask = async (payload: any) => {
   try {

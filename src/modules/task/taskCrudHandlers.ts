@@ -1,0 +1,85 @@
+import type { Ref } from 'vue';
+import type { Task } from 'src/modules/task/types';
+
+export function createTaskCrudHandlers(args: {
+  addTask: (date: string, data: any) => Promise<any>;
+  updateTask: (date: string, id: string, rest: any) => Promise<any>;
+  setCurrentDate: (d: string | null) => void;
+  activeGroup: Ref<any>;
+  currentDate: Ref<string>;
+  allTasks: Ref<any[]>;
+  $q: any;
+  taskToEdit: Ref<Task | null>;
+  mode: Ref<'add' | 'edit' | 'preview'>;
+  selectedTaskId: Ref<string | null>;
+}) {
+  const {
+    addTask,
+    updateTask,
+    setCurrentDate,
+    activeGroup,
+    currentDate,
+    allTasks,
+    $q,
+    taskToEdit,
+    mode,
+    selectedTaskId,
+  } = args;
+
+  const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
+    const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
+    if (groupIdToUse === null || groupIdToUse === undefined) {
+      try {
+        $q.notify({
+          type: 'warning',
+          message: 'Please select an active group first (not "All Groups")',
+          position: 'top',
+        });
+      } catch (e) {
+        // ignore
+      }
+      return;
+    }
+
+    if (!taskPayload || !taskPayload.name) return;
+
+    const targetDate =
+      (taskPayload && (taskPayload.date || taskPayload.eventDate)) || currentDate.value;
+    const taskData: any = {
+      ...taskPayload,
+      date: taskPayload?.date || taskPayload?.eventDate || targetDate,
+      groupId: groupIdToUse,
+    };
+
+    const created = await addTask(targetDate, taskData);
+    if (opts && opts.preview && created) {
+      taskToEdit.value = created as Task;
+      mode.value = 'preview';
+      selectedTaskId.value = created.id;
+      try {
+        setCurrentDate(created?.date || created?.eventDate || null);
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  const handleUpdateTask = async (updatedTask: any) => {
+    if (!updatedTask || !updatedTask.id) return;
+    const { id, ...rest } = updatedTask;
+    const targetDate =
+      (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
+    await updateTask(targetDate, id, rest);
+    const updated = (allTasks.value || []).find((t) => t.id === id) || null;
+    taskToEdit.value = updated as Task | null;
+    if (updated) {
+      mode.value = 'preview';
+      selectedTaskId.value = id;
+    } else {
+      mode.value = 'add';
+      selectedTaskId.value = null;
+    }
+  };
+
+  return { handleAddTask, handleUpdateTask } as const;
+}
