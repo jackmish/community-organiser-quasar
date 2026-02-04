@@ -219,7 +219,7 @@ import { useLongPress } from '../composables/useLongPress';
 import GroupSelectHeader from '../components/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
-import { createTaskUiHandlers } from 'src/modules/task/uiHandlers';
+import { createTaskUiHandlers, createTaskViewHelpers } from 'src/modules/task/uiHandlers';
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -478,109 +478,30 @@ function handleCalendarPreview(payload: any) {
   }
 }
 
-// Refs for date inputs
-
-const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
-
-const isClickBlocked = ref(false);
-// Long-press handling via composable
-const { longPressTriggered, setLongPressHandler } = useLongPress();
-
-// Register page's edit handler with the composable
-setLongPressHandler(editTask);
-
-function handleTaskClick(task: Task) {
-  if (longPressTriggered.value) {
-    // consumed by long-press; reset flag and do nothing
-    longPressTriggered.value = false;
-    return;
-  }
-  setTaskToEdit(task);
-}
-
-// Watch timeType to clear time when "Whole Day" is selected
-watch(timeType, (newValue) => {
-  if (newValue === 'wholeDay') {
-    newTask.value.eventTime = '';
-  }
+const {
+  timeType,
+  isClickBlocked,
+  newTask,
+  typeOptions,
+  parentTaskOptions,
+  filteredParentOptions,
+  handleTaskClick,
+  filterParentTasks,
+  parseYmdLocal,
+  getTimeOffsetDaysForTask,
+} = createTaskViewHelpers({
+  currentDate,
+  setCurrentDate,
+  currentDayData,
+  allTasks,
+  groups,
+  activeGroup,
+  getGroupsByParent,
+  setTaskToEdit,
+  editTask,
 });
 
-const newTask = ref({
-  name: '',
-  description: '',
-  type_id: 'TimeEvent',
-  status_id: '',
-  parent_id: null as string | null,
-  created_by: '',
-  priority: 'medium' as Task['priority'],
-  completed: false,
-  groupId: undefined as string | undefined,
-  eventDate: format(new Date(), 'yyyy-MM-dd'),
-  eventTime: '',
-});
-
-const typeOptions = [
-  { label: 'Command center', value: 'Command center', icon: 'dashboard' },
-  { label: 'Note/Later', value: 'Note/Later', icon: 'note' },
-  { label: 'TimeEvent', value: 'TimeEvent', icon: 'event' },
-  { label: 'Replenishment', value: 'Replenishment', icon: 'shopping_cart' },
-];
-
-const parentTaskOptions = computed(() => {
-  const val = currentDayData.value.tasks.map((task) => ({
-    label: task.name,
-    value: task.id,
-    icon: typeOptions.find((t) => t.value === task.category)?.icon || 'task',
-  }));
-  return val;
-});
-
-const filteredParentOptions = ref(parentTaskOptions.value);
-
-// Update filtered options when parent task options change
-watch(parentTaskOptions, (newOptions) => {
-  filteredParentOptions.value = newOptions;
-});
-
-// Sync calendar date with current date when using arrow navigation
-watch(currentDate, (newDate) => {
-  if (newTask.value.eventDate !== newDate) {
-    newTask.value.eventDate = newDate;
-  }
-});
-
-const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
-  update(() => {
-    if (val === '') {
-      filteredParentOptions.value = parentTaskOptions.value;
-    } else {
-      const needle = val.toLowerCase();
-      filteredParentOptions.value = parentTaskOptions.value.filter(
-        (option) => option.label.toLowerCase().indexOf(needle) > -1,
-      );
-    }
-  });
-};
-
-// Parse YYYY-MM-DD into a local Date (avoids timezone shifts with ISO parsing)
-const parseYmdLocal = (s: string | undefined | null): Date | null => {
-  if (!s || typeof s !== 'string') return null;
-  const parts = s.split('-');
-  if (parts.length < 3) return null;
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  const d = Number(parts[2]);
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
-  return new Date(y, m - 1, d);
-};
-
-// Return offset days for a task; use the task's value or 0 when missing/invalid
-const getTimeOffsetDaysForTask = (t: any): number => {
-  const raw = t && t.timeOffsetDays;
-  if (raw === null || raw === undefined || raw === '') return 0;
-  const n = Number(raw);
-  return isNaN(n) ? 0 : Math.max(0, Math.floor(n));
-};
+// parseYmdLocal and getTimeOffsetDaysForTask provided by task view helpers
 
 const sortedTasks = computed(() => {
   // Filter tasks by active group (unless "All Groups" is selected)

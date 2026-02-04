@@ -144,6 +144,9 @@ const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
 let headerManageHandler: any = null;
+// Obtain router and route during setup (inject must run inside setup)
+const router = useRouter();
+const route = useRoute();
 const appVersion = ref<string>(pkg?.version || 'unknown');
 
 const now = ref(new Date());
@@ -206,8 +209,6 @@ onMounted(async () => {
   });
   // Ensure 'Manage Groups' selection in header opens the dialog in DayOrganiserPage.
   try {
-    const router = useRouter();
-    const route = useRoute();
     headerManageHandler = () => {
       try {
         if (route.path === '/') {
