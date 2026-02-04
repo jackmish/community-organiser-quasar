@@ -3,6 +3,7 @@ import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } fro
 import { useQuasar, Dialog } from 'quasar';
 import { useDayOrganiser } from '../modules/day-organiser';
 import logger from 'src/utils/logger';
+import { useTimeDiff } from 'src/composables/useTimeDiff';
 import CalendarView from './CalendarView.vue';
 import ReplenishmentList from './ReplenishmentList.vue';
 import {
@@ -1015,32 +1016,7 @@ function updateEventDateYear(val: number | string | null) {
 
 // (Handlers replaced by computed setters above)
 
-// Returns a simple day-only difference between the given date and today
-const getTimeDifferenceDisplay = (dayDate: string) => {
-  if (!dayDate) return 'Select a date';
-
-  const date = new Date(dayDate);
-  const today = new Date();
-
-  // Normalize both dates to midnight for accurate day comparison
-  const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  const daysDiff = Math.round(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (daysDiff === 0) return 'TODAY';
-  if (daysDiff === 1) return 'TOMORROW';
-  if (daysDiff === -1) return 'YESTERDAY';
-
-  if (daysDiff > 0) {
-    return `In ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}`;
-  }
-
-  const absDays = Math.abs(daysDiff);
-  return `${absDays} ${absDays === 1 ? 'day' : 'days'} ago`;
-};
+const { getTimeDifferenceDisplay } = useTimeDiff();
 // Computed for eventDate parts, always in sync with eventDate
 const eventDate = computed(() => {
   const val = localNewTask.value.eventDate || '';

@@ -218,6 +218,7 @@ import CalendarView from '../components/CalendarView.vue';
 import { useLongPress } from '../composables/useLongPress';
 import GroupSelectHeader from '../components/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
+import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -281,6 +282,7 @@ const {
   addGroup,
 
   getGroupsByParent,
+  hiddenGroupSummary,
   previewTaskId,
   previewTaskPayload,
   setPreviewTask,
@@ -296,87 +298,7 @@ const allTasks = computed(() => {
   }
 });
 
-// Summary of tasks from child groups that hide tasks from parent
-const hiddenGroupSummary = computed(() => {
-  try {
-    if (!activeGroup.value || activeGroup.value.value === null)
-      return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-    const activeId = String(activeGroup.value.value);
-    const getGroupById = (id: any) =>
-      (groups.value || []).find((g: any) => String(g.id) === String(id));
-
-    // Find groups that have hideTasksFromParent === true and are direct children of activeGroup
-    const hiddenGroupIds = new Set<string>();
-    (groups.value || []).forEach((g: any) => {
-      try {
-        if (!g || !g.id) return;
-        if (!g.hideTasksFromParent) return;
-        const parent = g.parentId ?? g.parent_id ?? null;
-        if (parent && String(parent) === activeId) hiddenGroupIds.add(String(g.id));
-      } catch (e) {
-        void e;
-      }
-    });
-
-    if (hiddenGroupIds.size === 0)
-      return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-
-    // Initialize per-group counters
-    const groupsMap = new Map<string, any>();
-    for (const id of Array.from(hiddenGroupIds)) {
-      const g = getGroupById(id) || { id, name: '(unknown)' };
-      groupsMap.set(String(id), {
-        id: String(id),
-        name: g.name || String(id),
-        total: 0,
-        low: 0,
-        medium: 0,
-        high: 0,
-        critical: 0,
-      });
-    }
-
-    const all = allTasks.value || [];
-    for (const t of all) {
-      try {
-        if (!t || !t.groupId) continue;
-        const gid = String(t.groupId);
-        if (!hiddenGroupIds.has(gid)) continue;
-        if (Number(t.status_id) === 0) continue; // skip done
-        const p = t.priority || 'medium';
-        const entry = groupsMap.get(gid);
-        if (!entry) continue;
-        entry[p] = (entry[p] || 0) + 1;
-        entry.total++;
-      } catch (e) {
-        void e;
-      }
-    }
-
-    // Build final list and totals
-    const groupsArr = Array.from(groupsMap.values()).sort((a: any, b: any) =>
-      String(a.name).localeCompare(String(b.name)),
-    );
-    const totals: { total: number; low: number; medium: number; high: number; critical: number } = {
-      total: 0,
-      low: 0,
-      medium: 0,
-      high: 0,
-      critical: 0,
-    };
-    for (const g of groupsArr) {
-      totals.total += g.total || 0;
-      totals.low += g.low || 0;
-      totals.medium += g.medium || 0;
-      totals.high += g.high || 0;
-      totals.critical += g.critical || 0;
-    }
-
-    return { ...totals, groups: groupsArr };
-  } catch (e) {
-    return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-  }
-});
+// `hiddenGroupSummary` moved to the day-organiser module for reuse
 
 const showGroupDialog = ref(false);
 
@@ -400,46 +322,9 @@ const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
 const pendingToggles = new Map<string, boolean>();
-// pending promises for child line animation events
-const pendingLineEvents = new Map<string, (payload?: any) => void>();
-
-function waitForLineEvent(
-  taskId: string | number | undefined,
-  idx: number,
-  type: 'collapsed' | 'expanded',
-) {
-  if (!taskId && taskId !== 0) return Promise.resolve();
-  const key = `${taskId}:${idx}:${type}`;
-  return new Promise<void>((res) => {
-    pendingLineEvents.set(key, () => res());
-  });
-}
-
-function onLineCollapsed(payload: any) {
-  try {
-    const key = `${payload.taskId}:${payload.idx}:collapsed`;
-    const fn = pendingLineEvents.get(key);
-    if (fn) {
-      fn(payload);
-      pendingLineEvents.delete(key);
-    }
-  } catch (e) {
-    // ignore
-  }
-}
-
-function onLineExpanded(payload: any) {
-  try {
-    const key = `${payload.taskId}:${payload.idx}:expanded`;
-    const fn = pendingLineEvents.get(key);
-    if (fn) {
-      fn(payload);
-      pendingLineEvents.delete(key);
-    }
-  } catch (e) {
-    // ignore
-  }
-}
+// pending promises for child line animation events (moved to task module)
+const { pendingLineEvents, waitForLineEvent, onLineCollapsed, onLineExpanded } =
+  createLineEventHandlers();
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
