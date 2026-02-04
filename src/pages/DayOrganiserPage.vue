@@ -220,38 +220,12 @@ import GroupSelectHeader from '../components/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
 import { createTaskUiHandlers, createTaskViewHelpers } from 'src/modules/task/uiHandlers';
+import { createCalendarHandlers } from 'src/modules/task/calendarHandlers';
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
 
-function selectCalendarDate(dateString: string) {
-  // Block rapid clicks
-  if (isClickBlocked.value) return;
-
-  // Only update if the date is actually different
-  if (newTask.value.eventDate !== dateString) {
-    isClickBlocked.value = true;
-    newTask.value.eventDate = dateString;
-    setCurrentDate(dateString); // Sync the date to the left list
-
-    // Unblock after a short delay
-    setTimeout(() => {
-      isClickBlocked.value = false;
-    }, 100);
-  }
-}
-
-function handleCalendarDateSelect(dateString: string) {
-  selectCalendarDate(dateString);
-}
-
-function handleCalendarEdit(taskId: string | null) {
-  if (!taskId) return;
-  const found = (allTasks.value || []).find((t: any) => t.id === String(taskId));
-  if (found) {
-    editTask(found);
-  }
-}
+// calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useQuasar } from 'quasar';
@@ -442,42 +416,7 @@ watch(
   },
 );
 
-// Handle preview event from calendar (may pass either id string or full event object)
-function handleCalendarPreview(payload: any) {
-  if (!payload) return;
-  let found: Task | null = null;
-  try {
-    if (typeof payload === 'string' || typeof payload === 'number') {
-      const sid = String(payload);
-      found = (allTasks.value || []).find((t) => t.id === sid) || null;
-    } else if (payload && payload.id) {
-      // Prefer to find canonical task by id and then attach occurrence date
-      const sid = String(payload.id);
-      const base = (allTasks.value || []).find((t) => t.id === sid) || null;
-      if (base) {
-        // shallow clone and attach occurrence date if provided
-        found = { ...(base as any) } as Task;
-        const occ = payload.date || payload._date || payload._dateStr || payload.eventDate;
-        if (occ) (found as any).date = occ;
-      } else {
-        // fallback to using payload as the task object
-        found = payload as Task;
-      }
-    }
-  } catch (e) {
-    found = null;
-  }
-  if (found) {
-    taskToEdit.value = found;
-    mode.value = 'preview';
-    selectedTaskId.value = found.id;
-    try {
-      setCurrentDate((found as any).date || found.date || found.eventDate || null);
-    } catch (e) {
-      // ignore
-    }
-  }
-}
+// calendar preview handled by createCalendarHandlers
 
 const {
   timeType,
@@ -501,6 +440,21 @@ const {
   setTaskToEdit,
   editTask,
 });
+
+// instantiate calendar handlers (safe: uses refs created above)
+const { selectCalendarDate, handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
+  createCalendarHandlers({
+    isClickBlocked,
+    newTask,
+    setCurrentDate,
+    allTasks,
+    editTask,
+    setTaskToEdit,
+    mode,
+    selectedTaskId,
+    setPreviewTask,
+    notify: (opts: any) => $q.notify(opts),
+  });
 
 // parseYmdLocal and getTimeOffsetDaysForTask provided by task view helpers
 
