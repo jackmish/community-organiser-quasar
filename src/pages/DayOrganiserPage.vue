@@ -301,8 +301,7 @@ const animatingLines = ref<number[]>([]);
 // track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
 const pendingToggles = new Map<string, boolean>();
 // pending promises for child line animation events (moved to task module)
-const { pendingLineEvents, waitForLineEvent, onLineCollapsed, onLineExpanded } =
-  createLineEventHandlers();
+const { waitForLineEvent, onLineCollapsed, onLineExpanded } = createLineEventHandlers();
 
 // task UI handlers moved to module
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
@@ -419,11 +418,9 @@ watch(
 // calendar preview handled by createCalendarHandlers
 
 const {
-  timeType,
   isClickBlocked,
   newTask,
-  typeOptions,
-  parentTaskOptions,
+
   filteredParentOptions,
   handleTaskClick,
   filterParentTasks,
@@ -442,7 +439,7 @@ const {
 });
 
 // instantiate calendar handlers (safe: uses refs created above)
-const { selectCalendarDate, handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
+const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
   createCalendarHandlers({
     isClickBlocked,
     newTask,
