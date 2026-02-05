@@ -499,7 +499,7 @@ const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   activeGroup,
   currentDate,
   allTasks,
-  $q,
+  quasar: $q,
   taskToEdit,
   mode,
   selectedTaskId,

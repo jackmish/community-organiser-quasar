@@ -8,7 +8,7 @@ export function createTaskCrudHandlers(args: {
   activeGroup: Ref<any>;
   currentDate: Ref<string>;
   allTasks: Ref<any[]>;
-  $q: any;
+  quasar: any;
   taskToEdit: Ref<Task | null>;
   mode: Ref<'add' | 'edit' | 'preview'>;
   selectedTaskId: Ref<string | null>;
@@ -20,7 +20,7 @@ export function createTaskCrudHandlers(args: {
     activeGroup,
     currentDate,
     allTasks,
-    $q,
+    quasar,
     taskToEdit,
     mode,
     selectedTaskId,
@@ -30,7 +30,7 @@ export function createTaskCrudHandlers(args: {
     const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
     if (groupIdToUse === null || groupIdToUse === undefined) {
       try {
-        $q.notify({
+        quasar.notify({
           type: 'warning',
           message: 'Please select an active group first (not "All Groups")',
           position: 'top',
