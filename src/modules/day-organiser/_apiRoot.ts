@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 
 import type { OrganiserData } from './types';
 import type { Task } from '../task/types';
-import { storage } from './storage';
+import { createStorageApi } from './apiStorage';
 
 import { prepareGroupsForSave } from '../group/groupService';
 import * as apiTask from '../task/_apiTask';
@@ -24,6 +24,7 @@ export const store: any = {
   activeGroup: ref<{ label: string; value: string | null } | null>(null),
   //Shared API methods
   async saveData() {
+    // call storage API bound to store
     await storage.saveData(prepareGroupsForSave(this.organiserData.value));
   },
 };
@@ -36,3 +37,4 @@ export const store: any = {
 export const task = apiTask.createTaskApi(store) as any;
 export const group = apiGroup.createGroupApi(store) as any;
 export const time = createTimeApi() as any;
+export const storage = createStorageApi(store) as any;
