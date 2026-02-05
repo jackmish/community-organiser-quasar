@@ -6,6 +6,7 @@ import * as taskService from '../task/taskService';
 export function createTaskApi(
   getOrganiserData: () => OrganiserData,
   saveData: () => Promise<void>,
+  setPreview?: (payload: string | number | Record<string, unknown> | null) => void,
 ) {
   return {
     add: async (date: string, taskData: any): Promise<Task> => {
@@ -55,5 +56,8 @@ export function createTaskApi(
       taskService.getTasksByPriority(getOrganiserData(), priority),
 
     getIncompleteTasks: () => taskService.getIncompleteTasks(getOrganiserData()),
+    setPreviewTask: (payload: string | number | Record<string, unknown> | null) => {
+      if (typeof setPreview === 'function') setPreview(payload);
+    },
   } as const;
 }

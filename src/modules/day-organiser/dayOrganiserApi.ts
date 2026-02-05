@@ -30,25 +30,27 @@ export async function saveData() {
   await storage.saveData(dataToSave);
 }
 
-// Create a bound task API using the factory from apiTask
-const boundApiTask = apiTask.createTaskApi(() => organiserData.value, saveData);
-
-export function setPreviewTask(payload: string | number | Record<string, unknown> | null) {
-  if (payload == null) {
-    previewTaskId.value = null;
-    previewTaskPayload.value = null;
-    return;
-  }
-  if (typeof payload === 'string' || typeof payload === 'number') {
-    previewTaskId.value = String(payload);
-    previewTaskPayload.value = null;
-    return;
-  }
-  const p = payload as Record<string, any>;
-  const pid = p['id'];
-  previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
-  previewTaskPayload.value = p;
-}
+// Create a bound task API using the factory from apiTask and provide a preview setter
+const boundApiTask = apiTask.createTaskApi(
+  () => organiserData.value,
+  saveData,
+  (payload) => {
+    if (payload == null) {
+      previewTaskId.value = null;
+      previewTaskPayload.value = null;
+      return;
+    }
+    if (typeof payload === 'string' || typeof payload === 'number') {
+      previewTaskId.value = String(payload);
+      previewTaskPayload.value = null;
+      return;
+    }
+    const p = payload as Record<string, any>;
+    const pid = p['id'];
+    previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
+    previewTaskPayload.value = p;
+  },
+);
 
 // Group management helpers
 export async function addGroup(groupInput: CreateGroupInput) {
@@ -76,7 +78,7 @@ export function getGroupsByParent(parentId?: string) {
 
 export const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
 
-export const task = { ...boundApiTask, setPreviewTask } as any;
+export const task = boundApiTask as any;
 
 export const group = {
   add: addGroup,
