@@ -155,11 +155,13 @@ const options = computed(() => {
   // Ensure activeGroup is present
   const cur = activeGroup.value;
   if (cur) {
-    const curAny = cur as any;
-    const curVal = String(curAny.value ?? curAny.id ?? '');
+    const curVal =
+      typeof cur === 'string' || typeof cur === 'number'
+        ? String(cur)
+        : String((cur && (cur.value ?? cur.id)) ?? '');
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
-      const label = cur.label || (found && found.name) || curVal;
+      const label = (typeof cur === 'object' && cur.label) || (found && found.name) || curVal;
       combined.push({
         label,
         value: curVal,
@@ -171,6 +173,10 @@ const options = computed(() => {
 
   return combined.concat(manage);
 });
+
+function extractIdFrom(obj: unknown): string | null {
+  return normalizeId(obj as any);
+}
 
 const selectedOption = computed(() => {
   try {
@@ -227,11 +233,7 @@ watch(
       prevValue = null;
       return;
     }
-    const anyV = v as any;
-    const val =
-      typeof anyV === 'string' || typeof anyV === 'number'
-        ? String(anyV)
-        : String(anyV?.value ?? anyV?.id ?? '');
+    const val = typeof v === 'string' || typeof v === 'number' ? String(v) : String(extractIdFrom(v) ?? '');
     localValue.value = val || null;
     prevValue = val || null;
   },
@@ -252,15 +254,15 @@ watch(
       return;
     }
     // sync label/value with group record if possible
-    const agAny = activeGroup.value as any;
-    const gid =
-      typeof agAny === 'string' || typeof agAny === 'number'
-        ? String(agAny)
-        : String(agAny?.value ?? agAny?.id ?? '');
+    const ag = activeGroup.value;
+    const gid = typeof ag === 'string' || typeof ag === 'number' ? String(ag) : String(extractIdFrom(ag) ?? '');
     if (!gid) return;
     const found = (list || []).find((g: any) => String(g.id) === gid);
     if (found) {
-      if (agAny.label !== found.name || agAny.value !== gid)
+      const agObj = typeof ag === 'object' && ag ? (ag as Record<string, any>) : null;
+      const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
+      const agValue = agObj ? (agObj.value as string | undefined) : undefined;
+      if (agLabel !== found.name || String(agValue ?? '') !== gid)
         activeGroup.value = { label: found.name, value: gid };
       if (localValue.value !== gid) localValue.value = gid;
     }
@@ -309,8 +311,8 @@ function openManage() {
 
 const parentGroup = computed(() => {
   try {
-    const cur = activeGroup.value as any;
-    const gid = cur ? String(cur.value ?? cur.id ?? cur) : null;
+    const cur = activeGroup.value;
+    const gid = cur ? (typeof cur === 'string' || typeof cur === 'number' ? String(cur) : String(extractIdFrom(cur) ?? cur)) : null;
     if (!gid) return null;
     const g = (groups.value || []).find((gg: any) => String(gg.id) === String(gid));
     if (!g) return null;

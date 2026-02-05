@@ -12,6 +12,8 @@ export type DayOrganiserState = {
   saveData: () => Promise<void>;
 };
 
+export type PreviewPayload = string | number | Task | null;
+
 // Factory to create a task API bound to the given state object
 export function createTaskApi(state: DayOrganiserState) {
   return {

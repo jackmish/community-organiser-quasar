@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
+import type { TaskGroup } from 'src/modules/day-organiser';
 import { useQuasar, Dialog } from 'quasar';
 import { useDayOrganiser } from '../modules/day-organiser';
 import logger from 'src/utils/logger';
@@ -1981,8 +1982,8 @@ function onSubmit(event: Event) {
                               @click.stop="groupMenu = true"
                             >
                               {{
-                                (localNewTask.groupId &&
-                                  (groups || []).find((g) => g.id === localNewTask.groupId)
+                                  (localNewTask.groupId &&
+                                  (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)
                                     ?.name) ||
                                 (activeGroup && activeGroup.label.split(' (')[0]) ||
                                 'No group'
@@ -2052,7 +2053,7 @@ function onSubmit(event: Event) {
                             >
                               {{
                                 (localNewTask.groupId &&
-                                  (groups || []).find((g) => g.id === localNewTask.groupId)
+                                  (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)
                                     ?.name) ||
                                 activeGroup?.label?.split(' (')[0] ||
                                 'No group'

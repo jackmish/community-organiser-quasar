@@ -487,8 +487,8 @@ const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return 'Unknown';
-  const group = groups.value.find((g) => g.id === groupId);
-  return group ? group.name : 'Unknown';
+  const group = groups.value.find((g: TaskGroup) => g.id === groupId);
+    return group ? group.name : 'Unknown'; // Type the g parameter in .find to remove implicit any
 };
 
 // Extract add/update handlers into a task CRUD module
