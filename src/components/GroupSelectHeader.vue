@@ -233,7 +233,8 @@ watch(
       prevValue = null;
       return;
     }
-    const val = typeof v === 'string' || typeof v === 'number' ? String(v) : String(extractIdFrom(v) ?? '');
+    const val =
+      typeof v === 'string' || typeof v === 'number' ? String(v) : String(extractIdFrom(v) ?? '');
     localValue.value = val || null;
     prevValue = val || null;
   },
@@ -255,7 +256,10 @@ watch(
     }
     // sync label/value with group record if possible
     const ag = activeGroup.value;
-    const gid = typeof ag === 'string' || typeof ag === 'number' ? String(ag) : String(extractIdFrom(ag) ?? '');
+    const gid =
+      typeof ag === 'string' || typeof ag === 'number'
+        ? String(ag)
+        : String(extractIdFrom(ag) ?? '');
     if (!gid) return;
     const found = (list || []).find((g: any) => String(g.id) === gid);
     if (found) {
@@ -312,7 +316,11 @@ function openManage() {
 const parentGroup = computed(() => {
   try {
     const cur = activeGroup.value;
-    const gid = cur ? (typeof cur === 'string' || typeof cur === 'number' ? String(cur) : String(extractIdFrom(cur) ?? cur)) : null;
+    const gid = cur
+      ? typeof cur === 'string' || typeof cur === 'number'
+        ? String(cur)
+        : String(extractIdFrom(cur) ?? cur)
+      : null;
     if (!gid) return null;
     const g = (groups.value || []).find((gg: any) => String(gg.id) === String(gid));
     if (!g) return null;

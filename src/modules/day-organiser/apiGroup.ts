@@ -38,7 +38,10 @@ export function createGroupApi(state: any) {
           icon: g.icon,
           color: g.color,
           group: g,
-          parentId: (g.parentId ?? g.parent_id ?? null) == null ? null : String(g.parentId ?? g.parent_id ?? null),
+          parentId:
+            (g.parentId ?? g.parent_id ?? null) == null
+              ? null
+              : String(g.parentId ?? g.parent_id ?? null),
           shareSubgroups: g.shareSubgroups ?? false,
           hideTasksFromParent: g.hideTasksFromParent ?? false,
           children: [] as any[],

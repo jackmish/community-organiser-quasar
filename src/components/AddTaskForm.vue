@@ -1982,9 +1982,10 @@ function onSubmit(event: Event) {
                               @click.stop="groupMenu = true"
                             >
                               {{
-                                  (localNewTask.groupId &&
-                                  (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)
-                                    ?.name) ||
+                                (localNewTask.groupId &&
+                                  (groups || []).find(
+                                    (g: TaskGroup) => g.id === localNewTask.groupId,
+                                  )?.name) ||
                                 (activeGroup && activeGroup.label.split(' (')[0]) ||
                                 'No group'
                               }}
@@ -2053,8 +2054,9 @@ function onSubmit(event: Event) {
                             >
                               {{
                                 (localNewTask.groupId &&
-                                  (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)
-                                    ?.name) ||
+                                  (groups || []).find(
+                                    (g: TaskGroup) => g.id === localNewTask.groupId,
+                                  )?.name) ||
                                 activeGroup?.label?.split(' (')[0] ||
                                 'No group'
                               }}
