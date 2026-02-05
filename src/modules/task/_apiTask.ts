@@ -77,18 +77,6 @@ export function createTaskApi(state: any) {
           .reduce(fn, init),
     },
 
-    // Backwards-compatible top-level accessors (delegate to `list`)
-    getTasksInRange: (start: string, end: string) =>
-      taskService.getTasksInRange(state.organiserData.value, start, end),
-
-    getTasksByCategory: (category: Task['category']) =>
-      taskService.getTasksByCategory(state.organiserData.value, category),
-
-    getTasksByPriority: (priority: Task['priority']) =>
-      taskService.getTasksByPriority(state.organiserData.value, priority),
-
-    getIncompleteTasks: () => taskService.getIncompleteTasks(state.organiserData.value),
-
     setPreviewTask: (payload: string | number | Task | null) => {
       if (payload == null) {
         state.previewTaskId.value = null;

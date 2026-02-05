@@ -154,10 +154,11 @@ export function useDayOrganiser() {
     deleteTask: api.task.delete,
     toggleTaskComplete: api.task.toggleComplete,
     updateDayNotes: api.task.updateDayNotes,
-    getTasksInRange: api.task.getTasksInRange,
-    getTasksByCategory: api.task.getTasksByCategory,
-    getTasksByPriority: api.task.getTasksByPriority,
-    getIncompleteTasks: api.task.getIncompleteTasks,
+    // prefer using `api.task.list.*` but keep compatibility by delegating here
+    getTasksInRange: api.task.list.inRange,
+    getTasksByCategory: api.task.list.byCategory,
+    getTasksByPriority: api.task.list.byPriority,
+    getIncompleteTasks: api.task.list.incomplete,
     setPreviewTask: api.task.setPreviewTask,
 
     // namespaced APIs
