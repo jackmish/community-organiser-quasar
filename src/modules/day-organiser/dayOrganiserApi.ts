@@ -29,9 +29,8 @@ export const store: any = {
   },
 };
 
-export function saveData() {
-  return store.saveData();
-}
+// `saveData` should be called via `store.saveData()` to keep the store
+// object as the canonical exported state surface.
 
 //// API helpers
 // Create and export bound APIs in a single line each for brevity

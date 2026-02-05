@@ -107,7 +107,7 @@ export function useDayOrganiser() {
     try {
       const data = await storage.importFromFile(file);
       api.store.organiserData.value = data;
-      await api.saveData();
+        await api.store.saveData();
     } catch (error) {
       logger.error('Failed to import data:', error);
       throw error;
@@ -146,7 +146,7 @@ export function useDayOrganiser() {
 
     // Methods
     loadData,
-    saveData: api.saveData,
+    saveData: api.store.saveData,
     getDayData,
     // legacy task methods (backwards compatible)
     addTask: api.task.add,
