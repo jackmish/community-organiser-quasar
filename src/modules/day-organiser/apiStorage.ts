@@ -33,7 +33,8 @@ export function createStorageApi(store: any) {
 
     async importFromFile(file: File) {
       try {
-        if (typeof backendStorage.importFromFile === 'function') return await backendStorage.importFromFile(file);
+        if (typeof backendStorage.importFromFile === 'function')
+          return await backendStorage.importFromFile(file);
         throw new Error('importFromFile not implemented on backend');
       } catch (err) {
         logger.error('apiStorage.importFromFile failed', err);
