@@ -1,6 +1,6 @@
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
-import * as api from 'src/modules/day-organiser/api';
+import * as api from 'src/modules/day-organiser/dayOrganiserApi';
 
 export function createTaskCrudHandlers(args: {
   setCurrentDate: (d: string | null) => void;

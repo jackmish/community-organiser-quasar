@@ -1,10 +1,8 @@
 import { ref, computed } from 'vue';
-import type { Ref } from 'vue';
-import type { Task } from '../task/types';
+
 import type { OrganiserData } from './types';
-import * as taskService from '../task/taskService';
 import { storage, deleteGroupFile } from './storage';
-import logger from 'src/utils/logger';
+
 import {
   addGroup as addGroupService,
   updateGroup as updateGroupService,
@@ -13,6 +11,7 @@ import {
 } from '../group/groupService';
 import type { CreateGroupInput } from '../group/groupService';
 import { getGroupsByParent as getGroupsByParentUtil, buildGroupTree } from '../group/groupUtils';
+import * as apiTask from './apiTask';
 
 //// reactive state refs
 export const organiserData = ref<OrganiserData>({
@@ -31,58 +30,8 @@ export async function saveData() {
   await storage.saveData(dataToSave);
 }
 
-// No runtime context required — module-owned `organiserData` is used directly.
-
-export async function addTask(date: string, taskData: any): Promise<Task> {
-  const task = taskService.addTask(organiserData.value, date, taskData);
-  await saveData();
-  return task;
-}
-
-export async function updateTask(date: string, id: string, updates: any): Promise<void> {
-  taskService.updateTask(organiserData.value, date, id, updates);
-  await saveData();
-}
-
-export async function deleteTask(date: string, taskId: string): Promise<void> {
-  taskService.deleteTask(organiserData.value, date, taskId);
-  await saveData();
-}
-
-export async function toggleTaskComplete(date: string, taskId: string): Promise<void> {
-  taskService.toggleTaskComplete(organiserData.value, date, taskId);
-  await saveData();
-}
-
-export async function undoCycleDone(date: string, taskId: string): Promise<boolean> {
-  const changed = taskService.undoCycleDone(organiserData.value, date, taskId);
-  if (changed) await saveData();
-  return changed;
-}
-
-export async function updateDayNotes(date: string, notes: string): Promise<void> {
-  const day =
-    organiserData.value.days[date] ??
-    (organiserData.value.days[date] = { date, tasks: [], notes: '' } as any);
-  day.notes = notes;
-  await saveData();
-}
-
-export function getTasksInRange(startDate: string, endDate: string) {
-  return taskService.getTasksInRange(organiserData.value, startDate, endDate);
-}
-
-export function getTasksByCategory(category: Task['category']) {
-  return taskService.getTasksByCategory(organiserData.value, category);
-}
-
-export function getTasksByPriority(priority: Task['priority']) {
-  return taskService.getTasksByPriority(organiserData.value, priority);
-}
-
-export function getIncompleteTasks() {
-  return taskService.getIncompleteTasks(organiserData.value);
-}
+// Create a bound task API using the factory from apiTask
+const boundApiTask = apiTask.createTaskApi(() => organiserData.value, saveData);
 
 export function setPreviewTask(payload: string | number | Record<string, unknown> | null) {
   if (payload == null) {
@@ -127,20 +76,7 @@ export function getGroupsByParent(parentId?: string) {
 
 export const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
 
-// Namespaced APIs for clearer usage: `api.task.*` and `api.group.*`
-export const task = {
-  add: addTask,
-  update: updateTask,
-  delete: deleteTask,
-  toggleComplete: toggleTaskComplete,
-  undoCycleDone,
-  updateDayNotes,
-  getTasksInRange,
-  getTasksByCategory,
-  getTasksByPriority,
-  getIncompleteTasks,
-  setPreviewTask,
-};
+export const task = { ...boundApiTask, setPreviewTask } as any;
 
 export const group = {
   add: addGroup,

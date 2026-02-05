@@ -2,8 +2,8 @@ import { ref, computed, watch } from 'vue';
 import type { DayData, OrganiserData } from './types';
 import { storage, loadSettings, saveSettings } from './storage';
 import logger from 'src/utils/logger';
-import * as api from './api';
-import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummary';
+import * as api from './dayOrganiserApi';
+import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummaryFixed';
 
 function formatDate(d: Date | string) {
   const dt = typeof d === 'string' ? new Date(d) : d;

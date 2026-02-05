@@ -361,7 +361,7 @@ watch(
     let found: Task | null = null;
     try {
       const sid = String(id);
-      found = (allTasks.value || []).find((t) => t.id === sid) || null;
+      found = ((allTasks.value || []) as Task[]).find((t) => t.id === sid) || null;
     } catch (e) {
       found = null;
     }
