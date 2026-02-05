@@ -9,36 +9,37 @@ export type DayOrganiserState = {
   previewTaskId: Ref<string | null>;
   previewTaskPayload: Ref<Task | null>;
   activeGroup: Ref<{ label: string; value: string | null } | null>;
+  saveData: () => Promise<void>;
 };
 
-// Factory to create a task API bound to the given state object and saveData
-export function createTaskApi(state: DayOrganiserState, saveData: () => Promise<void>) {
+// Factory to create a task API bound to the given state object
+export function createTaskApi(state: DayOrganiserState) {
   return {
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = state.organiserData.value;
       const task = taskService.addTask(organiserData, date, taskData);
-      await saveData();
+      await state.saveData();
       return task;
     },
 
     update: async (date: string, id: string, updates: any): Promise<void> => {
       taskService.updateTask(state.organiserData.value, date, id, updates);
-      await saveData();
+      await state.saveData();
     },
 
     delete: async (date: string, taskId: string): Promise<void> => {
       taskService.deleteTask(state.organiserData.value, date, taskId);
-      await saveData();
+      await state.saveData();
     },
 
     toggleComplete: async (date: string, taskId: string): Promise<void> => {
       taskService.toggleTaskComplete(state.organiserData.value, date, taskId);
-      await saveData();
+      await state.saveData();
     },
 
     undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
       const changed = taskService.undoCycleDone(state.organiserData.value, date, taskId);
-      if (changed) await saveData();
+      if (changed) await state.saveData();
       return changed;
     },
 
@@ -48,7 +49,7 @@ export function createTaskApi(state: DayOrganiserState, saveData: () => Promise<
         organiserData.days[date] ??
         (organiserData.days[date] = { date, tasks: [], notes: '' } as any);
       day.notes = notes;
-      await saveData();
+      await state.saveData();
     },
 
     getTasksInRange: (start: string, end: string) =>

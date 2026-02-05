@@ -44,7 +44,7 @@ export function useDayOrganiser() {
         }
       }
 
-      api.state.organiserData.value = {
+      api.store.organiserData.value = {
         days: Object.keys(daysFromGroups).length ? daysFromGroups : (data as any).days || {},
         groups: rawGroups,
         lastModified: (data as any).lastModified || new Date().toISOString(),
@@ -54,11 +54,11 @@ export function useDayOrganiser() {
         const settings = await loadSettings();
         const requestedId = settings?.activeGroupId ?? null;
         if (requestedId) {
-          const found = (api.state.organiserData.value.groups || []).find(
+          const found = (api.store.organiserData.value.groups || []).find(
             (g: any) => String(g.id) === String(requestedId),
           );
           if (found)
-            api.state.activeGroup.value = {
+            api.store.activeGroup.value = {
               label: found.name || String(found.id),
               value: found.id,
             };
@@ -76,7 +76,7 @@ export function useDayOrganiser() {
   // Persist activeGroup changes to settings
   try {
     watch(
-      () => api.state.activeGroup.value,
+      () => api.store.activeGroup.value,
       async (val) => {
         try {
           const existing = (await loadSettings()) || {};
@@ -93,20 +93,20 @@ export function useDayOrganiser() {
   }
 
   const getDayData = (date: string): DayData => {
-    if (!api.state.organiserData.value.days[date]) {
-      api.state.organiserData.value.days[date] = { date, tasks: [], notes: '' } as DayData;
+    if (!api.store.organiserData.value.days[date]) {
+      api.store.organiserData.value.days[date] = { date, tasks: [], notes: '' } as DayData;
     }
-    return api.state.organiserData.value.days[date];
+    return api.store.organiserData.value.days[date];
   };
 
-  const currentDayData = computed(() => getDayData(api.state.currentDate.value));
+  const currentDayData = computed(() => getDayData(api.store.currentDate.value));
 
-  const exportData = () => storage.exportToFile(api.state.organiserData.value);
+  const exportData = () => storage.exportToFile(api.store.organiserData.value);
 
   const importData = async (file: File) => {
     try {
       const data = await storage.importFromFile(file);
-      api.state.organiserData.value = data;
+      api.store.organiserData.value = data;
       await api.saveData();
     } catch (error) {
       logger.error('Failed to import data:', error);
@@ -115,33 +115,33 @@ export function useDayOrganiser() {
   };
 
   const setCurrentDate = (date: string | number | null) => {
-    if (date && typeof date === 'string') api.state.currentDate.value = date;
+    if (date && typeof date === 'string') api.store.currentDate.value = date;
   };
 
   const goToToday = () => {
-    api.state.currentDate.value = formatDate(new Date());
+    api.store.currentDate.value = formatDate(new Date());
   };
   const nextDay = () => {
-    const date = new Date(api.state.currentDate.value);
+    const date = new Date(api.store.currentDate.value);
     date.setDate(date.getDate() + 1);
-    api.state.currentDate.value = formatDate(date);
+    api.store.currentDate.value = formatDate(date);
   };
   const prevDay = () => {
-    const date = new Date(api.state.currentDate.value);
+    const date = new Date(api.store.currentDate.value);
     date.setDate(date.getDate() - 1);
-    api.state.currentDate.value = formatDate(date);
+    api.store.currentDate.value = formatDate(date);
   };
 
   const hiddenGroupSummary = createHiddenGroupSummary(
-    api.state.organiserData,
-    api.state.activeGroup,
+    api.store.organiserData,
+    api.store.activeGroup,
   );
 
   return {
     // State
-    organiserData: api.state.organiserData,
+    organiserData: api.store.organiserData,
     isLoading,
-    currentDate: api.state.currentDate,
+    currentDate: api.store.currentDate,
     currentDayData,
 
     // Methods
@@ -165,8 +165,8 @@ export function useDayOrganiser() {
     group: api.group,
 
     // Groups
-    groups: computed(() => api.state.organiserData.value.groups),
-    activeGroup: api.state.activeGroup,
+    groups: computed(() => api.store.organiserData.value.groups),
+    activeGroup: api.store.activeGroup,
     addGroup: api.group.add,
     updateGroup: api.group.update,
     deleteGroup: api.group.delete,
@@ -181,8 +181,8 @@ export function useDayOrganiser() {
     prevDay,
 
     // Preview
-    previewTaskId: computed(() => api.state.previewTaskId.value),
-    previewTaskPayload: computed(() => api.state.previewTaskPayload.value),
+    previewTaskId: computed(() => api.store.previewTaskId.value),
+    previewTaskPayload: computed(() => api.store.previewTaskPayload.value),
 
     // Misc
     exportData,

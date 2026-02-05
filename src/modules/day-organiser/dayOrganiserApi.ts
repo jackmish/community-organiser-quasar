@@ -17,7 +17,7 @@ import type { Task } from '../task/types';
 export type PreviewPayload = string | number | Task | null;
 
 //// reactive state refs grouped into `state`
-export const state = {
+export const store = {
   organiserData: ref<OrganiserData>({
     days: {},
     groups: [],
@@ -27,31 +27,33 @@ export const state = {
   previewTaskId: ref<string | null>(null),
   previewTaskPayload: ref<Task | null>(null),
   activeGroup: ref<{ label: string; value: string | null } | null>(null),
+  async saveData() {
+    const dataToSave = prepareGroupsForSave(this.organiserData.value);
+    await storage.saveData(dataToSave);
+  },
 };
 
-//// API functions
-export async function saveData() {
-  const dataToSave = prepareGroupsForSave(state.organiserData.value);
-  await storage.saveData(dataToSave);
+export function saveData() {
+  return store.saveData();
 }
-
-// Create a bound task API using the factory from apiTask and provide a preview setter
-const boundApiTask = apiTask.createTaskApi(state, saveData);
+//// API helpers
+// Create a bound task API using the factory from apiTask
+const boundApiTask = apiTask.createTaskApi(store);
 
 // Group management helpers
 export async function addGroup(groupInput: CreateGroupInput) {
-  const group = addGroupService(state.organiserData.value, groupInput);
+  const group = addGroupService(store.organiserData.value, groupInput);
   await saveData();
   return group;
 }
 
 export async function updateGroup(groupId: string, updates: Partial<any>): Promise<void> {
-  updateGroupService(state.organiserData.value, groupId, updates);
+  updateGroupService(store.organiserData.value, groupId, updates);
   await saveData();
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
-  const { groupHasTasks } = deleteGroupService(state.organiserData.value, groupId);
+  const { groupHasTasks } = deleteGroupService(store.organiserData.value, groupId);
   await saveData();
   if (!groupHasTasks) {
     await deleteGroupFile(groupId);
@@ -59,10 +61,10 @@ export async function deleteGroup(groupId: string): Promise<void> {
 }
 
 export function getGroupsByParent(parentId?: string) {
-  return getGroupsByParentUtil(state.organiserData.value.groups, parentId);
+  return getGroupsByParentUtil(store.organiserData.value.groups, parentId);
 }
 
-export const groupTree = computed(() => buildGroupTree(state.organiserData.value.groups));
+export const groupTree = computed(() => buildGroupTree(store.organiserData.value.groups));
 
 export const task = boundApiTask as any;
 
