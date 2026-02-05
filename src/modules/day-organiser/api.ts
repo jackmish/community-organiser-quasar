@@ -1,26 +1,40 @@
+import { ref } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../task/types';
 import type { OrganiserData } from './types';
 import * as taskService from '../task/taskService';
 
-// Minimal module-level context. `useDayOrganiser` will call `setContext` to
-// provide these; functions below use them when invoked.
-let organiserDataRef: Ref<OrganiserData> | null = null;
-let saveDataFn: (() => Promise<void>) | null = null;
-// Optional preview refs (may be provided by the caller via `setContext`)
-let previewTaskIdRef: Ref<string | null> | null = null;
-let previewTaskPayloadRef: Ref<Record<string, unknown> | null> | null = null;
+// Module-owned reactive state (exported for callers)
+const organiserDataRef = ref<OrganiserData>({
+  days: {},
+  groups: [],
+  lastModified: new Date().toISOString(),
+});
+export const organiserData = organiserDataRef;
 
-export function setContext(ctx: {
-  organiserData: Ref<OrganiserData>;
-  saveData: () => Promise<void>;
-  previewTaskId?: Ref<string | null>;
-  previewTaskPayload?: Ref<Record<string, unknown> | null>;
-}) {
-  organiserDataRef = ctx.organiserData;
+const currentDateRef = ref<string>(new Date().toISOString().split('T')[0] ?? '');
+export const currentDate = currentDateRef;
+
+export const previewTaskId = ref<string | null>(null);
+export const previewTaskPayload = ref<Record<string, unknown> | null>(null);
+
+export const activeGroup = ref<{ label: string; value: string | null } | null>(null);
+
+let saveDataFn: (() => Promise<void>) | null = null;
+
+export function setContext(ctx: { saveData: () => Promise<void> }) {
   saveDataFn = ctx.saveData;
-  if (ctx.previewTaskId) previewTaskIdRef = ctx.previewTaskId;
-  if (ctx.previewTaskPayload) previewTaskPayloadRef = ctx.previewTaskPayload;
+}
+
+function ensureContext(): {
+  organiserDataRef: Ref<OrganiserData>;
+  saveDataFn: () => Promise<void>;
+} {
+  if (!saveDataFn) throw new Error('API context not set');
+  return { organiserDataRef, saveDataFn } as {
+    organiserDataRef: Ref<OrganiserData>;
+    saveDataFn: () => Promise<void>;
+  };
 }
 
 export async function addTask(date: string, taskData: any): Promise<Task> {
@@ -86,34 +100,19 @@ export function getIncompleteTasks() {
   return taskService.getIncompleteTasks(od.value);
 }
 
-// Preview helper: allows callers to set the preview task id or payload.
 export function setPreviewTask(payload: string | number | Record<string, unknown> | null) {
-  if (!previewTaskIdRef || !previewTaskPayloadRef) {
-    throw new Error('Preview refs not provided to API context');
-  }
   if (payload == null) {
-    previewTaskIdRef.value = null;
-    previewTaskPayloadRef.value = null;
+    previewTaskId.value = null;
+    previewTaskPayload.value = null;
     return;
   }
   if (typeof payload === 'string' || typeof payload === 'number') {
-    previewTaskIdRef.value = String(payload);
-    previewTaskPayloadRef.value = null;
+    previewTaskId.value = String(payload);
+    previewTaskPayload.value = null;
     return;
   }
   const p = payload;
   const pid = p['id'];
-  previewTaskIdRef.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
-  previewTaskPayloadRef.value = p;
-}
-
-function ensureContext(): {
-  organiserDataRef: Ref<OrganiserData>;
-  saveDataFn: () => Promise<void>;
-} {
-  if (!organiserDataRef || !saveDataFn) throw new Error('API context not set');
-  return { organiserDataRef, saveDataFn } as {
-    organiserDataRef: Ref<OrganiserData>;
-    saveDataFn: () => Promise<void>;
-  };
+  previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
+  previewTaskPayload.value = p;
 }

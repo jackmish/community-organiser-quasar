@@ -78,21 +78,17 @@ function sanitizeForHistory(value: any, depth = 2): any {
   }
 }
 
-// Reactive state
-const organiserData = ref<OrganiserData>({
-  days: {},
-  groups: [],
-  lastModified: new Date().toISOString(),
-});
+// Reactive state (owned by api module)
+const organiserData = api.organiserData;
 
 const isLoading = ref(false);
-const currentDate = ref(formatDate(new Date()));
+const currentDate = api.currentDate;
 // Optional preview request: a component can request a task preview by id
-const previewTaskId = ref<string | null>(null);
+const previewTaskId = api.previewTaskId;
 // Optional preview payload: may include occurrence date for cyclic tasks
-const previewTaskPayload = ref<Record<string, unknown> | null>(null);
-// Shared active group selection across pages/components
-const activeGroup = ref<{ label: string; value: string | null } | null>(null);
+const previewTaskPayload = api.previewTaskPayload;
+// Shared active group selection across pages/components (owned by api)
+const activeGroup = api.activeGroup;
 
 export function useDayOrganiser() {
   // Load data from storage
@@ -264,8 +260,9 @@ export function useDayOrganiser() {
   // assigned below with real implementations; keeping it in a separate file
   // keeps this module focused on organiser logic.
 
-  // Provide runtime context (organiserData + saveData + preview refs) to the API module.
-  api.setContext({ organiserData, saveData, previewTaskId, previewTaskPayload });
+  // Provide runtime context (saveData + preview refs) to the API module. organiserData/currentDate
+  // are owned by the API module and were linked above.
+  api.setContext({ saveData, previewTaskId, previewTaskPayload });
 
   // Delete / toggle / undo now provided by `api` via setContext.
 
