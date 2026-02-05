@@ -45,6 +45,35 @@ export function createTaskApi(state: any) {
       await state.saveData();
     },
 
+    
+
+    // Nested list helpers: `api.task.list.inRange(...)`, `api.task.list.byCategory(...)`, etc.
+    list: {
+      all: () => taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31'),
+      inRange: (start: string, end: string) =>
+        taskService.getTasksInRange(state.organiserData.value, start, end),
+      byCategory: (category: Task['category']) =>
+        taskService.getTasksByCategory(state.organiserData.value, category),
+      byPriority: (priority: Task['priority']) =>
+        taskService.getTasksByPriority(state.organiserData.value, priority),
+      incomplete: () => taskService.getIncompleteTasks(state.organiserData.value),
+      
+      filter: (fn: (t: Task) => boolean) =>
+        taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31').filter(fn),
+      sort: (compare?: (a: Task, b: Task) => number) => {
+        const arr = taskService
+          .getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31')
+          .slice();
+        arr.sort(
+          compare ?? ((a: Task, b: Task) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
+        );
+        return arr;
+      },
+      aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) =>
+        taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31').reduce(fn, init),
+    },
+
+    // Backwards-compatible top-level accessors (delegate to `list`)
     getTasksInRange: (start: string, end: string) =>
       taskService.getTasksInRange(state.organiserData.value, start, end),
 
