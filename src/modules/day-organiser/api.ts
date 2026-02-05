@@ -1,103 +1,117 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../task/types';
 import type { OrganiserData } from './types';
 import * as taskService from '../task/taskService';
+import { storage } from './storage';
+import logger from 'src/utils/logger';
+import {
+  addGroup as addGroupService,
+  updateGroup as updateGroupService,
+  deleteGroup as deleteGroupService,
+} from '../group/groupService';
+import type { CreateGroupInput } from '../group/groupService';
+import { getGroupsByParent as getGroupsByParentUtil, buildGroupTree } from '../group/groupUtils';
 
-// Module-owned reactive state (exported for callers)
-const organiserDataRef = ref<OrganiserData>({
+//// reactive state refs
+export const organiserData = ref<OrganiserData>({
   days: {},
   groups: [],
   lastModified: new Date().toISOString(),
 });
-export const organiserData = organiserDataRef;
 
-const currentDateRef = ref<string>(new Date().toISOString().split('T')[0] ?? '');
-export const currentDate = currentDateRef;
+export const currentDate = ref<string>(new Date().toISOString().split('T')[0] ?? '');
 
 export const previewTaskId = ref<string | null>(null);
 export const previewTaskPayload = ref<Record<string, unknown> | null>(null);
 
 export const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 
-let saveDataFn: (() => Promise<void>) | null = null;
-
-export function setContext(ctx: { saveData: () => Promise<void> }) {
-  saveDataFn = ctx.saveData;
+//// API functions
+export async function saveData() {
+  try {
+    const groupsOrig = Array.isArray(organiserData.value.groups) ? organiserData.value.groups : [];
+    const groupsForSave = groupsOrig.map((g: any) => ({ ...(g || {}), tasks: [] }));
+    const groupIndex = new Map<string, any>();
+    for (const g of groupsForSave) {
+      groupIndex.set(String(g.id), g);
+    }
+    for (const dKey of Object.keys(organiserData.value.days)) {
+      const day = organiserData.value.days[dKey];
+      if (!day || !Array.isArray(day.tasks)) continue;
+      for (const t of day.tasks) {
+        const gid = t && (t.groupId ?? null);
+        if (gid != null && groupIndex.has(String(gid))) {
+          groupIndex.get(String(gid)).tasks.push(t);
+        }
+      }
+    }
+    const dataToSave: OrganiserData = {
+      ...organiserData.value,
+      groups: groupsForSave,
+    };
+    await storage.saveData(dataToSave);
+  } catch (err) {
+    try {
+      await storage.saveData(organiserData.value as OrganiserData);
+    } catch (e) {
+      logger.error('Failed to save organiser data', e);
+      throw e;
+    }
+  }
 }
 
-function ensureContext(): {
-  organiserDataRef: Ref<OrganiserData>;
-  saveDataFn: () => Promise<void>;
-} {
-  if (!saveDataFn) throw new Error('API context not set');
-  return { organiserDataRef, saveDataFn } as {
-    organiserDataRef: Ref<OrganiserData>;
-    saveDataFn: () => Promise<void>;
-  };
-}
+// No runtime context required — module-owned `organiserData` is used directly.
 
 export async function addTask(date: string, taskData: any): Promise<Task> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const task = taskService.addTask(od.value, date, taskData);
-  await save();
+  const task = taskService.addTask(organiserData.value, date, taskData);
+  await saveData();
   return task;
 }
 
 export async function updateTask(date: string, id: string, updates: any): Promise<void> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  taskService.updateTask(od.value, date, id, updates);
-  await save();
+  taskService.updateTask(organiserData.value, date, id, updates);
+  await saveData();
 }
 
 export async function deleteTask(date: string, taskId: string): Promise<void> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const removed = taskService.deleteTask(od.value, date, taskId);
-  if (removed) {
-    await save();
-    return;
-  }
-  await save();
+  taskService.deleteTask(organiserData.value, date, taskId);
+  await saveData();
 }
 
 export async function toggleTaskComplete(date: string, taskId: string): Promise<void> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  taskService.toggleTaskComplete(od.value, date, taskId);
-  await save();
+  taskService.toggleTaskComplete(organiserData.value, date, taskId);
+  await saveData();
 }
 
 export async function undoCycleDone(date: string, taskId: string): Promise<boolean> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const changed = taskService.undoCycleDone(od.value, date, taskId);
-  if (changed) await save();
+  const changed = taskService.undoCycleDone(organiserData.value, date, taskId);
+  if (changed) await saveData();
   return changed;
 }
 
 export async function updateDayNotes(date: string, notes: string): Promise<void> {
-  const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const day = od.value.days[date] ?? (od.value.days[date] = { date, tasks: [], notes: '' } as any);
+  const day =
+    organiserData.value.days[date] ??
+    (organiserData.value.days[date] = { date, tasks: [], notes: '' } as any);
   day.notes = notes;
-  await save();
+  await saveData();
 }
 
 export function getTasksInRange(startDate: string, endDate: string) {
-  const { organiserDataRef: od } = ensureContext();
-  return taskService.getTasksInRange(od.value, startDate, endDate);
+  return taskService.getTasksInRange(organiserData.value, startDate, endDate);
 }
 
 export function getTasksByCategory(category: Task['category']) {
-  const { organiserDataRef: od } = ensureContext();
-  return taskService.getTasksByCategory(od.value, category);
+  return taskService.getTasksByCategory(organiserData.value, category);
 }
 
 export function getTasksByPriority(priority: Task['priority']) {
-  const { organiserDataRef: od } = ensureContext();
-  return taskService.getTasksByPriority(od.value, priority);
+  return taskService.getTasksByPriority(organiserData.value, priority);
 }
 
 export function getIncompleteTasks() {
-  const { organiserDataRef: od } = ensureContext();
-  return taskService.getIncompleteTasks(od.value);
+  return taskService.getIncompleteTasks(organiserData.value);
 }
 
 export function setPreviewTask(payload: string | number | Record<string, unknown> | null) {
@@ -116,3 +130,37 @@ export function setPreviewTask(payload: string | number | Record<string, unknown
   previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
   previewTaskPayload.value = p;
 }
+
+// Group management helpers
+export async function addGroup(groupInput: CreateGroupInput) {
+  const group = addGroupService(organiserData.value, groupInput);
+  await saveData();
+  return group;
+}
+
+export async function updateGroup(groupId: string, updates: Partial<any>): Promise<void> {
+  updateGroupService(organiserData.value, groupId, updates);
+  await saveData();
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  const { groupHasTasks } = deleteGroupService(organiserData.value, groupId);
+  await saveData();
+  if (!groupHasTasks) {
+    try {
+      const storageMod = await import('./storage');
+      const del = (storageMod as any).deleteGroupFile;
+      if (typeof del === 'function') {
+        await del.call(storageMod, groupId);
+      }
+    } catch (err) {
+      // ignore deletion errors here
+    }
+  }
+}
+
+export function getGroupsByParent(parentId?: string) {
+  return getGroupsByParentUtil(organiserData.value.groups, parentId);
+}
+
+export const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
