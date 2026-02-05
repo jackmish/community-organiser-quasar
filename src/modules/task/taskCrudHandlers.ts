@@ -1,9 +1,8 @@
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
+import { addTask, updateTask } from 'src/modules/day-organiser/api';
 
 export function createTaskCrudHandlers(args: {
-  addTask: (date: string, data: any) => Promise<any>;
-  updateTask: (date: string, id: string, rest: any) => Promise<any>;
   setCurrentDate: (d: string | null) => void;
   activeGroup: Ref<any>;
   currentDate: Ref<string>;
@@ -14,8 +13,6 @@ export function createTaskCrudHandlers(args: {
   selectedTaskId: Ref<string | null>;
 }) {
   const {
-    addTask,
-    updateTask,
     setCurrentDate,
     activeGroup,
     currentDate,
@@ -53,7 +50,7 @@ export function createTaskCrudHandlers(args: {
 
     const created = await addTask(targetDate, taskData);
     if (opts && opts.preview && created) {
-      taskToEdit.value = created as Task;
+      taskToEdit.value = created;
       mode.value = 'preview';
       selectedTaskId.value = created.id;
       try {

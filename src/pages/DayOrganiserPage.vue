@@ -493,8 +493,6 @@ const getGroupName = (groupId?: string): string => {
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
-  addTask,
-  updateTask,
   setCurrentDate,
   activeGroup,
   currentDate,

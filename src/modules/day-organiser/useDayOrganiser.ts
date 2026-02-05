@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue';
 import type { Task } from '../task/types';
 import type { DayData, OrganiserData, TaskGroup } from './types';
 import { storage } from './storage';
+import { setContext, addTask, updateTask } from './api';
 import {
   addGroup as addGroupService,
   updateGroup as updateGroupService,
@@ -267,24 +268,12 @@ export function useDayOrganiser() {
   // Current day data
   const currentDayData = computed(() => getDayData(currentDate.value));
 
-  // Add a new task (delegated to taskService)
-  const addTask = async (
-    date: string,
-    taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
-  ): Promise<Task> => {
-    const task = addTaskService(organiserData.value, date, taskData);
-    await saveData();
-    return task;
-  };
+  // `dayOrganiserApi` is a small exported singleton (see ./api) that will be
+  // assigned below with real implementations; keeping it in a separate file
+  // keeps this module focused on organiser logic.
 
-  const updateTask = async (
-    date: string,
-    taskId: string,
-    updates: Partial<Omit<Task, 'id' | 'createdAt'>>,
-  ): Promise<void> => {
-    updateTaskService(organiserData.value, date, taskId, updates);
-    await saveData();
-  };
+  // Provide runtime context (organiserData + saveData) to the API module.
+  setContext({ organiserData, saveData });
 
   // Delete a task (delegated to taskService)
   const deleteTask = async (date: string, taskId: string): Promise<void> => {
@@ -513,6 +502,7 @@ export function useDayOrganiser() {
     loadData,
     saveData,
     getDayData,
+    // Delegate add/update to the centralized API
     addTask,
     updateTask,
     deleteTask,
