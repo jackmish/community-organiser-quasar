@@ -48,7 +48,7 @@ export function createTaskCrudHandlers(args: {
       groupId: groupIdToUse,
     };
 
-    const created = await api.addTask(targetDate, taskData);
+    const created = await api.task.add(targetDate, taskData);
     if (opts && opts.preview && created) {
       taskToEdit.value = created;
       mode.value = 'preview';
@@ -66,7 +66,7 @@ export function createTaskCrudHandlers(args: {
     const { id, ...rest } = updatedTask;
     const targetDate =
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
-    await api.updateTask(targetDate, id, rest);
+    await api.task.update(targetDate, id, rest);
     const updated = (allTasks.value || []).find((t) => t.id === id) || null;
     taskToEdit.value = updated;
     if (updated) {

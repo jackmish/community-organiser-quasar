@@ -95,7 +95,7 @@ export function setPreviewTask(payload: string | number | Record<string, unknown
     previewTaskPayload.value = null;
     return;
   }
-  const p = payload;
+  const p = payload as Record<string, any>;
   const pid = p['id'];
   previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
   previewTaskPayload.value = p;
@@ -126,3 +126,26 @@ export function getGroupsByParent(parentId?: string) {
 }
 
 export const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
+
+// Namespaced APIs for clearer usage: `api.task.*` and `api.group.*`
+export const task = {
+  add: addTask,
+  update: updateTask,
+  delete: deleteTask,
+  toggleComplete: toggleTaskComplete,
+  undoCycleDone,
+  updateDayNotes,
+  getTasksInRange,
+  getTasksByCategory,
+  getTasksByPriority,
+  getIncompleteTasks,
+  setPreviewTask,
+};
+
+export const group = {
+  add: addGroup,
+  update: updateGroup,
+  delete: deleteGroup,
+  getGroupsByParent,
+  tree: groupTree,
+};
