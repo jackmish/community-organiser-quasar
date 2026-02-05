@@ -39,12 +39,8 @@ export function saveData() {
 }
 //// API helpers
 // Create a bound task API using the factory from apiTask
-const boundApiTask = apiTask.createTaskApi(store);
+export const task = apiTask.createTaskApi(store);
 
 export const groupTree = computed(() => buildGroupTree(store.organiserData.value.groups));
 
-const boundApiGroup = apiGroup.createGroupApi({ ...store, groupTree } as any);
-
-export const task = boundApiTask as any;
-
-export const group = boundApiGroup as any;
+export const group = apiGroup.createGroupApi({ ...store, groupTree } as any);
