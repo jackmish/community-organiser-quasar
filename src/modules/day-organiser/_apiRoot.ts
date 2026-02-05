@@ -7,6 +7,7 @@ import { storage } from './storage';
 import { prepareGroupsForSave } from '../group/groupService';
 import * as apiTask from '../task/_apiTask';
 import * as apiGroup from '../group/_apiGroup';
+import { createTimeApi } from './apiTime';
 
 //// reactive state refs grouped into `state`
 
@@ -18,7 +19,6 @@ export const store: any = {
     lastModified: new Date().toISOString(),
   }),
   //UI control data
-  currentDate: ref<string>(new Date().toISOString().split('T')[0] ?? ''),
   previewTaskId: ref<string | null>(null),
   previewTaskPayload: ref<Task | null>(null),
   activeGroup: ref<{ label: string; value: string | null } | null>(null),
@@ -35,3 +35,4 @@ export const store: any = {
 // Create and export bound APIs in a single line each for brevity
 export const task = apiTask.createTaskApi(store) as any;
 export const group = apiGroup.createGroupApi(store) as any;
+export const time = createTimeApi() as any;

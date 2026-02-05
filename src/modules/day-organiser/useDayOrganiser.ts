@@ -99,7 +99,7 @@ export function useDayOrganiser() {
     return api.store.organiserData.value.days[date];
   };
 
-  const currentDayData = computed(() => getDayData(api.store.currentDate.value));
+  const currentDayData = computed(() => getDayData(api.time.currentDate.value));
 
   const exportData = () => storage.exportToFile(api.store.organiserData.value);
 
@@ -115,22 +115,12 @@ export function useDayOrganiser() {
   };
 
   const setCurrentDate = (date: string | number | null) => {
-    if (date && typeof date === 'string') api.store.currentDate.value = date;
+    if (date && typeof date === 'string') api.time.setCurrentDate(String(date));
   };
 
-  const goToToday = () => {
-    api.store.currentDate.value = formatDate(new Date());
-  };
-  const nextDay = () => {
-    const date = new Date(api.store.currentDate.value);
-    date.setDate(date.getDate() + 1);
-    api.store.currentDate.value = formatDate(date);
-  };
-  const prevDay = () => {
-    const date = new Date(api.store.currentDate.value);
-    date.setDate(date.getDate() - 1);
-    api.store.currentDate.value = formatDate(date);
-  };
+  const goToToday = () => api.time.goToToday();
+  const nextDay = () => api.time.nextDay();
+  const prevDay = () => api.time.prevDay();
 
   const hiddenGroupSummary = createHiddenGroupSummary(
     api.store.organiserData,
@@ -141,7 +131,7 @@ export function useDayOrganiser() {
     // State
     organiserData: api.store.organiserData,
     isLoading,
-    currentDate: api.store.currentDate,
+    currentDate: api.time.currentDate,
     currentDayData,
 
     // Methods
