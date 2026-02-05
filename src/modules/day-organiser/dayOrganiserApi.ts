@@ -1,16 +1,10 @@
 import { ref, computed } from 'vue';
 
 import type { OrganiserData } from './types';
-import { storage, deleteGroupFile } from './storage';
+import { storage } from './storage';
 
-import {
-  addGroup as addGroupService,
-  updateGroup as updateGroupService,
-  deleteGroup as deleteGroupService,
-  prepareGroupsForSave,
-} from '../group/groupService';
-import type { CreateGroupInput } from '../group/groupService';
-import { getGroupsByParent as getGroupsByParentUtil, buildGroupTree } from '../group/groupUtils';
+import { prepareGroupsForSave } from '../group/groupService';
+import { buildGroupTree } from '../group/groupUtils';
 import * as apiTask from './apiTask';
 import * as apiGroup from './apiGroup';
 import type { Task } from '../task/types';
@@ -18,29 +12,26 @@ import type { Task } from '../task/types';
 export type PreviewPayload = string | number | Task | null;
 
 //// reactive state refs grouped into `state`
-export const store = {
-  organiserData: ref<OrganiserData>({
-    days: {},
-    groups: [],
-    lastModified: new Date().toISOString(),
-  }),
+const organiserData = ref<OrganiserData>({
+  days: {},
+  groups: [],
+  lastModified: new Date().toISOString(),
+});
+
+export const store: any = {
+  organiserData,
   currentDate: ref<string>(new Date().toISOString().split('T')[0] ?? ''),
   previewTaskId: ref<string | null>(null),
   previewTaskPayload: ref<Task | null>(null),
   activeGroup: ref<{ label: string; value: string | null } | null>(null),
+  groupTree: computed(() => buildGroupTree(organiserData.value.groups)),
   async saveData() {
-    const dataToSave = prepareGroupsForSave(this.organiserData.value);
+    const dataToSave = prepareGroupsForSave(organiserData.value);
     await storage.saveData(dataToSave);
   },
 };
 
-export function saveData() {
-  return store.saveData();
-}
 //// API helpers
-// Create a bound task API using the factory from apiTask
-export const task = apiTask.createTaskApi(store);
-
-export const groupTree = computed(() => buildGroupTree(store.organiserData.value.groups));
-
-export const group = apiGroup.createGroupApi({ ...store, groupTree } as any);
+// Create and export bound APIs in a single line each for brevity
+export const task = apiTask.createTaskApi(store) as any;
+export const group = apiGroup.createGroupApi(store) as any;
