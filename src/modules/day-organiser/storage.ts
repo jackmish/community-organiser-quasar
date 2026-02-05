@@ -26,14 +26,11 @@ let _dayOrganiserInstance: any = null;
 export function useDayOrganiser() {
   if (_dayOrganiserInstance) return _dayOrganiserInstance;
 
-  const isLoading = ref(false);
-
   const loadData = async () => {
-    isLoading.value = true;
     try {
-      const data = await storage.loadData();
+      const data = await api.storage.loadData();
       // If storage returns groups with embedded `tasks`, reconstruct `days` map.
-      const rawGroups = Array.isArray((data as any)?.groups) ? (data as any).groups : [];
+      const rawGroups = Array.isArray(data?.groups) ? data.groups : [];
       const daysFromGroups: Record<string, any> = {};
       // If groups contain tasks, rebuild days map from those tasks
       const groupsHaveTasks = rawGroups.some(
@@ -58,9 +55,9 @@ export function useDayOrganiser() {
       }
 
       api.store.organiserData.value = {
-        days: Object.keys(daysFromGroups).length ? daysFromGroups : (data as any).days || {},
+        days: Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {},
         groups: rawGroups,
-        lastModified: (data as any).lastModified || new Date().toISOString(),
+        lastModified: data.lastModified || new Date().toISOString(),
       };
       // Restore active group from settings if present
       try {
@@ -81,8 +78,6 @@ export function useDayOrganiser() {
       }
     } catch (error) {
       logger.error('Failed to load data:', error);
-    } finally {
-      isLoading.value = false;
     }
   };
 
@@ -143,7 +138,7 @@ export function useDayOrganiser() {
   const instance = {
     // State
     organiserData: api.store.organiserData,
-    isLoading,
+    isLoading: api.storage.isLoading,
     currentDate: api.time.currentDate,
     currentDayData,
 
