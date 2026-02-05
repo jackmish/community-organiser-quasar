@@ -354,7 +354,7 @@ watch(mode, (val) => {
 
 // Respond to preview requests coming from other parts of the app
 watch(
-  () => previewTaskId && (previewTaskId as any).value,
+  () => previewTaskId && previewTaskId.value,
   (id) => {
     if (!id) return;
     // find task by id using the precomputed allTasks list (avoids awkward any/never types)
@@ -400,7 +400,7 @@ watch(
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
 watch(
-  () => previewTaskPayload && (previewTaskPayload as any).value,
+  () => previewTaskPayload && previewTaskPayload.value,
   (payload) => {
     if (!payload) return;
     try {

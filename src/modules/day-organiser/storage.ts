@@ -21,8 +21,11 @@ function formatDate(d: Date | string) {
     dt.getDate(),
   ).padStart(2, '0')}`;
 }
+let _dayOrganiserInstance: any = null;
 
 export function useDayOrganiser() {
+  if (_dayOrganiserInstance) return _dayOrganiserInstance;
+
   const isLoading = ref(false);
 
   const loadData = async () => {
@@ -137,7 +140,7 @@ export function useDayOrganiser() {
     api.store.activeGroup,
   );
 
-  return {
+  const instance = {
     // State
     organiserData: api.store.organiserData,
     isLoading,
@@ -191,4 +194,8 @@ export function useDayOrganiser() {
     formatDate,
     undoCycleDone: api.task.status.undoCycleDone,
   };
+
+  _dayOrganiserInstance = instance;
+
+  return _dayOrganiserInstance;
 }

@@ -760,8 +760,15 @@ async function confirmDelete(id: string) {
 function startEdit(node: any) {
   try {
     const { groups } = useDayOrganiser();
+    // Helper: accept either an array or a ref/computed that holds an array
+    function unwrapArray(maybe: unknown): any[] {
+      if (Array.isArray(maybe)) return maybe;
+      if (maybe && typeof maybe === 'object' && Array.isArray((maybe as any).value))
+        return (maybe as any).value;
+      return [];
+    }
     // `groups` is a computed ref; access `.value` to get the underlying array
-    const grpList = Array.isArray(groups as any) ? (groups as any) : (groups as any).value || [];
+    const grpList = unwrapArray(groups);
     const g = grpList.find((x: any) => x.id === node.id);
     editingGroupId.value = node.id;
     localName.value = g?.name || node.label || node.name || '';
