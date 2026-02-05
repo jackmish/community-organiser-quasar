@@ -1,17 +1,7 @@
 import type { Ref } from 'vue';
 import type { Task } from '../task/types';
 import type { OrganiserData } from './types';
-import {
-  addTask as addTaskService,
-  updateTask as updateTaskService,
-  deleteTask as deleteTaskService,
-  toggleTaskComplete as toggleTaskCompleteService,
-  undoCycleDone as undoCycleDoneService,
-  getTasksInRange as getTasksInRangeService,
-  getTasksByCategory as getTasksByCategoryService,
-  getTasksByPriority as getTasksByPriorityService,
-  getIncompleteTasks as getIncompleteTasksService,
-} from '../task/taskService';
+import * as taskService from '../task/taskService';
 
 // Minimal module-level context. `useDayOrganiser` will call `setContext` to
 // provide these; functions below use them when invoked.
@@ -35,20 +25,20 @@ export function setContext(ctx: {
 
 export async function addTask(date: string, taskData: any): Promise<Task> {
   const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const task = addTaskService(od.value, date, taskData);
+  const task = taskService.addTask(od.value, date, taskData);
   await save();
   return task;
 }
 
 export async function updateTask(date: string, id: string, updates: any): Promise<void> {
   const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  updateTaskService(od.value, date, id, updates);
+  taskService.updateTask(od.value, date, id, updates);
   await save();
 }
 
 export async function deleteTask(date: string, taskId: string): Promise<void> {
   const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const removed = deleteTaskService(od.value, date, taskId);
+  const removed = taskService.deleteTask(od.value, date, taskId);
   if (removed) {
     await save();
     return;
@@ -58,13 +48,13 @@ export async function deleteTask(date: string, taskId: string): Promise<void> {
 
 export async function toggleTaskComplete(date: string, taskId: string): Promise<void> {
   const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  toggleTaskCompleteService(od.value, date, taskId);
+  taskService.toggleTaskComplete(od.value, date, taskId);
   await save();
 }
 
 export async function undoCycleDone(date: string, taskId: string): Promise<boolean> {
   const { organiserDataRef: od, saveDataFn: save } = ensureContext();
-  const changed = undoCycleDoneService(od.value, date, taskId);
+  const changed = taskService.undoCycleDone(od.value, date, taskId);
   if (changed) await save();
   return changed;
 }
@@ -78,22 +68,22 @@ export async function updateDayNotes(date: string, notes: string): Promise<void>
 
 export function getTasksInRange(startDate: string, endDate: string) {
   const { organiserDataRef: od } = ensureContext();
-  return getTasksInRangeService(od.value, startDate, endDate);
+  return taskService.getTasksInRange(od.value, startDate, endDate);
 }
 
 export function getTasksByCategory(category: Task['category']) {
   const { organiserDataRef: od } = ensureContext();
-  return getTasksByCategoryService(od.value, category);
+  return taskService.getTasksByCategory(od.value, category);
 }
 
 export function getTasksByPriority(priority: Task['priority']) {
   const { organiserDataRef: od } = ensureContext();
-  return getTasksByPriorityService(od.value, priority);
+  return taskService.getTasksByPriority(od.value, priority);
 }
 
 export function getIncompleteTasks() {
   const { organiserDataRef: od } = ensureContext();
-  return getIncompleteTasksService(od.value);
+  return taskService.getIncompleteTasks(od.value);
 }
 
 // Preview helper: allows callers to set the preview task id or payload.
