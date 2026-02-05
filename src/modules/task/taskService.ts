@@ -1,4 +1,4 @@
-import { getCycleType } from '../../utils/occursOnDay';
+import { getCycleType } from './utlils/occursOnDay';
 import type { Task } from './types';
 import type { OrganiserData, DayData } from '../day-organiser/types';
 

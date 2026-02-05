@@ -62,7 +62,7 @@ import {
   getReplenishText,
 } from './theme';
 import { typeIcons } from './theme';
-import { getCycleType } from 'src/utils/occursOnDay';
+import { getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 // Replenish color data imported from theme
 

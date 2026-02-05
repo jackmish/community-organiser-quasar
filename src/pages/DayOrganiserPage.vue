@@ -235,7 +235,7 @@ import logger from 'src/utils/logger';
 import { useDayOrganiser } from '../modules/day-organiser';
 import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/FirstRunDialog.vue';
-import { occursOnDay, getCycleType } from 'src/utils/occursOnDay';
+import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 import { createGroupUiHandlers } from 'src/modules/group/uiHandlers';
 import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUtils';
 

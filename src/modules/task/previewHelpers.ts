@@ -17,7 +17,7 @@ export function createPreviewTaskHandler(args: {
       previewTaskPayload.value = null;
       return;
     }
-    const p = payload as Record<string, unknown>;
+    const p = payload;
     const pid = p['id'];
     previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
     previewTaskPayload.value = p;
