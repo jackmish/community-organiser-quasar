@@ -21,7 +21,6 @@ export const store: any = {
   //UI control data
   previewTaskId: ref<string | null>(null),
   previewTaskPayload: ref<Task | null>(null),
-  activeGroup: ref<{ label: string; value: string | null } | null>(null),
   //Shared API methods
   async saveData() {
     // call storage API bound to store

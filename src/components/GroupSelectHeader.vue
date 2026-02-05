@@ -91,9 +91,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import logger from 'src/utils/logger';
-import { useDayOrganiser } from 'src/modules/day-organiser';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 
-const { groups, activeGroup, isLoading } = useDayOrganiser();
+const groups = api.group.list.all;
+const activeGroup = api.group.activeGroup;
+const isLoading = api.storage.isLoading;
 
 // Normalize parent id values: accept string/number or object like { value, id }
 const normalizeId = (v: any): string | null => {

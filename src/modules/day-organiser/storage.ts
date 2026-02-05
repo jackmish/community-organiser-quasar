@@ -68,7 +68,7 @@ export function useDayOrganiser() {
             (g: any) => String(g.id) === String(requestedId),
           );
           if (found)
-            api.store.activeGroup.value = {
+            api.group.activeGroup.value = {
               label: found.name || String(found.id),
               value: found.id,
             };
@@ -84,7 +84,7 @@ export function useDayOrganiser() {
   // Persist activeGroup changes to settings
   try {
     watch(
-      () => api.store.activeGroup.value,
+      () => api.group.activeGroup.value,
       async (val) => {
         try {
           const existing = (await loadSettings()) || {};
@@ -132,7 +132,7 @@ export function useDayOrganiser() {
 
   const hiddenGroupSummary = createHiddenGroupSummary(
     api.store.organiserData,
-    api.store.activeGroup,
+    api.group.activeGroup,
   );
 
   const instance = {
@@ -165,7 +165,7 @@ export function useDayOrganiser() {
 
     // Groups
     groups: computed(() => api.store.organiserData.value.groups),
-    activeGroup: api.store.activeGroup,
+    activeGroup: api.group.activeGroup,
     addGroup: api.group.add,
     updateGroup: api.group.update,
     deleteGroup: api.group.delete,

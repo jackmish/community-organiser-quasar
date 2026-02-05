@@ -1,9 +1,15 @@
 import * as groupService from './groupService';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
 export function createGroupApi(state: any) {
+  // reuse existing shared ref if provided, otherwise create an internal one
+  const activeGroup =
+    state && state.activeGroup
+      ? state.activeGroup
+      : ref<{ label: string; value: string | null } | null>(null);
+
   return {
     add: async (payload: any) => {
       const group = groupService.addGroup(state.organiserData.value, payload);
@@ -24,6 +30,14 @@ export function createGroupApi(state: any) {
 
     getGroupsByParent: (parentId?: string) =>
       getGroupsByParentUtil(state.organiserData.value.groups, parentId),
+
+    // list helpers
+    list: {
+      all: computed(() => state.organiserData.value.groups || []),
+    },
+
+    // expose active group ref (proxy to shared store or internal ref)
+    activeGroup,
 
     // build tree from state.organiserData when requested
     tree: computed(() => {
