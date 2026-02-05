@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import type { Task } from '../task/types';
 import type { DayData, OrganiserData, TaskGroup } from './types';
 import { storage } from './storage';
-import { setContext, addTask, updateTask } from './api';
+import * as api from './api';
 import {
   addGroup as addGroupService,
   updateGroup as updateGroupService,
@@ -10,17 +10,8 @@ import {
 } from '../group/groupService';
 import type { CreateGroupInput } from '../group/groupService';
 import logger from 'src/utils/logger';
+import { getGroupsByParent as getGroupsByParentUtil, buildGroupTree } from '../group/groupUtils';
 import {
-  normalizeId as normalizeGroupId,
-  getGroupsByParent as getGroupsByParentUtil,
-  buildGroupTree,
-} from '../group/groupUtils';
-import {
-  addTask as addTaskService,
-  updateTask as updateTaskService,
-  deleteTask as deleteTaskService,
-  toggleTaskComplete as toggleTaskCompleteService,
-  undoCycleDone as undoCycleDoneService,
   getTasksInRange as getTasksInRangeService,
   getTasksByCategory as getTasksByCategoryService,
   getTasksByPriority as getTasksByPriorityService,
@@ -273,24 +264,9 @@ export function useDayOrganiser() {
   // keeps this module focused on organiser logic.
 
   // Provide runtime context (organiserData + saveData) to the API module.
-  setContext({ organiserData, saveData });
+  api.setContext({ organiserData, saveData });
 
-  // Delete a task (delegated to taskService)
-  const deleteTask = async (date: string, taskId: string): Promise<void> => {
-    const removed = deleteTaskService(organiserData.value, date, taskId);
-    if (removed) {
-      await saveData();
-      return;
-    }
-    // If not removed by fast path, still persist to ensure consistency
-    await saveData();
-  };
-
-  // Toggle task completion (delegated to taskService)
-  const toggleTaskComplete = async (date: string, taskId: string): Promise<void> => {
-    toggleTaskCompleteService(organiserData.value, date, taskId);
-    await saveData();
-  };
+  // Delete / toggle / undo now provided by `api` via setContext.
 
   // Update day notes
   const updateDayNotes = async (date: string, notes: string): Promise<void> => {
@@ -360,11 +336,7 @@ export function useDayOrganiser() {
 
   // Undo a cycleDone history entry for a specific task/date.
   // Returns true if an entry was removed and data saved.
-  const undoCycleDone = async (date: string, taskId: string): Promise<boolean> => {
-    const changed = undoCycleDoneService(organiserData.value, date, taskId);
-    if (changed) await saveData();
-    return changed;
-  };
+  // (undoCycleDone provided by API)
   // Group management helpers (delegated to groupService)
   const addGroup = async (groupInput: CreateGroupInput): Promise<TaskGroup> => {
     const group = addGroupService(organiserData.value, groupInput);
@@ -503,10 +475,10 @@ export function useDayOrganiser() {
     saveData,
     getDayData,
     // Delegate add/update to the centralized API
-    addTask,
-    updateTask,
-    deleteTask,
-    toggleTaskComplete,
+    addTask: api.addTask,
+    updateTask: api.updateTask,
+    deleteTask: api.deleteTask,
+    toggleTaskComplete: api.toggleTaskComplete,
     updateDayNotes,
     getTasksInRange,
     getTasksByCategory,
@@ -557,7 +529,7 @@ export function useDayOrganiser() {
     // Utils
     formatDate,
     // Undo a cycleDone entry for a specific task/date. Returns true if an entry was removed.
-    undoCycleDone,
+    undoCycleDone: api.undoCycleDone,
   };
 }
 
