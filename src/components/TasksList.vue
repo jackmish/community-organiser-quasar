@@ -592,7 +592,7 @@ const getDisplayDescription = (task: any) => {
   return desc;
 };
 
-import { countTodoSubtasks, countStarredUndone } from 'src/utils/todo';
+import { countTodoSubtasks, countStarredUndone } from 'src/modules/task/utlils/todo';
 
 const itemStyle = (task: any) => {
   if (!task) return {};

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countTodoSubtasks, countStarredUndone } from '../../src/utils/todo';
+import { countTodoSubtasks, countStarredUndone } from '../../src/modules/task/utlils/todo';
 
 describe('todo utils', () => {
   it('counts subtasks and done flags', () => {
