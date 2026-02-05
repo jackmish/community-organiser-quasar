@@ -128,12 +128,6 @@ const file = event.target.files[0];
 await importData(file);
 ```
 
-### Update Day Notes
-
-```typescript
-await updateDayNotes(currentDate.value, 'Great productive day!');
-```
-
 ## Data Structure
 
 ### Task Interface

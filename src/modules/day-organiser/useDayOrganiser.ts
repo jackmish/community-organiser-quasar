@@ -153,7 +153,7 @@ export function useDayOrganiser() {
     updateTask: api.task.update,
     deleteTask: api.task.delete,
     toggleTaskComplete: api.task.toggleComplete,
-    updateDayNotes: api.task.updateDayNotes,
+
     // prefer using `api.task.list.*` but keep compatibility by delegating here
     getTasksInRange: api.task.list.inRange,
     getTasksByCategory: api.task.list.byCategory,

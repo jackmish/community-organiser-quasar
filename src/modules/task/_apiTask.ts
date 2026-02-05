@@ -36,15 +36,6 @@ export function createTaskApi(state: any) {
       return changed;
     },
 
-    updateDayNotes: async (date: string, notes: string): Promise<void> => {
-      const organiserData = state.organiserData.value;
-      const day =
-        organiserData.days[date] ??
-        (organiserData.days[date] = { date, tasks: [], notes: '' } as any);
-      day.notes = notes;
-      await state.saveData();
-    },
-
     // Nested list helpers: `api.task.list.inRange(...)`, `api.task.list.byCategory(...)`, etc.
     list: {
       all: () => taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31'),
