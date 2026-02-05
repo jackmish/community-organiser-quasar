@@ -1,5 +1,5 @@
-import * as groupService from '../group/groupService';
-import { getGroupsByParent as getGroupsByParentUtil } from '../group/groupUtils';
+import * as groupService from './groupService';
+import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed } from 'vue';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.

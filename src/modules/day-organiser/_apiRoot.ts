@@ -5,8 +5,8 @@ import type { Task } from '../task/types';
 import { storage } from './storage';
 
 import { prepareGroupsForSave } from '../group/groupService';
-import * as apiTask from './apiTask';
-import * as apiGroup from './apiGroup';
+import * as apiTask from '../task/_apiTask';
+import * as apiGroup from '../group/_apiGroup';
 
 //// reactive state refs grouped into `state`
 
@@ -24,8 +24,7 @@ export const store: any = {
   activeGroup: ref<{ label: string; value: string | null } | null>(null),
   //Shared API methods
   async saveData() {
-    const dataToSave = prepareGroupsForSave(this.organiserData.value);
-    await storage.saveData(dataToSave);
+    await storage.saveData(prepareGroupsForSave(this.organiserData.value));
   },
 };
 

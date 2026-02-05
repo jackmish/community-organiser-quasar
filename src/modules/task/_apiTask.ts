@@ -1,21 +1,12 @@
-import type { Task } from '../task/types';
-import type { OrganiserData } from './types';
-import * as taskService from '../task/taskService';
+import type { Task } from './types';
+import type { OrganiserData } from '../day-organiser/types';
+import * as taskService from './taskService';
 import type { Ref } from 'vue';
-
-export type DayOrganiserState = {
-  organiserData: Ref<OrganiserData>;
-  currentDate: Ref<string>;
-  previewTaskId: Ref<string | null>;
-  previewTaskPayload: Ref<Task | null>;
-  activeGroup: Ref<{ label: string; value: string | null } | null>;
-  saveData: () => Promise<void>;
-};
 
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
-export function createTaskApi(state: DayOrganiserState) {
+export function createTaskApi(state: any) {
   return {
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = state.organiserData.value;
