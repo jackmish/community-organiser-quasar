@@ -107,7 +107,7 @@ export function useDayOrganiser() {
     try {
       const data = await storage.importFromFile(file);
       api.store.organiserData.value = data;
-        await api.store.saveData();
+      await api.store.saveData();
     } catch (error) {
       logger.error('Failed to import data:', error);
       throw error;
