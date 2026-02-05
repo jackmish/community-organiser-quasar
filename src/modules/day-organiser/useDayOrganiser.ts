@@ -17,6 +17,7 @@ import {
   getTasksByPriority as getTasksByPriorityService,
   getIncompleteTasks as getIncompleteTasksService,
 } from '../task/taskService';
+import { createHiddenGroupSummary } from '../task/hiddenGroupSummary';
 
 // Format date to YYYY-MM-DD
 const formatDate = (date: Date): string => {
@@ -263,32 +264,14 @@ export function useDayOrganiser() {
   // assigned below with real implementations; keeping it in a separate file
   // keeps this module focused on organiser logic.
 
-  // Provide runtime context (organiserData + saveData) to the API module.
-  api.setContext({ organiserData, saveData });
+  // Provide runtime context (organiserData + saveData + preview refs) to the API module.
+  api.setContext({ organiserData, saveData, previewTaskId, previewTaskPayload });
 
   // Delete / toggle / undo now provided by `api` via setContext.
 
-  // Update day notes
-  const updateDayNotes = async (date: string, notes: string): Promise<void> => {
-    const dayData = getDayData(date);
-    dayData.notes = notes;
-    await saveData();
-  };
+  // Update day notes provided by API
 
-  // Get tasks for a date range
-  const getTasksInRange = (startDate: string, endDate: string): Task[] =>
-    getTasksInRangeService(organiserData.value, startDate, endDate);
-
-  // Get tasks by category
-  const getTasksByCategory = (category: Task['category']): Task[] =>
-    getTasksByCategoryService(organiserData.value, category);
-
-  // Get tasks by priority
-  const getTasksByPriority = (priority: Task['priority']): Task[] =>
-    getTasksByPriorityService(organiserData.value, priority);
-
-  // Get incomplete tasks
-  const getIncompleteTasks = (): Task[] => getIncompleteTasksService(organiserData.value);
+  // Task query helpers are provided by the `api` module (use `api.getTasks*`).
 
   // Export data
   const exportData = () => {
@@ -377,87 +360,9 @@ export function useDayOrganiser() {
   const groupTree = computed(() => buildGroupTree(organiserData.value.groups));
 
   // Summary of tasks from child groups that hide tasks from parent
-  const hiddenGroupSummary = computed(() => {
-    try {
-      if (!activeGroup.value || activeGroup.value.value === null)
-        return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-      const activeId = String(activeGroup.value.value);
-      const getGroupById = (id: any) =>
-        (organiserData.value.groups || []).find((g: any) => String(g.id) === String(id));
+  const hiddenGroupSummary = createHiddenGroupSummary(organiserData, activeGroup);
 
-      // Find groups that have hideTasksFromParent === true and are direct children of activeGroup
-      const hiddenGroupIds = new Set<string>();
-      (organiserData.value.groups || []).forEach((g: any) => {
-        try {
-          if (!g || !g.id) return;
-          if (!g.hideTasksFromParent) return;
-          const parent = g.parentId ?? g.parent_id ?? null;
-          if (parent && String(parent) === activeId) hiddenGroupIds.add(String(g.id));
-        } catch (e) {
-          void e;
-        }
-      });
-
-      if (hiddenGroupIds.size === 0)
-        return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-
-      // Initialize per-group counters
-      const groupsMap = new Map<string, any>();
-      for (const id of Array.from(hiddenGroupIds)) {
-        const g = getGroupById(id) || { id, name: '(unknown)' };
-        groupsMap.set(String(id), {
-          id: String(id),
-          name: g.name || String(id),
-          total: 0,
-          low: 0,
-          medium: 0,
-          high: 0,
-          critical: 0,
-        });
-      }
-
-      const all = getTasksInRangeService(organiserData.value, '1970-01-01', '9999-12-31') || [];
-      for (const t of all) {
-        try {
-          if (!t || !t.groupId) continue;
-          const gid = String(t.groupId);
-          if (!hiddenGroupIds.has(gid)) continue;
-          if (Number(t.status_id) === 0) continue; // skip done
-          const p = t.priority || 'medium';
-          const entry = groupsMap.get(gid);
-          if (!entry) continue;
-          entry[p] = (entry[p] || 0) + 1;
-          entry.total++;
-        } catch (e) {
-          void e;
-        }
-      }
-
-      // Build final list and totals
-      const groupsArr = Array.from(groupsMap.values()).sort((a: any, b: any) =>
-        String(a.name).localeCompare(String(b.name)),
-      );
-      const totals: { total: number; low: number; medium: number; high: number; critical: number } =
-        {
-          total: 0,
-          low: 0,
-          medium: 0,
-          high: 0,
-          critical: 0,
-        };
-      for (const g of groupsArr) {
-        totals.total += g.total || 0;
-        totals.low += g.low || 0;
-        totals.medium += g.medium || 0;
-        totals.high += g.high || 0;
-        totals.critical += g.critical || 0;
-      }
-
-      return { ...totals, groups: groupsArr };
-    } catch (e) {
-      return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
-    }
-  });
+  // `setPreviewTask` is provided by `api` (api.setPreviewTask), refs were passed via setContext.
 
   const getGroupHierarchy = (): any[] => {
     return groupTree.value;
@@ -479,11 +384,11 @@ export function useDayOrganiser() {
     updateTask: api.updateTask,
     deleteTask: api.deleteTask,
     toggleTaskComplete: api.toggleTaskComplete,
-    updateDayNotes,
-    getTasksInRange,
-    getTasksByCategory,
-    getTasksByPriority,
-    getIncompleteTasks,
+    updateDayNotes: api.updateDayNotes,
+    getTasksInRange: api.getTasksInRange,
+    getTasksByCategory: api.getTasksByCategory,
+    getTasksByPriority: api.getTasksByPriority,
+    getIncompleteTasks: api.getIncompleteTasks,
     exportData,
     importData,
 
@@ -508,23 +413,7 @@ export function useDayOrganiser() {
     // Preview helper: supports either an id string or a payload object { id, date, ... }
     previewTaskId: computed(() => previewTaskId.value),
     previewTaskPayload: computed(() => previewTaskPayload.value),
-    setPreviewTask: (payload: string | number | Record<string, unknown> | null) => {
-      if (payload == null) {
-        previewTaskId.value = null;
-        previewTaskPayload.value = null;
-        return;
-      }
-      if (typeof payload === 'string' || typeof payload === 'number') {
-        previewTaskId.value = String(payload);
-        previewTaskPayload.value = null;
-        return;
-      }
-      // object payload -> store both id and payload
-      const p = payload;
-      const pid = p['id'];
-      previewTaskId.value = typeof pid === 'string' || typeof pid === 'number' ? String(pid) : null;
-      previewTaskPayload.value = p;
-    },
+    setPreviewTask: api.setPreviewTask,
 
     // Utils
     formatDate,
