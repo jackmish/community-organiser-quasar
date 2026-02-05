@@ -3,12 +3,13 @@ import type { Ref } from 'vue';
 import type { Task } from '../task/types';
 import type { OrganiserData } from './types';
 import * as taskService from '../task/taskService';
-import { storage } from './storage';
+import { storage, deleteGroupFile } from './storage';
 import logger from 'src/utils/logger';
 import {
   addGroup as addGroupService,
   updateGroup as updateGroupService,
   deleteGroup as deleteGroupService,
+  prepareGroupsForSave,
 } from '../group/groupService';
 import type { CreateGroupInput } from '../group/groupService';
 import { getGroupsByParent as getGroupsByParentUtil, buildGroupTree } from '../group/groupUtils';
@@ -19,46 +20,15 @@ export const organiserData = ref<OrganiserData>({
   groups: [],
   lastModified: new Date().toISOString(),
 });
-
 export const currentDate = ref<string>(new Date().toISOString().split('T')[0] ?? '');
-
 export const previewTaskId = ref<string | null>(null);
 export const previewTaskPayload = ref<Record<string, unknown> | null>(null);
-
 export const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 
 //// API functions
 export async function saveData() {
-  try {
-    const groupsOrig = Array.isArray(organiserData.value.groups) ? organiserData.value.groups : [];
-    const groupsForSave = groupsOrig.map((g: any) => ({ ...(g || {}), tasks: [] }));
-    const groupIndex = new Map<string, any>();
-    for (const g of groupsForSave) {
-      groupIndex.set(String(g.id), g);
-    }
-    for (const dKey of Object.keys(organiserData.value.days)) {
-      const day = organiserData.value.days[dKey];
-      if (!day || !Array.isArray(day.tasks)) continue;
-      for (const t of day.tasks) {
-        const gid = t && (t.groupId ?? null);
-        if (gid != null && groupIndex.has(String(gid))) {
-          groupIndex.get(String(gid)).tasks.push(t);
-        }
-      }
-    }
-    const dataToSave: OrganiserData = {
-      ...organiserData.value,
-      groups: groupsForSave,
-    };
-    await storage.saveData(dataToSave);
-  } catch (err) {
-    try {
-      await storage.saveData(organiserData.value as OrganiserData);
-    } catch (e) {
-      logger.error('Failed to save organiser data', e);
-      throw e;
-    }
-  }
+  const dataToSave = prepareGroupsForSave(organiserData.value);
+  await storage.saveData(dataToSave);
 }
 
 // No runtime context required — module-owned `organiserData` is used directly.
@@ -147,15 +117,7 @@ export async function deleteGroup(groupId: string): Promise<void> {
   const { groupHasTasks } = deleteGroupService(organiserData.value, groupId);
   await saveData();
   if (!groupHasTasks) {
-    try {
-      const storageMod = await import('./storage');
-      const del = (storageMod as any).deleteGroupFile;
-      if (typeof del === 'function') {
-        await del.call(storageMod, groupId);
-      }
-    } catch (err) {
-      // ignore deletion errors here
-    }
+    await deleteGroupFile(groupId);
   }
 }
 

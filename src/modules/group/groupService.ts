@@ -83,3 +83,38 @@ export function deleteGroup(
 
   return { groupHasTasks };
 }
+
+// Prepare groups with their tasks for persistence. Returns a new OrganiserData
+// object suitable for saving to disk (groups include a `tasks` array populated
+// from organiserData.days).
+export function prepareGroupsForSave(organiserData: OrganiserData): OrganiserData {
+  try {
+    const groupsOrig = Array.isArray(organiserData.groups) ? organiserData.groups : [];
+    const groupsForSave = groupsOrig.map((g: any) => ({ ...(g || {}), tasks: [] }));
+    const groupIndex = new Map<string, any>();
+    for (const g of groupsForSave) {
+      groupIndex.set(String(g.id), g);
+    }
+
+    for (const dayKey of Object.keys(organiserData.days || {})) {
+      const day = (organiserData.days || {})[dayKey];
+      if (!day || !Array.isArray(day.tasks)) continue;
+      for (const t of day.tasks) {
+        const gid = t && (t.groupId ?? null);
+        if (gid != null && groupIndex.has(String(gid))) {
+          groupIndex.get(String(gid)).tasks.push(t);
+        }
+      }
+    }
+
+    return {
+      ...organiserData,
+      groups: groupsForSave,
+    } as OrganiserData;
+  } catch (err) {
+    // If preparing groups fails for any reason, log and return organiserData as-is
+    // to avoid losing data during persistence.
+    console.error('prepareGroupsForSave failed:', err);
+    return organiserData;
+  }
+}
