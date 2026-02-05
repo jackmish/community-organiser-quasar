@@ -24,18 +24,18 @@ export function createTaskApi(state: any) {
       taskService.deleteTask(state.organiserData.value, date, taskId);
       await state.saveData();
     },
+    status: {
+      toggleComplete: async (date: string, taskId: string): Promise<void> => {
+        taskService.toggleTaskComplete(state.organiserData.value, date, taskId);
+        await state.saveData();
+      },
 
-    toggleComplete: async (date: string, taskId: string): Promise<void> => {
-      taskService.toggleTaskComplete(state.organiserData.value, date, taskId);
-      await state.saveData();
+      undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
+        const changed = taskService.undoCycleDone(state.organiserData.value, date, taskId);
+        if (changed) await state.saveData();
+        return changed;
+      },
     },
-
-    undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
-      const changed = taskService.undoCycleDone(state.organiserData.value, date, taskId);
-      if (changed) await state.saveData();
-      return changed;
-    },
-
     // Nested list helpers: `api.task.list.inRange(...)`, `api.task.list.byCategory(...)`, etc.
     list: {
       all: () => taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31'),

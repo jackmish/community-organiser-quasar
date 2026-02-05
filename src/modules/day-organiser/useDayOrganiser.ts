@@ -152,7 +152,7 @@ export function useDayOrganiser() {
     addTask: api.task.add,
     updateTask: api.task.update,
     deleteTask: api.task.delete,
-    toggleTaskComplete: api.task.toggleComplete,
+    toggleTaskComplete: api.task.status.toggleComplete,
 
     // prefer using `api.task.list.*` but keep compatibility by delegating here
     getTasksInRange: api.task.list.inRange,
@@ -189,6 +189,6 @@ export function useDayOrganiser() {
     exportData,
     importData,
     formatDate,
-    undoCycleDone: api.task.undoCycleDone,
+    undoCycleDone: api.task.status.undoCycleDone,
   };
 }
