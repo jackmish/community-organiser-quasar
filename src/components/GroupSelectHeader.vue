@@ -122,31 +122,23 @@ watch(
   { immediate: true },
 );
 
-// assemble flat list of options from group tree
+// assemble flat list of options from groups list (shorter)
 const options = computed(() => {
   const manage = { label: 'Manage Groups...', value: '__manage_groups__' };
 
-  // Flatten the shared group tree into a labeled list for the dropdown
-  const flat: any[] = [];
-  const walkNodes = (nodes: any[], depth = 0) => {
-    (nodes || [])
-      .slice()
-      .sort((a: any, b: any) => String(a.label).localeCompare(String(b.label)))
-      .forEach((n: any) => {
-        flat.push({
-          label: `${'\u00A0'.repeat(depth * 2)}${n.label}`,
-          value: String(n.id),
-          icon: n.icon || 'folder',
-          color: n.color || null,
-        });
-        walkNodes(n.children || [], depth + 1);
-      });
-  };
-
-  walkNodes(api.group.tree.value || [], 0);
-
   const base: any[] = [{ label: 'All Groups', value: null, icon: 'folder_open', color: null }];
-  const combined = base.concat(flat);
+
+  const groupOptions = (groups.value || [])
+    .slice()
+    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
+    .map((g: any) => ({
+      label: g.name,
+      value: String(g.id),
+      icon: g.icon || 'folder',
+      color: g.color || null,
+    }));
+
+  const combined = base.concat(groupOptions);
 
   // Ensure activeGroup is present in the options
   const cur = activeGroup.value;
