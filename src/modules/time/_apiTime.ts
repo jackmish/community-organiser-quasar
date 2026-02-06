@@ -2,6 +2,8 @@ import { ref } from 'vue';
 
 export function createTimeApi() {
   const currentDate = ref<string>(new Date().toISOString().split('T')[0] ?? '');
+  const days = ref<Record<string, any>>({});
+  const lastModified = ref<string>(new Date().toISOString());
 
   return {
     currentDate,
@@ -29,5 +31,9 @@ export function createTimeApi() {
         // ignore
       }
     },
+    // Days map (date -> DayData)
+    days,
+    // Last modified timestamp for organiser data
+    lastModified,
   } as const;
 }

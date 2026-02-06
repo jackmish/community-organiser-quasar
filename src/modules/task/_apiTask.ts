@@ -7,13 +7,26 @@ import type { Ref } from 'vue';
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
-export function createTaskApi(state: any) {
+export function createTaskApi(state: any, groupApi?: any, timeApi?: any) {
   // Internal UI refs now live inside the task API so the task API is the canonical source
   const previewTaskId = ref<string | null>(null);
-  const previewTaskPayload = ref<any | null>(null);
+  const previewTaskPayload = ref<PreviewPayload>(null);
   const mode = ref<'add' | 'edit' | 'preview'>('add');
   const taskToEdit = ref<Task | null>(null);
   const selectedTaskId = ref<string | null>(null);
+
+  // helper to build organiser-like refs from refactored APIs
+  const _organiserRef = () => ({
+    days: (timeApi && timeApi.days ? timeApi.days.value : state.organiserData?.value?.days) || {},
+    groups:
+      (groupApi && groupApi._groupsRef
+        ? groupApi._groupsRef.value
+        : state.organiserData?.value?.groups) || [],
+    lastModified:
+      (timeApi && timeApi.lastModified
+        ? timeApi.lastModified.value
+        : state.organiserData?.value?.lastModified) || new Date().toISOString(),
+  });
 
   // Ensure mode-driven clearing of selection lives inside the API so views don't repeat logic
   watch(mode, (val) => {
@@ -30,51 +43,49 @@ export function createTaskApi(state: any) {
     previewTaskId,
     previewTaskPayload,
     add: async (date: string, taskData: any): Promise<Task> => {
-      const organiserData = state.organiserData.value;
-      const task = taskService.addTask(organiserData, date, taskData);
+      const organiserData = _organiserRef();
+      const task = taskService.addTask(organiserData as any, date, taskData);
       await state.saveData();
       return task;
     },
 
     update: async (date: string, id: string, updates: any): Promise<void> => {
-      taskService.updateTask(state.organiserData.value, date, id, updates);
+      taskService.updateTask(_organiserRef() as any, date, id, updates);
       await state.saveData();
     },
 
     delete: async (date: string, taskId: string): Promise<void> => {
-      taskService.deleteTask(state.organiserData.value, date, taskId);
+      taskService.deleteTask(_organiserRef() as any, date, taskId);
       await state.saveData();
     },
     status: {
       toggleComplete: async (date: string, taskId: string): Promise<void> => {
-        taskService.toggleTaskComplete(state.organiserData.value, date, taskId);
+        taskService.toggleTaskComplete(_organiserRef() as any, date, taskId);
         await state.saveData();
       },
 
       undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
-        const changed = taskService.undoCycleDone(state.organiserData.value, date, taskId);
+        const changed = taskService.undoCycleDone(_organiserRef() as any, date, taskId);
         if (changed) await state.saveData();
         return changed;
       },
     },
     // Nested list helpers: `api.task.list.inRange(...)`, `api.task.list.byCategory(...)`, etc.
     list: {
-      all: () => taskService.getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31'),
+      all: () => taskService.getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31'),
       inRange: (start: string, end: string) =>
-        taskService.getTasksInRange(state.organiserData.value, start, end),
+        taskService.getTasksInRange(_organiserRef() as any, start, end),
       byCategory: (category: Task['category']) =>
-        taskService.getTasksByCategory(state.organiserData.value, category),
+        taskService.getTasksByCategory(_organiserRef() as any, category),
       byPriority: (priority: Task['priority']) =>
-        taskService.getTasksByPriority(state.organiserData.value, priority),
-      incomplete: () => taskService.getIncompleteTasks(state.organiserData.value),
+        taskService.getTasksByPriority(_organiserRef() as any, priority),
+      incomplete: () => taskService.getIncompleteTasks(_organiserRef() as any),
 
       filter: (fn: (t: Task) => boolean) =>
-        taskService
-          .getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31')
-          .filter(fn),
+        taskService.getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31').filter(fn),
       sort: (compare?: (a: Task, b: Task) => number) => {
         const arr = taskService
-          .getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31')
+          .getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31')
           .slice();
         arr.sort(
           compare ??
@@ -85,7 +96,7 @@ export function createTaskApi(state: any) {
       },
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) =>
         taskService
-          .getTasksInRange(state.organiserData.value, '1970-01-01', '9999-12-31')
+          .getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31')
           .reduce(fn, init),
     },
 

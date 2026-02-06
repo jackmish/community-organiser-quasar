@@ -4,42 +4,47 @@ import { computed, ref } from 'vue';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
 export function createGroupApi(state: any) {
-  // use an internal activeGroup ref (do not depend on external/shared state)
+  // local refs: activeGroup and groups (groups will be populated by storage)
   const activeGroup = ref<{ label: string; value: string | null } | null>(null);
+  const groups = ref<any[]>([]);
 
   // parent computed delegates the lookup to groupService to avoid duplication
-  const parent = computed(() =>
-    groupService.getParentForActive(state.organiserData.value, activeGroup.value),
-  );
+  // parent delegates to groupService but provides an organiser-like object
+  // use the `groups` ref directly for operations
+
+  // parent computed is provided by groupService (keeps lookup logic in one place)
+  const parent = groupService.createParentComputed(groups, activeGroup);
 
   return {
     add: async (payload: any) => {
-      const group = groupService.addGroup(state.organiserData.value, payload);
+      const group = groupService.addGroup(groups.value, payload);
       await state.saveData();
       return group;
     },
 
     update: async (groupId: string, updates: Partial<any>) => {
-      groupService.updateGroup(state.organiserData.value, groupId, updates);
+      groupService.updateGroup(groups.value, groupId, updates);
       await state.saveData();
     },
 
     delete: async (groupId: string) => {
-      const res = groupService.deleteGroup(state.organiserData.value, groupId);
+      const res = groupService.deleteGroup(groups.value, groupId);
       await state.saveData();
       return res;
     },
 
-    getGroupsByParent: (parentId?: string) =>
-      getGroupsByParentUtil(state.organiserData.value.groups, parentId),
+    getGroupsByParent: (parentId?: string) => getGroupsByParentUtil(groups.value || [], parentId),
 
     // list helpers
     list: {
-      all: computed(() => state.organiserData.value.groups || []),
+      all: computed(() => groups.value || []),
     },
 
     // expose active group ref (proxy to shared store or internal ref)
     activeGroup,
+
+    // expose groups ref so storage can populate it
+    _groupsRef: groups,
 
     // expose parent computed
     parent,
@@ -68,11 +73,11 @@ export function createGroupApi(state: any) {
       return null;
     },
 
-    // build tree from state.organiserData when requested (uses getGroupsByParent)
+    // build tree from groups when requested (uses getGroupsByParent)
     tree: computed(() => {
       const buildTree = (parentId?: string): any[] => {
         const pidNorm = parentId == null ? undefined : String(parentId);
-        const groupsForParent = getGroupsByParentUtil(state.organiserData.value.groups, pidNorm);
+        const groupsForParent = getGroupsByParentUtil(groups.value || [], pidNorm);
         return (groupsForParent || []).map((group: any) => ({
           id: String(group.id),
           label: group.name,

@@ -1,4 +1,6 @@
 import type { OrganiserData, TaskGroup } from '../day-organiser/types';
+import { computed } from 'vue';
+import type { Ref } from 'vue';
 import { generateGroupId } from './groupId';
 import { normalizeId as normalizeGroupId } from './groupUtils';
 
@@ -11,7 +13,10 @@ export type CreateGroupInput = {
   hideTasksFromParent?: boolean | undefined;
 };
 
-export function addGroup(organiserData: OrganiserData, payload: CreateGroupInput): TaskGroup {
+export function addGroup(
+  organiserData: OrganiserData | any[],
+  payload: CreateGroupInput,
+): TaskGroup {
   const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent } = payload;
   const now = new Date().toISOString();
   const group: TaskGroup = {
@@ -25,49 +30,69 @@ export function addGroup(organiserData: OrganiserData, payload: CreateGroupInput
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
   };
 
-  if (!Array.isArray(organiserData.groups)) organiserData.groups = [];
-  organiserData.groups.push(group);
+  // Allow callers to pass either the full organiserData object or the groups array directly.
+  if (Array.isArray(organiserData)) {
+    organiserData.push(group);
+  } else {
+    if (!Array.isArray(organiserData.groups)) organiserData.groups = [];
+    organiserData.groups.push(group);
+  }
   return group;
 }
 
+function _ensureGroupsAndDays(src: any): { groups: any[]; days: Record<string, any> } {
+  if (Array.isArray(src)) return { groups: src, days: {} };
+  return { groups: src.groups || [], days: src.days || {} };
+}
+
 export function updateGroup(
-  organiserData: OrganiserData,
+  organiserData: OrganiserData | any[],
   groupId: string,
   updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
 ): void {
-  const group = (organiserData.groups || []).find((g) => g.id === groupId);
+  const { groups } = _ensureGroupsAndDays(organiserData);
+  const group = (groups || []).find((g: any) => g.id === groupId);
   if (!group) throw new Error('Group not found');
   Object.assign(group, updates);
 }
 
 export function deleteGroup(
-  organiserData: OrganiserData,
+  organiserData: OrganiserData | any[],
   groupId: string,
 ): { groupHasTasks: boolean } {
-  const groupToDelete = (organiserData.groups || []).find((g) => g.id === groupId);
+  const src: any = organiserData;
+  const { groups, days } = _ensureGroupsAndDays(src);
+  const groupToDelete = (groups || []).find((g: any) => g.id === groupId);
 
-  const groupHasTasks = Object.values(organiserData.days || {}).some(
+  const groupHasTasks = Object.values(days || {}).some(
     (day: any) =>
       Array.isArray(day.tasks) &&
       day.tasks.some((task: any) => String(task.groupId) === String(groupId)),
   );
 
   // Remove group from persisted list
-  organiserData.groups = (organiserData.groups || []).filter((g) => g.id !== groupId);
+  const newGroups = (groups || []).filter((g: any) => g.id !== groupId);
+  if (Array.isArray(src)) {
+    // caller passed an array reference: mutate it in place
+    src.length = 0;
+    newGroups.forEach((g: any) => src.push(g));
+  } else {
+    src.groups = newGroups;
+  }
 
   // Remove groupId from all tasks
-  Object.values(organiserData.days || {}).forEach((day: any) => {
+  Object.values(days || {}).forEach((day: any) => {
     (day.tasks || []).forEach((task: any) => {
       if (task.groupId === groupId) delete task.groupId;
     });
   });
 
   // Move child groups to parent or root
-  organiserData.groups.forEach((g: any) => {
+  (src.groups || []).forEach((g: any) => {
     const pid = normalizeGroupId(g.parentId ?? g.parent_id ?? null);
     if (pid === String(groupId)) {
       const newParent = groupToDelete
-        ? normalizeGroupId(groupToDelete.parentId ?? (groupToDelete as any).parent_id ?? null)
+        ? normalizeGroupId(groupToDelete.parentId ?? groupToDelete.parent_id ?? null)
         : null;
       if (g.parentId !== undefined) {
         if (newParent) g.parentId = newParent;
@@ -121,7 +146,10 @@ export function prepareGroupsForSave(organiserData: OrganiserData): OrganiserDat
 
 // Return a normalized parent object for the given active group value.
 // `active` may be a string id, number, or an object with `value`/`id`.
-export function getParentForActive(organiserData: OrganiserData, active: unknown): any {
+export function getParentForActive(
+  organiserData: OrganiserData | { groups?: any[]; days?: Record<string, any> },
+  active: unknown,
+): any {
   try {
     if (active == null) return null;
     const maybeId =
@@ -140,4 +168,9 @@ export function getParentForActive(organiserData: OrganiserData, active: unknown
   } catch (err) {
     return null;
   }
+}
+
+// Create a computed parent lookup bound to reactive refs.
+export function createParentComputed(groupsRef: Ref<any[]>, activeRef: Ref<unknown>) {
+  return computed(() => getParentForActive({ groups: groupsRef.value }, activeRef.value));
 }

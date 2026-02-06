@@ -1,8 +1,8 @@
 import { ref } from 'vue';
-import logger from 'src/utils/logger';
+import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
 
-export function createStorageApi(store: any, groupApi?: any) {
+export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
 
   const loadData = async () => {
@@ -33,16 +33,31 @@ export function createStorageApi(store: any, groupApi?: any) {
         }
       }
 
-      // Populate the provided store so callers relying on api.store see data
+      // Populate the refactored API refs: time.days and group._groupsRef
       try {
-        store.organiserData.value = {
-          days: Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {},
-          groups: rawGroups,
-          lastModified: data.lastModified || new Date().toISOString(),
-        };
+        const finalDays = Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {};
+
+        // populate groupApi internal ref if available
+        try {
+          if (groupApi && groupApi._groupsRef) {
+            groupApi._groupsRef.value = rawGroups;
+          }
+        } catch (e) {
+          void e;
+        }
+
+        // populate timeApi days/lastModified if provided
+        try {
+          if (timeApi) {
+            if (timeApi.days) timeApi.days.value = finalDays;
+            if (timeApi.lastModified)
+              timeApi.lastModified.value = data.lastModified || new Date().toISOString();
+          }
+        } catch (e) {
+          void e;
+        }
       } catch (e) {
-        // if store assignment fails, still return raw data
-        logger.warn('Failed to assign organiserData to store in api.storage.loadData', e);
+        logger.warn('Failed to populate refactored API refs in api.storage.loadData', e);
       }
 
       // Restore active group from settings if groupApi was provided
@@ -51,9 +66,11 @@ export function createStorageApi(store: any, groupApi?: any) {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
           if (requestedId) {
-            const found = (store.organiserData.value.groups || []).find(
-              (g: any) => String(g.id) === String(requestedId),
-            );
+            const groupsList =
+              groupApi && groupApi._groupsRef && groupApi._groupsRef.value
+                ? groupApi._groupsRef.value
+                : store.organiserData.value.groups || [];
+            const found = (groupsList || []).find((g: any) => String(g.id) === String(requestedId));
             if (found) {
               try {
                 groupApi.activeGroup.value = {
@@ -80,9 +97,19 @@ export function createStorageApi(store: any, groupApi?: any) {
     }
   };
 
-  const saveData = async (data: any) => {
+  const saveData = async (data?: any) => {
     try {
-      await backendStorage.saveData(data);
+      // If caller didn't provide data, build it from refactored APIs
+      let payload = data;
+      if (!payload) {
+        const groups = groupApi && groupApi._groupsRef ? groupApi._groupsRef.value : [];
+        const days =
+          timeApi && timeApi.days ? timeApi.days.value : store.organiserData?.value?.days || {};
+        const lastModified =
+          timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString();
+        payload = { days, groups, lastModified };
+      }
+      await backendStorage.saveData(payload);
     } catch (err) {
       logger.error('apiStorage.saveData failed', err);
       throw err;

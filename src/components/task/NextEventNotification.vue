@@ -44,7 +44,8 @@ import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } fro
 import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
-const organiserData = api.store.organiserData;
+const timeApi = api.time;
+const groupApi = api.group;
 const setCurrentDate = api.time.setCurrentDate;
 const setPreviewTask = api.task.setPreviewTask;
 const getTasksInRange = api.task.list.inRange;
@@ -71,9 +72,9 @@ function formatDateLabel(dateStr?: string) {
 // occursOnDay and repeat helpers moved to ../utils/occursOnDay
 
 const nextEvents = computed(() => {
-  // Touch organiserData to ensure this computed tracks changes to the store
+  // Touch time.days to ensure this computed tracks changes to the days map
   // (some callers mutate nested structures and explicit access guarantees reactivity)
-  void organiserData.value;
+  void (timeApi.days && timeApi.days.value);
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -90,7 +91,7 @@ const nextEvents = computed(() => {
   try {
     allTasks = api.task.list.all() || [];
   } catch (e) {
-    const days = organiserData.value?.days || {};
+    const days = (timeApi.days && timeApi.days.value) || {};
     Object.keys(days).forEach((d) => {
       const day = days[d];
       if (day && Array.isArray(day.tasks)) allTasks.push(...day.tasks);

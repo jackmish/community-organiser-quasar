@@ -243,12 +243,16 @@ import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUti
 const $q = useQuasar();
 
 const currentDayData = computed(() => {
-  const days = api.store.organiserData.value.days || {};
+  const days = api.time.days.value || {};
   const d = api.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: '' } as any);
 });
 
-const hiddenGroupSummary = createHiddenGroupSummary(api.store.organiserData, api.group.activeGroup);
+// Provide a lightweight organiser-like ref for legacy helpers that expect
+// an `organiserData` ref with `groups` and `days`.
+const organiserLike = computed(() => ({ groups: api.group.list.all.value, days: api.time.days.value }));
+
+const hiddenGroupSummary = createHiddenGroupSummary(organiserLike as any, api.group.activeGroup);
 
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => api.task.list.all());

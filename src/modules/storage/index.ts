@@ -1,5 +1,5 @@
 import type { OrganiserData } from '../day-organiser/types';
-import logger from 'src/utils/logger';
+import logger from '../../utils/logger';
 import type { ElectronAPI } from './types';
 
 declare global {

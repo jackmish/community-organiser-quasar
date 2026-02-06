@@ -12,18 +12,11 @@ import { createTimeApi } from '../time/_apiTime';
 //// reactive state refs grouped into `state`
 
 export const store: any = {
-  // Main organiser data
-  organiserData: ref<OrganiserData>({
-    days: {},
-    groups: [],
-    lastModified: new Date().toISOString(),
-  }),
-  //UI control data
-  // UI control data moved into the task API (keeps store focused on organiser data)
-  //Shared API methods
+  // Legacy organiserData removed — use `time` and `group` APIs instead.
+  // Shared API methods
   async saveData() {
-    // call storage API bound to store
-    await storage.saveData(prepareGroupsForSave(this.organiserData.value));
+    // storage.saveData will build payload from refactored APIs if none provided
+    await storage.saveData();
   },
 };
 
@@ -32,7 +25,7 @@ export const store: any = {
 
 //// API helpers
 // Create and export bound APIs in a single line each for brevity
-export const task = apiTask.createTaskApi(store) as any;
-export const group = apiGroup.createGroupApi(store) as any;
 export const time = createTimeApi() as any;
-export const storage = createStorageApi(store, group) as any;
+export const group = apiGroup.createGroupApi(store) as any;
+export const task = apiTask.createTaskApi(store, group, time) as any;
+export const storage = createStorageApi(store, group, time) as any;
