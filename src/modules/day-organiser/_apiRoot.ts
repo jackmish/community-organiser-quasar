@@ -36,4 +36,4 @@ export const store: any = {
 export const task = apiTask.createTaskApi(store) as any;
 export const group = apiGroup.createGroupApi(store) as any;
 export const time = createTimeApi() as any;
-export const storage = createStorageApi(store) as any;
+export const storage = createStorageApi(store, group) as any;

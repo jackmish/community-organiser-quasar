@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import logger from 'src/utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
 
-export function createStorageApi(store: any) {
+export function createStorageApi(store: any, groupApi?: any) {
   const isLoading = ref(false);
 
   const loadData = async () => {
@@ -11,17 +11,20 @@ export function createStorageApi(store: any) {
     try {
       const data = await backendStorage.loadData();
       // If backend returns groups with embedded `tasks`, reconstruct `days` map
-      const rawGroups = Array.isArray(data?.groups) ? data.groups : [];
+      const rawGroups: any[] = Array.isArray(data?.groups) ? (data.groups as any[]) : [];
       const daysFromGroups: Record<string, any> = {};
-      const groupsHaveTasks = rawGroups.some((g: any) => Array.isArray(g.tasks) && g.tasks.length > 0);
+      const groupsHaveTasks = rawGroups.some(
+        (g: any) => Array.isArray(g.tasks) && g.tasks.length > 0,
+      );
       if (groupsHaveTasks) {
         for (const grp of rawGroups) {
-          const tasks = Array.isArray(grp.tasks) ? grp.tasks : [];
+          const tasks = Array.isArray((grp as any).tasks) ? (grp as any).tasks : [];
           for (const t of tasks) {
             try {
               const dateKey = t?.date || t?.eventDate || new Date().toISOString().split('T')[0];
-              if (!daysFromGroups[dateKey]) daysFromGroups[dateKey] = { date: dateKey, tasks: [], notes: '' };
-              if (!t.groupId) t.groupId = grp.id;
+              if (!daysFromGroups[dateKey])
+                daysFromGroups[dateKey] = { date: dateKey, tasks: [], notes: '' };
+              if (!t.groupId) t.groupId = (grp as any).id;
               daysFromGroups[dateKey].tasks.push(t);
             } catch (e) {
               void e;
@@ -40,6 +43,29 @@ export function createStorageApi(store: any) {
       } catch (e) {
         // if store assignment fails, still return raw data
         logger.warn('Failed to assign organiserData to store in api.storage.loadData', e);
+      }
+
+      // Restore active group from settings if groupApi was provided
+      try {
+        if (groupApi && typeof loadSettings === 'function') {
+          const settings = await loadSettings();
+          const requestedId = settings?.activeGroupId ?? null;
+          if (requestedId) {
+            const found = (store.organiserData.value.groups || []).find(
+              (g: any) => String(g.id) === String(requestedId),
+            );
+            if (found) {
+              try {
+                groupApi.activeGroup.value = { label: found.name || String(found.id), value: found.id };
+              } catch (e) {
+                void e;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // ignore settings restore errors
+        void e;
       }
 
       return data;
