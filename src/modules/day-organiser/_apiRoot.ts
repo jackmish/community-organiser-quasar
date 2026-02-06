@@ -2,12 +2,12 @@ import { ref, computed } from 'vue';
 
 import type { OrganiserData } from './types';
 import type { Task } from '../task/types';
-import { createStorageApi } from './apiStorage';
+import { createStorageApi } from '../storage/_apiStorage';
 
 import { prepareGroupsForSave } from '../group/groupService';
 import * as apiTask from '../task/_apiTask';
 import * as apiGroup from '../group/_apiGroup';
-import { createTimeApi } from './apiTime';
+import { createTimeApi } from '../time/_apiTime';
 
 //// reactive state refs grouped into `state`
 

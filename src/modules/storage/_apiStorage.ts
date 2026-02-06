@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import logger from 'src/utils/logger';
-import { storage as backendStorage, loadSettings, saveSettings } from '../storage';
+import { storage as backendStorage, loadSettings, saveSettings } from '.';
 
 export function createStorageApi(store: any) {
   const isLoading = ref(false);

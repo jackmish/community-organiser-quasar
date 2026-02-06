@@ -214,7 +214,7 @@ import GroupManagementDialog from '../components/group/GroupManagementDialog.vue
 import TasksList from '../components/task/TasksList.vue';
 import { formatDisplayDate } from '../components/theme';
 import TaskPreview from '../components/task/TaskPreview.vue';
-import CalendarView from '../components/calendar/CalendarView.vue';
+import CalendarView from 'src/components/time/CalendarView.vue';
 import GroupSelectHeader from '../components/group/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';

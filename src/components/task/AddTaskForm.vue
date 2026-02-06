@@ -5,7 +5,7 @@ import { useQuasar, Dialog } from 'quasar';
 import { useDayOrganiser } from 'src/modules/day-organiser';
 import logger from 'src/utils/logger';
 import { useTimeDiff } from 'src/composables/useTimeDiff';
-import CalendarView from 'src/components/calendar/CalendarView.vue';
+import CalendarView from 'src/components/time/CalendarView.vue';
 import ReplenishmentList from './ReplenishmentList.vue';
 import {
   priorityColors as themePriorityColors,
