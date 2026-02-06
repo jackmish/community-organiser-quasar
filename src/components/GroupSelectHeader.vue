@@ -122,6 +122,7 @@ watch(
   { immediate: true },
 );
 
+// assemble flat list of options from group tree
 const options = computed(() => {
   const manage = { label: 'Manage Groups...', value: '__manage_groups__' };
 
@@ -186,6 +187,7 @@ const selectedOption = computed(() => {
   }
 });
 
+//converting api tree into q-tree
 const convertNode = (n: any): any => ({
   id: String(n.id),
   label: n.label,
