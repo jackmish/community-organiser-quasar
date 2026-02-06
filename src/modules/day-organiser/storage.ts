@@ -124,9 +124,9 @@ export function useDayOrganiser() {
     nextDay,
     prevDay,
 
-    // Preview (retained minimal refs)
-    previewTaskId: computed(() => api.task.previewTaskId.value),
-    previewTaskPayload: computed(() => api.task.previewTaskPayload.value),
+    // Preview (mapped to new task active API)
+    previewTaskId: computed(() => api.task.active.task.value?.id ?? null),
+    previewTaskPayload: computed(() => api.task.active.task.value),
 
     // Misc
     exportData,

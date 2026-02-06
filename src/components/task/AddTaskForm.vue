@@ -379,6 +379,26 @@ const submitIcon = computed(() => {
   return '';
 });
 
+function extractGroupId(ag: any) {
+  if (!ag) return undefined;
+  try {
+    if (Object.prototype.hasOwnProperty.call(ag, 'value')) {
+      const inner = ag.value;
+      if (!inner) return undefined;
+      if (typeof inner === 'object' && Object.prototype.hasOwnProperty.call(inner, 'value'))
+        return inner.value;
+      if (typeof inner === 'string' || typeof inner === 'number') return inner;
+      return undefined;
+    }
+    if (typeof ag === 'object' && Object.prototype.hasOwnProperty.call(ag, 'value'))
+      return ag.value;
+    if (typeof ag === 'string' || typeof ag === 'number') return ag;
+  } catch (e) {
+    // ignore
+  }
+  return undefined;
+}
+
 // Type options for task type selector (local only)
 const typeOptions = [
   { label: 'Time Event', shortLabel: 'Time', value: 'TimeEvent', icon: 'event' },
@@ -781,7 +801,7 @@ watch(
         parent_id: null,
         created_by: '',
         priority: 'medium',
-        groupId: props.activeGroup?.value ?? undefined,
+        groupId: extractGroupId((props as any).activeGroup),
         eventDate:
           props.selectedDate ||
           `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,

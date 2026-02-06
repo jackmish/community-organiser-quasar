@@ -47,7 +47,7 @@ import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 const timeApi = api.time;
 const groupApi = api.group;
 const setCurrentDate = api.time.setCurrentDate;
-const setPreviewTask = api.task.setPreviewTask;
+const setPreviewTask = api.task.active.setTask;
 const getTasksInRange = api.task.list.inRange;
 // data load is handled centrally by DayOrganiserPage; do not call loadData here
 

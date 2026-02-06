@@ -8,20 +8,15 @@ export function createTaskCrudHandlers(args: {
   currentDate: Ref<string>;
   allTasks: Ref<any[]>;
   quasar: any;
-  taskToEdit: Ref<Task | null>;
-  mode: Ref<'add' | 'edit' | 'preview'>;
-  selectedTaskId: Ref<string | null>;
+  active: {
+    task: Ref<Task | null>;
+    mode: Ref<'add' | 'edit' | 'preview'>;
+    setTask?: (t: Task | null) => void;
+    setMode?: (m: 'add' | 'edit' | 'preview') => void;
+  };
 }) {
-  const {
-    setCurrentDate,
-    activeGroup,
-    currentDate,
-    allTasks,
-    quasar,
-    taskToEdit,
-    mode,
-    selectedTaskId,
-  } = args;
+  const { setCurrentDate, activeGroup, currentDate, allTasks, quasar, active } = args;
+  const { task: taskToEdit, mode, setTask } = active;
 
   const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
     const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
@@ -50,9 +45,9 @@ export function createTaskCrudHandlers(args: {
 
     const created = await api.task.add(targetDate, taskData);
     if (opts && opts.preview && created) {
-      taskToEdit.value = created;
+      if (setTask) setTask(created);
+      else taskToEdit.value = created;
       mode.value = 'preview';
-      selectedTaskId.value = created.id;
       try {
         setCurrentDate(created?.date || created?.eventDate || null);
       } catch (e) {
@@ -68,13 +63,12 @@ export function createTaskCrudHandlers(args: {
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
     await api.task.update(targetDate, id, rest);
     const updated = (allTasks.value || []).find((t) => t.id === id) || null;
-    taskToEdit.value = updated;
+    if (setTask) setTask(updated);
+    else taskToEdit.value = updated;
     if (updated) {
       mode.value = 'preview';
-      selectedTaskId.value = id;
     } else {
       mode.value = 'add';
-      selectedTaskId.value = null;
     }
   };
 

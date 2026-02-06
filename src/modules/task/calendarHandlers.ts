@@ -7,9 +7,8 @@ export function createCalendarHandlers(args: {
   setCurrentDate: (d: string | null) => void;
   allTasks: Ref<any[]>;
   editTask?: (t: Task) => void;
-  setTaskToEdit?: (t: Task) => void;
-  mode?: Ref<'add' | 'edit' | 'preview'>;
-  selectedTaskId?: Ref<string | null>;
+  setTask?: (t: Task | null) => void;
+  activeMode?: Ref<'add' | 'edit' | 'preview'>;
   setPreviewTask?: (v: any) => void;
   notify?: (opts: any) => void;
 }) {
@@ -19,9 +18,8 @@ export function createCalendarHandlers(args: {
     setCurrentDate,
     allTasks,
     editTask,
-    setTaskToEdit,
-    mode,
-    selectedTaskId,
+    setTask,
+    activeMode,
     setPreviewTask,
     notify,
   } = args;
@@ -76,9 +74,9 @@ export function createCalendarHandlers(args: {
     }
     if (found) {
       try {
-        if (setTaskToEdit) setTaskToEdit(found);
-        if (mode) mode.value = 'preview';
-        if (selectedTaskId) selectedTaskId.value = found.id;
+        if (setTask) setTask(found);
+        else if (editTask) editTask(found);
+        if (activeMode) activeMode.value = 'preview';
         try {
           setCurrentDate(found.date || found.eventDate || null);
         } catch (e) {

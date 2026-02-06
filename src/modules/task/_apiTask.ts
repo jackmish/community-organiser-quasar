@@ -11,11 +11,8 @@ export type PreviewPayload = string | number | Task | null;
 // Factory to create a task API bound to the given state object
 export function createTaskApi(groupApi?: any, timeApi?: any) {
   // Internal UI refs now live inside the task API so the task API is the canonical source
-  const previewTaskId = ref<string | null>(null);
-  const previewTaskPayload = ref<PreviewPayload>(null);
-  const mode = ref<'add' | 'edit' | 'preview'>('add');
-  const taskToEdit = ref<Task | null>(null);
-  const selectedTaskId = ref<string | null>(null);
+  const activeTask = ref<Task | null>(null);
+  const activeMode = ref<'add' | 'edit' | 'preview'>('add');
 
   // helper to build organiser-like refs from refactored APIs
   const _organiserRef = () => ({
@@ -28,19 +25,50 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   // persistence uses global `app('storage')` service (lazy-resolved)
 
   // Ensure mode-driven clearing of selection lives inside the API so views don't repeat logic
-  watch(mode, (val) => {
+  function setTask(payload: PreviewPayload) {
+    if (payload == null) {
+      activeTask.value = null;
+      activeMode.value = 'add';
+      return;
+    }
+    if (typeof payload === 'string' || typeof payload === 'number') {
+      const all = taskService.getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31');
+      const found = all.find((t) => t.id === String(payload)) || null;
+      if (found) {
+        activeTask.value = found;
+        activeMode.value = 'preview';
+        try {
+          if (timeApi && timeApi.setCurrentDate) {
+            timeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      return;
+    }
+    // payload is a Task
+    activeTask.value = payload;
+    activeMode.value = 'preview';
+  }
+
+  function setMode(m: 'add' | 'edit' | 'preview') {
+    activeMode.value = m;
+    if (m === 'add') activeTask.value = null;
+  }
+  watch(activeMode, (val) => {
     if (val === 'add') {
-      taskToEdit.value = null;
-      selectedTaskId.value = null;
+      activeTask.value = null;
     }
   });
   return {
     // Shared UI state for tasks
-    mode,
-    taskToEdit,
-    selectedTaskId,
-    previewTaskId,
-    previewTaskPayload,
+    active: {
+      task: activeTask,
+      mode: activeMode,
+      setTask,
+      setMode,
+    },
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = _organiserRef();
       const task = taskService.addTask(organiserData as any, date, taskData);
@@ -104,20 +132,6 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
           .reduce(fn, init),
     },
 
-    setPreviewTask: (payload: string | number | Task | null) => {
-      if (payload == null) {
-        previewTaskId.value = null;
-        previewTaskPayload.value = null;
-        return;
-      }
-      if (typeof payload === 'string' || typeof payload === 'number') {
-        previewTaskId.value = String(payload);
-        previewTaskPayload.value = null;
-        return;
-      }
-      const p = payload;
-      previewTaskId.value = p.id ?? null;
-      previewTaskPayload.value = p;
-    },
+    // Note: use `active.setTask` to set preview/active task
   } as const;
 }

@@ -6,14 +6,14 @@ import type { Task } from '../day-organiser';
 import { getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 export function createTaskUiHandlers(args: {
-  taskToEdit: Ref<Task | null>;
-  mode: Ref<'add' | 'edit' | 'preview'>;
+  activeTask: Ref<Task | null>;
+  activeMode: Ref<'add' | 'edit' | 'preview'>;
+  setActiveTask?: (t: Task | null) => void;
   panelHidden: Ref<boolean>;
-  selectedTaskId: Ref<string | null>;
   currentDate: Ref<string>;
   setCurrentDate: (d: string | null) => void;
 }) {
-  const { taskToEdit, mode, panelHidden, selectedTaskId, currentDate, setCurrentDate } = args;
+  const { activeTask, activeMode, setActiveTask, panelHidden, currentDate, setCurrentDate } = args;
 
   function setTaskToEdit(task: Task) {
     let toShow: Task = task;
@@ -27,23 +27,24 @@ export function createTaskUiHandlers(args: {
       // ignore and fall back to the original task
     }
 
-    taskToEdit.value = toShow;
-    mode.value = 'preview';
+    if (setActiveTask) setActiveTask(toShow);
+    else activeTask.value = toShow;
+    activeMode.value = 'preview';
     panelHidden.value = false;
-    selectedTaskId.value = toShow.id;
+    // selected task id is represented by active.task
   }
 
   function editTask(task: Task) {
-    taskToEdit.value = task;
-    mode.value = 'edit';
+    if (setActiveTask) setActiveTask(task);
+    else activeTask.value = task;
+    activeMode.value = 'edit';
     panelHidden.value = false;
-    selectedTaskId.value = task.id;
   }
 
   function clearTaskToEdit() {
-    taskToEdit.value = null;
-    mode.value = 'add';
-    selectedTaskId.value = null;
+    if (setActiveTask) setActiveTask(null);
+    else activeTask.value = null;
+    activeMode.value = 'add';
     panelHidden.value = false;
   }
 

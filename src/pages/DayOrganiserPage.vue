@@ -20,13 +20,29 @@
                   style="align-items: center; margin-top: 6px"
                 >
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn flat dense round icon="chevron_left" @click="api.time.prevDay" color="primary" />
-                    <span class="date-black">{{ getTimeDifferenceDisplay(api.time.currentDate) }}</span>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="chevron_left"
+                      @click="api.time.prevDay"
+                      color="primary"
+                    />
+                    <span class="date-black">{{
+                      getTimeDifferenceDisplay(api.time.currentDate)
+                    }}</span>
                     <span class="q-mx-sm">|</span>
                     <span :class="['text-weight-bold', getTimeDiffClass(api.time.currentDate)]">{{
                       formatDateOnly(api.time.currentDate.value)
                     }}</span>
-                    <q-btn flat dense round icon="chevron_right" @click="api.time.nextDay" color="primary" />
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="chevron_right"
+                      @click="api.time.nextDay"
+                      color="primary"
+                    />
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div style="display: flex; align-items: center; gap: 8px">
@@ -134,7 +150,7 @@
 
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
-      v-if="panelHidden || api.task.mode.value !== 'add'"
+      v-if="panelHidden || api.task.active.mode.value !== 'add'"
       class="floating-add-btn"
       color="green"
       fab
@@ -155,15 +171,15 @@
       />
       <div class="fixed-content">
         <TaskPreview
-          v-if="api.task.mode.value === 'preview' && api.task.taskToEdit.value"
-          :task="api.task.taskToEdit.value"
-          :group-name="getGroupName(api.task.taskToEdit.value.groupId)"
+          v-if="api.task.active.mode.value === 'preview' && api.task.active.task.value"
+          :task="api.task.active.task.value"
+          :group-name="getGroupName(api.task.active.task.value.groupId)"
           :animating-lines="animatingLines"
           @line-collapsed="onLineCollapsed"
           @line-expanded="onLineExpanded"
           @edit="
             () => {
-              api.task.mode.value = 'edit';
+              api.task.active.mode.value = 'edit';
             }
           "
           @close="clearTaskToEdit"
@@ -179,9 +195,9 @@
           :selected-date="newTask.eventDate"
           :all-tasks="allTasks"
           :replenish-tasks="replenishTasks"
-          :initial-task="api.task.taskToEdit.value"
-          :mode="api.task.mode.value"
-          @update:mode="(v) => (api.task.mode.value = v)"
+          :initial-task="api.task.active.task.value"
+          :mode="api.task.active.mode.value"
+          @update:mode="(v) => api.task.active.setMode(v)"
           @add-task="handleAddTask"
           @update-task="handleUpdateTask"
           @delete-task="handleDeleteTask"
@@ -193,7 +209,7 @@
     </div>
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
-      v-if="panelHidden && api.task.mode.value !== 'add'"
+      v-if="panelHidden && api.task.active.mode.value !== 'add'"
       class="panel-show-btn"
       unelevated
       color="dark"
@@ -250,9 +266,15 @@ const currentDayData = computed(() => {
 
 // Provide a lightweight organiser-like ref for legacy helpers that expect
 // an `organiserData` ref with `groups` and `days`.
-const organiserLike = computed(() => ({ groups: api.group.list.all.value, days: api.time.days.value }));
+const organiserLike = computed(() => ({
+  groups: api.group.list.all.value,
+  days: api.time.days.value,
+}));
 
-const hiddenGroupSummary = createHiddenGroupSummary(organiserLike as any, api.group.active.activeGroup);
+const hiddenGroupSummary = createHiddenGroupSummary(
+  organiserLike as any,
+  api.group.active.activeGroup,
+);
 
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => api.task.list.all());
@@ -274,7 +296,7 @@ const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
 const panelHidden = ref(false);
-const selectedTaskId = api.task.selectedTaskId;
+const selectedTaskId = computed(() => api.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
@@ -284,10 +306,10 @@ const { waitForLineEvent, onLineCollapsed, onLineExpanded } = createLineEventHan
 
 // task UI handlers moved to module
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
-  taskToEdit: api.task.taskToEdit,
-  mode: api.task.mode,
+  activeTask: api.task.active.task,
+  activeMode: api.task.active.mode,
+  setActiveTask: api.task.active.setTask,
   panelHidden,
-  selectedTaskId: api.task.selectedTaskId,
   currentDate: api.time.currentDate,
   setCurrentDate: api.time.setCurrentDate,
 });
@@ -309,11 +331,14 @@ onBeforeUnmount(() => {
 });
 
 // Ensure we return to 'add' mode when no task is selected
-watch(api.task.taskToEdit, (val) => {
-  if (!val && api.task.mode.value !== 'add') {
-    api.task.mode.value = 'add';
-  }
-});
+watch(
+  () => api.task.active.task.value,
+  (val) => {
+    if (!val && api.task.active.mode.value !== 'add') {
+      api.task.active.mode.value = 'add';
+    }
+  },
+);
 
 const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
   editGroupLocal,
@@ -324,63 +349,10 @@ const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
 // mode change handling moved into api.task
 
 // Respond to preview requests coming from other parts of the app
-watch(() => api.task.previewTaskId.value, (id) => {
-  if (!id) return;
-  // find task by id using the precomputed allTasks list (avoids awkward any/never types)
-  let found: Task | null = null;
-  try {
-    const sid = String(id);
-    found = ((allTasks.value || []) as Task[]).find((t) => t.id === sid) || null;
-  } catch (e) {
-    found = null;
-  }
-  if (found) {
-    // If this is a cyclic/occurring task, prefer to show it with the
-    // currently visible date so the preview displays the occurrence.
-    let toShow: Task = found;
-    try {
-      const cycle = getCycleType(found as any);
-      if (cycle) {
-        toShow = { ...(found as any) } as Task;
-        (toShow as any).date = api.time.currentDate.value;
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    api.task.taskToEdit.value = toShow;
-    api.task.mode.value = 'preview';
-    api.task.selectedTaskId.value = toShow.id;
-    // also ensure the calendar/date syncs to the task date
-    try {
-      api.time.setCurrentDate((toShow as any).date || toShow.eventDate || null);
-    } catch (e) {
-      // ignore
-    }
-  }
-  // clear preview request after handling
-  try {
-    api.task.setPreviewTask(null);
-  } catch (e) {
-    // ignore
-  }
-});
+// preview requests are handled by `api.task.setPreviewTask` and mapped to `api.task.active`
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
-watch(() => api.task.previewTaskPayload.value, (payload) => {
-  if (!payload) return;
-  try {
-    handleCalendarPreview(payload);
-  } catch (e) {
-    // ignore
-  }
-  // clear payload after handling
-  try {
-    api.task.setPreviewTask(null);
-  } catch (e) {
-    void 0;
-  }
-});
+// payload-based previews are handled via `api.task.setPreviewTask`
 
 // calendar preview handled by createCalendarHandlers
 
@@ -413,10 +385,9 @@ const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
     setCurrentDate: api.time.setCurrentDate,
     allTasks,
     editTask,
-    setTaskToEdit,
-    mode: api.task.mode,
-    selectedTaskId: api.task.selectedTaskId,
-    setPreviewTask: api.task.setPreviewTask,
+    setTask: api.task.active.setTask,
+    activeMode: api.task.active.mode,
+    setPreviewTask: api.task.active.setTask,
     notify: (opts: any) => $q.notify(opts),
   });
 
@@ -463,9 +434,7 @@ const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   currentDate: api.time.currentDate,
   allTasks,
   quasar: $q,
-  taskToEdit: api.task.taskToEdit,
-  mode: api.task.mode,
-  selectedTaskId: api.task.selectedTaskId,
+  active: api.task.active,
 });
 
 const handleDeleteTask = async (payload: any) => {
@@ -482,10 +451,9 @@ const handleDeleteTask = async (payload: any) => {
     if (!id) return;
     await api.task.delete(date, id);
     // If the deleted task was currently selected for preview/edit, switch back to create mode
-    if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === id) {
-      api.task.taskToEdit.value = null;
-      api.task.mode.value = 'add';
-      api.task.selectedTaskId.value = null;
+    if (api.task.active.task.value && api.task.active.task.value.id === id) {
+      api.task.active.setTask(null);
+      api.task.active.setMode('add');
     }
   } finally {
     openDeleteMenu.value = null;
@@ -629,8 +597,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       // update the task description after animation
       try {
         task.description = newDesc;
-        if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
-          api.task.taskToEdit.value.description = newDesc;
+        if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
+          api.task.active.task.value.description = newDesc;
         }
       } catch (e) {
         // ignore
@@ -722,8 +690,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const newDesc = lines.join('\n');
       try {
         task.description = newDesc;
-        if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
-          api.task.taskToEdit.value.description = newDesc;
+        if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
+          api.task.active.task.value.description = newDesc;
         }
       } catch (e) {
         // ignore
@@ -756,8 +724,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     status = Number(task.status_id) === 0 ? 1 : 0;
     try {
       task.status_id = status;
-      if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id)
-        api.task.taskToEdit.value.status_id = status;
+      if (api.task.active.task.value && api.task.active.task.value.id === task.id)
+        api.task.active.task.value.status_id = status;
     } catch (e) {
       // ignore
     }
@@ -803,12 +771,12 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
             );
           };
 
-            try {
+          try {
             removeCycleDone(task);
             const base = (allTasks.value || []).find((x: any) => x.id === task.id);
             removeCycleDone(base);
-            if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id)
-              removeCycleDone(api.task.taskToEdit.value);
+            if (api.task.active.task.value && api.task.active.task.value.id === task.id)
+              removeCycleDone(api.task.active.task.value);
             logger.debug('[toggleStatus] optimistic undo applied', {
               taskId: task.id,
               targetDate,
@@ -867,8 +835,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // optimistic update
   try {
     task.status_id = status;
-    if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
-      api.task.taskToEdit.value.status_id = status;
+    if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
+      api.task.active.task.value.status_id = status;
     }
   } catch (e) {
     // ignore
@@ -881,7 +849,11 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 };
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await api.group.add({ name: data.name, color: data.color, hideTasksFromParent: false });
+  const group = await api.group.add({
+    name: data.name,
+    color: data.color,
+    hideTasksFromParent: false,
+  });
   defaultGroupId.value = group.id;
   api.group.active.activeGroup.value = {
     label: group.name,
@@ -920,7 +892,7 @@ onMounted(async () => {
           today.getDate(),
         ).getTime();
         if (curNorm < todayNorm) {
-            try {
+          try {
             api.time.setCurrentDate(todayStr);
           } catch (e) {
             // ignore
