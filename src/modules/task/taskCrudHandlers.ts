@@ -61,8 +61,9 @@ export function createTaskCrudHandlers(args: {
     const { id, ...rest } = updatedTask;
     const targetDate =
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
-    await api.task.update(targetDate, id, rest);
-    const updated = (allTasks.value || []).find((t) => t.id === id) || null;
+    const updatedPayload = { ...updatedTask };
+    await api.task.update(targetDate, updatedPayload);
+    const updated = (allTasks.value || []).find((t) => t.id === updatedTask.id) || null;
     if (setTask) setTask(updated);
     else taskToEdit.value = updated;
     if (updated) {

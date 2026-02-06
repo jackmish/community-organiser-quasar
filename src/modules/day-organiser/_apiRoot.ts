@@ -11,9 +11,12 @@ export const time = createTimeApi() as any;
 // Configure taskService default days getter so taskService can operate without
 // callers passing the days map explicitly.
 
+// taskService default days getter is wired when storage/time initializes.
+
 // Create APIs without passing a legacy `store` object. Storage will be
 // created and then wired to other APIs via their internal setters.
 export const group = apiGroup.createGroupApi() as any;
+// taskService reads `time` directly; no runtime wiring required here.
 export const task = apiTask.createTaskApi(group, time) as any;
 export const storage = createStorageApi(group, time) as any;
 

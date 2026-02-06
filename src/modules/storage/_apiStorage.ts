@@ -6,6 +6,7 @@ import * as taskService from 'src/modules/task/taskService';
 export function createStorageApi(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
 
+  // No implicit wiring: storage will populate `timeApi.days` during `loadData`.
   const loadData = async () => {
     isLoading.value = true;
     console.log('apiStorage.loadData called');
@@ -117,11 +118,61 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
       // If caller didn't provide data, build it from refactored APIs
       let payload = data;
       if (!payload) {
-        const groups =
-          groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
         const days = timeApi && timeApi.days ? timeApi.days.value : {};
         const lastModified =
           timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString();
+
+        // Build groups payload from days so group files include newly created tasks.
+        const existingGroups =
+          groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
+        const groupsMap: Record<string, any> = {};
+        // Seed groupsMap with existing group metadata (do NOT copy tasks here)
+        for (const g of existingGroups || []) {
+          try {
+            const meta = { ...g };
+            // Ensure we don't carry over any pre-existing tasks to avoid duplicates
+            if (meta && Object.prototype.hasOwnProperty.call(meta, 'tasks')) delete meta.tasks;
+            groupsMap[String(g.id)] = { ...meta, tasks: [] };
+          } catch (e) {
+            void e;
+          }
+        }
+        // Iterate days and attach tasks to their group entries
+        try {
+          for (const dKey of Object.keys(days || {})) {
+            const day = days[dKey];
+            if (!day || !Array.isArray(day.tasks)) continue;
+            for (const t of day.tasks) {
+              try {
+                const gid = t && t.groupId ? String(t.groupId) : null;
+                if (!gid) continue;
+                if (!groupsMap[gid]) {
+                  groupsMap[gid] = { id: gid, name: String(gid), tasks: [] };
+                }
+                // Avoid duplicates: only add if not already present (by id)
+                try {
+                  const exists = groupsMap[gid].tasks.find(
+                    (x: any) => String(x.id) === String(t.id),
+                  );
+                  if (!exists) groupsMap[gid].tasks.push(t);
+                } catch (e) {
+                  // fallback: push without check
+                  try {
+                    groupsMap[gid].tasks.push(t);
+                  } catch (err) {
+                    void err;
+                  }
+                }
+              } catch (e) {
+                void e;
+              }
+            }
+          }
+        } catch (e) {
+          void e;
+        }
+
+        const groups = Object.keys(groupsMap).map((k) => groupsMap[k]);
         payload = { days, groups, lastModified };
       }
       await backendStorage.saveData(payload);

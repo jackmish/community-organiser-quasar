@@ -44,7 +44,7 @@ export function createHiddenGroupSummary(
         });
       }
 
-      const all = getTasksInRangeService(organiserData.value, '1970-01-01', '9999-12-31') || [];
+      const all = getTasksInRangeService('1970-01-01', '9999-12-31') || [];
       for (const t of all) {
         try {
           if (!t || !t.groupId) continue;

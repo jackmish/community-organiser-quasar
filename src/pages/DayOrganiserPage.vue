@@ -615,7 +615,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       animatingLines.value = [];
       try {
-        await api.task.update(targetDate, task.id, { description: newDesc });
+        await api.task.update(targetDate, { ...task, description: newDesc });
       } finally {
         pendingToggles.delete(pendingKey);
       }
@@ -708,7 +708,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       animatingLines.value = [];
       try {
-        await api.task.update(targetDate, task.id, { description: newDesc });
+        await api.task.update(targetDate, { ...task, description: newDesc });
       } finally {
         pendingToggles.delete(pendingKey);
       }
@@ -730,6 +730,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       // ignore
     }
     await api.task.update(targetDate, task.id, { status_id: status });
+    await api.task.update(targetDate, { ...task, status_id: status });
+    await api.task.update(targetDate, { ...task, status_id: status });
     return;
   }
 
