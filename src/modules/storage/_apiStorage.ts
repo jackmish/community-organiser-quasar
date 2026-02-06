@@ -18,13 +18,13 @@ export function createStorageApi(store: any, groupApi?: any) {
       );
       if (groupsHaveTasks) {
         for (const grp of rawGroups) {
-          const tasks = Array.isArray((grp as any).tasks) ? (grp as any).tasks : [];
+          const tasks = Array.isArray(grp.tasks) ? grp.tasks : [];
           for (const t of tasks) {
             try {
               const dateKey = t?.date || t?.eventDate || new Date().toISOString().split('T')[0];
               if (!daysFromGroups[dateKey])
                 daysFromGroups[dateKey] = { date: dateKey, tasks: [], notes: '' };
-              if (!t.groupId) t.groupId = (grp as any).id;
+              if (!t.groupId) t.groupId = grp.id;
               daysFromGroups[dateKey].tasks.push(t);
             } catch (e) {
               void e;
@@ -56,7 +56,10 @@ export function createStorageApi(store: any, groupApi?: any) {
             );
             if (found) {
               try {
-                groupApi.activeGroup.value = { label: found.name || String(found.id), value: found.id };
+                groupApi.activeGroup.value = {
+                  label: found.name || String(found.id),
+                  value: found.id,
+                };
               } catch (e) {
                 void e;
               }
