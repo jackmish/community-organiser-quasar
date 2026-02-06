@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
+import * as taskService from 'src/modules/task/taskService';
 
 export function createStorageApi(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
@@ -52,6 +53,12 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
             if (timeApi.days) timeApi.days.value = finalDays;
             if (timeApi.lastModified)
               timeApi.lastModified.value = data.lastModified || new Date().toISOString();
+            // Populate taskService flat list immediately so callers can use it
+            try {
+              taskService.rebuildAllTasksList(finalDays || {});
+            } catch (e) {
+              void e;
+            }
           }
         } catch (e) {
           void e;

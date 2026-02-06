@@ -1,9 +1,16 @@
 import { getCycleType } from './utlils/occursOnDay';
+import { watch, ref } from 'vue';
+import type { Ref } from 'vue';
 import type { Task } from './types';
 import type { OrganiserData, DayData } from '../day-organiser/types';
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// (No module-level flat list here) task lists are built from organiser data on demand.
+
+// Reactive flat list exposed for callers that want to observe all tasks.
+export const flatTasks = ref<Task[]>([]);
 
 function sanitizeForHistory(value: any, depth = 2): any {
   if (value === null || value === undefined) return value;
@@ -157,6 +164,7 @@ export const updateTask = (
   });
 
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+  // no module-level cache update here
   // If the update included a date/eventDate and it's different from the current day,
   // move the task to the target day so it appears under the new date bucket.
   try {
@@ -216,6 +224,7 @@ export const deleteTask = (organiserData: OrganiserData, date: string, taskId: s
   } catch (err) {
     // ignore
   }
+  // no module-level cache removal here
   return removed;
 };
 
@@ -260,6 +269,7 @@ export const toggleTaskComplete = (
     (task as any).status_id = 1;
   }
   task.updatedAt = new Date().toISOString();
+  // no module-level cache update here
 };
 
 export const undoCycleDone = (
@@ -281,6 +291,7 @@ export const undoCycleDone = (
         const after = task.history.length;
         if (after < before) {
           task.updatedAt = new Date().toISOString();
+          // no module-level cache update here
           return true;
         }
         return false;
@@ -314,6 +325,156 @@ export const getTasksInRange = (
   });
 };
 
+export const getAllTasks = (organiserData: OrganiserData): Task[] => {
+  const tasks: Task[] = [];
+  try {
+    Object.keys(organiserData.days).forEach((date) => {
+      const dayTasks = organiserData.days[date]?.tasks;
+      if (dayTasks) tasks.push(...dayTasks);
+    });
+  } catch (e) {
+    // ignore
+  }
+  return tasks.sort((a, b) => {
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    return a.priority.localeCompare(b.priority);
+  });
+};
+
+export const rebuildAllTasksList = (daysArg?: Record<string, any>): Task[] => {
+  const daysObj = daysArg || {};
+  const out: Task[] = [];
+  try {
+    for (const key of Object.keys(daysObj || {})) {
+      const d = daysObj[key];
+      if (d && Array.isArray(d.tasks)) out.push(...(d.tasks as Task[]));
+    }
+  } catch (e) {
+    // ignore
+  }
+  const sorted = out.sort((a, b) => {
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    return a.priority.localeCompare(b.priority);
+  });
+  try {
+    flatTasks.value = sorted.slice();
+  } catch (e) {
+    // ignore
+  }
+  return sorted;
+};
+
+// Resolve a payload (id | Task | null) to a Task or null. Optionally accepts a days map to search.
+export const resolveTaskPayload = (
+  payload: string | number | Task | null,
+  daysArg?: Record<string, any>,
+): Task | null => {
+  if (payload == null) return null;
+  if (typeof payload === 'object') return payload;
+  const id = String(payload);
+  // Prefer reactive flatTasks if available
+  try {
+    if (Array.isArray((flatTasks as any).value) && (flatTasks as any).value.length > 0) {
+      const found = (flatTasks as any).value.find((t: Task) => String(t.id) === id);
+      if (found) return found as Task;
+    }
+  } catch (e) {
+    // ignore
+  }
+  const days = daysArg || {};
+  try {
+    for (const k of Object.keys(days)) {
+      const d = days[k];
+      if (!d || !Array.isArray(d.tasks)) continue;
+      const f = d.tasks.find((t: Task) => String(t.id) === id);
+      if (f) return f as Task;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+};
+
+// Apply a payload to provided active refs and optional timeApi: sets task ref, mode ref, and current date.
+export const applyActiveSelection = (
+  activeTaskRef: Ref<Task | null>,
+  activeModeRef: Ref<'add' | 'edit' | 'preview'>,
+  timeApi: any,
+  payload: string | number | Task | null,
+) => {
+  try {
+    if (payload == null) {
+      activeTaskRef.value = null;
+      activeModeRef.value = 'add';
+      return;
+    }
+    const found = resolveTaskPayload(
+      payload as any,
+      timeApi && timeApi.days ? timeApi.days.value : undefined,
+    );
+    if (found) {
+      activeTaskRef.value = found;
+      activeModeRef.value = 'preview';
+      try {
+        if (timeApi && typeof timeApi.setCurrentDate === 'function')
+          timeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
+      } catch (e) {
+        // ignore
+      }
+      return;
+    }
+    if (typeof payload === 'object') {
+      activeTaskRef.value = payload;
+      activeModeRef.value = 'preview';
+      return;
+    }
+    activeTaskRef.value = null;
+    activeModeRef.value = 'add';
+  } catch (e) {
+    try {
+      activeTaskRef.value = null;
+      activeModeRef.value = 'add';
+    } catch (err) {
+      // ignore
+    }
+  }
+};
+
+export const attachDaysWatcher = (daysRef?: Ref<any>, onUpdate?: (tasks: Task[]) => void) => {
+  try {
+    if (!daysRef || typeof daysRef !== 'object') return () => {};
+    // initial call
+    try {
+      const initial = rebuildAllTasksList((daysRef as any).value || {});
+      if (typeof onUpdate === 'function') onUpdate(initial);
+    } catch (e) {
+      // ignore
+    }
+    const stop = watch(
+      () => (daysRef as any).value,
+      (newVal) => {
+        try {
+          const out = rebuildAllTasksList(newVal || {});
+          try {
+            flatTasks.value = out;
+          } catch (e) {
+            // ignore
+          }
+          if (typeof onUpdate === 'function') onUpdate(out);
+        } catch (e) {
+          // ignore
+        }
+      },
+      { deep: true, immediate: false },
+    );
+    return stop;
+  } catch (e) {
+    return () => {};
+  }
+};
+
 export const getTasksByCategory = (
   organiserData: OrganiserData,
   category: Task['category'],
@@ -343,3 +504,32 @@ export const getIncompleteTasks = (organiserData: OrganiserData): Task[] => {
   });
   return tasks.sort((a, b) => a.date.localeCompare(b.date));
 };
+
+// default days getter can be configured by callers that have access to the
+// time API. By default it returns an empty map so unbound usages remain safe.
+let _defaultDaysGetter: () => Record<string, any> = () => ({});
+
+export const setDefaultDaysGetter = (g: () => Record<string, any>) => {
+  if (typeof g === 'function') _defaultDaysGetter = g;
+};
+
+// Convenience wrappers that use the configured default days getter so callers
+// can call taskService methods without passing an organiserData object.
+const _getOrganiser = () => ({ days: _defaultDaysGetter() }) as any;
+
+export const add = (date: string, taskData: any) => addTask(_getOrganiser(), date, taskData);
+export const update = (date: string, id: string, updates: any) =>
+  updateTask(_getOrganiser(), date, id, updates);
+export const remove = (date: string, id: string) => deleteTask(_getOrganiser(), date, id);
+export const toggleCompleteDefault = (date: string, id: string) =>
+  toggleTaskComplete(_getOrganiser(), date, id);
+export const undoCycleDoneDefault = (date: string, id: string) =>
+  undoCycleDone(_getOrganiser(), date, id);
+export const getAll = () => getAllTasks(_getOrganiser());
+export const getInRange = (start: string, end: string) =>
+  getTasksInRange(_getOrganiser(), start, end);
+export const getByCategory = (category: Task['category']) =>
+  getTasksByCategory(_getOrganiser(), category);
+export const getByPriority = (priority: Task['priority']) =>
+  getTasksByPriority(_getOrganiser(), priority);
+export const getIncomplete = () => getIncompleteTasks(_getOrganiser());
