@@ -220,9 +220,9 @@ import {
   priorityDefinitions,
   priorityIcons,
   highlightIcon,
-} from './theme';
-import { useDayOrganiser } from '../modules/day-organiser';
-import type { Task } from '../modules/task/types';
+} from '../theme';
+import { useDayOrganiser } from 'src/modules/day-organiser';
+import type { Task } from 'src/modules/task/types';
 
 const props = defineProps<{
   task: Task;

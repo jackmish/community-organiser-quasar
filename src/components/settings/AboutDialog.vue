@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue';
-import pkg from '../../package.json';
+import pkg from '../../../package.json';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();

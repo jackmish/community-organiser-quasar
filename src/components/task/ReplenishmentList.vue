@@ -35,12 +35,12 @@
 </template>
 
 <script setup lang="ts">
-import { useLongPress } from '../composables/useLongPress';
+import { useLongPress } from 'src/composables/useLongPress';
 import {
   findReplenishSet,
   getReplenishBg as themeGetReplenishBg,
   getReplenishText as themeGetReplenishText,
-} from './theme';
+} from '../theme';
 
 const props = defineProps<{
   replenishTasks: any[];

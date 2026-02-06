@@ -2,10 +2,10 @@
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskGroup } from 'src/modules/day-organiser';
 import { useQuasar, Dialog } from 'quasar';
-import { useDayOrganiser } from '../modules/day-organiser';
+import { useDayOrganiser } from 'src/modules/day-organiser';
 import logger from 'src/utils/logger';
 import { useTimeDiff } from 'src/composables/useTimeDiff';
-import CalendarView from './CalendarView.vue';
+import CalendarView from 'src/components/calendar/CalendarView.vue';
 import ReplenishmentList from './ReplenishmentList.vue';
 import {
   priorityColors as themePriorityColors,
@@ -17,7 +17,7 @@ import {
   formatEventHoursDiff,
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
-} from './theme';
+} from '../theme';
 
 const props = defineProps({
   filteredParentOptions: {

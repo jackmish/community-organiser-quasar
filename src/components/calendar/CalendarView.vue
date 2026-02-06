@@ -234,14 +234,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import logger from 'src/utils/logger';
-import { useLongPress } from '../composables/useLongPress';
+import { useLongPress } from 'src/composables/useLongPress';
 import { occursOnDay } from 'src/modules/task/utlils/occursOnDay';
 import { format, addDays, startOfWeek } from 'date-fns';
 import {
   priorityColors as themePriorityColors,
   priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
-} from './theme';
+} from '../theme';
 
 const props = defineProps<{
   selectedDate?: string;

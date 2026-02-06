@@ -60,8 +60,8 @@ import {
   findReplenishSet,
   getReplenishBg,
   getReplenishText,
-} from './theme';
-import { typeIcons } from './theme';
+} from '../theme';
+import { typeIcons } from '../theme';
 import { getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 // Replenish color data imported from theme

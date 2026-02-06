@@ -309,7 +309,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 
-import { useLongPress } from '../composables/useLongPress';
+import { useLongPress } from 'src/composables/useLongPress';
 import ReplenishmentList from './ReplenishmentList.vue';
 
 const props = defineProps<{
@@ -332,7 +332,7 @@ const openDeleteMenu = ref<string | null>(null);
 const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import { useDayOrganiser } from '../modules/day-organiser/useDayOrganiser';
+import { useDayOrganiser } from 'src/modules/day-organiser';
 const { groups, activeGroup } = useDayOrganiser();
 import {
   priorityColors as themePriorityColors,
@@ -342,7 +342,7 @@ import {
   formatDisplayDate,
   typeIcons,
   highlightIcon,
-} from './theme';
+} from '../theme';
 
 const openItemMenuId = ref<string | null>(null);
 const pendingDeleteId = ref<string | null>(null);

@@ -39,9 +39,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue';
-import { useDayOrganiser } from '../modules/day-organiser';
-import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from './theme';
-import { occursOnDay, getCycleType, getRepeatDays } from '../modules/task/utlils/occursOnDay';
+import { useDayOrganiser } from 'src/modules/day-organiser';
+import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
+import { occursOnDay, getCycleType, getRepeatDays } from 'src/modules/task/utlils/occursOnDay';
 
 const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
   useDayOrganiser();

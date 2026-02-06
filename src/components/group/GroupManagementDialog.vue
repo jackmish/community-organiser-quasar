@@ -406,9 +406,9 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import logger from 'src/utils/logger';
-import { typeIcons, priorityIcons } from './theme';
+import { typeIcons, priorityIcons } from '../theme';
 
-import { useDayOrganiser } from '../modules/day-organiser';
+import { useDayOrganiser } from '../../modules/day-organiser';
 
 const props = defineProps<{
   modelValue: boolean;

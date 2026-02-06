@@ -130,12 +130,12 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import pkg from '../../package.json';
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from 'vue-router';
-import NextEventNotification from '../components/NextEventNotification.vue';
+import NextEventNotification from '../components/task/NextEventNotification.vue';
 import { format } from 'date-fns';
 import { useDayOrganiser } from '../modules/day-organiser';
-import AppConfigDialog from 'src/components/AppConfigDialog.vue';
-import AboutDialog from 'src/components/AboutDialog.vue';
-import ConnectionsDialog from 'src/components/ConnectionsDialog.vue';
+import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
+import AboutDialog from 'src/components/settings/AboutDialog.vue';
+import ConnectionsDialog from 'src/components/settings/ConnectionsDialog.vue';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;

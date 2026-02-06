@@ -207,16 +207,15 @@
 <script setup lang="ts">
 import { format } from 'date-fns';
 
-import AddTaskForm from '../components/AddTaskForm.vue';
+import AddTaskForm from '../components/task/AddTaskForm.vue';
 
-import DoneTasksList from '../components/DoneTasksList.vue';
-import GroupManagementDialog from '../components/GroupManagementDialog.vue';
-import TasksList from '../components/TasksList.vue';
-import { timeDiffClassFor, formatDisplayDate } from '../components/theme';
-import TaskPreview from '../components/TaskPreview.vue';
-import CalendarView from '../components/CalendarView.vue';
-import { useLongPress } from '../composables/useLongPress';
-import GroupSelectHeader from '../components/GroupSelectHeader.vue';
+import DoneTasksList from '../components/task/DoneTasksList.vue';
+import GroupManagementDialog from '../components/group/GroupManagementDialog.vue';
+import TasksList from '../components/task/TasksList.vue';
+import { formatDisplayDate } from '../components/theme';
+import TaskPreview from '../components/task/TaskPreview.vue';
+import CalendarView from '../components/calendar/CalendarView.vue';
+import GroupSelectHeader from '../components/group/GroupSelectHeader.vue';
 import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
 import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
 import { createTaskUiHandlers, createTaskViewHelpers } from 'src/modules/task/uiHandlers';
@@ -232,9 +231,9 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useQuasar } from 'quasar';
 import logger from 'src/utils/logger';
-import { useDayOrganiser } from '../modules/day-organiser';
+import { useDayOrganiser } from 'src/modules/day-organiser';
 import type { Task, TaskGroup } from '../modules/day-organiser';
-import FirstRunDialog from '../components/FirstRunDialog.vue';
+import FirstRunDialog from '../components/settings/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 import { createGroupUiHandlers } from 'src/modules/group/uiHandlers';
 import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUtils';
