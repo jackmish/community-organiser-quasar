@@ -38,21 +38,7 @@ export function createGroupApi(state: any) {
           // ignore
         }
       },
-      tree: computed(() => {
-        const buildTree = (parentId?: string): any[] => {
-          const pidNorm = parentId == null ? undefined : String(parentId);
-          const groupsForParent = getGroupsByParentUtil(groups.value || [], pidNorm);
-          return (groupsForParent || []).map((group: any) => ({
-            id: String(group.id),
-            label: group.name,
-            color: group.color,
-            icon: group.icon || 'folder',
-            group: group,
-            children: buildTree(String(group.id)),
-          }));
-        };
-        return buildTree();
-      }),
+      tree: groupService.createTreeComputed(groups),
     },
 
     // active-related helpers grouped under `active`
@@ -63,23 +49,8 @@ export function createGroupApi(state: any) {
       // expose parent computed
       parent,
 
-      // navigate activeGroup to its parent (returns new activeGroup or null)
-      goToParent: () => {
-        try {
-          const p = parent.value;
-          if (!p) {
-            activeGroup.value = null;
-            return null;
-          }
-          // prefer label from parent node if available
-          const label = p.label ?? p.name ?? String(p.id);
-          const id = String(p.id);
-          activeGroup.value = { label, value: id };
-          return activeGroup.value;
-        } catch (e) {
-          return null;
-        }
-      },
+      // navigate activeGroup to its parent (delegates to groupService.goToParent)
+      goToParent: () => groupService.goToParent(groups, activeGroup),
 
       // clear active group selection
       selectAll: () => {

@@ -1,6 +1,7 @@
 import type { OrganiserData, TaskGroup } from '../day-organiser/types';
 import { computed } from 'vue';
 import type { Ref } from 'vue';
+import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { generateGroupId } from './groupId';
 import { normalizeId as normalizeGroupId } from './groupUtils';
 
@@ -173,4 +174,71 @@ export function getParentForActive(
 // Create a computed parent lookup bound to reactive refs.
 export function createParentComputed(groupsRef: Ref<any[]>, activeRef: Ref<unknown>) {
   return computed(() => getParentForActive({ groups: groupsRef.value }, activeRef.value));
+}
+
+// Create a computed tree of groups for UI consumption. This mirrors the previous
+// inline implementation but lives in the service layer so it can be reused.
+export function createTreeComputed(groupsRef: Ref<any[]>) {
+  return computed(() => {
+    const buildTree = (parentId?: string): any[] => {
+      const pidNorm = parentId == null ? undefined : String(parentId);
+      const groupsForParent = getGroupsByParentUtil(groupsRef.value || [], pidNorm);
+      return (groupsForParent || []).map((group: any) => ({
+        id: String(group.id),
+        label: group.name,
+        color: group.color,
+        icon: group.icon || 'folder',
+        group: group,
+        children: buildTree(String(group.id)),
+      }));
+    };
+    return buildTree();
+  });
+}
+
+// Short helper to navigate active to parent using existing getParentForActive logic.
+export function goToParent(groupsRef: Ref<any[]>, activeRef: Ref<any>) {
+  try {
+    const p = getParentForActive({ groups: groupsRef.value }, activeRef.value);
+    if (!p) {
+      activeRef.value = null;
+      return null;
+    }
+    const label = p.label ?? p.name ?? String(p.id);
+    const id = String(p.id);
+    activeRef.value = { label, value: id };
+    return activeRef.value;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Create handlers for active-group navigation (goToParent, selectAll).
+export function createActiveHandlers(activeRef: Ref<any>, parentComputed: Ref<any>) {
+  return {
+    goToParent: () => {
+      try {
+        const p = parentComputed.value;
+        if (!p) {
+          activeRef.value = null;
+          return null;
+        }
+        const label = p.label ?? p.name ?? String(p.id);
+        const id = String(p.id);
+        activeRef.value = { label, value: id };
+        return activeRef.value;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    selectAll: () => {
+      try {
+        activeRef.value = null;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    },
+  };
 }
