@@ -135,6 +135,7 @@ export function useDayOrganiser() {
     api.group.activeGroup,
   );
 
+  // Minimal public surface: prefer using `api.*` namespaced APIs directly
   const instance = {
     // State
     organiserData: api.store.organiserData,
@@ -146,32 +147,6 @@ export function useDayOrganiser() {
     loadData,
     saveData: api.store.saveData,
     getDayData,
-    // legacy task methods (backwards compatible)
-    addTask: api.task.add,
-    updateTask: api.task.update,
-    deleteTask: api.task.delete,
-    toggleTaskComplete: api.task.status.toggleComplete,
-
-    // prefer using `api.task.list.*` but keep compatibility by delegating here
-    getTasksInRange: api.task.list.inRange,
-    getTasksByCategory: api.task.list.byCategory,
-    getTasksByPriority: api.task.list.byPriority,
-    getIncompleteTasks: api.task.list.incomplete,
-    setPreviewTask: api.task.setPreviewTask,
-
-    // namespaced APIs
-    task: api.task,
-    group: api.group,
-
-    // Groups
-    groups: computed(() => api.store.organiserData.value.groups),
-    activeGroup: api.group.activeGroup,
-    addGroup: api.group.add,
-    updateGroup: api.group.update,
-    deleteGroup: api.group.delete,
-    getGroupsByParent: api.group.getGroupsByParent,
-    getGroupHierarchy: () => api.group.tree.value,
-    hiddenGroupSummary,
 
     // Navigation
     setCurrentDate,
@@ -179,7 +154,7 @@ export function useDayOrganiser() {
     nextDay,
     prevDay,
 
-    // Preview
+    // Preview (retained minimal refs)
     previewTaskId: computed(() => api.store.previewTaskId.value),
     previewTaskPayload: computed(() => api.store.previewTaskPayload.value),
 
@@ -187,7 +162,6 @@ export function useDayOrganiser() {
     exportData,
     importData,
     formatDate,
-    undoCycleDone: api.task.status.undoCycleDone,
   };
 
   _dayOrganiserInstance = instance;

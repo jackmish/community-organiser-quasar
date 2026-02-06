@@ -132,7 +132,8 @@ import pkg from '../../package.json';
 import { useRouter, useRoute } from 'vue-router';
 import NextEventNotification from '../components/task/NextEventNotification.vue';
 import { format } from 'date-fns';
-import { useDayOrganiser } from '../modules/day-organiser';
+import * as api from 'src/modules/day-organiser/_apiRoot';
+import { useDayOrganiser } from 'src/modules/day-organiser';
 import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
 import AboutDialog from 'src/components/settings/AboutDialog.vue';
 import ConnectionsDialog from 'src/components/settings/ConnectionsDialog.vue';
@@ -195,10 +196,8 @@ onMounted(async () => {
   // Load organiser data so we can show upcoming event
   try {
     // ensure organiser data loaded (component will compute next event)
-    // useDayOrganiser is invoked inside the notification component
-    // but call load here if available via module to pre-load data
-    const mod = await import('../modules/day-organiser');
-    mod.useDayOrganiser?.().loadData?.();
+    // call wrapper which assigns data into the shared `api.store`
+    await useDayOrganiser().loadData?.();
   } catch (e) {
     // ignore
   }
@@ -240,8 +239,7 @@ onMounted(async () => {
 
 function refreshNotifications() {
   try {
-    const mod = useDayOrganiser();
-    mod?.loadData?.();
+    useDayOrganiser().loadData?.();
     try {
       // notify pages that data was reloaded so they can refresh UI (calendar, lists)
       window.dispatchEvent(new Event('organiser:reloaded'));

@@ -4,8 +4,8 @@
       <q-card-section>
         <div class="text-h6">Welcome! 👋</div>
         <div class="text-subtitle2 q-mt-sm">
-          Create your first group/society/member/car name/whatever to get started. You can
-          change name later.
+          Create your first group/society/member/car name/whatever to get started. You can change
+          name later.
         </div>
       </q-card-section>
 
@@ -29,8 +29,8 @@
             </template>
           </q-input>
           <div class="text-caption text-grey-7 q-mb-md">
-            All your tasks will be organized in this group by default. You can create more
-            groups later!
+            All your tasks will be organized in this group by default. You can create more groups
+            later!
           </div>
           <q-btn
             type="submit"
@@ -46,45 +46,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch } from 'vue';
 
 interface Props {
   modelValue: boolean;
 }
 
 interface Emits {
-  (e: "update:modelValue", value: boolean): void;
-  (e: "create", data: { name: string; color: string }): void;
+  (e: 'update:modelValue', value: boolean): void;
+  (e: 'create', data: { name: string; color: string }): void;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const isOpen = ref(props.modelValue);
-const groupName = ref("");
-const groupColor = ref("#1976d2");
+const groupName = ref('');
+const groupColor = ref('#1976d2');
 
 watch(
   () => props.modelValue,
   (newVal) => {
     isOpen.value = newVal;
-  }
+  },
 );
 
 watch(isOpen, (newVal) => {
-  emit("update:modelValue", newVal);
+  emit('update:modelValue', newVal);
 });
 
 const handleSubmit = () => {
   if (!groupName.value.trim()) return;
 
-  emit("create", {
+  emit('create', {
     name: groupName.value,
     color: groupColor.value,
   });
 
   // Reset form
-  groupName.value = "";
-  groupColor.value = "#1976d2";
+  groupName.value = '';
+  groupColor.value = '#1976d2';
 };
 </script>

@@ -231,7 +231,9 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useQuasar } from 'quasar';
 import logger from 'src/utils/logger';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 import { useDayOrganiser } from 'src/modules/day-organiser';
+import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummaryFixed';
 import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/settings/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
@@ -240,33 +242,33 @@ import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUti
 
 const $q = useQuasar();
 
-const {
-  isLoading,
-  currentDate,
-  currentDayData,
-  loadData,
-  addTask,
-  deleteTask,
-  toggleTaskComplete,
-  updateTask,
-
-  getTasksInRange,
-  setCurrentDate,
-
-  nextDay,
-  prevDay,
-  groups,
-  activeGroup,
-  addGroup,
-  updateGroup,
-
-  getGroupsByParent,
-  hiddenGroupSummary,
-  previewTaskId,
-  previewTaskPayload,
-  setPreviewTask,
-  undoCycleDone,
-} = useDayOrganiser();
+const isLoading = api.storage.isLoading;
+const currentDate = api.time.currentDate;
+const currentDayData = computed(() => {
+  const days = api.store.organiserData.value.days || {};
+  const d = api.time.currentDate.value;
+  return days[d] || ({ date: d, tasks: [], notes: '' } as any);
+});
+// Use the compatibility wrapper from `useDayOrganiser` which assigns loaded data into `api.store`
+const loadData = useDayOrganiser().loadData;
+const addTask = api.task.add;
+const deleteTask = api.task.delete;
+const toggleTaskComplete = api.task.status.toggleComplete;
+const updateTask = api.task.update;
+const getTasksInRange = api.task.list.inRange;
+const setCurrentDate = api.time.setCurrentDate;
+const nextDay = api.time.nextDay;
+const prevDay = api.time.prevDay;
+const groups = api.group.list.all;
+const activeGroup = api.group.activeGroup;
+const addGroup = api.group.add;
+const updateGroup = api.group.update;
+const getGroupsByParent = api.group.getGroupsByParent;
+const hiddenGroupSummary = createHiddenGroupSummary(api.store.organiserData, api.group.activeGroup);
+const previewTaskId = computed(() => api.store.previewTaskId.value);
+const previewTaskPayload = computed(() => api.store.previewTaskPayload.value);
+const setPreviewTask = api.task.setPreviewTask;
+const undoCycleDone = api.task.status.undoCycleDone;
 
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => {
@@ -352,69 +354,63 @@ watch(mode, (val) => {
 });
 
 // Respond to preview requests coming from other parts of the app
-watch(
-  () => previewTaskId && previewTaskId.value,
-  (id) => {
-    if (!id) return;
-    // find task by id using the precomputed allTasks list (avoids awkward any/never types)
-    let found: Task | null = null;
+watch(previewTaskId, (id) => {
+  if (!id) return;
+  // find task by id using the precomputed allTasks list (avoids awkward any/never types)
+  let found: Task | null = null;
+  try {
+    const sid = String(id);
+    found = ((allTasks.value || []) as Task[]).find((t) => t.id === sid) || null;
+  } catch (e) {
+    found = null;
+  }
+  if (found) {
+    // If this is a cyclic/occurring task, prefer to show it with the
+    // currently visible date so the preview displays the occurrence.
+    let toShow: Task = found;
     try {
-      const sid = String(id);
-      found = ((allTasks.value || []) as Task[]).find((t) => t.id === sid) || null;
-    } catch (e) {
-      found = null;
-    }
-    if (found) {
-      // If this is a cyclic/occurring task, prefer to show it with the
-      // currently visible date so the preview displays the occurrence.
-      let toShow: Task = found;
-      try {
-        const cycle = getCycleType(found as any);
-        if (cycle) {
-          toShow = { ...(found as any) } as Task;
-          (toShow as any).date = currentDate.value;
-        }
-      } catch (e) {
-        // ignore
+      const cycle = getCycleType(found as any);
+      if (cycle) {
+        toShow = { ...(found as any) } as Task;
+        (toShow as any).date = currentDate.value;
       }
-
-      taskToEdit.value = toShow;
-      mode.value = 'preview';
-      selectedTaskId.value = toShow.id;
-      // also ensure the calendar/date syncs to the task date
-      try {
-        setCurrentDate((toShow as any).date || toShow.eventDate || null);
-      } catch (e) {
-        // ignore
-      }
-    }
-    // clear preview request after handling
-    try {
-      setPreviewTask(null);
     } catch (e) {
       // ignore
     }
-  },
-);
+
+    taskToEdit.value = toShow;
+    mode.value = 'preview';
+    selectedTaskId.value = toShow.id;
+    // also ensure the calendar/date syncs to the task date
+    try {
+      setCurrentDate((toShow as any).date || toShow.eventDate || null);
+    } catch (e) {
+      // ignore
+    }
+  }
+  // clear preview request after handling
+  try {
+    setPreviewTask(null);
+  } catch (e) {
+    // ignore
+  }
+});
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
-watch(
-  () => previewTaskPayload && previewTaskPayload.value,
-  (payload) => {
-    if (!payload) return;
-    try {
-      handleCalendarPreview(payload);
-    } catch (e) {
-      // ignore
-    }
-    // clear payload after handling
-    try {
-      setPreviewTask(null);
-    } catch (e) {
-      void 0;
-    }
-  },
-);
+watch(previewTaskPayload, (payload) => {
+  if (!payload) return;
+  try {
+    handleCalendarPreview(payload);
+  } catch (e) {
+    // ignore
+  }
+  // clear payload after handling
+  try {
+    setPreviewTask(null);
+  } catch (e) {
+    void 0;
+  }
+});
 
 // calendar preview handled by createCalendarHandlers
 

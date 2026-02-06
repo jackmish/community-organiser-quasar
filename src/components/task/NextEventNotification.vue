@@ -39,22 +39,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 import { useDayOrganiser } from 'src/modules/day-organiser';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
 import { occursOnDay, getCycleType, getRepeatDays } from 'src/modules/task/utlils/occursOnDay';
 
-const { organiserData, setCurrentDate, setPreviewTask, getTasksInRange, loadData } =
-  useDayOrganiser();
+// Bind to the new namespaced APIs instead of destructuring the (undefined) result
+const organiserData = api.store.organiserData;
+const setCurrentDate = api.time.setCurrentDate;
+const setPreviewTask = api.task.setPreviewTask;
+const getTasksInRange = api.task.list.inRange;
+const loadData = useDayOrganiser().loadData;
 
 const containerRef = ref<HTMLElement | null>(null);
-
-function refreshNotifications() {
-  try {
-    if (typeof loadData === 'function') loadData();
-  } catch (e) {
-    // ignore
-  }
-}
 
 onMounted(() => {
   // Ensure organiser data is loaded so notifications can compute tasks

@@ -2,7 +2,7 @@
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskGroup } from 'src/modules/day-organiser';
 import { useQuasar, Dialog } from 'quasar';
-import { useDayOrganiser } from 'src/modules/day-organiser';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 import logger from 'src/utils/logger';
 import { useTimeDiff } from 'src/composables/useTimeDiff';
 import CalendarView from 'src/components/time/CalendarView.vue';
@@ -68,7 +68,8 @@ const emit = defineEmits([
 
 // Group menu state for edit-mode group changing
 const groupMenu = ref(false);
-const { groups, updateTask } = useDayOrganiser();
+const groups = api.group.list.all;
+const updateTask = api.task.update;
 
 async function selectGroupForEdit(gid: string | null) {
   try {
@@ -478,7 +479,6 @@ async function selectReplenishMatch(t: any) {
   selectedReplenishId.value = t.id;
   replenishQuery.value = t.name || '';
   try {
-    const { updateTask } = useDayOrganiser();
     const targetDate = t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
     await updateTask(targetDate, t.id, { status_id: 1 });
     // Ask parent to clear any preview/edit state

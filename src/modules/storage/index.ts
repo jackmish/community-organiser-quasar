@@ -88,6 +88,7 @@ class DayOrganiserStorage {
       } catch (err) {
         logger.error('Error reading group directory:', groupDir, err);
       }
+      console.log('Loading groups from files...', groups);
       return groups;
     } else if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem('day-organiser-groups');

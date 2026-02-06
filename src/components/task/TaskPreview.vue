@@ -221,7 +221,7 @@ import {
   priorityIcons,
   highlightIcon,
 } from '../theme';
-import { useDayOrganiser } from 'src/modules/day-organiser';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 import type { Task } from 'src/modules/task/types';
 
 const props = defineProps<{
@@ -247,7 +247,7 @@ const quickSubtaskStar = ref(false);
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
 const priorityMenu = ref(false);
 const groupMenu = ref(false);
-const { groups } = useDayOrganiser();
+const groups = api.group.list.all;
 // track pending transition fallback timers per element
 const transitionFallbacks = new Map<HTMLElement, number>();
 
@@ -263,7 +263,7 @@ function selectPriority(p: string) {
 
 async function selectGroup(gid: string | null) {
   try {
-    const { updateTask } = useDayOrganiser();
+    const updateTask = api.task.update;
     const date = (props.task && (props.task.date || props.task.eventDate)) || '';
     if (!props.task || !props.task.id) return;
     const updates: any = {};

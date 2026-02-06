@@ -7,6 +7,7 @@ export function createStorageApi(store: any) {
 
   const loadData = async () => {
     isLoading.value = true;
+    console.log('apiStorage.loadData called');
     try {
       const data = await backendStorage.loadData();
       return data;
