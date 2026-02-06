@@ -925,8 +925,9 @@ onMounted(async () => {
   // Listen for global reload events (e.g. from MainLayout refresh button)
   // Handlers are assigned to outer-scope vars so cleanup can be registered synchronously
   organiserReloadHandler = async () => {
+    // do not reload data on organiser:reloaded; initial load happens on mount
     try {
-      await loadData();
+      // noop for data load
     } catch (e) {
       // ignore
     }

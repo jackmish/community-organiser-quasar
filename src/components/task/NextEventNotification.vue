@@ -40,7 +40,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue';
 import * as api from 'src/modules/day-organiser/_apiRoot';
-import { useDayOrganiser } from 'src/modules/day-organiser';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
 import { occursOnDay, getCycleType, getRepeatDays } from 'src/modules/task/utlils/occursOnDay';
 
@@ -49,7 +48,7 @@ const organiserData = api.store.organiserData;
 const setCurrentDate = api.time.setCurrentDate;
 const setPreviewTask = api.task.setPreviewTask;
 const getTasksInRange = api.task.list.inRange;
-const loadData = useDayOrganiser().loadData;
+// data load is handled centrally by DayOrganiserPage; do not call loadData here
 
 const containerRef = ref<HTMLElement | null>(null);
 
