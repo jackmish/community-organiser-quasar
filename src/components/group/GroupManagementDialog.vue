@@ -408,7 +408,7 @@ import { ref, watch, computed } from 'vue';
 import logger from 'src/utils/logger';
 import { typeIcons, priorityIcons } from '../theme';
 
-import { useDayOrganiser } from '../../modules/day-organiser';
+import * as api from 'src/modules/day-organiser/_apiRoot';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -447,7 +447,7 @@ const paletteColors = [
   '#ffffff',
   '#000000',
 ];
-const paletteBtn = ref<HTMLElement | undefined>(undefined);
+
 const iconMenuVisible = ref(false);
 const gmIconPreview = ref<HTMLElement | null>(null);
 const iconMenuStyle = ref<Record<string, string>>({ position: 'fixed', left: '0px', top: '0px' });
@@ -684,10 +684,9 @@ async function onAddGroup() {
   const parent = localParent.value || undefined;
 
   try {
-    const { addGroup, updateGroup } = useDayOrganiser();
     if (editingGroupId.value) {
-      // update existing
-      await updateGroup(editingGroupId.value, {
+      // update existing via api.group
+      await api.group.update(editingGroupId.value, {
         name,
         ...(parent ? { parentId: parent } : {}),
         ...(color ? { color } : {}),
@@ -700,8 +699,8 @@ async function onAddGroup() {
           : {}),
       });
     } else {
-      // add new
-      await addGroup({
+      // add new via api.group
+      await api.group.add({
         name,
         parentId: parent,
         color,
@@ -727,8 +726,7 @@ async function onAddGroup() {
 
 async function onDeleteGroup(id: string) {
   try {
-    const { deleteGroup } = useDayOrganiser();
-    await deleteGroup(id);
+    await api.group.delete(id);
     if (editingGroupId.value === id) cancelEdit();
   } catch (e) {
     logger.error('deleteGroup failed', e);
@@ -759,7 +757,7 @@ async function confirmDelete(id: string) {
 
 function startEdit(node: any) {
   try {
-    const { groups } = useDayOrganiser();
+    const groups = api.group.list.all;
     // Helper: accept either an array or a ref/computed that holds an array
     function unwrapArray(maybe: unknown): any[] {
       if (Array.isArray(maybe)) return maybe;
