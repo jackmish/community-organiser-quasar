@@ -1,17 +1,34 @@
 import type { Task } from './types';
 import type { OrganiserData } from '../day-organiser/types';
 import * as taskService from './taskService';
+import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
 export function createTaskApi(state: any) {
+  // Internal UI refs now live inside the task API so the task API is the canonical source
+  const previewTaskId = ref<string | null>(null);
+  const previewTaskPayload = ref<any | null>(null);
+  const mode = ref<'add' | 'edit' | 'preview'>('add');
+  const taskToEdit = ref<Task | null>(null);
+  const selectedTaskId = ref<string | null>(null);
+
+  // Ensure mode-driven clearing of selection lives inside the API so views don't repeat logic
+  watch(mode, (val) => {
+    if (val === 'add') {
+      taskToEdit.value = null;
+      selectedTaskId.value = null;
+    }
+  });
   return {
     // Shared UI state for tasks
-    mode: state.mode,
-    taskToEdit: state.taskToEdit,
-    selectedTaskId: state.selectedTaskId,
+    mode,
+    taskToEdit,
+    selectedTaskId,
+    previewTaskId,
+    previewTaskPayload,
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = state.organiserData.value;
       const task = taskService.addTask(organiserData, date, taskData);
@@ -74,18 +91,18 @@ export function createTaskApi(state: any) {
 
     setPreviewTask: (payload: string | number | Task | null) => {
       if (payload == null) {
-        state.previewTaskId.value = null;
-        state.previewTaskPayload.value = null;
+        previewTaskId.value = null;
+        previewTaskPayload.value = null;
         return;
       }
       if (typeof payload === 'string' || typeof payload === 'number') {
-        state.previewTaskId.value = String(payload);
-        state.previewTaskPayload.value = null;
+        previewTaskId.value = String(payload);
+        previewTaskPayload.value = null;
         return;
       }
       const p = payload;
-      state.previewTaskId.value = p.id ?? null;
-      state.previewTaskPayload.value = p;
+      previewTaskId.value = p.id ?? null;
+      previewTaskPayload.value = p;
     },
   } as const;
 }

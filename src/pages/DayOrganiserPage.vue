@@ -317,16 +317,10 @@ const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
   updateGroup: api.group.update,
 });
 
-// When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
-watch(api.task.mode, (val) => {
-  if (val === 'add') {
-    api.task.taskToEdit.value = null;
-    api.task.selectedTaskId.value = null;
-  }
-});
+// mode change handling moved into api.task
 
 // Respond to preview requests coming from other parts of the app
-watch(() => api.store.previewTaskId.value, (id) => {
+watch(() => api.task.previewTaskId.value, (id) => {
   if (!id) return;
   // find task by id using the precomputed allTasks list (avoids awkward any/never types)
   let found: Task | null = null;
@@ -369,7 +363,7 @@ watch(() => api.store.previewTaskId.value, (id) => {
 });
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
-watch(() => api.store.previewTaskPayload.value, (payload) => {
+watch(() => api.task.previewTaskPayload.value, (payload) => {
   if (!payload) return;
   try {
     handleCalendarPreview(payload);

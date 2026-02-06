@@ -19,12 +19,7 @@ export const store: any = {
     lastModified: new Date().toISOString(),
   }),
   //UI control data
-  previewTaskId: ref<string | null>(null),
-  previewTaskPayload: ref<Task | null>(null),
-  // UI selection and mode (moved here so APIs can share state)
-  mode: ref<'add' | 'edit' | 'preview'>('add'),
-  taskToEdit: ref<Task | null>(null),
-  selectedTaskId: ref<string | null>(null),
+  // UI control data moved into the task API (keeps store focused on organiser data)
   //Shared API methods
   async saveData() {
     // call storage API bound to store
