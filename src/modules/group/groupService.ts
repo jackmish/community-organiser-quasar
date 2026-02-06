@@ -118,3 +118,26 @@ export function prepareGroupsForSave(organiserData: OrganiserData): OrganiserDat
     return organiserData;
   }
 }
+
+// Return a normalized parent object for the given active group value.
+// `active` may be a string id, number, or an object with `value`/`id`.
+export function getParentForActive(organiserData: OrganiserData, active: unknown): any {
+  try {
+    if (active == null) return null;
+    const maybeId =
+      typeof active === 'string' || typeof active === 'number'
+        ? String(active)
+        : String((active && ((active as any).value ?? (active as any).id)) ?? '');
+    if (!maybeId) return null;
+    const groups: any[] = organiserData.groups || [];
+    const g = (groups || []).find((gg: any) => String(gg.id) === maybeId);
+    if (!g) return null;
+    const pid = g.parentId ?? g.parent_id ?? null;
+    if (pid == null) return null;
+    const pg = (groups || []).find((gg: any) => String(gg.id) === String(pid)) || null;
+    if (!pg) return null;
+    return pg;
+  } catch (err) {
+    return null;
+  }
+}

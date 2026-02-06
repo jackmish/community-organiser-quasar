@@ -79,6 +79,7 @@ export default defineConfig((/* ctx */) => {
         viteConf.css = viteConf.css || {};
         // enable CSS dev sourcemaps so browser inspector can map rules back to SCSS files
         (viteConf.css as any).devSourcemap = true;
+        // no additional Vite watch configuration here
       },
     },
 

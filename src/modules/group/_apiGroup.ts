@@ -1,4 +1,5 @@
 import * as groupService from './groupService';
+import logger from 'src/utils/logger';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed, ref } from 'vue';
 
@@ -9,6 +10,11 @@ export function createGroupApi(state: any) {
     state && state.activeGroup
       ? state.activeGroup
       : ref<{ label: string; value: string | null } | null>(null);
+
+  // parent computed delegates the lookup to groupService to avoid duplication
+  const parent = computed(() =>
+    groupService.getParentForActive(state.organiserData.value, activeGroup.value),
+  );
 
   return {
     add: async (payload: any) => {
@@ -39,40 +45,42 @@ export function createGroupApi(state: any) {
     // expose active group ref (proxy to shared store or internal ref)
     activeGroup,
 
-    // build tree from state.organiserData when requested
-    tree: computed(() => {
-      const groups: any[] = state.organiserData.value.groups || [];
-      const raw = groups || [];
-      const map = new Map<string, any>();
+    // expose parent computed
+    parent,
 
-      raw.forEach((g: any) => {
-        map.set(String(g.id), {
-          id: g.id,
-          label: g.name,
-          icon: g.icon,
-          color: g.color,
-          group: g,
-          parentId:
-            (g.parentId ?? g.parent_id ?? null) == null
-              ? null
-              : String(g.parentId ?? g.parent_id ?? null),
-          shareSubgroups: g.shareSubgroups ?? false,
-          hideTasksFromParent: g.hideTasksFromParent ?? false,
-          children: [] as any[],
-        });
-      });
-
-      const roots: any[] = [];
-      map.forEach((node) => {
-        if (node.parentId == null) {
-          roots.push(node);
-        } else {
-          const parent = map.get(String(node.parentId));
-          if (parent) parent.children.push(node);
-          else roots.push(node);
+    // navigate activeGroup to its parent (returns new activeGroup or null)
+    goToParent: () => {
+      try {
+        const p = parent.value;
+        if (!p) {
+          activeGroup.value = null;
+          return null;
         }
-      });
-      return roots;
+        // prefer label from parent node if available
+        const label = p.label ?? p.name ?? String(p.id);
+        const id = String(p.id);
+        activeGroup.value = { label, value: id };
+        return activeGroup.value;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    // build tree from state.organiserData when requested (uses getGroupsByParent)
+    tree: computed(() => {
+      const buildTree = (parentId?: string): any[] => {
+        const pidNorm = parentId == null ? undefined : String(parentId);
+        const groupsForParent = getGroupsByParentUtil(state.organiserData.value.groups, pidNorm);
+        return (groupsForParent || []).map((group: any) => ({
+          id: String(group.id),
+          label: group.name,
+          color: group.color,
+          icon: group.icon || 'folder',
+          group: group,
+          children: buildTree(String(group.id)),
+        }));
+      };
+      return buildTree();
     }),
   } as const;
 }

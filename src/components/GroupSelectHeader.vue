@@ -75,7 +75,7 @@
         round
         icon="arrow_upward"
         title="Go to parent group"
-        @click.stop.prevent="goToParent"
+        @click.stop.prevent="api.group.goToParent"
       >
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
@@ -95,6 +95,7 @@ import * as api from 'src/modules/day-organiser/_apiRoot';
 
 const groups = api.group.list.all;
 const activeGroup = api.group.activeGroup;
+const parentGroup = api.group.parent;
 const isLoading = api.storage.isLoading;
 
 // Normalize parent id values: accept string/number or object like { value, id }
@@ -185,11 +186,6 @@ const selectedOption = computed(() => {
   }
 });
 
-const selectKey = computed(
-  () =>
-    `gsel-${optionsReady.value ? 'r' : 'w'}-${(options.value || []).length}-${localValue.value ?? 'nil'}`,
-);
-
 const convertNode = (n: any): any => ({
   id: String(n.id),
   label: n.label,
@@ -258,18 +254,6 @@ watch(
   { immediate: true },
 );
 
-const onChange = (val: any) => {
-  if (val === '__manage_groups__') {
-    window.dispatchEvent(new Event('group:manage-request'));
-    localValue.value = prevValue;
-    return;
-  }
-  const opt = options.value.find((o: any) => o.value === val);
-  if (opt) activeGroup.value = { label: opt.label, value: opt.value };
-  else activeGroup.value = null;
-  prevValue = val ?? null;
-};
-
 function selectAll() {
   activeGroup.value = null;
   localValue.value = null;
@@ -297,33 +281,10 @@ function openManage() {
   menuOpen.value = false;
 }
 
-const parentGroup = computed(() => {
-  try {
-    const cur = activeGroup.value;
-    const gid = cur
-      ? typeof cur === 'string' || typeof cur === 'number'
-        ? String(cur)
-        : String(extractIdFrom(cur) ?? cur)
-      : null;
-    if (!gid) return null;
-    const g = (groups.value || []).find((gg: any) => String(gg.id) === String(gid));
-    if (!g) return null;
-    const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
-    if (!pid) return null;
-    return (groups.value || []).find((gg: any) => String(gg.id) === String(pid)) || null;
-  } catch (e) {
-    return null;
-  }
-});
-
 const parentButtonVisible = computed(() => Boolean(parentGroup.value));
 const parentName = computed(() => (parentGroup.value ? parentGroup.value.name : null));
 
-function goToParent() {
-  const p = parentGroup.value;
-  if (!p) return;
-  activeGroup.value = { label: p.name || String(p.id), value: p.id };
-}
+// navigation to parent handled by shared API: `api.group.goToParent()`
 
 watch(
   () => menuOpen.value,
