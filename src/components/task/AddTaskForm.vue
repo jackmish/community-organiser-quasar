@@ -1934,7 +1934,7 @@ function onSubmit(event: Event) {
                           unelevated
                           :icon="submitIcon || undefined"
                           :label="
-                            mode === 'add' ? 'New item' : mode === 'edit' ? 'Update' : 'Preview'
+                            mode === 'add' ? 'Create' : mode === 'edit' ? 'Update' : 'Preview'
                           "
                           :disable="mode === 'preview'"
                           :style="`background: ${submitColor} !important; background-color: ${submitColor} !important; border-color: ${submitColor} !important; color: ${submitTextColor} !important;`"

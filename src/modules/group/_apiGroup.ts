@@ -2,6 +2,7 @@ import * as groupService from './groupService';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed, ref } from 'vue';
 import { app } from 'src/services/appService';
+import { appSaveData } from 'src/utils/storageUtils';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
 export function createGroupApi() {
@@ -14,18 +15,18 @@ export function createGroupApi() {
   return {
     add: async (payload: any) => {
       const group = groupService.addGroup(groups.value, payload);
-      await app('storage')!.saveData();
+      await appSaveData();
       return group;
     },
 
     update: async (groupId: string, updates: Partial<any>) => {
       groupService.updateGroup(groups.value, groupId, updates);
-      await app('storage')!.saveData();
+      await appSaveData();
     },
 
     delete: async (groupId: string) => {
       const res = groupService.deleteGroup(groups.value, groupId);
-      await app('storage')!.saveData();
+      await appSaveData();
       return res;
     },
 
