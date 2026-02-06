@@ -1,18 +1,17 @@
 import type { Task } from './types';
 import * as taskService from './taskService';
 import { ref } from 'vue';
-import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
 export function createTaskApi(groupApi?: any, timeApi?: any) {
+  // Construct a task service instance
+  const svc = taskService.createTaskService(timeApi);
+
   const activeTask = ref<Task | null>(null);
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
-
-  // Construct a task service instance bound to `timeApi`.
-  const svc = taskService.createTaskService(timeApi);
 
   const setTask = (payload: PreviewPayload) =>
     svc.applyActiveSelection(activeTask, activeMode, payload as any);
