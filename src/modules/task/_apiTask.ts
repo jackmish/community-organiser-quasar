@@ -19,8 +19,8 @@ export function createTaskApi(state: any, groupApi?: any, timeApi?: any) {
   const _organiserRef = () => ({
     days: (timeApi && timeApi.days ? timeApi.days.value : state.organiserData?.value?.days) || {},
     groups:
-      (groupApi && groupApi._groupsRef
-        ? groupApi._groupsRef.value
+      (groupApi && groupApi.list && groupApi.list.all
+        ? groupApi.list.all.value
         : state.organiserData?.value?.groups) || [],
     lastModified:
       (timeApi && timeApi.lastModified

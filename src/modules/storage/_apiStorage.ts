@@ -33,14 +33,14 @@ export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
         }
       }
 
-      // Populate the refactored API refs: time.days and group._groupsRef
+      // Populate the refactored API refs: time.days and group list
       try {
         const finalDays = Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {};
 
-        // populate groupApi internal ref if available
+        // populate groupApi internal ref if available (use setter)
         try {
-          if (groupApi && groupApi._groupsRef) {
-            groupApi._groupsRef.value = rawGroups;
+          if (groupApi && groupApi.list && typeof groupApi.list.setGroups === 'function') {
+            groupApi.list.setGroups(rawGroups || []);
           }
         } catch (e) {
           void e;
@@ -67,16 +67,26 @@ export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
           const requestedId = settings?.activeGroupId ?? null;
           if (requestedId) {
             const groupsList =
-              groupApi && groupApi._groupsRef && groupApi._groupsRef.value
-                ? groupApi._groupsRef.value
-                : store.organiserData.value.groups || [];
+              (groupApi && groupApi.list && groupApi.list.all
+                ? groupApi.list.all.value
+                : store.organiserData?.value?.groups) || [];
+            console.log('Restoring activeGroup:', {
+              requestedId,
+              groupsCount: (groupsList || []).length,
+            });
             const found = (groupsList || []).find((g: any) => String(g.id) === String(requestedId));
             if (found) {
               try {
-                groupApi.activeGroup.value = {
-                  label: found.name || String(found.id),
-                  value: found.id,
-                };
+                if (groupApi.active && groupApi.active.activeGroup)
+                  groupApi.active.activeGroup.value = {
+                    label: found.name || String(found.id),
+                    value: found.id,
+                  };
+                else if (groupApi.activeGroup)
+                  groupApi.activeGroup.value = {
+                    label: found.name || String(found.id),
+                    value: found.id,
+                  };
               } catch (e) {
                 void e;
               }
@@ -102,7 +112,8 @@ export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
       // If caller didn't provide data, build it from refactored APIs
       let payload = data;
       if (!payload) {
-        const groups = groupApi && groupApi._groupsRef ? groupApi._groupsRef.value : [];
+        const groups =
+          groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
         const days =
           timeApi && timeApi.days ? timeApi.days.value : store.organiserData?.value?.days || {};
         const lastModified =

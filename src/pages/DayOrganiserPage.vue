@@ -174,7 +174,7 @@
         <AddTaskForm
           v-else
           :filtered-parent-options="filteredParentOptions"
-          :active-group="api.group.activeGroup"
+          :active-group="api.group.active.activeGroup"
           :show-calendar="false"
           :selected-date="newTask.eventDate"
           :all-tasks="allTasks"
@@ -252,7 +252,7 @@ const currentDayData = computed(() => {
 // an `organiserData` ref with `groups` and `days`.
 const organiserLike = computed(() => ({ groups: api.group.list.all.value, days: api.time.days.value }));
 
-const hiddenGroupSummary = createHiddenGroupSummary(organiserLike as any, api.group.activeGroup);
+const hiddenGroupSummary = createHiddenGroupSummary(organiserLike as any, api.group.active.activeGroup);
 
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => api.task.list.all());
@@ -399,8 +399,8 @@ const {
   currentDayData,
   allTasks,
   groups: api.group.list.all,
-  activeGroup: api.group.activeGroup,
-  getGroupsByParent: api.group.getGroupsByParent,
+  activeGroup: api.group.active.activeGroup,
+  getGroupsByParent: api.group.list.getGroupsByParent,
   setTaskToEdit,
   editTask,
 });
@@ -436,8 +436,8 @@ const {
   allTasks,
   getTasksInRange: api.task.list.inRange,
   groups: api.group.list.all,
-  activeGroup: api.group.activeGroup,
-  getGroupsByParent: api.group.getGroupsByParent,
+  activeGroup: api.group.active.activeGroup,
+  getGroupsByParent: api.group.list.getGroupsByParent,
   parseYmdLocal,
   getTimeOffsetDaysForTask,
   getCycleType,
@@ -459,7 +459,7 @@ const getGroupName = (groupId?: string): string => {
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   setCurrentDate: api.time.setCurrentDate,
-  activeGroup: api.group.activeGroup,
+  activeGroup: api.group.active.activeGroup,
   currentDate: api.time.currentDate,
   allTasks,
   quasar: $q,
@@ -883,7 +883,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
   const group = await api.group.add({ name: data.name, color: data.color, hideTasksFromParent: false });
   defaultGroupId.value = group.id;
-  api.group.activeGroup.value = {
+  api.group.active.activeGroup.value = {
     label: group.name,
     value: group.id,
   };
@@ -946,8 +946,8 @@ onMounted(async () => {
   } else {
     // Auto-select first group as active if groups exist
     const firstGroup = api.group.list.all.value[0];
-    if (firstGroup && !api.group.activeGroup.value) {
-      api.group.activeGroup.value = {
+    if (firstGroup && !api.group.active.activeGroup.value) {
+      api.group.active.activeGroup.value = {
         label: firstGroup.name,
         value: firstGroup.id,
       };

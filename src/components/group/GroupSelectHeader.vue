@@ -75,7 +75,7 @@
         round
         icon="arrow_upward"
         title="Go to parent group"
-        @click.stop.prevent="api.group.goToParent"
+        @click.stop.prevent="api.group.active.goToParent"
       >
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
@@ -93,8 +93,8 @@ import { computed, ref, watch } from 'vue';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 
 const groups = api.group.list.all;
-const activeGroup = api.group.activeGroup;
-const parentGroup = api.group.parent;
+const activeGroup = api.group.active.activeGroup;
+const parentGroup = api.group.active.parent;
 const isLoading = api.storage.isLoading;
 
 // Normalize parent id values: accept string/number or object like { value, id }
@@ -189,7 +189,7 @@ const convertNode = (n: any): any => ({
 
 const treeNodes = computed(() => {
   try {
-    return (api.group.tree.value || []).map(convertNode);
+    return (api.group.list.tree.value || []).map(convertNode);
   } catch (e) {
     return [];
   }
@@ -249,7 +249,7 @@ watch(
 
 function onSelectAll() {
   // delegate the canonical selection change to the shared API
-  api.group.selectAll();
+  api.group.active.selectAll();
   // keep local UI state in sync
   localValue.value = null;
   menuOpen.value = false;

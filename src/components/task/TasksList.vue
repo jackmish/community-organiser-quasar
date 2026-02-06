@@ -334,7 +334,7 @@ const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler
 // Bring in group and theme helpers locally so parent doesn't need to pass them
 import * as api from 'src/modules/day-organiser/_apiRoot';
 const groups = api.group.list.all;
-const activeGroup = api.group.activeGroup;
+const activeGroup = api.group.active.activeGroup;
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
