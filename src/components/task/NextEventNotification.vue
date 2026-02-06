@@ -52,15 +52,6 @@ const getTasksInRange = api.task.list.inRange;
 
 const containerRef = ref<HTMLElement | null>(null);
 
-onMounted(() => {
-  // Ensure organiser data is loaded so notifications can compute tasks
-  try {
-    if (typeof loadData === 'function') loadData();
-  } catch (e) {
-    // ignore
-  }
-});
-
 function formatDateLabel(dateStr?: string) {
   if (!dateStr) return '';
   const dt = new Date(dateStr + 'T00:00:00');
