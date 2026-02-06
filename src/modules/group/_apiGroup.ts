@@ -1,15 +1,11 @@
 import * as groupService from './groupService';
-import logger from 'src/utils/logger';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed, ref } from 'vue';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
 export function createGroupApi(state: any) {
-  // reuse existing shared ref if provided, otherwise create an internal one
-  const activeGroup =
-    state && state.activeGroup
-      ? state.activeGroup
-      : ref<{ label: string; value: string | null } | null>(null);
+  // use an internal activeGroup ref (do not depend on external/shared state)
+  const activeGroup = ref<{ label: string; value: string | null } | null>(null);
 
   // parent computed delegates the lookup to groupService to avoid duplication
   const parent = computed(() =>

@@ -90,7 +90,6 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import logger from 'src/utils/logger';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 
 const groups = api.group.list.all;
