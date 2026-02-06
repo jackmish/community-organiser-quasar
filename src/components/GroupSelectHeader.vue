@@ -124,37 +124,29 @@ watch(
 const options = computed(() => {
   const manage = { label: 'Manage Groups...', value: '__manage_groups__' };
 
-  // Build a parent->children map (support both camelCase and snake_case parent fields)
-  const byParent: Record<string, any[]> = {};
-  (groups.value || []).forEach((g: any) => {
-    const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
-    const key = pid != null ? String(pid) : '__root__';
-    if (!byParent[key]) byParent[key] = [];
-    byParent[key].push(g);
-  });
-
+  // Flatten the shared group tree into a labeled list for the dropdown
   const flat: any[] = [];
-  const walk = (parentKey: string, depth = 0) => {
-    const list = byParent[parentKey] || [];
-    // sort by name for stable order
-    list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    list.forEach((g: any) => {
-      flat.push({
-        label: `${'\u00A0'.repeat(depth * 2)}${g.name}`,
-        value: String(g.id),
-        icon: g.icon || 'folder',
-        color: g.color || null,
+  const walkNodes = (nodes: any[], depth = 0) => {
+    (nodes || [])
+      .slice()
+      .sort((a: any, b: any) => String(a.label).localeCompare(String(b.label)))
+      .forEach((n: any) => {
+        flat.push({
+          label: `${'\u00A0'.repeat(depth * 2)}${n.label}`,
+          value: String(n.id),
+          icon: n.icon || 'folder',
+          color: n.color || null,
+        });
+        walkNodes(n.children || [], depth + 1);
       });
-      walk(String(g.id), depth + 1);
-    });
   };
 
-  walk('__root__', 0);
+  walkNodes(api.group.tree.value || [], 0);
 
   const base: any[] = [{ label: 'All Groups', value: null, icon: 'folder_open', color: null }];
   const combined = base.concat(flat);
 
-  // Ensure activeGroup is present
+  // Ensure activeGroup is present in the options
   const cur = activeGroup.value;
   if (cur) {
     const curVal =
@@ -164,12 +156,7 @@ const options = computed(() => {
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label = (typeof cur === 'object' && cur.label) || (found && found.name) || curVal;
-      combined.push({
-        label,
-        value: curVal,
-        icon: found?.icon || 'folder',
-        color: found?.color || null,
-      });
+      combined.push({ label, value: curVal, icon: found?.icon || 'folder', color: found?.color || null });
     }
   }
 
@@ -198,30 +185,20 @@ const selectKey = computed(
     `gsel-${optionsReady.value ? 'r' : 'w'}-${(options.value || []).length}-${localValue.value ?? 'nil'}`,
 );
 
+const convertNode = (n: any): any => ({
+  id: String(n.id),
+  label: n.label,
+  icon: n.icon || 'folder',
+  color: n.color || null,
+  children: (n.children || []).map(convertNode),
+});
+
 const treeNodes = computed(() => {
-  // build nested nodes for q-tree
-  const byParent: Record<string, any[]> = {};
-  (groups.value || []).forEach((g: any) => {
-    const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
-    const key = pid != null ? String(pid) : '__root__';
-    if (!byParent[key]) byParent[key] = [];
-    byParent[key].push(g);
-  });
-
-  const build = (parentKey: string): Array<any> => {
-    const list = (byParent[parentKey] || [])
-      .slice()
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    return list.map((g: any) => ({
-      id: String(g.id),
-      label: g.name,
-      icon: g.icon || 'folder',
-      color: g.color || null,
-      children: build(String(g.id)),
-    }));
-  };
-
-  return build('__root__');
+  try {
+    return (api.group.tree.value || []).map(convertNode);
+  } catch (e) {
+    return [];
+  }
 });
 
 const selectedKeyArray = computed(() => (localValue.value ? [String(localValue.value)] : []));
