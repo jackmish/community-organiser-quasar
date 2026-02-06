@@ -2,7 +2,16 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const IGNORES = ['node_modules', '.git', 'dist', 'build', 'www', 'src-capacitor', 'src-electron', '.quasar'];
+const IGNORES = [
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'www',
+  'src-capacitor',
+  'src-electron',
+  '.quasar',
+];
 const EXTENSIONS = ['', '.ts', '.js', '.mjs', '.cjs', '.vue', '.tsx', '.jsx', '.json'];
 
 function walk(dir, filelist = []) {
@@ -17,7 +26,11 @@ function walk(dir, filelist = []) {
 }
 
 function readFile(file) {
-  try { return fs.readFileSync(file, 'utf8'); } catch (e) { return ''; }
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    return '';
+  }
 }
 
 function extractSpecifiers(content) {
@@ -65,7 +78,7 @@ function tryExts(base) {
 }
 
 function isIgnoredFile(file) {
-  return IGNORES.some(i => file.split(path.sep).includes(i));
+  return IGNORES.some((i) => file.split(path.sep).includes(i));
 }
 
 function main() {
