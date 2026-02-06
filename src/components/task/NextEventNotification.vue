@@ -38,10 +38,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue';
+import { computed, ref, onBeforeUnmount, watch, nextTick } from 'vue';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
-import { occursOnDay, getCycleType, getRepeatDays } from 'src/modules/task/utlils/occursOnDay';
+import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
 const organiserData = api.store.organiserData;
@@ -88,8 +88,7 @@ const nextEvents = computed(() => {
   // Gather tasks
   let allTasks: any[] = [];
   try {
-    allTasks =
-      typeof getTasksInRange === 'function' ? getTasksInRange('1970-01-01', '9999-12-31') : [];
+    allTasks = api.task.list.all() || [];
   } catch (e) {
     const days = organiserData.value?.days || {};
     Object.keys(days).forEach((d) => {
