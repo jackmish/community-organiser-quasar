@@ -21,6 +21,10 @@ export const store: any = {
   //UI control data
   previewTaskId: ref<string | null>(null),
   previewTaskPayload: ref<Task | null>(null),
+  // UI selection and mode (moved here so APIs can share state)
+  mode: ref<'add' | 'edit' | 'preview'>('add'),
+  taskToEdit: ref<Task | null>(null),
+  selectedTaskId: ref<string | null>(null),
   //Shared API methods
   async saveData() {
     // call storage API bound to store

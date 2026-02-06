@@ -134,7 +134,7 @@
 
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
-      v-if="panelHidden || mode !== 'add'"
+      v-if="panelHidden || api.task.mode.value !== 'add'"
       class="floating-add-btn"
       color="green"
       fab
@@ -155,15 +155,15 @@
       />
       <div class="fixed-content">
         <TaskPreview
-          v-if="mode === 'preview' && taskToEdit"
-          :task="taskToEdit"
-          :group-name="getGroupName(taskToEdit.groupId)"
+          v-if="api.task.mode.value === 'preview' && api.task.taskToEdit.value"
+          :task="api.task.taskToEdit.value"
+          :group-name="getGroupName(api.task.taskToEdit.value.groupId)"
           :animating-lines="animatingLines"
           @line-collapsed="onLineCollapsed"
           @line-expanded="onLineExpanded"
           @edit="
             () => {
-              mode = 'edit';
+              api.task.mode.value = 'edit';
             }
           "
           @close="clearTaskToEdit"
@@ -179,9 +179,9 @@
           :selected-date="newTask.eventDate"
           :all-tasks="allTasks"
           :replenish-tasks="replenishTasks"
-          :initial-task="taskToEdit"
-          :mode="mode"
-          @update:mode="(v) => (mode = v)"
+          :initial-task="api.task.taskToEdit.value"
+          :mode="api.task.mode.value"
+          @update:mode="(v) => (api.task.mode.value = v)"
           @add-task="handleAddTask"
           @update-task="handleUpdateTask"
           @delete-task="handleDeleteTask"
@@ -193,7 +193,7 @@
     </div>
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
-      v-if="panelHidden && mode !== 'add'"
+      v-if="panelHidden && api.task.mode.value !== 'add'"
       class="panel-show-btn"
       unelevated
       color="dark"
@@ -268,11 +268,9 @@ const showFirstRunDialog = ref(false);
 
 const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
-const taskToEdit = ref<Task | null>(null);
-const mode = ref<'add' | 'edit' | 'preview'>('add');
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
 const panelHidden = ref(false);
-const selectedTaskId = ref<string | null>(null);
+const selectedTaskId = api.task.selectedTaskId;
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
@@ -282,10 +280,10 @@ const { waitForLineEvent, onLineCollapsed, onLineExpanded } = createLineEventHan
 
 // task UI handlers moved to module
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
-  taskToEdit,
-  mode,
+  taskToEdit: api.task.taskToEdit,
+  mode: api.task.mode,
   panelHidden,
-  selectedTaskId,
+  selectedTaskId: api.task.selectedTaskId,
   currentDate: api.time.currentDate,
   setCurrentDate: api.time.setCurrentDate,
 });
@@ -307,9 +305,9 @@ onBeforeUnmount(() => {
 });
 
 // Ensure we return to 'add' mode when no task is selected
-watch(taskToEdit, (val) => {
-  if (!val && mode.value !== 'add') {
-    mode.value = 'add';
+watch(api.task.taskToEdit, (val) => {
+  if (!val && api.task.mode.value !== 'add') {
+    api.task.mode.value = 'add';
   }
 });
 
@@ -320,10 +318,10 @@ const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
 });
 
 // When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
-watch(mode, (val) => {
+watch(api.task.mode, (val) => {
   if (val === 'add') {
-    taskToEdit.value = null;
-    selectedTaskId.value = null;
+    api.task.taskToEdit.value = null;
+    api.task.selectedTaskId.value = null;
   }
 });
 
@@ -352,9 +350,9 @@ watch(() => api.store.previewTaskId.value, (id) => {
       // ignore
     }
 
-    taskToEdit.value = toShow;
-    mode.value = 'preview';
-    selectedTaskId.value = toShow.id;
+    api.task.taskToEdit.value = toShow;
+    api.task.mode.value = 'preview';
+    api.task.selectedTaskId.value = toShow.id;
     // also ensure the calendar/date syncs to the task date
     try {
       api.time.setCurrentDate((toShow as any).date || toShow.eventDate || null);
@@ -418,8 +416,8 @@ const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
     allTasks,
     editTask,
     setTaskToEdit,
-    mode,
-    selectedTaskId,
+    mode: api.task.mode,
+    selectedTaskId: api.task.selectedTaskId,
     setPreviewTask: api.task.setPreviewTask,
     notify: (opts: any) => $q.notify(opts),
   });
@@ -467,9 +465,9 @@ const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   currentDate: api.time.currentDate,
   allTasks,
   quasar: $q,
-  taskToEdit,
-  mode,
-  selectedTaskId,
+  taskToEdit: api.task.taskToEdit,
+  mode: api.task.mode,
+  selectedTaskId: api.task.selectedTaskId,
 });
 
 const handleDeleteTask = async (payload: any) => {
@@ -486,10 +484,10 @@ const handleDeleteTask = async (payload: any) => {
     if (!id) return;
     await api.task.delete(date, id);
     // If the deleted task was currently selected for preview/edit, switch back to create mode
-    if (taskToEdit.value && taskToEdit.value.id === id) {
-      taskToEdit.value = null;
-      mode.value = 'add';
-      selectedTaskId.value = null;
+    if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === id) {
+      api.task.taskToEdit.value = null;
+      api.task.mode.value = 'add';
+      api.task.selectedTaskId.value = null;
     }
   } finally {
     openDeleteMenu.value = null;
@@ -633,8 +631,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       // update the task description after animation
       try {
         task.description = newDesc;
-        if (taskToEdit.value && taskToEdit.value.id === task.id) {
-          taskToEdit.value.description = newDesc;
+        if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
+          api.task.taskToEdit.value.description = newDesc;
         }
       } catch (e) {
         // ignore
@@ -726,8 +724,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       const newDesc = lines.join('\n');
       try {
         task.description = newDesc;
-        if (taskToEdit.value && taskToEdit.value.id === task.id) {
-          taskToEdit.value.description = newDesc;
+        if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
+          api.task.taskToEdit.value.description = newDesc;
         }
       } catch (e) {
         // ignore
@@ -760,7 +758,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     status = Number(task.status_id) === 0 ? 1 : 0;
     try {
       task.status_id = status;
-      if (taskToEdit.value && taskToEdit.value.id === task.id) taskToEdit.value.status_id = status;
+      if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id)
+        api.task.taskToEdit.value.status_id = status;
     } catch (e) {
       // ignore
     }
@@ -806,12 +805,12 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
             );
           };
 
-          try {
+            try {
             removeCycleDone(task);
             const base = (allTasks.value || []).find((x: any) => x.id === task.id);
             removeCycleDone(base);
-            if (taskToEdit.value && taskToEdit.value.id === task.id)
-              removeCycleDone(taskToEdit.value);
+            if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id)
+              removeCycleDone(api.task.taskToEdit.value);
             logger.debug('[toggleStatus] optimistic undo applied', {
               taskId: task.id,
               targetDate,
@@ -870,8 +869,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // optimistic update
   try {
     task.status_id = status;
-    if (taskToEdit.value && taskToEdit.value.id === task.id) {
-      taskToEdit.value.status_id = status;
+    if (api.task.taskToEdit.value && api.task.taskToEdit.value.id === task.id) {
+      api.task.taskToEdit.value.status_id = status;
     }
   } catch (e) {
     // ignore

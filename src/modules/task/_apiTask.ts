@@ -8,6 +8,10 @@ export type PreviewPayload = string | number | Task | null;
 // Factory to create a task API bound to the given state object
 export function createTaskApi(state: any) {
   return {
+    // Shared UI state for tasks
+    mode: state.mode,
+    taskToEdit: state.taskToEdit,
+    selectedTaskId: state.selectedTaskId,
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = state.organiserData.value;
       const task = taskService.addTask(organiserData, date, taskData);
