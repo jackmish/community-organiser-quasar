@@ -115,7 +115,7 @@ export function useDayOrganiser() {
 
     // Methods
     loadData,
-    saveData: api.store.saveData,
+    saveData: api.storage.saveData,
     getDayData,
 
     // Navigation

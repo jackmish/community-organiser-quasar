@@ -3,11 +3,12 @@ import type { OrganiserData } from '../day-organiser/types';
 import * as taskService from './taskService';
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
+import { app } from 'src/services/appService';
 
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
-export function createTaskApi(state: any, groupApi?: any, timeApi?: any) {
+export function createTaskApi(groupApi?: any, timeApi?: any) {
   // Internal UI refs now live inside the task API so the task API is the canonical source
   const previewTaskId = ref<string | null>(null);
   const previewTaskPayload = ref<PreviewPayload>(null);
@@ -17,16 +18,14 @@ export function createTaskApi(state: any, groupApi?: any, timeApi?: any) {
 
   // helper to build organiser-like refs from refactored APIs
   const _organiserRef = () => ({
-    days: (timeApi && timeApi.days ? timeApi.days.value : state.organiserData?.value?.days) || {},
+    days: (timeApi && timeApi.days ? timeApi.days.value : {}) || {},
     groups:
-      (groupApi && groupApi.list && groupApi.list.all
-        ? groupApi.list.all.value
-        : state.organiserData?.value?.groups) || [],
+      (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [],
     lastModified:
-      (timeApi && timeApi.lastModified
-        ? timeApi.lastModified.value
-        : state.organiserData?.value?.lastModified) || new Date().toISOString(),
+      (timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString()) ||
+      new Date().toISOString(),
   });
+  // persistence uses global `app('storage')` service (lazy-resolved)
 
   // Ensure mode-driven clearing of selection lives inside the API so views don't repeat logic
   watch(mode, (val) => {
@@ -45,31 +44,36 @@ export function createTaskApi(state: any, groupApi?: any, timeApi?: any) {
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = _organiserRef();
       const task = taskService.addTask(organiserData as any, date, taskData);
-      await state.saveData();
+      await app('storage')!.saveData();
       return task;
     },
 
     update: async (date: string, id: string, updates: any): Promise<void> => {
       taskService.updateTask(_organiserRef() as any, date, id, updates);
-      await state.saveData();
+      await app('storage')!.saveData();
     },
 
     delete: async (date: string, taskId: string): Promise<void> => {
       taskService.deleteTask(_organiserRef() as any, date, taskId);
-      await state.saveData();
+      await app('storage')!.saveData();
     },
     status: {
       toggleComplete: async (date: string, taskId: string): Promise<void> => {
         taskService.toggleTaskComplete(_organiserRef() as any, date, taskId);
-        await state.saveData();
+        {
+          await app('storage')!.saveData();
+        }
       },
 
       undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
         const changed = taskService.undoCycleDone(_organiserRef() as any, date, taskId);
-        if (changed) await state.saveData();
+        if (changed) {
+          await app('storage')!.saveData();
+        }
         return changed;
       },
     },
+    // persistence handled via global service `app('storage')`
     // Nested list helpers: `api.task.list.inRange(...)`, `api.task.list.byCategory(...)`, etc.
     list: {
       all: () => taskService.getTasksInRange(_organiserRef() as any, '1970-01-01', '9999-12-31'),

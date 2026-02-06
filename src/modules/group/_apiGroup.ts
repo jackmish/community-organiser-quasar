@@ -1,29 +1,31 @@
 import * as groupService from './groupService';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed, ref } from 'vue';
+import { app } from 'src/services/appService';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
-export function createGroupApi(state: any) {
+export function createGroupApi() {
   //// shared state REFS
   const activeGroup = ref<{ label: string; value: string | null } | null>(null);
   const groups = ref<any[]>([]);
   const parent = groupService.createParentComputed(groups, activeGroup);
+  // persistence uses global `app('storage')` service (lazy-resolved)
 
   return {
     add: async (payload: any) => {
       const group = groupService.addGroup(groups.value, payload);
-      await state.saveData();
+      await app('storage')!.saveData();
       return group;
     },
 
     update: async (groupId: string, updates: Partial<any>) => {
       groupService.updateGroup(groups.value, groupId, updates);
-      await state.saveData();
+      await app('storage')!.saveData();
     },
 
     delete: async (groupId: string) => {
       const res = groupService.deleteGroup(groups.value, groupId);
-      await state.saveData();
+      await app('storage')!.saveData();
       return res;
     },
 
@@ -54,5 +56,6 @@ export function createGroupApi(state: any) {
         return null;
       },
     },
+    // persistence handled via global service `app('storage')`
   } as const;
 }

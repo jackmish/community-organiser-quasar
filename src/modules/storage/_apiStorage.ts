@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
 
-export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
+export function createStorageApi(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
 
   const loadData = async () => {
@@ -66,10 +66,9 @@ export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
           if (requestedId) {
-            const groupsList =
-              (groupApi && groupApi.list && groupApi.list.all
-                ? groupApi.list.all.value
-                : store.organiserData?.value?.groups) || [];
+                const groupsList = (groupApi && groupApi.list && groupApi.list.all
+                  ? groupApi.list.all.value
+                  : []) || [];
             console.log('Restoring activeGroup:', {
               requestedId,
               groupsCount: (groupsList || []).length,
@@ -112,10 +111,8 @@ export function createStorageApi(store: any, groupApi?: any, timeApi?: any) {
       // If caller didn't provide data, build it from refactored APIs
       let payload = data;
       if (!payload) {
-        const groups =
-          groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
-        const days =
-          timeApi && timeApi.days ? timeApi.days.value : store.organiserData?.value?.days || {};
+        const groups = groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
+        const days = timeApi && timeApi.days ? timeApi.days.value : {};
         const lastModified =
           timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString();
         payload = { days, groups, lastModified };
