@@ -232,7 +232,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar';
 import logger from 'src/utils/logger';
 import * as api from 'src/modules/day-organiser/_apiRoot';
-import { useDayOrganiser } from 'src/modules/day-organiser';
+
 import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummaryFixed';
 import type { Task, TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/settings/FirstRunDialog.vue';
@@ -249,9 +249,9 @@ const currentDayData = computed(() => {
   const d = api.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: '' } as any);
 });
-// Use the compatibility wrapper from `useDayOrganiser` which assigns loaded data into `api.store`
-const loadData = useDayOrganiser().loadData;
-const addTask = api.task.add;
+// Use the storage API directly
+const loadData = api.storage.loadData;
+
 const deleteTask = api.task.delete;
 const toggleTaskComplete = api.task.status.toggleComplete;
 const updateTask = api.task.update;
@@ -271,13 +271,7 @@ const setPreviewTask = api.task.setPreviewTask;
 const undoCycleDone = api.task.status.undoCycleDone;
 
 // All tasks across days — used to render calendar events
-const allTasks = computed(() => {
-  try {
-    return getTasksInRange('1970-01-01', '9999-12-31');
-  } catch (e) {
-    return [] as Task[];
-  }
-});
+const allTasks = computed(() => api.task.list.all());
 
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
@@ -920,7 +914,11 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
 };
 
 onMounted(async () => {
-  await loadData();
+  try {
+    await loadData();
+  } catch (error) {
+    logger.error('Failed to load data on mount:', error);
+  }
 
   // Listen for global reload events (e.g. from MainLayout refresh button)
   // Handlers are assigned to outer-scope vars so cleanup can be registered synchronously

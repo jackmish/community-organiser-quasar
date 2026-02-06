@@ -10,6 +10,38 @@ export function createStorageApi(store: any) {
     console.log('apiStorage.loadData called');
     try {
       const data = await backendStorage.loadData();
+      // If backend returns groups with embedded `tasks`, reconstruct `days` map
+      const rawGroups = Array.isArray(data?.groups) ? data.groups : [];
+      const daysFromGroups: Record<string, any> = {};
+      const groupsHaveTasks = rawGroups.some((g: any) => Array.isArray(g.tasks) && g.tasks.length > 0);
+      if (groupsHaveTasks) {
+        for (const grp of rawGroups) {
+          const tasks = Array.isArray(grp.tasks) ? grp.tasks : [];
+          for (const t of tasks) {
+            try {
+              const dateKey = t?.date || t?.eventDate || new Date().toISOString().split('T')[0];
+              if (!daysFromGroups[dateKey]) daysFromGroups[dateKey] = { date: dateKey, tasks: [], notes: '' };
+              if (!t.groupId) t.groupId = grp.id;
+              daysFromGroups[dateKey].tasks.push(t);
+            } catch (e) {
+              void e;
+            }
+          }
+        }
+      }
+
+      // Populate the provided store so callers relying on api.store see data
+      try {
+        store.organiserData.value = {
+          days: Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {},
+          groups: rawGroups,
+          lastModified: data.lastModified || new Date().toISOString(),
+        };
+      } catch (e) {
+        // if store assignment fails, still return raw data
+        logger.warn('Failed to assign organiserData to store in api.storage.loadData', e);
+      }
+
       return data;
     } catch (err) {
       logger.error('apiStorage.loadData failed', err);
