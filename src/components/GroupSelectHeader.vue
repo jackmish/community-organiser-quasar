@@ -156,7 +156,12 @@ const options = computed(() => {
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label = (typeof cur === 'object' && cur.label) || (found && found.name) || curVal;
-      combined.push({ label, value: curVal, icon: found?.icon || 'folder', color: found?.color || null });
+      combined.push({
+        label,
+        value: curVal,
+        icon: found?.icon || 'folder',
+        color: found?.color || null,
+      });
     }
   }
 
