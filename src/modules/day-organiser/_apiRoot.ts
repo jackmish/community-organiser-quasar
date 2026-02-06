@@ -2,7 +2,6 @@ import { createStorageApi } from '../storage/_apiStorage';
 import { registerAppService } from 'src/services/appService';
 
 import * as apiTask from '../task/_apiTask';
-import * as taskService from '../task/taskService';
 import * as apiGroup from '../group/_apiGroup';
 import { createTimeApi } from '../time/_apiTime';
 
@@ -11,11 +10,6 @@ export const time = createTimeApi() as any;
 
 // Configure taskService default days getter so taskService can operate without
 // callers passing the days map explicitly.
-try {
-  taskService.setDefaultDaysGetter(() => (time && time.days ? time.days.value : {}));
-} catch (e) {
-  void e;
-}
 
 // Create APIs without passing a legacy `store` object. Storage will be
 // created and then wired to other APIs via their internal setters.

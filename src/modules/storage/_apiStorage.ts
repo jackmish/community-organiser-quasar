@@ -55,7 +55,7 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
               timeApi.lastModified.value = data.lastModified || new Date().toISOString();
             // Populate taskService flat list immediately so callers can use it
             try {
-              taskService.rebuildAllTasksList(finalDays || {});
+              taskService.buildFlatTasksList(finalDays || {});
             } catch (e) {
               void e;
             }

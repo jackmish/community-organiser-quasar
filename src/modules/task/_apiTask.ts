@@ -12,7 +12,7 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
 
   const getAll = () =>
-    taskService.flatTasks ? taskService.flatTasks.value : taskService.rebuildAllTasksList();
+    taskService.flatTasks ? taskService.flatTasks.value : taskService.buildFlatTasksList();
 
   const setTask = (payload: PreviewPayload) =>
     taskService.applyActiveSelection(activeTask, activeMode, timeApi, payload as any);

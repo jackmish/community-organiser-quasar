@@ -342,7 +342,7 @@ export const getAllTasks = (organiserData: OrganiserData): Task[] => {
   });
 };
 
-export const rebuildAllTasksList = (daysArg?: Record<string, any>): Task[] => {
+export const buildFlatTasksList = (daysArg?: Record<string, any>): Task[] => {
   const daysObj = daysArg || {};
   const out: Task[] = [];
   try {
@@ -447,7 +447,7 @@ export const attachDaysWatcher = (daysRef?: Ref<any>, onUpdate?: (tasks: Task[])
     if (!daysRef || typeof daysRef !== 'object') return () => {};
     // initial call
     try {
-      const initial = rebuildAllTasksList((daysRef as any).value || {});
+      const initial = buildFlatTasksList((daysRef as any).value || {});
       if (typeof onUpdate === 'function') onUpdate(initial);
     } catch (e) {
       // ignore
@@ -456,7 +456,7 @@ export const attachDaysWatcher = (daysRef?: Ref<any>, onUpdate?: (tasks: Task[])
       () => (daysRef as any).value,
       (newVal) => {
         try {
-          const out = rebuildAllTasksList(newVal || {});
+          const out = buildFlatTasksList(newVal || {});
           try {
             flatTasks.value = out;
           } catch (e) {
@@ -504,32 +504,3 @@ export const getIncompleteTasks = (organiserData: OrganiserData): Task[] => {
   });
   return tasks.sort((a, b) => a.date.localeCompare(b.date));
 };
-
-// default days getter can be configured by callers that have access to the
-// time API. By default it returns an empty map so unbound usages remain safe.
-let _defaultDaysGetter: () => Record<string, any> = () => ({});
-
-export const setDefaultDaysGetter = (g: () => Record<string, any>) => {
-  if (typeof g === 'function') _defaultDaysGetter = g;
-};
-
-// Convenience wrappers that use the configured default days getter so callers
-// can call taskService methods without passing an organiserData object.
-const _getOrganiser = () => ({ days: _defaultDaysGetter() }) as any;
-
-export const add = (date: string, taskData: any) => addTask(_getOrganiser(), date, taskData);
-export const update = (date: string, id: string, updates: any) =>
-  updateTask(_getOrganiser(), date, id, updates);
-export const remove = (date: string, id: string) => deleteTask(_getOrganiser(), date, id);
-export const toggleCompleteDefault = (date: string, id: string) =>
-  toggleTaskComplete(_getOrganiser(), date, id);
-export const undoCycleDoneDefault = (date: string, id: string) =>
-  undoCycleDone(_getOrganiser(), date, id);
-export const getAll = () => getAllTasks(_getOrganiser());
-export const getInRange = (start: string, end: string) =>
-  getTasksInRange(_getOrganiser(), start, end);
-export const getByCategory = (category: Task['category']) =>
-  getTasksByCategory(_getOrganiser(), category);
-export const getByPriority = (priority: Task['priority']) =>
-  getTasksByPriority(_getOrganiser(), priority);
-export const getIncomplete = () => getIncompleteTasks(_getOrganiser());
