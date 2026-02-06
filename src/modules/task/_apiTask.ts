@@ -29,8 +29,8 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
       await saveData();
       return t;
     },
-    update: async (date: string, task: Task) => {
-      svc.updateTask(date, task);
+    update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
+      svc.updateTask(date, taskOrId as any, maybeUpdates);
       await saveData();
     },
     delete: async (date: string, id: string) => {

@@ -326,7 +326,17 @@ export const createTaskService = (timeApi?: any) => {
 
   return {
     addTask: (date: string, data: any) => addTask(date, data),
-    updateTask: (date: string, task: Task) => updateTask(date, task),
+    updateTask: (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
+      if (typeof taskOrId === 'string') {
+        const id = taskOrId;
+        const updates = maybeUpdates || {};
+        const existing = getAll(timeApi).find((t) => String(t.id) === String(id));
+        if (!existing) throw new Error('Task not found');
+        const merged = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+        return updateTask(date, merged as Task);
+      }
+      return updateTask(date, taskOrId);
+    },
     deleteTask: (date: string, id: string) => deleteTask(date, id),
     toggleTaskComplete: (date: string, id: string) => toggleTaskComplete(date, id),
     undoCycleDone: (date: string, id: string) => undoCycleDone(date, id),
