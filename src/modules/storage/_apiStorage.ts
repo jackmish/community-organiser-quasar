@@ -66,9 +66,8 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
           if (requestedId) {
-                const groupsList = (groupApi && groupApi.list && groupApi.list.all
-                  ? groupApi.list.all.value
-                  : []) || [];
+            const groupsList =
+              (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [];
             console.log('Restoring activeGroup:', {
               requestedId,
               groupsCount: (groupsList || []).length,
@@ -111,7 +110,8 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
       // If caller didn't provide data, build it from refactored APIs
       let payload = data;
       if (!payload) {
-        const groups = groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
+        const groups =
+          groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
         const days = timeApi && timeApi.days ? timeApi.days.value : {};
         const lastModified =
           timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString();

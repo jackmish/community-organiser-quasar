@@ -19,8 +19,7 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   // helper to build organiser-like refs from refactored APIs
   const _organiserRef = () => ({
     days: (timeApi && timeApi.days ? timeApi.days.value : {}) || {},
-    groups:
-      (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [],
+    groups: (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [],
     lastModified:
       (timeApi && timeApi.lastModified ? timeApi.lastModified.value : new Date().toISOString()) ||
       new Date().toISOString(),

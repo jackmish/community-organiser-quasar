@@ -21,7 +21,6 @@ export function app(name: string) {
             try {
               return await value.apply(target, args);
             } catch (err) {
-              // eslint-disable-next-line no-console
               console.error(`app(${name}) ${String(prop)} threw`, err);
               return undefined;
             }
@@ -31,7 +30,6 @@ export function app(name: string) {
       },
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('app() lookup failed', err);
     return null;
   }
