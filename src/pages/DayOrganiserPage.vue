@@ -3,7 +3,7 @@
     <!-- top selector removed; groups shown in the header -->
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="text-center q-pa-lg">
+    <div v-if="api.storage.isLoading && api.storage.isLoading.value" class="text-center q-pa-lg">
       <q-spinner color="primary" size="3em" />
     </div>
 
@@ -20,13 +20,13 @@
                   style="align-items: center; margin-top: 6px"
                 >
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn flat dense round icon="chevron_left" @click="prevDay" color="primary" />
-                    <span class="date-black">{{ getTimeDifferenceDisplay(currentDate) }}</span>
+                    <q-btn flat dense round icon="chevron_left" @click="api.time.prevDay" color="primary" />
+                    <span class="date-black">{{ getTimeDifferenceDisplay(api.time.currentDate) }}</span>
                     <span class="q-mx-sm">|</span>
-                    <span :class="['text-weight-bold', getTimeDiffClass(currentDate)]">{{
-                      formatDateOnly(currentDate)
+                    <span :class="['text-weight-bold', getTimeDiffClass(api.time.currentDate)]">{{
+                      formatDateOnly(api.time.currentDate.value)
                     }}</span>
-                    <q-btn flat dense round icon="chevron_right" @click="nextDay" color="primary" />
+                    <q-btn flat dense round icon="chevron_right" @click="api.time.nextDay" color="primary" />
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div style="display: flex; align-items: center; gap: 8px">
@@ -174,7 +174,7 @@
         <AddTaskForm
           v-else
           :filtered-parent-options="filteredParentOptions"
-          :active-group="activeGroup"
+          :active-group="api.group.activeGroup"
           :show-calendar="false"
           :selected-date="newTask.eventDate"
           :all-tasks="allTasks"
@@ -242,33 +242,13 @@ import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUti
 
 const $q = useQuasar();
 
-const isLoading = api.storage.isLoading;
-const currentDate = api.time.currentDate;
 const currentDayData = computed(() => {
   const days = api.store.organiserData.value.days || {};
   const d = api.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: '' } as any);
 });
-// Use the storage API directly
-const loadData = api.storage.loadData;
 
-const deleteTask = api.task.delete;
-const toggleTaskComplete = api.task.status.toggleComplete;
-const updateTask = api.task.update;
-const getTasksInRange = api.task.list.inRange;
-const setCurrentDate = api.time.setCurrentDate;
-const nextDay = api.time.nextDay;
-const prevDay = api.time.prevDay;
-const groups = api.group.list.all;
-const activeGroup = api.group.activeGroup;
-const addGroup = api.group.add;
-const updateGroup = api.group.update;
-const getGroupsByParent = api.group.getGroupsByParent;
 const hiddenGroupSummary = createHiddenGroupSummary(api.store.organiserData, api.group.activeGroup);
-const previewTaskId = computed(() => api.store.previewTaskId.value);
-const previewTaskPayload = computed(() => api.store.previewTaskPayload.value);
-const setPreviewTask = api.task.setPreviewTask;
-const undoCycleDone = api.task.status.undoCycleDone;
 
 // All tasks across days — used to render calendar events
 const allTasks = computed(() => api.task.list.all());
@@ -306,8 +286,8 @@ const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
   mode,
   panelHidden,
   selectedTaskId,
-  currentDate,
-  setCurrentDate,
+  currentDate: api.time.currentDate,
+  setCurrentDate: api.time.setCurrentDate,
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
@@ -336,7 +316,7 @@ watch(taskToEdit, (val) => {
 const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
   editGroupLocal,
   showEditGroupDialog,
-  updateGroup,
+  updateGroup: api.group.update,
 });
 
 // When parent switches to 'add' mode (via ModeSwitcher), ensure no task remains selected
@@ -348,7 +328,7 @@ watch(mode, (val) => {
 });
 
 // Respond to preview requests coming from other parts of the app
-watch(previewTaskId, (id) => {
+watch(() => api.store.previewTaskId.value, (id) => {
   if (!id) return;
   // find task by id using the precomputed allTasks list (avoids awkward any/never types)
   let found: Task | null = null;
@@ -366,7 +346,7 @@ watch(previewTaskId, (id) => {
       const cycle = getCycleType(found as any);
       if (cycle) {
         toShow = { ...(found as any) } as Task;
-        (toShow as any).date = currentDate.value;
+        (toShow as any).date = api.time.currentDate.value;
       }
     } catch (e) {
       // ignore
@@ -377,21 +357,21 @@ watch(previewTaskId, (id) => {
     selectedTaskId.value = toShow.id;
     // also ensure the calendar/date syncs to the task date
     try {
-      setCurrentDate((toShow as any).date || toShow.eventDate || null);
+      api.time.setCurrentDate((toShow as any).date || toShow.eventDate || null);
     } catch (e) {
       // ignore
     }
   }
   // clear preview request after handling
   try {
-    setPreviewTask(null);
+    api.task.setPreviewTask(null);
   } catch (e) {
     // ignore
   }
 });
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
-watch(previewTaskPayload, (payload) => {
+watch(() => api.store.previewTaskPayload.value, (payload) => {
   if (!payload) return;
   try {
     handleCalendarPreview(payload);
@@ -400,7 +380,7 @@ watch(previewTaskPayload, (payload) => {
   }
   // clear payload after handling
   try {
-    setPreviewTask(null);
+    api.task.setPreviewTask(null);
   } catch (e) {
     void 0;
   }
@@ -418,13 +398,13 @@ const {
   parseYmdLocal,
   getTimeOffsetDaysForTask,
 } = createTaskViewHelpers({
-  currentDate,
-  setCurrentDate,
+  currentDate: api.time.currentDate,
+  setCurrentDate: api.time.setCurrentDate,
   currentDayData,
   allTasks,
-  groups,
-  activeGroup,
-  getGroupsByParent,
+  groups: api.group.list.all,
+  activeGroup: api.group.activeGroup,
+  getGroupsByParent: api.group.getGroupsByParent,
   setTaskToEdit,
   editTask,
 });
@@ -434,13 +414,13 @@ const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
   createCalendarHandlers({
     isClickBlocked,
     newTask,
-    setCurrentDate,
+    setCurrentDate: api.time.setCurrentDate,
     allTasks,
     editTask,
     setTaskToEdit,
     mode,
     selectedTaskId,
-    setPreviewTask,
+    setPreviewTask: api.task.setPreviewTask,
     notify: (opts: any) => $q.notify(opts),
   });
 
@@ -456,12 +436,12 @@ const {
   groupTree,
 } = createTaskComputed({
   currentDayData,
-  currentDate,
+  currentDate: api.time.currentDate,
   allTasks,
-  getTasksInRange,
-  groups,
-  activeGroup,
-  getGroupsByParent,
+  getTasksInRange: api.task.list.inRange,
+  groups: api.group.list.all,
+  activeGroup: api.group.activeGroup,
+  getGroupsByParent: api.group.getGroupsByParent,
   parseYmdLocal,
   getTimeOffsetDaysForTask,
   getCycleType,
@@ -476,15 +456,15 @@ const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return 'Unknown';
-  const group = groups.value.find((g: TaskGroup) => g.id === groupId);
-  return group ? group.name : 'Unknown'; // Type the g parameter in .find to remove implicit any
+  const group = api.group.list.all.value.find((g: TaskGroup) => g.id === groupId);
+  return group ? group.name : 'Unknown';
 };
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
-  setCurrentDate,
-  activeGroup,
-  currentDate,
+  setCurrentDate: api.time.setCurrentDate,
+  activeGroup: api.group.activeGroup,
+  currentDate: api.time.currentDate,
   allTasks,
   quasar: $q,
   taskToEdit,
@@ -495,7 +475,7 @@ const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
 const handleDeleteTask = async (payload: any) => {
   try {
     let id: string | undefined;
-    let date: string = currentDate.value;
+    let date: string = api.time.currentDate.value;
     if (!payload) return;
     if (typeof payload === 'string') {
       id = payload;
@@ -504,7 +484,7 @@ const handleDeleteTask = async (payload: any) => {
       if (payload.date) date = payload.date;
     }
     if (!id) return;
-    await deleteTask(date, id);
+    await api.task.delete(date, id);
     // If the deleted task was currently selected for preview/edit, switch back to create mode
     if (taskToEdit.value && taskToEdit.value.id === id) {
       taskToEdit.value = null;
@@ -524,8 +504,8 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
   // occurrence date when persisting per-occurrence completions.
   const isCyclic = Boolean(getCycleType(task));
   const targetDate = !isCyclic
-    ? task.date || task.eventDate || currentDate.value
-    : currentDate.value;
+    ? task.date || task.eventDate || api.time.currentDate.value
+    : api.time.currentDate.value;
   // status used for non-cyclic optimistic toggles — declare in outer scope
   let status = Number(task.status_id) === 0 ? 1 : 0;
   // If this is a 'prepare' time-mode task and user is trying to mark it done,
@@ -671,7 +651,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       animatingLines.value = [];
       try {
-        await updateTask(targetDate, task.id, { description: newDesc });
+        await api.task.update(targetDate, task.id, { description: newDesc });
       } finally {
         pendingToggles.delete(pendingKey);
       }
@@ -764,7 +744,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
       }
       animatingLines.value = [];
       try {
-        await updateTask(targetDate, task.id, { description: newDesc });
+        await api.task.update(targetDate, task.id, { description: newDesc });
       } finally {
         pendingToggles.delete(pendingKey);
       }
@@ -784,7 +764,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     } catch (e) {
       // ignore
     }
-    await updateTask(targetDate, task.id, { status_id: status });
+    await api.task.update(targetDate, task.id, { status_id: status });
     return;
   }
 
@@ -816,7 +796,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
         hist.some((h: any) => h && h.type === 'cycleDone' && h.date === targetDate);
       logger.debug('[toggleStatus] alreadyDone=', { taskId: task.id, targetDate, alreadyDone });
       if (alreadyDone) {
-        const undone = await undoCycleDone(targetDate, task.id);
+        const undone = await api.task.status.undoCycleDone(targetDate, task.id);
         if (undone) {
           logger.debug('[toggleStatus] undoCycleDone succeeded', { taskId: task.id, targetDate });
           const removeCycleDone = (obj: any) => {
@@ -849,7 +829,7 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
 
       // Otherwise mark the occurrence done
       logger.debug('[toggleStatus] calling toggleTaskComplete', { taskId: task.id, targetDate });
-      await toggleTaskComplete(targetDate, task.id);
+      await api.task.status.toggleComplete(targetDate, task.id);
       // optimistic local update so UI moves task to Done list
       try {
         const newEntry = {
@@ -897,16 +877,16 @@ const toggleStatus = async (task: any, lineIndex?: number) => {
     // ignore
   }
   try {
-    await updateTask(targetDate, task.id, { status_id: status });
+    await api.task.update(targetDate, task.id, { status_id: status });
   } finally {
     pendingToggles.delete(pendingKeyTask);
   }
 };
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await addGroup({ name: data.name, color: data.color, hideTasksFromParent: false });
+  const group = await api.group.add({ name: data.name, color: data.color, hideTasksFromParent: false });
   defaultGroupId.value = group.id;
-  activeGroup.value = {
+  api.group.activeGroup.value = {
     label: group.name,
     value: group.id,
   };
@@ -915,7 +895,7 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
 
 onMounted(async () => {
   try {
-    await loadData();
+    await api.storage.loadData();
   } catch (error) {
     logger.error('Failed to load data on mount:', error);
   }
@@ -932,8 +912,8 @@ onMounted(async () => {
     try {
       // If current active date is before today, move active day to today when refreshing
       const todayStr = format(new Date(), 'yyyy-MM-dd');
-      if (currentDate && currentDate.value) {
-        const cur = new Date(currentDate.value);
+      if (api.time.currentDate && api.time.currentDate.value) {
+        const cur = new Date(api.time.currentDate.value);
         const today = new Date(todayStr);
         // normalize to midnight for comparison
         const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
@@ -943,8 +923,8 @@ onMounted(async () => {
           today.getDate(),
         ).getTime();
         if (curNorm < todayNorm) {
-          try {
-            setCurrentDate(todayStr);
+            try {
+            api.time.setCurrentDate(todayStr);
           } catch (e) {
             // ignore
           }
@@ -964,13 +944,13 @@ onMounted(async () => {
   window.addEventListener('group:manage', organiserGroupManageHandler as EventListener);
 
   // Show first run dialog if no groups exist
-  if (groups.value.length === 0) {
+  if (api.group.list.all.value.length === 0) {
     showFirstRunDialog.value = true;
   } else {
     // Auto-select first group as active if groups exist
-    const firstGroup = groups.value[0];
-    if (firstGroup && !activeGroup.value) {
-      activeGroup.value = {
+    const firstGroup = api.group.list.all.value[0];
+    if (firstGroup && !api.group.activeGroup.value) {
+      api.group.activeGroup.value = {
         label: firstGroup.name,
         value: firstGroup.id,
       };

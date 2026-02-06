@@ -66,6 +66,22 @@ const emit = defineEmits([
   'edit-task',
 ]);
 
+// Robust active group label: supports either a plain object or a Ref-like object
+const activeGroupLabel = computed(() => {
+  const ag: any = (props as any).activeGroup;
+  if (!ag) return null;
+  return ag.label ?? (ag.value && ag.value.label) ?? null;
+});
+const activeGroupLabelShort = computed(() => {
+  const lab = activeGroupLabel.value;
+  if (!lab) return null;
+  try {
+    return String(lab).split(' (')[0];
+  } catch (e) {
+    return String(lab);
+  }
+});
+
 // Group menu state for edit-mode group changing
 const groupMenu = ref(false);
 const groups = api.group.list.all;
@@ -1986,7 +2002,7 @@ function onSubmit(event: Event) {
                                   (groups || []).find(
                                     (g: TaskGroup) => g.id === localNewTask.groupId,
                                   )?.name) ||
-                                (activeGroup && activeGroup.label.split(' (')[0]) ||
+                                activeGroupLabelShort ||
                                 'No group'
                               }}
                             </q-chip>
@@ -2057,7 +2073,7 @@ function onSubmit(event: Event) {
                                   (groups || []).find(
                                     (g: TaskGroup) => g.id === localNewTask.groupId,
                                   )?.name) ||
-                                activeGroup?.label?.split(' (')[0] ||
+                                activeGroupLabelShort ||
                                 'No group'
                               }}
                             </q-chip>
