@@ -1,6 +1,7 @@
 import type { OrganiserData, TaskGroup } from '../day-organiser/types';
 import { computed } from 'vue';
 import type { Ref } from 'vue';
+import logger from 'src/utils/logger';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { generateGroupId } from './groupId';
 import { normalizeId as normalizeGroupId } from './groupUtils';
@@ -210,6 +211,15 @@ export function goToParent(groupsRef: Ref<any[]>, activeRef: Ref<any>) {
     return activeRef.value;
   } catch (e) {
     return null;
+  }
+}
+
+// Set groups list into the provided ref with error handling/logging.
+export function setGroups(groupsRef: Ref<any[]>, arr: any[]) {
+  try {
+    groupsRef.value = Array.isArray(arr) ? arr : [];
+  } catch (err) {
+    logger.error('groupService.setGroups failed', err);
   }
 }
 

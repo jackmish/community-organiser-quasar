@@ -4,7 +4,7 @@ import { computed, ref } from 'vue';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
 export function createGroupApi(state: any) {
-  //// REFS - included in exported API
+  //// shared state REFS
   const activeGroup = ref<{ label: string; value: string | null } | null>(null);
   const groups = ref<any[]>([]);
   const parent = groupService.createParentComputed(groups, activeGroup);
@@ -32,11 +32,7 @@ export function createGroupApi(state: any) {
       all: computed(() => groups.value || []),
       getGroupsByParent: (parentId?: string) => getGroupsByParentUtil(groups.value || [], parentId),
       setGroups: (arr: any[]) => {
-        try {
-          groups.value = Array.isArray(arr) ? arr : [];
-        } catch (e) {
-          // ignore
-        }
+        groupService.setGroups(groups, arr);
       },
       tree: groupService.createTreeComputed(groups),
     },
