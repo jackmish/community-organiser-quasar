@@ -13,11 +13,21 @@ export const flatTasks = ref<Task[]>([]);
 
 type DaysMap = Record<string, any>;
 
-// Module-level days map; can be initialized by passing a `time` API via `setTimeApi`.
+// Module-level days map/ref; can be initialized by passing a `time` API via `setTimeApi`.
 let daysMap: DaysMap = {} as DaysMap;
+let daysRef: Ref<any> | undefined;
+
+const getDays = () => {
+  try {
+    return (daysRef && (daysRef as any).value) || daysMap || {};
+  } catch (e) {
+    return daysMap || {};
+  }
+};
 
 export const setTimeApi = (t: any) => {
   try {
+    daysRef = t && t.days ? t.days : undefined;
     daysMap = t && t.days ? t.days.value : {};
   } catch (e) {
     daysMap = {} as DaysMap;
@@ -96,9 +106,9 @@ export const addTask = (
   }
 
   if (!daysMap[date]) {
-    daysMap[date] = { date, tasks: [], notes: '' } as any;
+    getDays()[date] = { date, tasks: [], notes: '' } as any;
   }
-  daysMap[date].tasks.push(task);
+  getDays()[date].tasks.push(task);
   try {
     flatTasks.value.push(task);
     flatTasks.value.sort(
@@ -112,7 +122,7 @@ export const addTask = (
 
 export const updateTask = (date: string, taskObj: Task): void => {
   // Minimal/dumb updater: only operate within the provided date bucket.
-  const day = daysMap && daysMap[date];
+  const day = getDays()[date];
   if (!day || !Array.isArray(day.tasks)) throw new Error('Task not found in provided day');
   // Prefer identity match; if not found, try matching by id inside the same day.
   let idx = day.tasks.findIndex((t: any) => t === taskObj);
@@ -142,24 +152,24 @@ export const updateTask = (date: string, taskObj: Task): void => {
 };
 
 export const deleteTask = (date: string, taskId: string): boolean => {
+  let removed = false;
   try {
-    const dayData = daysMap[date];
+    const dayData = getDays()[date];
     if (dayData && Array.isArray(dayData.tasks)) {
       const before = dayData.tasks.length;
-      dayData.tasks = dayData.tasks.filter((t: any) => t.id !== taskId);
-      if (dayData.tasks.length < before) return true;
+      dayData.tasks = dayData.tasks.filter((t: any) => String(t.id) !== String(taskId));
+      if (dayData.tasks.length < before) removed = true;
     }
   } catch (e) {
     // continue to global search
   }
 
-  let removed = false;
   try {
-    for (const dKey of Object.keys(daysMap)) {
-      const d = daysMap[dKey];
+    for (const dKey of Object.keys(getDays())) {
+      const d = getDays()[dKey];
       if (!d || !Array.isArray(d.tasks)) continue;
       const before = d.tasks.length;
-      d.tasks = d.tasks.filter((t: any) => t.id !== taskId);
+      d.tasks = d.tasks.filter((t: any) => String(t.id) !== String(taskId));
       if (d.tasks.length < before) removed = true;
     }
   } catch (err) {
@@ -177,12 +187,12 @@ export const deleteTask = (date: string, taskId: string): boolean => {
 };
 
 export const toggleTaskComplete = (date: string, taskId: string): void => {
-  const dayData = daysMap[date];
+  const dayData = getDays()[date];
   let task = dayData?.tasks?.find((t: any) => t.id === taskId);
 
   if (!task) {
-    for (const dKey of Object.keys(daysMap)) {
-      const d = daysMap[dKey];
+    for (const dKey of Object.keys(getDays())) {
+      const d = getDays()[dKey];
       if (!d || !Array.isArray(d.tasks)) continue;
       const found = d.tasks.find((t: any) => t.id === taskId);
       if (found) {
@@ -226,8 +236,8 @@ export const toggleTaskComplete = (date: string, taskId: string): void => {
 
 export const undoCycleDone = (date: string, taskId: string): boolean => {
   try {
-    for (const dayKey of Object.keys(daysMap)) {
-      const day = daysMap[dayKey];
+    for (const dayKey of Object.keys(getDays())) {
+      const day = getDays()[dayKey];
       if (!day || !Array.isArray(day.tasks)) continue;
       const task = day.tasks.find((t: any) => t.id === taskId);
       if (task) {
@@ -260,10 +270,10 @@ export const getTasksInRange = (startDate: string, endDate: string): Task[] => {
   const tasks: Task[] = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
-  Object.keys(daysMap).forEach((date) => {
+  Object.keys(getDays()).forEach((date) => {
     const current = new Date(date);
     if (current >= start && current <= end) {
-      const dayTasks = daysMap[date]?.tasks;
+      const dayTasks = getDays()[date]?.tasks;
       if (dayTasks) tasks.push(...dayTasks);
     }
   });
@@ -277,8 +287,8 @@ export const getTasksInRange = (startDate: string, endDate: string): Task[] => {
 export const getAllTasks = (): Task[] => {
   const tasks: Task[] = [];
   try {
-    Object.keys(daysMap).forEach((date) => {
-      const dayTasks = daysMap[date]?.tasks;
+    Object.keys(getDays()).forEach((date) => {
+      const dayTasks = getDays()[date]?.tasks;
       if (dayTasks) tasks.push(...dayTasks);
     });
   } catch (e) {
@@ -531,7 +541,7 @@ export const attachDaysWatcher = (daysRef?: Ref<any>, onUpdate?: (tasks: Task[])
 };
 
 export const getTasksByCategory = (category: Task['category']): Task[] => {
-  const days = daysMap;
+  const days = getDays();
   const tasks: Task[] = [];
   Object.values(days).forEach((day: any) => {
     tasks.push(...(day.tasks || []).filter((t: Task) => t.category === category));
@@ -540,7 +550,7 @@ export const getTasksByCategory = (category: Task['category']): Task[] => {
 };
 
 export const getTasksByPriority = (priority: Task['priority']): Task[] => {
-  const days = daysMap;
+  const days = getDays();
   const tasks: Task[] = [];
   Object.values(days).forEach((day: any) => {
     tasks.push(...(day.tasks || []).filter((t: Task) => t.priority === priority));
@@ -549,7 +559,7 @@ export const getTasksByPriority = (priority: Task['priority']): Task[] => {
 };
 
 export const getIncompleteTasks = (): Task[] => {
-  const days = daysMap;
+  const days = getDays();
   const tasks: Task[] = [];
   Object.values(days).forEach((day: any) => {
     tasks.push(...(day.tasks || []).filter((t: Task) => Number((t as any).status_id) !== 0));
