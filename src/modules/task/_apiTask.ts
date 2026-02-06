@@ -4,7 +4,7 @@ import * as taskService from './taskService';
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { app } from 'src/services/appService';
-import { appSaveData } from 'src/utils/storageUtils';
+import { saveData } from 'src/utils/storageUtils';
 
 export type PreviewPayload = string | number | Task | null;
 
@@ -44,31 +44,31 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
     add: async (date: string, taskData: any): Promise<Task> => {
       const organiserData = _organiserRef();
       const task = taskService.addTask(organiserData as any, date, taskData);
-      await appSaveData();
+      await saveData();
       return task;
     },
 
     update: async (date: string, id: string, updates: any): Promise<void> => {
       taskService.updateTask(_organiserRef() as any, date, id, updates);
-      await appSaveData();
+      await saveData();
     },
 
     delete: async (date: string, taskId: string): Promise<void> => {
       taskService.deleteTask(_organiserRef() as any, date, taskId);
-      await appSaveData();
+      await saveData();
     },
     status: {
       toggleComplete: async (date: string, taskId: string): Promise<void> => {
         taskService.toggleTaskComplete(_organiserRef() as any, date, taskId);
         {
-          await appSaveData();
+          await saveData();
         }
       },
 
       undoCycleDone: async (date: string, taskId: string): Promise<boolean> => {
         const changed = taskService.undoCycleDone(_organiserRef() as any, date, taskId);
         if (changed) {
-          await appSaveData();
+          await saveData();
         }
         return changed;
       },
