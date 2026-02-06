@@ -66,6 +66,12 @@ export function createGroupApi(state: any) {
       }
     },
 
+    // clear active group selection
+    selectAll: () => {
+      activeGroup.value = null;
+      return null;
+    },
+
     // build tree from state.organiserData when requested (uses getGroupsByParent)
     tree: computed(() => {
       const buildTree = (parentId?: string): any[] => {

@@ -27,7 +27,7 @@
         <q-menu v-model="menuOpen" anchor="bottom left" self="top left" :offset="[0, 6]">
           <div style="min-width: 260px; max-height: 60vh; overflow: auto; padding: 8px">
             <q-list padding>
-              <q-item clickable v-ripple @click="selectAll">
+              <q-item clickable v-ripple @click="onSelectAll">
                 <q-item-section avatar style="min-width: 36px">
                   <q-icon name="folder_open" />
                 </q-item-section>
@@ -254,8 +254,10 @@ watch(
   { immediate: true },
 );
 
-function selectAll() {
-  activeGroup.value = null;
+function onSelectAll() {
+  // delegate the canonical selection change to the shared API
+  api.group.selectAll();
+  // keep local UI state in sync
   localValue.value = null;
   menuOpen.value = false;
   prevValue = null;
@@ -283,24 +285,6 @@ function openManage() {
 
 const parentButtonVisible = computed(() => Boolean(parentGroup.value));
 const parentName = computed(() => (parentGroup.value ? parentGroup.value.name : null));
-
-// navigation to parent handled by shared API: `api.group.goToParent()`
-
-watch(
-  () => menuOpen.value,
-  (v) => {
-    try {
-      logger.debug(
-        '[GroupSelectHeader] menuOpen=',
-        v,
-        'treeNodes.len=',
-        (treeNodes.value || []).length,
-      );
-    } catch (e) {
-      // ignore
-    }
-  },
-);
 </script>
 
 <style scoped></style>
