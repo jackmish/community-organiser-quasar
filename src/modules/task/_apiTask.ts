@@ -13,33 +13,23 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   const activeTask = ref<Task | null>(null);
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
 
-  const setActiveTask = (payload: PreviewPayload) =>
-    svc.applyActiveSelection(activeTask, activeMode, payload as any);
-
-  function setMode(m: 'add' | 'edit' | 'preview') {
-    activeMode.value = m;
-    if (m === 'add') activeTask.value = null;
-  }
-
   return {
-    active: { task: activeTask, mode: activeMode, setTask: setActiveTask, setMode },
+    active: {
+      task: activeTask,
+      mode: activeMode,
+      setTask: (payload: PreviewPayload) =>
+        svc.applyActiveSelection(activeTask, activeMode, payload as any),
+      setMode: (m: 'add' | 'edit' | 'preview') => {
+        activeMode.value = m;
+        if (m === 'add') activeTask.value = null;
+      },
+    },
     add: async (date: string, taskData: any) => {
       const t = svc.addTask(date, taskData);
       await saveData();
       return t;
     },
-    subtaskLine: {
-      toggleStatus: async (task: any, lineIndex: number) => {
-        const res = await (svc as any).subtaskLine.toggleStatus(task, lineIndex);
-        if (res && res.newDesc) await saveData();
-        return res;
-      },
-      add: async (text: string) => {
-        const res = await (svc as any).subtaskLine.add(activeTask.value, text);
-        if (res && res.newDesc) await saveData();
-        return res;
-      },
-    },
+
     update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
       svc.updateTask(date, taskOrId as any, maybeUpdates);
       await saveData();
@@ -76,6 +66,18 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
               ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
           ),
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) => svc.getAll().reduce(fn, init),
+    },
+    subtaskLine: {
+      add: async (text: string) => {
+        const res = await (svc as any).subtaskLine.add(activeTask.value, text);
+        if (res && res.newDesc) await saveData();
+        return res;
+      },
+      toggleStatus: async (task: any, lineIndex: number) => {
+        const res = await (svc as any).subtaskLine.toggleStatus(task, lineIndex);
+        if (res && res.newDesc) await saveData();
+        return res;
+      },
     },
   } as const;
 }
