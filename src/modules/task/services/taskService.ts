@@ -1,5 +1,5 @@
 import { getCycleType } from '../utlils/occursOnDay';
-import { watch, ref } from 'vue';
+import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineService from './subtaskLine/subtaskLineService';
 import type { Task } from '../types';
@@ -483,39 +483,6 @@ export const applyActiveSelection = (
     } catch (err) {
       // ignore
     }
-  }
-};
-
-export const attachDaysWatcher = (daysRef?: Ref<any>, onUpdate?: (tasks: Task[]) => void) => {
-  try {
-    if (!daysRef || typeof daysRef !== 'object') return () => {};
-    // initial call
-    try {
-      const initial = buildFlatTasksList((daysRef as any).value || {});
-      if (typeof onUpdate === 'function') onUpdate(initial);
-    } catch (e) {
-      // ignore
-    }
-    const stop = watch(
-      () => (daysRef as any).value,
-      (newVal) => {
-        try {
-          const out = buildFlatTasksList(newVal || {});
-          try {
-            flatTasks.value = out;
-          } catch (e) {
-            // ignore
-          }
-          if (typeof onUpdate === 'function') onUpdate(out);
-        } catch (e) {
-          // ignore
-        }
-      },
-      { deep: true, immediate: false },
-    );
-    return stop;
-  } catch (e) {
-    return () => {};
   }
 };
 
