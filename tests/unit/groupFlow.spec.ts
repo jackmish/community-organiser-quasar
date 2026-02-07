@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { addGroup, deleteGroup } from '../../src/modules/group/groupService';
+import { addGroup, deleteGroup } from '../../src/modules/group/groupManager';
 import { addTask, updateTask } from '../../src/modules/task/taskService';
 
 let data: any;

@@ -219,7 +219,7 @@ export function setGroups(groupsRef: Ref<any[]>, arr: any[]) {
   try {
     groupsRef.value = Array.isArray(arr) ? arr : [];
   } catch (err) {
-    logger.error('groupService.setGroups failed', err);
+    logger.error('groupManager.setGroups failed', err);
   }
 }
 

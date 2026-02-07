@@ -1,4 +1,4 @@
-import * as groupService from './groupService';
+import * as groupManager from './groupManager';
 import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
 import { computed, ref } from 'vue';
 import { app } from 'src/services/appService';
@@ -9,23 +9,23 @@ export function construct() {
   //// shared state REFS
   const activeGroup = ref<{ label: string; value: string | null } | null>(null);
   const groups = ref<any[]>([]);
-  const parent = groupService.createParentComputed(groups, activeGroup);
+  const parent = groupManager.createParentComputed(groups, activeGroup);
   // persistence uses global `app('storage')` service (lazy-resolved)
 
   return {
     add: async (payload: any) => {
-      const group = groupService.addGroup(groups.value, payload);
+      const group = groupManager.addGroup(groups.value, payload);
       await saveData();
       return group;
     },
 
     update: async (groupId: string, updates: Partial<any>) => {
-      groupService.updateGroup(groups.value, groupId, updates);
+      groupManager.updateGroup(groups.value, groupId, updates);
       await saveData();
     },
 
     delete: async (groupId: string) => {
-      const res = groupService.deleteGroup(groups.value, groupId);
+      const res = groupManager.deleteGroup(groups.value, groupId);
       await saveData();
       return res;
     },
@@ -35,9 +35,9 @@ export function construct() {
       all: computed(() => groups.value || []),
       getGroupsByParent: (parentId?: string) => getGroupsByParentUtil(groups.value || [], parentId),
       setGroups: (arr: any[]) => {
-        groupService.setGroups(groups, arr);
+        groupManager.setGroups(groups, arr);
       },
-      tree: groupService.createTreeComputed(groups),
+      tree: groupManager.createTreeComputed(groups),
     },
 
     // active-related helpers grouped under `active`
@@ -48,8 +48,8 @@ export function construct() {
       // expose parent computed
       parent,
 
-      // navigate activeGroup to its parent (delegates to groupService.goToParent)
-      goToParent: () => groupService.goToParent(groups, activeGroup),
+      // navigate activeGroup to its parent (delegates to groupManager.goToParent)
+      goToParent: () => groupManager.goToParent(groups, activeGroup),
 
       // clear active group selection
       selectAll: () => {
