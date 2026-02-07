@@ -317,7 +317,7 @@ export const getAll = (timeApi?: any): Task[] => {
 // Factory that binds a `timeApi` to a simple service object. It sets the
 // module-level days map (via `setTimeApi`) for compatibility, then returns
 // wrappers that operate using the provided `timeApi` where appropriate.
-export const createTaskService = (timeApi?: any) => {
+export const construct = (timeApi?: any) => {
   try {
     setTimeApi(timeApi);
   } catch (e) {

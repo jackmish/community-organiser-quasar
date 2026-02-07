@@ -8,7 +8,7 @@ export type PreviewPayload = string | number | Task | null;
 // Factory to create a task API bound to the given state object
 export function createTaskApi(groupApi?: any, timeApi?: any) {
   // Construct a task service instance
-  const svc = taskService.createTaskService(timeApi);
+  const svc = taskService.construct(timeApi);
 
   const activeTask = ref<Task | null>(null);
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
