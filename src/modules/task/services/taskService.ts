@@ -2,28 +2,40 @@ import { getCycleType } from '../utlils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineService from './subtaskLine/subtaskLineService';
+import type { ApiTask } from '../_apiTask';
 import type { Task } from '../types';
 
 // Factory that binds a `timeApi` to a simple service object. It sets the
 // module-level days map (via `setTimeApi`) for compatibility, then returns
 // wrappers that operate using the provided `timeApi` where appropriate.
 export class TaskService {
-  timeApi: any;
-  services: { subtaskLine: any };
+  timeApi: unknown;
+  services: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
+  // preserve provided active state for sub-services that expect it
+  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> };
 
-  constructor(
-    timeApi?: any,
-    state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
-  ) {
+  constructor(apiOrTimeApi?: ApiTask | unknown) {
+    // Accept either an ApiTask/TaskApi instance (which contains `.state` and
+    // `.timeApi`) or a raw `timeApi` object for backward compatibility.
     try {
-      setTimeApi(timeApi);
+      if (apiOrTimeApi && typeof apiOrTimeApi === 'object' && (apiOrTimeApi as any).state) {
+        const apiInstance = apiOrTimeApi as ApiTask;
+        setTimeApi(apiInstance.timeApi);
+        this.timeApi = apiInstance.timeApi;
+        this.state = apiInstance.state;
+      } else {
+        setTimeApi(apiOrTimeApi);
+        this.timeApi = apiOrTimeApi;
+        this.state = undefined;
+      }
     } catch (e) {
       // ignore
+      this.timeApi = undefined;
+      this.state = undefined;
     }
-    this.timeApi = timeApi;
     // Construct sub-services and pass this service instance where expected
     this.services = {
-      subtaskLine: SubtaskLineService.construct(state as any, this, timeApi),
+      subtaskLine: SubtaskLineService.construct(this),
     };
   }
 
@@ -48,23 +60,6 @@ export class TaskService {
     payload: string | number | Task | null,
   ) => applyActiveSelection(activeTaskRef, activeModeRef, payload as any);
 }
-
-export const construct = (
-  maybeApiOrTimeApi?: any,
-  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
-) => {
-  // Backwards-compatible: if an ApiTask instance was passed (it contains a
-  // `state` and `timeApi`), extract those and construct the service.
-  try {
-    if (maybeApiOrTimeApi && typeof maybeApiOrTimeApi === 'object' && maybeApiOrTimeApi.state) {
-      const apiInstance = maybeApiOrTimeApi;
-      return new TaskService(apiInstance.timeApi, apiInstance.state);
-    }
-  } catch (e) {
-    // fall back
-  }
-  return new TaskService(maybeApiOrTimeApi, state);
-};
 
 //// Chaotic generative AI code, not sorted or organized yet.
 // Generate unique ID

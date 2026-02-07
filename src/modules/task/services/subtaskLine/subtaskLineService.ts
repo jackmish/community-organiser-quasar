@@ -1,46 +1,35 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../../types';
+import type { TaskService } from '../../taskService';
 import { getCycleType } from '../../utlils/occursOnDay';
 
-export function construct(
-  stateOrActiveTask: any,
-  // Accept either an `opts` object or (legacy) a `taskService` object and `timeApi`
-  optsOrTaskService?: any,
-  maybeTimeApi?: any,
-) {
-  // Normalize options into expected shape: { timeApi?, persist? }
-  // `persist` may return a Promise or void; callers will await it.
+export function construct(taskService: TaskService) {
+  // Accept only a TaskService instance. Extract `state` and `timeApi` and
+  // build an `opts` object that delegates persistence to
+  // `taskService.updateTask(date, taskObj)`.
+  let stateOrActiveTask: any = undefined;
   let opts:
     | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
     | undefined = undefined;
   try {
-    if (
-      optsOrTaskService &&
-      typeof optsOrTaskService === 'object' &&
-      (optsOrTaskService.timeApi || optsOrTaskService.persist)
-    ) {
-      opts = optsOrTaskService;
-    } else if (optsOrTaskService && typeof optsOrTaskService === 'object') {
-      const taskService = optsOrTaskService;
+    if (taskService && typeof taskService === 'object') {
+      stateOrActiveTask = taskService.state;
       opts = {
-        timeApi: maybeTimeApi,
+        timeApi: taskService.timeApi,
         persist: async (date: string, taskObj: Task) => {
           try {
             if (typeof taskService.updateTask === 'function') {
-              // updateTask is synchronous currently; wrap in Promise.resolve to allow awaiting
               await Promise.resolve(taskService.updateTask(date, taskObj));
             }
           } catch (e) {
-            // ignore
+            // ignore persistence failures
           }
         },
       };
-    } else if (maybeTimeApi) {
-      opts = { timeApi: maybeTimeApi };
     }
   } catch (e) {
-    opts = optsOrTaskService;
+    // fall back to undefined state/opts
   }
   // Accept either a state object with `activeTask`, a direct `Ref<Task|null>`,
   // or `undefined`. If nothing is provided create an internal activeTask ref.

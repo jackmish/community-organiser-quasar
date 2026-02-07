@@ -1,6 +1,6 @@
 import type { Task } from './types';
 import * as taskService from './services/taskService';
-import type { TaskService } from './services/taskService';
+import { TaskService } from './services/taskService';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
@@ -29,7 +29,7 @@ export class ApiTask {
     };
     // Pass the ApiTask instance to the task service; taskService.construct will
     // detect and pull `time` and `state` from this object.
-    this.svc = taskService.construct(this as any);
+    this.svc = new TaskService(this);
   }
 
   get active() {
