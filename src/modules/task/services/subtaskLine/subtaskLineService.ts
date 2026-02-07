@@ -14,9 +14,9 @@ export function construct(taskService: TaskService) {
     | undefined = undefined;
   try {
     if (taskService && typeof taskService === 'object') {
-      stateOrActiveTask = taskService.state;
+      stateOrActiveTask = taskService.apiTask && (taskService.apiTask.state as any);
       opts = {
-        timeApi: taskService.timeApi,
+        timeApi: taskService.apiTask && taskService.apiTask.timeApi,
         persist: async (date: string, taskObj: Task) => {
           try {
             if (typeof taskService.updateTask === 'function') {

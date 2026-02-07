@@ -5,35 +5,17 @@ import * as SubtaskLineService from './subtaskLine/subtaskLineService';
 import type { ApiTask } from '../_apiTask';
 import type { Task } from '../types';
 
-// Factory that binds a `timeApi` to a simple service object. It sets the
-// module-level days map (via `setTimeApi`) for compatibility, then returns
-// wrappers that operate using the provided `timeApi` where appropriate.
 export class TaskService {
-  timeApi: unknown;
+  apiTask: ApiTask | undefined;
   services: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
-  // preserve provided active state for sub-services that expect it
-  state:
-    | { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> }
-    | undefined;
 
-  constructor(apiOrTimeApi?: ApiTask | Record<string, unknown>) {
-    // Accept either an ApiTask/TaskApi instance (which contains `.state` and
-    // `.timeApi`) or a raw `timeApi` object for backward compatibility.
+  constructor(apiTask?: ApiTask) {
     try {
-      if (apiOrTimeApi && typeof apiOrTimeApi === 'object' && (apiOrTimeApi as any).state) {
-        const apiInstance = apiOrTimeApi as ApiTask;
-        setTimeApi(apiInstance.timeApi);
-        this.timeApi = apiInstance.timeApi;
-        this.state = apiInstance.state;
-      } else {
-        setTimeApi(apiOrTimeApi);
-        this.timeApi = apiOrTimeApi;
-      }
+      this.apiTask = apiTask;
+      setTimeApi(apiTask?.timeApi);
     } catch (e) {
       // ignore
-      this.timeApi = undefined;
     }
-    // Construct sub-services and pass this service instance where expected
     this.services = {
       subtaskLine: SubtaskLineService.construct(this),
     };
@@ -41,16 +23,16 @@ export class TaskService {
 
   addTask = (date: string, data: any) => addTask(date, data);
   updateTask = (date: string, taskOrId: Task | string, maybeUpdates?: any) =>
-    updateTask(date, taskOrId as any, maybeUpdates, this.timeApi);
+    updateTask(date, taskOrId as any, maybeUpdates, this.apiTask?.timeApi);
   deleteTask = (date: string, id: string) => deleteTask(date, id);
   toggleTaskComplete = (date: string, id: string) => toggleTaskComplete(date, id);
   undoCycleDone = (date: string, id: string) => undoCycleDone(date, id);
-  getAll = () => getAll(this.timeApi);
+  getAll = () => getAll(this.apiTask?.timeApi);
   getTasksInRange = (s: string, e: string) => getTasksInRange(s, e);
   getTasksByCategory = (c: Task['category']) => getTasksByCategory(c);
   getTasksByPriority = (p: Task['priority']) => getTasksByPriority(p);
   getIncompleteTasks = () => getIncompleteTasks();
-  buildFlatTasksList = (daysArg?: Record<string, any>) => buildFlatTasksList(daysArg);
+  buildFlatTasksList = (daysArg?: Record<string, any>) => listFromDays(daysArg);
   get flatTasks() {
     return flatTasks;
   }
@@ -61,18 +43,12 @@ export class TaskService {
   ) => applyActiveSelection(activeTaskRef, activeModeRef, payload as any);
 }
 
-//// Chaotic generative AI code, not sorted or organized yet.
-// Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-// (No module-level flat list here) task lists are built from organiser data on demand.
-
-// Reactive flat list exposed for callers that want to observe all tasks.
 export const flatTasks = ref<Task[]>([]);
 
 type DaysMap = Record<string, any>;
 
-// Module-level days map/ref; can be initialized by passing a `time` API via `setTimeApi`.
 let daysMap: DaysMap = {} as DaysMap;
 let daysRef: Ref<any> | undefined;
 let currentTimeApi: any = undefined;
@@ -116,7 +92,7 @@ export const addTask = (
     // ignore
   }
 
-  if (!daysMap[date]) {
+  if (!getDays()[date]) {
     getDays()[date] = { date, tasks: [], notes: '' } as any;
   }
   getDays()[date].tasks.push(task);
@@ -137,7 +113,6 @@ export const updateTask = (
   maybeUpdates?: any,
   timeApi?: any,
 ): void => {
-  // Resolve string id -> merged Task using the provided `timeApi` (if any)
   let taskObj: Task;
   if (typeof taskOrId === 'string') {
     const id = taskOrId;
@@ -149,17 +124,14 @@ export const updateTask = (
     taskObj = taskOrId;
   }
 
-  // Minimal/dumb updater: only operate within the provided date bucket.
   const day = getDays()[date];
   if (!day || !Array.isArray(day.tasks)) throw new Error('Task not found in provided day');
-  // Prefer identity match; if not found, try matching by id inside the same day.
   let idx = day.tasks.findIndex((t: any) => t === taskObj);
   if (idx === -1) idx = day.tasks.findIndex((t: any) => String(t.id) === String(taskObj.id));
   if (idx === -1) throw new Error('Task not found in provided day');
 
   const existing = day.tasks[idx];
   try {
-    // Merge provided task object's fields into the existing task and update timestamp
     if (existing) {
       Object.assign(existing, taskObj, { updatedAt: new Date().toISOString() });
       try {
@@ -203,7 +175,7 @@ export const deleteTask = (date: string, taskId: string): boolean => {
   } catch (err) {
     // ignore
   }
-  // update flatTasks cache
+
   try {
     if (removed) {
       flatTasks.value = flatTasks.value.filter((t) => String(t.id) !== String(taskId));
@@ -251,7 +223,6 @@ export const toggleTaskComplete = (date: string, taskId: string): void => {
     task.status_id = 1;
   }
   task.updatedAt = new Date().toISOString();
-  // no module-level cache update here
   try {
     const fi = flatTasks.value.findIndex((t: any) => String(t.id) === String(task.id));
     if (fi !== -1) {
@@ -329,22 +300,6 @@ export const getAllTasks = (): Task[] => {
   });
 };
 
-// Prefer cached `flatTasks` when available, otherwise build from a provided
-// `timeApi.days` or fall back to `getAllTasks()`.
-export const getAll = (timeApi?: any): Task[] => {
-  try {
-    const maybe = (flatTasks as any).value;
-    if (Array.isArray(maybe) && maybe.length > 0) return maybe as Task[];
-  } catch (e) {
-    // ignore
-  }
-  if (timeApi && timeApi.days) return listFromDays(timeApi.days.value || {});
-  return getAllTasks();
-};
-
-// Build a sorted flat list from a days map WITHOUT mutating the module-level
-// `flatTasks` reactive cache. Use this when callers need a snapshot for
-// rendering and should not trigger side-effects.
 export const listFromDays = (daysArg?: Record<string, any>): Task[] => {
   const daysObj = daysArg || {};
   const out: Task[] = [];
@@ -363,172 +318,65 @@ export const listFromDays = (daysArg?: Record<string, any>): Task[] => {
   });
 };
 
+export const getAll = (timeApi?: any): Task[] => {
+  try {
+    const maybe = (flatTasks as any).value;
+    if (Array.isArray(maybe) && maybe.length > 0) return maybe as Task[];
+  } catch (e) {
+    // ignore
+  }
+  if (timeApi && timeApi.days) return listFromDays(timeApi.days.value || {});
+  return getAllTasks();
+};
+
+export const getTasksByCategory = (c: Task['category']): Task[] => {
+  return getAll().filter((t) => t.category === c);
+};
+
+export const getTasksByPriority = (p: Task['priority']): Task[] => {
+  return getAll().filter((t) => t.priority === p);
+};
+
+export const getIncompleteTasks = (): Task[] => {
+  return getAll().filter((t) => Number(t.status_id) === 0);
+};
+
 export const buildFlatTasksList = (daysArg?: Record<string, any>): Task[] => {
-  const daysObj = daysArg || {};
-  const out: Task[] = [];
-  try {
-    for (const key of Object.keys(daysObj || {})) {
-      const d = daysObj[key];
-      if (d && Array.isArray(d.tasks)) out.push(...(d.tasks as Task[]));
-    }
-  } catch (e) {
-    // ignore
-  }
-  const sorted = out.sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) return dateCompare;
-    return a.priority.localeCompare(b.priority);
-  });
-  try {
-    flatTasks.value = sorted.slice();
-  } catch (e) {
-    // ignore
-  }
-  return sorted;
+  return listFromDays(daysArg);
 };
 
-// Resolve a payload (id | Task | null) to a Task or null. Optionally accepts a days map to search.
-export const resolveTaskPayload = (
-  payload: string | number | Task | null,
-  daysArg?: Record<string, any>,
-): Task | null => {
-  if (payload == null) return null;
-  if (typeof payload === 'object') return payload;
-  const id = String(payload);
-  // Prefer reactive flatTasks if available
-  try {
-    if (Array.isArray((flatTasks as any).value) && (flatTasks as any).value.length > 0) {
-      const found = (flatTasks as any).value.find((t: Task) => String(t.id) === id);
-      if (found) return found as Task;
-    }
-  } catch (e) {
-    // ignore
-  }
-  const days = daysArg || {};
-  try {
-    for (const k of Object.keys(days)) {
-      const d = days[k];
-      if (!d || !Array.isArray(d.tasks)) continue;
-      const f = d.tasks.find((t: Task) => String(t.id) === id);
-      if (f) return f as Task;
-    }
-  } catch (e) {
-    // ignore
-  }
-  return null;
-};
-
-// Apply a payload to provided active refs and optional timeApi: sets task ref, mode ref, and current date.
 export const applyActiveSelection = (
   activeTaskRef: Ref<Task | null>,
   activeModeRef: Ref<'add' | 'edit' | 'preview'>,
   payload: string | number | Task | null,
 ) => {
+  if (!activeTaskRef || !activeModeRef) return;
   try {
-    if (payload == null) {
+    if (!payload) {
       activeTaskRef.value = null;
       activeModeRef.value = 'add';
       return;
     }
-    const found = resolveTaskPayload(
-      payload as any,
-      currentTimeApi && currentTimeApi.days ? currentTimeApi.days.value : undefined,
-    );
-    if (found) {
-      // If the same task is already selected in preview mode, avoid re-assigning
-      // to prevent reactive loops. Still update the current date only when it
-      // actually differs.
-      const currentlySelectedId =
-        activeTaskRef.value && (activeTaskRef.value as any).id
-          ? String((activeTaskRef.value as any).id)
-          : null;
-      const foundId = (found as any).id ? String((found as any).id) : null;
-      if (
-        currentlySelectedId &&
-        foundId &&
-        currentlySelectedId === foundId &&
-        activeModeRef.value === 'preview'
-      ) {
-        try {
-          if (currentTimeApi && typeof currentTimeApi.setCurrentDate === 'function') {
-            const isCyclic = Boolean(getCycleType(found));
-            const isTimeEvent =
-              Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
-            if (isCyclic || isTimeEvent) {
-              const newDate = (found as any).date || (found as any).eventDate || null;
-              try {
-                const currentDate =
-                  currentTimeApi && typeof currentTimeApi.currentDate !== 'undefined'
-                    ? currentTimeApi.currentDate
-                    : undefined;
-                if (currentDate !== newDate) currentTimeApi.setCurrentDate(newDate);
-              } catch (e) {
-                currentTimeApi.setCurrentDate(newDate);
-              }
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
-        return;
-      }
-
-      activeTaskRef.value = found;
-      activeModeRef.value = 'preview';
-      try {
-        if (currentTimeApi && typeof currentTimeApi.setCurrentDate === 'function') {
-          const isCyclic = Boolean(getCycleType(found));
-          const isTimeEvent =
-            Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
-          if (isCyclic || isTimeEvent) {
-            currentTimeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
-          }
-        }
-      } catch (e) {
-        // ignore
+    if (typeof payload === 'string' || typeof payload === 'number') {
+      const id = String(payload);
+      const found = flatTasks.value.find((t) => String(t.id) === id);
+      if (found) {
+        activeTaskRef.value = found;
+        activeModeRef.value = 'edit';
+      } else {
+        activeTaskRef.value = null;
+        activeModeRef.value = 'add';
       }
       return;
     }
-    if (typeof payload === 'object') {
-      activeTaskRef.value = payload;
-      activeModeRef.value = 'preview';
-      return;
+    // payload is a Task
+    const task = payload;
+    if (!task.id) {
+      task.id = generateId();
     }
-    activeTaskRef.value = null;
-    activeModeRef.value = 'add';
+    activeTaskRef.value = task;
+    activeModeRef.value = 'edit';
   } catch (e) {
-    try {
-      activeTaskRef.value = null;
-      activeModeRef.value = 'add';
-    } catch (err) {
-      // ignore
-    }
+    // ignore
   }
-};
-
-export const getTasksByCategory = (category: Task['category']): Task[] => {
-  const days = getDays();
-  const tasks: Task[] = [];
-  Object.values(days).forEach((day: any) => {
-    tasks.push(...(day.tasks || []).filter((t: Task) => t.category === category));
-  });
-  return tasks;
-};
-
-export const getTasksByPriority = (priority: Task['priority']): Task[] => {
-  const days = getDays();
-  const tasks: Task[] = [];
-  Object.values(days).forEach((day: any) => {
-    tasks.push(...(day.tasks || []).filter((t: Task) => t.priority === priority));
-  });
-  return tasks;
-};
-
-export const getIncompleteTasks = (): Task[] => {
-  const days = getDays();
-  const tasks: Task[] = [];
-  Object.values(days).forEach((day: any) => {
-    tasks.push(...(day.tasks || []).filter((t: Task) => Number((t as any).status_id) !== 0));
-  });
-  return tasks.sort((a, b) => a.date.localeCompare(b.date));
 };
