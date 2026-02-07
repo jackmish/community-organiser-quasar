@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
-import type { Task } from '../types';
+import type { Task } from '../../types';
 
 export function createSubtaskLines(activeTask: Ref<Task | null>) {
   const lastRawLines = ref<string[]>([] as string[]);

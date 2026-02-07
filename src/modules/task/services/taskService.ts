@@ -1,7 +1,8 @@
-import { getCycleType } from './utlils/occursOnDay';
+import { getCycleType } from '../utlils/occursOnDay';
 import { watch, ref } from 'vue';
 import type { Ref } from 'vue';
-import type { Task } from './types';
+import { createSubtaskLines } from './subtaskLine/subtaskLineService';
+import type { Task } from '../types';
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -267,9 +268,30 @@ export const getAll = (timeApi?: any): Task[] => {
 // Factory that binds a `timeApi` to a simple service object. It sets the
 // module-level days map (via `setTimeApi`) for compatibility, then returns
 // wrappers that operate using the provided `timeApi` where appropriate.
-export const construct = (timeApi?: any) => {
+export const construct = (
+  timeApi?: any,
+  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
+) => {
   try {
     setTimeApi(timeApi);
+  } catch (e) {
+    // ignore
+  }
+
+  // If an external state object with `activeTask` is provided, bind the
+  // parsed-lines helper to that ref so parsing/watching runs centrally.
+  const boundSubtask =
+    state && state.activeTask
+      ? createSubtaskLines(state.activeTask)
+      : createSubtaskLines(ref(null) as Ref<Task | null>);
+
+  // If the caller provided a mutable `state` object, attach the parsedLines
+  // ref directly to it so callers can access the shared parsed representation
+  // without duplicating definitions in the API layer.
+  try {
+    if (state && typeof state === 'object') {
+      (state as any).parsedLines = boundSubtask.parsedLines;
+    }
   } catch (e) {
     // ignore
   }
@@ -291,6 +313,7 @@ export const construct = (timeApi?: any) => {
     toggleTaskComplete: (date: string, id: string) => toggleTaskComplete(date, id),
     undoCycleDone: (date: string, id: string) => undoCycleDone(date, id),
     subtaskLine: {
+      parsedLines: boundSubtask.parsedLines,
       toggleStatus: async (task: any, lineIndex: number) => {
         try {
           if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
@@ -518,6 +541,9 @@ export const construct = (timeApi?: any) => {
         }
       },
     },
+    // Note: parsed-lines helper is bound during construction when a `state`
+    // object with `activeTask` is provided. The older `svcSubtaskLine.bind`
+    // approach was removed in favor of this shared state injection.
     getAll: () => getAll(timeApi),
     getTasksInRange: (s: string, e: string) => getTasksInRange(s, e),
     getTasksByCategory: (c: Task['category']) => getTasksByCategory(c),

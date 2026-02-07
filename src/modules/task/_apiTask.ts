@@ -1,32 +1,36 @@
 import type { Task } from './types';
-import * as taskService from './taskService';
-import { createSubtaskLines } from './subtaskLines/subtaskLines';
+import * as taskService from './services/taskService';
 import { ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
+import { parse } from 'path';
 
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
 export function construct(groupApi?: any, timeApi?: any) {
-  // Construct a task service instance
-  const svc = taskService.construct(timeApi);
+  // Construct a task service instance. Provide a shared `state` object so the
+  // service can bind parsed-lines and watchers to the active refs directly.
+  // Keep `state` simple and let TypeScript infer the ref types. The
+  // service will attach `parsedLines` to this object when available.
+  const state = {
+    activeTask: ref<Task | null>(null),
+    activeMode: ref<'add' | 'edit' | 'preview'>('add'),
+    parsedLines: ref([]),
+  };
 
-  const activeTask = ref<Task | null>(null);
-  const activeMode = ref<'add' | 'edit' | 'preview'>('add');
+  const svc = taskService.construct(timeApi, state as any);
 
-  // parsed lines and watcher for the active task are managed by a dedicated
-  // helper so UI components can read `api.task.subtaskLine.parsedLines`.
-  const subtaskLines = createSubtaskLines(activeTask);
+  // `state.parsedLines` is attached by the service when available.
 
   return {
     active: {
-      task: activeTask,
-      mode: activeMode,
+      task: state.activeTask,
+      mode: state.activeMode,
       setTask: (payload: PreviewPayload) =>
-        svc.applyActiveSelection(activeTask, activeMode, payload as any),
+        svc.applyActiveSelection(state.activeTask, state.activeMode, payload as any),
       setMode: (m: 'add' | 'edit' | 'preview') => {
-        activeMode.value = m;
-        if (m === 'add') activeTask.value = null;
+        state.activeMode.value = m;
+        if (m === 'add') state.activeTask.value = null;
       },
     },
     add: async (date: string, taskData: any) => {
@@ -73,9 +77,9 @@ export function construct(groupApi?: any, timeApi?: any) {
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) => svc.getAll().reduce(fn, init),
     },
     subtaskLine: {
-      parsedLines: subtaskLines.parsedLines,
+      parsedLines: state.parsedLines,
       add: async (text: string) => {
-        const res = await (svc as any).subtaskLine.add(activeTask.value, text);
+        const res = await (svc as any).subtaskLine.add(state.activeTask.value, text);
         if (res && res.newDesc) await saveData();
         return res;
       },

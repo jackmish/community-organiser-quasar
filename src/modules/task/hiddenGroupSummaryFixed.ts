@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 import type { OrganiserData } from '../day-organiser/types';
-import { getTasksInRange as getTasksInRangeService } from './taskService';
+import { getTasksInRange as getTasksInRangeService } from './services/taskService';
 
 export function createHiddenGroupSummary(
   organiserData: Ref<OrganiserData>,

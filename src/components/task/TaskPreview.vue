@@ -168,7 +168,9 @@
               <div
                 class="collapse-wrapper"
                 :ref="(el) => setItemRef(el, idx)"
-                :class="{ shrinking: props.animatingLines && props.animatingLines.includes(idx) }"
+                :class="{
+                  shrinking: props.animatingLines && props.animatingLines.includes(Number(idx)),
+                }"
               >
                 <q-item
                   clickable
@@ -279,20 +281,21 @@ async function selectGroup(gid: string | null) {
   }
 }
 
-function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
+function setItemRef(el: Element | ComponentPublicInstance | null, idx: string | number) {
+  const i = Number(idx);
   if (el == null) {
-    itemRefs.value[idx] = null;
+    itemRefs.value[i] = null;
     return;
   }
   // If a raw HTMLElement was passed, use it. Otherwise, if a Vue component
   // instance was passed, prefer its $el root DOM node.
   if (el instanceof HTMLElement) {
-    itemRefs.value[idx] = el;
+    itemRefs.value[i] = el;
     return;
   }
   const maybeEl = (el as any)?.$el;
   if (maybeEl && maybeEl instanceof HTMLElement) {
-    itemRefs.value[idx] = maybeEl;
+    itemRefs.value[i] = maybeEl;
     return;
   }
   // If we received a generic Element (e.g. SVGElement), coerce as a fallback.
@@ -300,14 +303,14 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
   try {
     const asEl = el as unknown as HTMLElement;
     if (asEl && (asEl as any).style !== undefined) {
-      itemRefs.value[idx] = asEl;
+      itemRefs.value[i] = asEl;
       return;
     }
   } catch (e) {
     void e;
   }
   // fallback
-  itemRefs.value[idx] = null;
+  itemRefs.value[i] = null;
 }
 
 function addQuickSubtask() {
