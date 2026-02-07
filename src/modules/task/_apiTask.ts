@@ -2,6 +2,7 @@ import type { Task } from './types';
 import * as taskService from './services/taskService';
 import type { TaskService } from './services/taskService';
 import { ref } from 'vue';
+import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 import { parse } from 'path';
 
@@ -12,9 +13,9 @@ export class ApiTask {
   groupApi: any;
   timeApi: any;
   state: {
-    activeTask: ReturnType<typeof ref>;
-    activeMode: ReturnType<typeof ref>;
-    parsedLines: ReturnType<typeof ref>;
+    activeTask: Ref<Task | null>;
+    activeMode: Ref<'add' | 'edit' | 'preview'>;
+    parsedLines: Ref<any[]>;
   };
   svc: TaskService;
 
@@ -73,12 +74,12 @@ export class ApiTask {
     return {
       parsedLines: state.parsedLines,
       add: async (text: string) => {
-        const res = await (svc as any).services.subtaskLine.add(state.activeTask.value, text);
+        const res = await svc.services.subtaskLine.add(state.activeTask.value, text);
         if (res && res.newDesc) await saveData();
         return res;
       },
       toggleStatus: async (task: any, lineIndex: number) => {
-        const res = await (svc as any).services.subtaskLine.toggleStatus(task, lineIndex);
+        const res = await svc.services.subtaskLine.toggleStatus(task, lineIndex);
         if (res && res.newDesc) await saveData();
         return res;
       },
