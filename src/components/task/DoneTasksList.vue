@@ -44,12 +44,23 @@ const props = defineProps<{
   doneTasks: any[];
 }>();
 
-const emit = defineEmits<{
-  (e: 'toggle-status', task: any): void;
-}>();
+import * as api from 'src/modules/day-organiser/_apiRoot';
 
-function onDoneClick(task: any) {
-  emit('toggle-status', task);
+async function onDoneClick(task: any) {
+  try {
+    const date = task?.date || task?.eventDate || '';
+    const id = task.id || task._id || task.uuid;
+    const hasCycleDone =
+      Array.isArray(task?.history) &&
+      task.history.some((h: any) => h && h.type === 'cycleDone' && h.date === date);
+    if (hasCycleDone) {
+      await api.task.status.undoCycleDone(date, id);
+    } else {
+      await api.task.status.toggleComplete(date, id);
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
 // Utility functions for priority colors and replenish color sets
