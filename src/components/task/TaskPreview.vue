@@ -175,7 +175,7 @@
                 <q-item
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
-                  @click.stop="api.task.subtaskLine.toggleStatus(api.task.active.task.value, idx)"
+                  @click.stop="api.task.subtaskLine.toggleStatus(api.task.active.task.value, Number(idx))"
                 >
                   <q-item-section side>
                     <q-icon
@@ -195,7 +195,7 @@
                       class="highlight-btn"
                       :icon="highlightIcon"
                       :color="line.highlighted ? 'amber' : 'grey-6'"
-                      @click.stop="toggleHighlight(idx)"
+                      @click.stop="toggleHighlight(Number(idx))"
                     />
                   </q-item-section>
                 </q-item>

@@ -79,12 +79,12 @@ export function construct(groupApi?: any, timeApi?: any) {
     subtaskLine: {
       parsedLines: state.parsedLines,
       add: async (text: string) => {
-        const res = await (svc as any).svcSubtaskLine.add(state.activeTask.value, text);
+        const res = await (svc as any).services.subtaskLine.add(state.activeTask.value, text);
         if (res && res.newDesc) await saveData();
         return res;
       },
       toggleStatus: async (task: any, lineIndex: number) => {
-        const res = await (svc as any).svcSubtaskLine.toggleStatus(task, lineIndex);
+        const res = await (svc as any).services.subtaskLine.toggleStatus(task, lineIndex);
         if (res && res.newDesc) await saveData();
         return res;
       },

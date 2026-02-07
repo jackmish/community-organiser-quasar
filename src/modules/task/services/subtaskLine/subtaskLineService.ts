@@ -3,7 +3,39 @@ import type { Ref } from 'vue';
 import type { Task } from '../../types';
 import { getCycleType } from '../../utlils/occursOnDay';
 
-export function construct(stateOrActiveTask: any, opts?: { timeApi?: any; persist?: (date: string, taskObj: Task) => void }) {
+export function construct(
+  stateOrActiveTask: any,
+  // Accept either an `opts` object or (legacy) a `taskService` object and `timeApi`
+  optsOrTaskService?: any,
+  maybeTimeApi?: any,
+) {
+  // Normalize options into expected shape: { timeApi?, persist? }
+  let opts: { timeApi?: any; persist?: (date: string, taskObj: Task) => void } | undefined = undefined;
+  try {
+    if (
+      optsOrTaskService &&
+      typeof optsOrTaskService === 'object' &&
+      (optsOrTaskService.timeApi || optsOrTaskService.persist)
+    ) {
+      opts = optsOrTaskService;
+    } else if (optsOrTaskService && typeof optsOrTaskService === 'object') {
+      const taskService = optsOrTaskService;
+      opts = {
+        timeApi: maybeTimeApi,
+        persist: (date: string, taskObj: Task) => {
+          try {
+            if (typeof taskService.updateTask === 'function') taskService.updateTask(date, taskObj);
+          } catch (e) {
+            // ignore
+          }
+        },
+      };
+    } else if (maybeTimeApi) {
+      opts = { timeApi: maybeTimeApi };
+    }
+  } catch (e) {
+    opts = optsOrTaskService;
+  }
   // Accept either a state object with `activeTask`, a direct `Ref<Task|null>`,
   // or `undefined`. If nothing is provided create an internal activeTask ref.
   let activeTask: Ref<Task | null>;
@@ -340,11 +372,17 @@ export function construct(stateOrActiveTask: any, opts?: { timeApi?: any; persis
       try {
         const isCyclic = Boolean(getCycleType(task));
         const targetDate = !isCyclic
-          ? task.date || task.eventDate || (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
+          ? task.date ||
+            task.eventDate ||
+            (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
           : opts?.timeApi && opts.timeApi.currentDate
             ? opts.timeApi.currentDate.value
             : '';
-        const merged: any = { ...task, description: res.newDesc, updatedAt: new Date().toISOString() };
+        const merged: any = {
+          ...task,
+          description: res.newDesc,
+          updatedAt: new Date().toISOString(),
+        };
         opts.persist(targetDate, merged as Task);
       } catch (e) {
         // ignore persistence failures
@@ -359,11 +397,17 @@ export function construct(stateOrActiveTask: any, opts?: { timeApi?: any; persis
       try {
         const isCyclic = Boolean(getCycleType(task));
         const targetDate = !isCyclic
-          ? task.date || task.eventDate || (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
+          ? task.date ||
+            task.eventDate ||
+            (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
           : opts?.timeApi && opts.timeApi.currentDate
             ? opts.timeApi.currentDate.value
             : '';
-        const merged: any = { ...task, description: res.newDesc, updatedAt: new Date().toISOString() };
+        const merged: any = {
+          ...task,
+          description: res.newDesc,
+          updatedAt: new Date().toISOString(),
+        };
         opts.persist(targetDate, merged as Task);
       } catch (e) {
         // ignore persistence failures

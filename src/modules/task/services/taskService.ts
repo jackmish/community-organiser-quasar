@@ -16,19 +16,12 @@ export const construct = (
   } catch (e) {
     // ignore
   }
-
-  const svcSubtaskLine = SubtaskLineService.construct(state as any, {
-    timeApi,
-    persist: (date: string, taskObj: Task) => updateTask(date, taskObj),
-  });
-
-  return {
+  const taskService = {
     addTask,
     updateTask,
     deleteTask,
     toggleTaskComplete,
     undoCycleDone,
-    svcSubtaskLine,
     getAll,
     getTasksInRange,
     getTasksByCategory,
@@ -37,7 +30,15 @@ export const construct = (
     buildFlatTasksList,
     flatTasks,
     applyActiveSelection,
-  } as const;
+  };
+
+  const services = {
+    subtaskLine: SubtaskLineService.construct(state as any, taskService, timeApi),
+  };
+
+  // Return the task service plus its grouped `services` object. Callers
+  // should access subtask helpers via `svc.services.subtaskLine`.
+  return { services, ...taskService };
 };
 
 //// Chaotic generative AI code, not sorted or organized yet.
