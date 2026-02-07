@@ -1,5 +1,5 @@
 import type { Task } from './types';
-import { TaskService } from './services/taskService';
+import { TaskService } from './services/taskManager';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';

@@ -5,7 +5,7 @@ import * as SubtaskLineService from './subtaskLine/subtaskLineService';
 import type { ApiTask } from '../_apiTask';
 import type { Task } from '../types';
 
-export class TaskService {
+export class TaskManager {
   apiTask: ApiTask | undefined;
   services: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
 
@@ -42,6 +42,9 @@ export class TaskService {
     payload: string | number | Task | null,
   ) => applyActiveSelection(activeTaskRef, activeModeRef, payload as any);
 }
+
+// Backwards-compatible alias: prefer `TaskManager`, keep `TaskService` for callers
+export { TaskManager as TaskService };
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -98,9 +101,7 @@ export const addTask = (
   getDays()[date].tasks.push(task);
   try {
     flatTasks.value.push(task);
-    flatTasks.value.sort(
-      (a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority),
-    );
+    flatTasks.value.sort((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority));
   } catch (e) {
     // ignore
   }
@@ -138,9 +139,7 @@ export const updateTask = (
         const fi = flatTasks.value.findIndex((t: any) => String(t.id) === String(existing.id));
         if (fi !== -1) {
           flatTasks.value[fi] = existing;
-          flatTasks.value.sort(
-            (a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority),
-          );
+          flatTasks.value.sort((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority));
         }
       } catch (e) {
         // ignore
@@ -242,9 +241,7 @@ export const undoCycleDone = (date: string, taskId: string): boolean => {
       if (task) {
         if (!Array.isArray(task.history)) return false;
         const before = task.history.length;
-        task.history = task.history.filter(
-          (h: any) => !(h && h.type === 'cycleDone' && h.date === date),
-        );
+        task.history = task.history.filter((h: any) => !(h && h.type === 'cycleDone' && h.date === date));
         const after = task.history.length;
         if (after < before) {
           task.updatedAt = new Date().toISOString();
