@@ -1,9 +1,46 @@
 import { getCycleType } from '../utlils/occursOnDay';
 import { watch, ref } from 'vue';
 import type { Ref } from 'vue';
-import { createSubtaskLines } from './subtaskLine/subtaskLineService';
+import * as SubtaskLineService from './subtaskLine/subtaskLineService';
 import type { Task } from '../types';
 
+// Factory that binds a `timeApi` to a simple service object. It sets the
+// module-level days map (via `setTimeApi`) for compatibility, then returns
+// wrappers that operate using the provided `timeApi` where appropriate.
+export const construct = (
+  timeApi?: any,
+  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
+) => {
+  try {
+    setTimeApi(timeApi);
+  } catch (e) {
+    // ignore
+  }
+
+  const svcSubtaskLine = SubtaskLineService.construct(state as any, {
+    timeApi,
+    persist: (date: string, taskObj: Task) => updateTask(date, taskObj),
+  });
+
+  return {
+    addTask,
+    updateTask,
+    deleteTask,
+    toggleTaskComplete,
+    undoCycleDone,
+    svcSubtaskLine,
+    getAll,
+    getTasksInRange,
+    getTasksByCategory,
+    getTasksByPriority,
+    getIncompleteTasks,
+    buildFlatTasksList,
+    flatTasks,
+    applyActiveSelection,
+  } as const;
+};
+
+//// Chaotic generative AI code, not sorted or organized yet.
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -17,6 +54,7 @@ type DaysMap = Record<string, any>;
 // Module-level days map/ref; can be initialized by passing a `time` API via `setTimeApi`.
 let daysMap: DaysMap = {} as DaysMap;
 let daysRef: Ref<any> | undefined;
+let currentTimeApi: any = undefined;
 
 const getDays = () => {
   try {
@@ -28,6 +66,7 @@ const getDays = () => {
 
 export const setTimeApi = (t: any) => {
   try {
+    currentTimeApi = t;
     daysRef = t && t.days ? t.days : undefined;
     daysMap = t && t.days ? t.days.value : {};
   } catch (e) {
@@ -71,7 +110,24 @@ export const addTask = (
   return task;
 };
 
-export const updateTask = (date: string, taskObj: Task): void => {
+export const updateTask = (
+  date: string,
+  taskOrId: Task | string,
+  maybeUpdates?: any,
+  timeApi?: any,
+): void => {
+  // Resolve string id -> merged Task using the provided `timeApi` (if any)
+  let taskObj: Task;
+  if (typeof taskOrId === 'string') {
+    const id = taskOrId;
+    const updates = maybeUpdates || {};
+    const existing = getAll(timeApi).find((t) => String(t.id) === String(id));
+    if (!existing) throw new Error('Task not found');
+    taskObj = { ...existing, ...updates, updatedAt: new Date().toISOString() } as Task;
+  } else {
+    taskObj = taskOrId;
+  }
+
   // Minimal/dumb updater: only operate within the provided date bucket.
   const day = getDays()[date];
   if (!day || !Array.isArray(day.tasks)) throw new Error('Task not found in provided day');
@@ -265,306 +321,6 @@ export const getAll = (timeApi?: any): Task[] => {
   return getAllTasks();
 };
 
-// Factory that binds a `timeApi` to a simple service object. It sets the
-// module-level days map (via `setTimeApi`) for compatibility, then returns
-// wrappers that operate using the provided `timeApi` where appropriate.
-export const construct = (
-  timeApi?: any,
-  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
-) => {
-  try {
-    setTimeApi(timeApi);
-  } catch (e) {
-    // ignore
-  }
-
-  // If an external state object with `activeTask` is provided, bind the
-  // parsed-lines helper to that ref so parsing/watching runs centrally.
-  const boundSubtask =
-    state && state.activeTask
-      ? createSubtaskLines(state.activeTask)
-      : createSubtaskLines(ref(null) as Ref<Task | null>);
-
-  // If the caller provided a mutable `state` object, attach the parsedLines
-  // ref directly to it so callers can access the shared parsed representation
-  // without duplicating definitions in the API layer.
-  try {
-    if (state && typeof state === 'object') {
-      (state as any).parsedLines = boundSubtask.parsedLines;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  return {
-    addTask: (date: string, data: any) => addTask(date, data),
-    updateTask: (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
-      if (typeof taskOrId === 'string') {
-        const id = taskOrId;
-        const updates = maybeUpdates || {};
-        const existing = getAll(timeApi).find((t) => String(t.id) === String(id));
-        if (!existing) throw new Error('Task not found');
-        const merged = { ...existing, ...updates, updatedAt: new Date().toISOString() };
-        return updateTask(date, merged as Task);
-      }
-      return updateTask(date, taskOrId);
-    },
-    deleteTask: (date: string, id: string) => deleteTask(date, id),
-    toggleTaskComplete: (date: string, id: string) => toggleTaskComplete(date, id),
-    undoCycleDone: (date: string, id: string) => undoCycleDone(date, id),
-    subtaskLine: {
-      parsedLines: boundSubtask.parsedLines,
-      toggleStatus: async (task: any, lineIndex: number) => {
-        try {
-          if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
-            return null;
-          const isCyclic = Boolean(getCycleType(task));
-          const targetDate = !isCyclic
-            ? task.date ||
-              task.eventDate ||
-              (timeApi && timeApi.currentDate ? timeApi.currentDate.value : '')
-            : timeApi && timeApi.currentDate
-              ? timeApi.currentDate.value
-              : '';
-
-          const lines = (task.description || '').split(/\r?\n/);
-          let appendedIndex: number | undefined = undefined;
-          const ln = lines[lineIndex] ?? '';
-          const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
-          const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/);
-
-          if (dashMatch) {
-            const prefix = dashMatch[1];
-            const marker = dashMatch[2] || '';
-            const content = dashMatch[3] || '';
-            const checked = /^\s*\[[xX]\]\s*/.test(marker);
-            const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-            const baseInsertIndex = hasTitleInDesc ? 1 : 0;
-            const hadStar = /\s*\*\s*$/.test(content);
-            if (checked) {
-              if (lineIndex === 0 && hasTitleInDesc) {
-                lines[lineIndex] = `${prefix}${content}`;
-              } else {
-                const completedStart = lines.findIndex(
-                  (ln2: string) =>
-                    /^\s*-\s*\[[xX]\]/.test(ln2) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln2),
-                );
-                const undoneEnd = completedStart === -1 ? lines.length : completedStart;
-                let lastStarIndex = -1;
-                for (let i = baseInsertIndex; i < undoneEnd; i++) {
-                  try {
-                    if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
-                  } catch (e) {
-                    // ignore
-                  }
-                }
-                let finalInsert = baseInsertIndex;
-                if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
-                const adjustedFinal = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
-                if (lineIndex === adjustedFinal) {
-                  lines[lineIndex] = `${prefix}${content}`;
-                } else {
-                  const movedLine = `${prefix}${content}`;
-                  lines.splice(lineIndex, 1);
-                  lines.splice(adjustedFinal, 0, movedLine);
-                  appendedIndex = adjustedFinal;
-                }
-              }
-            } else {
-              const cleanContent = content.replace(/\s*\*\s*$/, '');
-              const completedLine = `${prefix}[x] ${cleanContent}${hadStar ? ' *' : ''}`;
-              lines.splice(lineIndex, 1);
-              if (hadStar) {
-                const completedStart = lines.findIndex(
-                  (ln2: string) =>
-                    /^(\s*-\s*\[[xX]\]\s*)/.test(ln2) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln2),
-                );
-                if (completedStart === -1) {
-                  lines.push(completedLine);
-                  appendedIndex = lines.length - 1;
-                } else {
-                  lines.splice(completedStart, 0, completedLine);
-                  appendedIndex = completedStart;
-                }
-              } else {
-                lines.push(completedLine);
-                appendedIndex = lines.length - 1;
-              }
-            }
-          } else if (numMatch) {
-            const prefix = numMatch[1];
-            const marker = numMatch[2] || '';
-            const content = numMatch[3] || '';
-            const checked = /^\s*\[[xX]\]\s*/.test(marker);
-            const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-            const baseInsertIndex = hasTitleInDesc ? 1 : 0;
-            const hadStar = /\s*\*\s*$/.test(content);
-            if (checked) {
-              if (lineIndex === 0 && hasTitleInDesc) {
-                lines[lineIndex] = `${prefix}${content}`;
-              } else {
-                const completedStart = lines.findIndex(
-                  (ln2: string) =>
-                    /^\s*-\s*\[[xX]\]/.test(ln2) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln2),
-                );
-                const undoneEnd = completedStart === -1 ? lines.length : completedStart;
-                let lastStarIndex = -1;
-                for (let i = baseInsertIndex; i < undoneEnd; i++) {
-                  try {
-                    if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
-                  } catch (e) {
-                    // ignore
-                  }
-                }
-                let finalInsert = baseInsertIndex;
-                if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
-                const adjustedIndex = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
-                if (lineIndex === adjustedIndex) {
-                  lines[lineIndex] = `${prefix}${content}`;
-                } else {
-                  const movedLine = `${prefix}${content}`;
-                  lines.splice(lineIndex, 1);
-                  lines.splice(adjustedIndex, 0, movedLine);
-                  appendedIndex = adjustedIndex;
-                }
-              }
-            } else {
-              const hadStarLocal = /\s*\*\s*$/.test(content);
-              const cleanContent = content.replace(/\s*\*\s*$/, '');
-              const completedLine = `- [x] ${cleanContent}${hadStarLocal ? ' *' : ''}`;
-              lines.splice(lineIndex, 1);
-              if (hadStarLocal) {
-                const completedStart = lines.findIndex(
-                  (ln2: string) =>
-                    /^(\s*-\s*\[[xX]\]\s*)/.test(ln2) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln2),
-                );
-                if (completedStart === -1) {
-                  lines.push(completedLine);
-                  appendedIndex = lines.length - 1;
-                } else {
-                  lines.splice(completedStart, 0, completedLine);
-                  appendedIndex = completedStart;
-                }
-              } else {
-                lines.push(completedLine);
-                appendedIndex = lines.length - 1;
-              }
-            }
-          } else {
-            return null;
-          }
-
-          const newDesc = lines.join('\n');
-          try {
-            const merged: any = {
-              ...task,
-              description: newDesc,
-              updatedAt: new Date().toISOString(),
-            };
-            updateTask(targetDate, merged as Task);
-          } catch (e) {
-            // ignore update failures
-          }
-          return { newDesc, appendedIndex };
-        } catch (e) {
-          return null;
-        }
-      },
-      add: async (task: any, text: string) => {
-        try {
-          if (!task || typeof text !== 'string' || !text.trim()) return null;
-          const cur = task.description || '';
-          const lines = cur.split(/\r?\n/);
-          // find last starred undone list item
-          let lastStarredUndone = -1;
-          for (let i = 0; i < lines.length; i++) {
-            try {
-              const ln = lines[i] || '';
-              const dashMatch = ln.match(/^\s*-\s*(.*)$/);
-              if (!dashMatch) continue;
-              const content = dashMatch[1] || '';
-              const checked = /^\s*\[[xX]\]/.test(content);
-              const starred = /\*\s*$/.test(content);
-              if (starred && !checked) lastStarredUndone = i;
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          let updated: string;
-          if (lastStarredUndone >= 0) {
-            const newLines = [...lines];
-            newLines.splice(lastStarredUndone + 1, 0, `- ${text}`);
-            updated = newLines.join('\n');
-          } else {
-            const title = (task.name || '').trim();
-            if (title && lines.length > 0) {
-              const first = lines[0] || '';
-              const firstNorm = first.trim().toLowerCase();
-              const titleNorm = title.toLowerCase();
-              if (firstNorm.startsWith(titleNorm)) {
-                if (lines.length === 1) {
-                  updated = `${first}\n- ${text}`;
-                } else {
-                  updated = `${first}\n- ${text}\n${lines.slice(1).join('\n')}`;
-                }
-              } else {
-                updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-              }
-            } else {
-              updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-            }
-          }
-
-          const isCyclic = Boolean(getCycleType(task));
-          const targetDate = !isCyclic
-            ? task.date ||
-              task.eventDate ||
-              (timeApi && timeApi.currentDate ? timeApi.currentDate.value : '')
-            : timeApi && timeApi.currentDate
-              ? timeApi.currentDate.value
-              : '';
-
-          try {
-            const merged: any = {
-              ...task,
-              description: updated,
-              updatedAt: new Date().toISOString(),
-            };
-            updateTask(targetDate, merged as Task);
-          } catch (e) {
-            // ignore
-          }
-          return { newDesc: updated };
-        } catch (e) {
-          return null;
-        }
-      },
-    },
-    // Note: parsed-lines helper is bound during construction when a `state`
-    // object with `activeTask` is provided. The older `svcSubtaskLine.bind`
-    // approach was removed in favor of this shared state injection.
-    getAll: () => getAll(timeApi),
-    getTasksInRange: (s: string, e: string) => getTasksInRange(s, e),
-    getTasksByCategory: (c: Task['category']) => getTasksByCategory(c),
-    getTasksByPriority: (p: Task['priority']) => getTasksByPriority(p),
-    getIncompleteTasks: () => getIncompleteTasks(),
-    buildFlatTasksList: (daysArg?: Record<string, any>) => buildFlatTasksList(daysArg),
-    flatTasks,
-    applyActiveSelection: (
-      activeTaskRef: Ref<Task | null>,
-      activeModeRef: Ref<'add' | 'edit' | 'preview'>,
-      payload: string | number | Task | null,
-    ) =>
-      applyActiveSelection(
-        activeTaskRef,
-        activeModeRef,
-        timeApi /* bound at factory time */,
-        payload as any,
-      ),
-  } as const;
-};
-
 // Build a sorted flat list from a days map WITHOUT mutating the module-level
 // `flatTasks` reactive cache. Use this when callers need a snapshot for
 // rendering and should not trigger side-effects.
@@ -645,7 +401,6 @@ export const resolveTaskPayload = (
 export const applyActiveSelection = (
   activeTaskRef: Ref<Task | null>,
   activeModeRef: Ref<'add' | 'edit' | 'preview'>,
-  timeApi: any,
   payload: string | number | Task | null,
 ) => {
   try {
@@ -656,7 +411,7 @@ export const applyActiveSelection = (
     }
     const found = resolveTaskPayload(
       payload as any,
-      timeApi && timeApi.days ? timeApi.days.value : undefined,
+      currentTimeApi && currentTimeApi.days ? currentTimeApi.days.value : undefined,
     );
     if (found) {
       // If the same task is already selected in preview mode, avoid re-assigning
@@ -674,9 +429,7 @@ export const applyActiveSelection = (
         activeModeRef.value === 'preview'
       ) {
         try {
-          if (timeApi && typeof timeApi.setCurrentDate === 'function') {
-            // Only change the current date for time-based or cyclic tasks. Selecting
-            // a plain Todo should not move the calendar day.
+          if (currentTimeApi && typeof currentTimeApi.setCurrentDate === 'function') {
             const isCyclic = Boolean(getCycleType(found));
             const isTimeEvent =
               Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
@@ -684,12 +437,12 @@ export const applyActiveSelection = (
               const newDate = (found as any).date || (found as any).eventDate || null;
               try {
                 const currentDate =
-                  timeApi && typeof timeApi.currentDate !== 'undefined'
-                    ? timeApi.currentDate
+                  currentTimeApi && typeof currentTimeApi.currentDate !== 'undefined'
+                    ? currentTimeApi.currentDate
                     : undefined;
-                if (currentDate !== newDate) timeApi.setCurrentDate(newDate);
+                if (currentDate !== newDate) currentTimeApi.setCurrentDate(newDate);
               } catch (e) {
-                timeApi.setCurrentDate(newDate);
+                currentTimeApi.setCurrentDate(newDate);
               }
             }
           }
@@ -702,12 +455,12 @@ export const applyActiveSelection = (
       activeTaskRef.value = found;
       activeModeRef.value = 'preview';
       try {
-        if (timeApi && typeof timeApi.setCurrentDate === 'function') {
+        if (currentTimeApi && typeof currentTimeApi.setCurrentDate === 'function') {
           const isCyclic = Boolean(getCycleType(found));
           const isTimeEvent =
             Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
           if (isCyclic || isTimeEvent) {
-            timeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
+            currentTimeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
           }
         }
       } catch (e) {
