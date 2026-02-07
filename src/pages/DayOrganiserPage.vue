@@ -64,7 +64,6 @@
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
               @task-click="handleTaskClick"
-              @toggle-status="toggleStatus"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
             />
@@ -78,7 +77,7 @@
         </div>
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
-            <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
+            <DoneTasksList :done-tasks="doneTasks" />
           </div>
         </div>
       </div>
@@ -128,7 +127,6 @@
             }
           "
           @close="clearTaskToEdit"
-          @toggle-status="(t, i) => toggleStatus(t, i)"
           @update-task="(t) => handleUpdateTask(t)"
           :fixed="false"
         />
@@ -189,7 +187,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import logger from 'src/utils/logger';
 import * as api from 'src/modules/day-organiser/_apiRoot';
@@ -237,10 +235,8 @@ const panelHidden = ref(false);
 const selectedTaskId = computed(() => api.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
-// track pending toggle operations to avoid overlapping/duplicate toggles causing transient flips
-const pendingToggles = new Map<string, boolean>();
-// pending promises for child line animation events (moved to task module)
-const { waitForLineEvent, onLineCollapsed, onLineExpanded } = createLineEventHandlers();
+// child line animation handlers (API handles the data changes)
+const { onLineCollapsed, onLineExpanded } = createLineEventHandlers();
 
 // task UI handlers moved to module
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
@@ -394,395 +390,7 @@ const handleDeleteTask = async (payload: any) => {
   }
 };
 
-// `lineIndex?: number`: when provided toggles a specific checklist line
-// inside the task's description instead of toggling the whole task.
-const toggleStatus = async (task: any, lineIndex?: number) => {
-  // Prefer the task's own date for cyclic tasks, otherwise use the currently
-  // selected calendar date. This ensures generated cyclic instances use their
-  // occurrence date when persisting per-occurrence completions.
-  const isCyclic = Boolean(getCycleType(task));
-  const targetDate = !isCyclic
-    ? task.date || task.eventDate || api.time.currentDate.value
-    : api.time.currentDate.value;
-  // status used for non-cyclic optimistic toggles — declare in outer scope
-  let status = Number(task.status_id) === 0 ? 1 : 0;
-  // If this is a 'prepare' time-mode task and user is trying to mark it done,
-  // notify the user that preparation was recorded. Do NOT return here so the
-  // status update still proceeds; the Done list will exclude prepare tasks.
-  if (status === 0 && task.timeMode === 'prepare') {
-    try {
-      $q.notify({
-        type: 'info',
-        message: `Preparation recorded${task && task.name ? ': ' + task.name : ''}`,
-        position: 'top',
-      });
-    } catch (e) {
-      // ignore notification errors
-    }
-  }
-  try {
-    // Debug: help trace toggle attempts for cyclic occurrences
-    const baseCheck = (allTasks.value || []).find((x: any) => x.id === task.id) || null;
-    logger.debug(
-      '[toggleStatus] taskId=',
-      task?.id,
-      'instanceDate=',
-      (task && (task.date || task.eventDate)) || null,
-      'targetDate=',
-      targetDate,
-      'isCyclic=',
-      isCyclic,
-      'isInstance=',
-      Boolean(task?.__isCyclicInstance),
-      'instanceHistoryLen=',
-      (task?.history || []).length || 0,
-      'baseHistoryLen=',
-      baseCheck && baseCheck.history ? baseCheck.history.length : 0,
-    );
-  } catch (e) {
-    // ignore
-  }
-  // If a line index is provided, toggle only that line's checked marker inside the description
-  if (typeof lineIndex === 'number' && task && typeof task.description === 'string') {
-    const pendingKey = `${task.id}:line:${lineIndex}`;
-    if (pendingToggles.get(pendingKey)) return;
-    pendingToggles.set(pendingKey, true);
-    const lines = task.description.split(/\r?\n/);
-    let appendedIndex: number | undefined = undefined;
-    const ln = lines[lineIndex] ?? '';
-
-    const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
-    const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/);
-
-    if (dashMatch) {
-      const prefix = dashMatch[1];
-      const marker = dashMatch[2] || '';
-      const content = dashMatch[3] || '';
-      const checked = /^\s*\[[xX]\]\s*/.test(marker);
-      if (checked) {
-        // unchecked: move to top behind title (second line) unless already there.
-        // If the undone item has NO trailing star, append it after the last starred undone item.
-        const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-        const baseInsertIndex = hasTitleInDesc ? 1 : 0;
-        const hadStar = /\s*\*\s*$/.test(content);
-        // If the user toggled the actual title line (index 0 when title present), don't move it.
-        if (lineIndex === 0 && hasTitleInDesc) {
-          lines[lineIndex] = `${prefix}${content}`;
-        } else {
-          // find where completed items start so we only consider the undone section
-          const completedStart = lines.findIndex(
-            (ln: string) => /^\s*-\s*\[[xX]\]/.test(ln) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln),
-          );
-          const undoneEnd = completedStart === -1 ? lines.length : completedStart;
-          // find last starred undone item
-          let lastStarIndex = -1;
-          for (let i = baseInsertIndex; i < undoneEnd; i++) {
-            try {
-              if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
-            } catch (e) {
-              // ignore
-            }
-          }
-          // decide final insert position: starred undone items go to top; unstarred go after last starred undone
-          let finalInsert = baseInsertIndex;
-          if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
-          // if already in final spot (taking shifts into account), just remove marker in-place
-          const adjustedFinal = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
-          if (lineIndex === adjustedFinal) {
-            lines[lineIndex] = `${prefix}${content}`;
-          } else {
-            animatingLines.value = [lineIndex];
-            await waitForLineEvent(task.id, lineIndex, 'collapsed');
-            const movedLine = `${prefix}${content}`;
-            lines.splice(lineIndex, 1);
-            lines.splice(adjustedFinal, 0, movedLine);
-            appendedIndex = adjustedFinal;
-          }
-        }
-      } else {
-        // animate then mark done and move this subtask to the end (or into starred-top area)
-        animatingLines.value = [lineIndex];
-        await waitForLineEvent(task.id, lineIndex, 'collapsed');
-        // detect trailing star on the original content
-        const hadStar = /\s*\*\s*$/.test(content);
-        const cleanContent = content.replace(/\s*\*\s*$/, '');
-        const completedLine = `${prefix}[x] ${cleanContent}${hadStar ? ' *' : ''}`;
-        // remove the original line first
-        lines.splice(lineIndex, 1);
-        if (hadStar) {
-          // insert at the start of the completed-block: find first completed item index
-          const completedStart = lines.findIndex(
-            (ln: string) =>
-              /^(\s*-\s*\[[xX]\]\s*)/.test(ln) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln),
-          );
-          if (completedStart === -1) {
-            lines.push(completedLine);
-            appendedIndex = lines.length - 1;
-          } else {
-            lines.splice(completedStart, 0, completedLine);
-            appendedIndex = completedStart;
-          }
-        } else {
-          lines.push(completedLine);
-          appendedIndex = lines.length - 1;
-        }
-      }
-      const newDesc = lines.join('\n');
-      // update the task description after animation
-      try {
-        task.description = newDesc;
-        if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
-          api.task.active.task.value.description = newDesc;
-        }
-      } catch (e) {
-        // ignore
-      }
-      // If we recorded an appendedIndex above, signal expansion now that DOM will update
-      try {
-        if (typeof appendedIndex !== 'undefined') {
-          await nextTick();
-          animatingLines.value = [-(appendedIndex + 1)];
-          await waitForLineEvent(task.id, appendedIndex, 'expanded');
-        }
-      } catch (e) {
-        // ignore
-      }
-      animatingLines.value = [];
-      try {
-        await api.task.update(targetDate, { ...task, description: newDesc });
-      } finally {
-        pendingToggles.delete(pendingKey);
-      }
-      return;
-    }
-
-    if (numMatch) {
-      const prefix = numMatch[1];
-      const marker = numMatch[2] || '';
-      const content = numMatch[3] || '';
-      const checked = /^\s*\[[xX]\]\s*/.test(marker);
-      if (checked) {
-        // unchecked numeric item -> move to top behind title unless already there.
-        // If the undone item has NO trailing star, append it after the last starred undone item.
-        const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
-        const baseInsertIndex = hasTitleInDesc ? 1 : 0;
-        const hadStar = /\s*\*\s*$/.test(content);
-        if (lineIndex === 0 && hasTitleInDesc) {
-          lines[lineIndex] = `${prefix}${content}`;
-        } else {
-          const completedStart = lines.findIndex(
-            (ln: string) => /^\s*-\s*\[[xX]\]/.test(ln) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln),
-          );
-          const undoneEnd = completedStart === -1 ? lines.length : completedStart;
-          let lastStarIndex = -1;
-          for (let i = baseInsertIndex; i < undoneEnd; i++) {
-            try {
-              if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
-            } catch (e) {
-              // ignore
-            }
-          }
-          let finalInsert = baseInsertIndex;
-          if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
-          const adjustedIndex = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
-          if (lineIndex === adjustedIndex) {
-            lines[lineIndex] = `${prefix}${content}`;
-          } else {
-            animatingLines.value = [lineIndex];
-            await waitForLineEvent(task.id, lineIndex, 'collapsed');
-            const movedLine = `${prefix}${content}`;
-            lines.splice(lineIndex, 1);
-            lines.splice(adjustedIndex, 0, movedLine);
-            appendedIndex = adjustedIndex;
-          }
-        }
-      } else {
-        // animate then convert numeric item into a completed bullet at the end (or into starred-top area)
-        animatingLines.value = [lineIndex];
-        await waitForLineEvent(task.id, lineIndex, 'collapsed');
-        const hadStar = /\s*\*\s*$/.test(content);
-        const cleanContent = content.replace(/\s*\*\s*$/, '');
-        const completedLine = `- [x] ${cleanContent}${hadStar ? ' *' : ''}`;
-        lines.splice(lineIndex, 1);
-        if (hadStar) {
-          const completedStart = lines.findIndex(
-            (ln: string) =>
-              /^(\s*-\s*\[[xX]\]\s*)/.test(ln) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln),
-          );
-          if (completedStart === -1) {
-            lines.push(completedLine);
-            appendedIndex = lines.length - 1;
-          } else {
-            lines.splice(completedStart, 0, completedLine);
-            appendedIndex = completedStart;
-          }
-        } else {
-          lines.push(completedLine);
-          appendedIndex = lines.length - 1;
-        }
-      }
-      const newDesc = lines.join('\n');
-      try {
-        task.description = newDesc;
-        if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
-          api.task.active.task.value.description = newDesc;
-        }
-      } catch (e) {
-        // ignore
-      }
-      // If we recorded an appendedIndex above, signal expansion now that DOM will update
-      try {
-        if (typeof appendedIndex !== 'undefined') {
-          await nextTick();
-          animatingLines.value = [-(appendedIndex + 1)];
-          await waitForLineEvent(task.id, appendedIndex, 'expanded');
-        }
-      } catch (e) {
-        // ignore
-      }
-      animatingLines.value = [];
-      try {
-        await api.task.update(targetDate, { ...task, description: newDesc });
-      } finally {
-        pendingToggles.delete(pendingKey);
-      }
-      return;
-    }
-    // Not a list-like line: fall through to toggling whole task
-    // ensure we clear pending for safety (shouldn't reach here normally)
-    pendingToggles.delete(pendingKey);
-  }
-
-  // Special-case Replenishment items: toggle their base status immediately
-  if (task.type_id === 'Replenish') {
-    status = Number(task.status_id) === 0 ? 1 : 0;
-    try {
-      task.status_id = status;
-      if (api.task.active.task.value && api.task.active.task.value.id === task.id)
-        api.task.active.task.value.status_id = status;
-    } catch (e) {
-      // ignore
-    }
-    await api.task.update(targetDate, task.id, { status_id: status });
-    await api.task.update(targetDate, { ...task, status_id: status });
-    await api.task.update(targetDate, { ...task, status_id: status });
-    return;
-  }
-
-  // Toggle entire task status (existing behavior)
-  // Handle cyclic tasks explicitly: mark occurrence done via toggleTaskComplete or undo via undoCycleDone
-  try {
-    if (isCyclic) {
-      logger.debug('[toggleStatus] cyclic handling start', {
-        taskId: task?.id,
-        instanceDate: task?.date || task?.eventDate || null,
-        targetDate,
-        isInstance: Boolean(task?.__isCyclicInstance),
-      });
-      // If an occurrence is already marked done for this date, undo it
-      const tAny: any = task;
-      const hist = tAny.history || [];
-      try {
-        logger.debug('[toggleStatus] history raw:', hist);
-        logger.debug(
-          '[toggleStatus] history dates:',
-          Array.isArray(hist) ? hist.map((hh: any) => ({ type: hh?.type, date: hh?.date })) : hist,
-        );
-        logger.debug('[toggleStatus] targetDate value/type:', targetDate, typeof targetDate);
-      } catch (e) {
-        // ignore logging errors
-      }
-      const alreadyDone =
-        Array.isArray(hist) &&
-        hist.some((h: any) => h && h.type === 'cycleDone' && h.date === targetDate);
-      logger.debug('[toggleStatus] alreadyDone=', { taskId: task.id, targetDate, alreadyDone });
-      if (alreadyDone) {
-        const undone = await api.task.status.undoCycleDone(targetDate, task.id);
-        if (undone) {
-          logger.debug('[toggleStatus] undoCycleDone succeeded', { taskId: task.id, targetDate });
-          const removeCycleDone = (obj: any) => {
-            if (!obj || !Array.isArray(obj.history)) return;
-            obj.history = obj.history.filter(
-              (hh: any) => !(hh && hh.type === 'cycleDone' && hh.date === targetDate),
-            );
-          };
-
-          try {
-            removeCycleDone(task);
-            const base = (allTasks.value || []).find((x: any) => x.id === task.id);
-            removeCycleDone(base);
-            if (api.task.active.task.value && api.task.active.task.value.id === task.id)
-              removeCycleDone(api.task.active.task.value);
-            logger.debug('[toggleStatus] optimistic undo applied', {
-              taskId: task.id,
-              targetDate,
-            });
-          } catch (e) {
-            logger.warn('[toggleStatus] optimistic undo failed', {
-              taskId: task.id,
-              targetDate,
-              err: e,
-            });
-          }
-        }
-        return;
-      }
-
-      // Otherwise mark the occurrence done
-      logger.debug('[toggleStatus] calling toggleTaskComplete', { taskId: task.id, targetDate });
-      await api.task.status.toggleComplete(targetDate, task.id);
-      // optimistic local update so UI moves task to Done list
-      try {
-        const newEntry = {
-          type: 'cycleDone',
-          is_done: true,
-          date: targetDate,
-          changedAt: new Date().toISOString(),
-        };
-        const ensurePush = (obj: any) => {
-          if (!obj) return;
-          if (!Array.isArray(obj.history)) obj.history = [];
-          obj.history.push(newEntry);
-        };
-
-        ensurePush(task);
-        const base = (allTasks.value || []).find((x: any) => x.id === task.id);
-        ensurePush(base);
-        logger.debug('[toggleStatus] optimistic mark applied', { taskId: task.id, targetDate });
-      } catch (e) {
-        logger.warn('[toggleStatus] optimistic mark failed', {
-          taskId: task.id,
-          targetDate,
-          err: e,
-        });
-      }
-      return;
-    }
-
-    // reuse outer `status` (already computed) for non-cyclic toggle
-  } catch (e) {
-    // ignore errors when probing/recording cycleDone
-    logger.warn('toggleStatus cyclic handling error', e);
-  }
-
-  const pendingKeyTask = `${task.id}:task`;
-  if (pendingToggles.get(pendingKeyTask)) return;
-  pendingToggles.set(pendingKeyTask, true);
-  // optimistic update
-  try {
-    task.status_id = status;
-    if (api.task.active.task.value && api.task.active.task.value.id === task.id) {
-      api.task.active.task.value.status_id = status;
-    }
-  } catch (e) {
-    // ignore
-  }
-  try {
-    await api.task.update(targetDate, task.id, { status_id: status });
-  } finally {
-    pendingToggles.delete(pendingKeyTask);
-  }
-};
+// `toggleStatus` delegates to the task API; child components call the API directly now.
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
   const group = await api.group.add({

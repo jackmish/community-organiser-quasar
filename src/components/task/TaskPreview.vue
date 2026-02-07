@@ -173,7 +173,7 @@
                 <q-item
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
-                  @click.stop="$emit('toggle-status', task, idx)"
+                  @click.stop="api.task.subtaskLine.toggleStatus(props.task, idx)"
                 >
                   <q-item-section side>
                     <q-icon
@@ -724,6 +724,7 @@ function toggleHighlight(idx: number) {
     void e;
   }
 }
+
 async function copyStyledTask() {
   const t = toRaw(props.task || ({} as any));
   const html = buildHtmlFromParsed(parsedLines.value, t);

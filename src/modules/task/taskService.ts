@@ -340,6 +340,164 @@ export const createTaskService = (timeApi?: any) => {
     deleteTask: (date: string, id: string) => deleteTask(date, id),
     toggleTaskComplete: (date: string, id: string) => toggleTaskComplete(date, id),
     undoCycleDone: (date: string, id: string) => undoCycleDone(date, id),
+    subtaskLine: {
+      toggleStatus: async (task: any, lineIndex: number) => {
+        try {
+          if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
+            return null;
+          const isCyclic = Boolean(getCycleType(task));
+          const targetDate = !isCyclic
+            ? task.date ||
+              task.eventDate ||
+              (timeApi && timeApi.currentDate ? timeApi.currentDate.value : '')
+            : timeApi && timeApi.currentDate
+              ? timeApi.currentDate.value
+              : '';
+
+          const lines = (task.description || '').split(/\r?\n/);
+          let appendedIndex: number | undefined = undefined;
+          const ln = lines[lineIndex] ?? '';
+          const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/);
+          const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/);
+
+          if (dashMatch) {
+            const prefix = dashMatch[1];
+            const marker = dashMatch[2] || '';
+            const content = dashMatch[3] || '';
+            const checked = /^\s*\[[xX]\]\s*/.test(marker);
+            const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
+            const baseInsertIndex = hasTitleInDesc ? 1 : 0;
+            const hadStar = /\s*\*\s*$/.test(content);
+            if (checked) {
+              if (lineIndex === 0 && hasTitleInDesc) {
+                lines[lineIndex] = `${prefix}${content}`;
+              } else {
+                const completedStart = lines.findIndex(
+                  (ln2: string) =>
+                    /^\s*-\s*\[[xX]\]/.test(ln2) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln2),
+                );
+                const undoneEnd = completedStart === -1 ? lines.length : completedStart;
+                let lastStarIndex = -1;
+                for (let i = baseInsertIndex; i < undoneEnd; i++) {
+                  try {
+                    if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
+                  } catch (e) {
+                    // ignore
+                  }
+                }
+                let finalInsert = baseInsertIndex;
+                if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
+                const adjustedFinal = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
+                if (lineIndex === adjustedFinal) {
+                  lines[lineIndex] = `${prefix}${content}`;
+                } else {
+                  const movedLine = `${prefix}${content}`;
+                  lines.splice(lineIndex, 1);
+                  lines.splice(adjustedFinal, 0, movedLine);
+                  appendedIndex = adjustedFinal;
+                }
+              }
+            } else {
+              const cleanContent = content.replace(/\s*\*\s*$/, '');
+              const completedLine = `${prefix}[x] ${cleanContent}${hadStar ? ' *' : ''}`;
+              lines.splice(lineIndex, 1);
+              if (hadStar) {
+                const completedStart = lines.findIndex(
+                  (ln2: string) =>
+                    /^(\s*-\s*\[[xX]\]\s*)/.test(ln2) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln2),
+                );
+                if (completedStart === -1) {
+                  lines.push(completedLine);
+                  appendedIndex = lines.length - 1;
+                } else {
+                  lines.splice(completedStart, 0, completedLine);
+                  appendedIndex = completedStart;
+                }
+              } else {
+                lines.push(completedLine);
+                appendedIndex = lines.length - 1;
+              }
+            }
+          } else if (numMatch) {
+            const prefix = numMatch[1];
+            const marker = numMatch[2] || '';
+            const content = numMatch[3] || '';
+            const checked = /^\s*\[[xX]\]\s*/.test(marker);
+            const hasTitleInDesc = Boolean(lines[0] && lines[0].trim() !== '');
+            const baseInsertIndex = hasTitleInDesc ? 1 : 0;
+            const hadStar = /\s*\*\s*$/.test(content);
+            if (checked) {
+              if (lineIndex === 0 && hasTitleInDesc) {
+                lines[lineIndex] = `${prefix}${content}`;
+              } else {
+                const completedStart = lines.findIndex(
+                  (ln2: string) =>
+                    /^\s*-\s*\[[xX]\]/.test(ln2) || /^\s*\d+[.)]\s*\[[xX]\]/.test(ln2),
+                );
+                const undoneEnd = completedStart === -1 ? lines.length : completedStart;
+                let lastStarIndex = -1;
+                for (let i = baseInsertIndex; i < undoneEnd; i++) {
+                  try {
+                    if (/\*\s*$/.test(lines[i])) lastStarIndex = i;
+                  } catch (e) {
+                    // ignore
+                  }
+                }
+                let finalInsert = baseInsertIndex;
+                if (!hadStar && lastStarIndex !== -1) finalInsert = lastStarIndex + 1;
+                const adjustedIndex = finalInsert > lineIndex ? finalInsert - 1 : finalInsert;
+                if (lineIndex === adjustedIndex) {
+                  lines[lineIndex] = `${prefix}${content}`;
+                } else {
+                  const movedLine = `${prefix}${content}`;
+                  lines.splice(lineIndex, 1);
+                  lines.splice(adjustedIndex, 0, movedLine);
+                  appendedIndex = adjustedIndex;
+                }
+              }
+            } else {
+              const hadStarLocal = /\s*\*\s*$/.test(content);
+              const cleanContent = content.replace(/\s*\*\s*$/, '');
+              const completedLine = `- [x] ${cleanContent}${hadStarLocal ? ' *' : ''}`;
+              lines.splice(lineIndex, 1);
+              if (hadStarLocal) {
+                const completedStart = lines.findIndex(
+                  (ln2: string) =>
+                    /^(\s*-\s*\[[xX]\]\s*)/.test(ln2) || /^(\s*\d+[.)]\s*\[[xX]\]\s*)/.test(ln2),
+                );
+                if (completedStart === -1) {
+                  lines.push(completedLine);
+                  appendedIndex = lines.length - 1;
+                } else {
+                  lines.splice(completedStart, 0, completedLine);
+                  appendedIndex = completedStart;
+                }
+              } else {
+                lines.push(completedLine);
+                appendedIndex = lines.length - 1;
+              }
+            }
+          } else {
+            return null;
+          }
+
+          const newDesc = lines.join('\n');
+          try {
+            const merged: any = {
+              ...task,
+              description: newDesc,
+              updatedAt: new Date().toISOString(),
+            };
+            updateTask(targetDate, merged as Task);
+          } catch (e) {
+            // ignore update failures
+          }
+          return { newDesc, appendedIndex };
+        } catch (e) {
+          return null;
+        }
+      },
+    },
     getAll: () => getAll(timeApi),
     getTasksInRange: (s: string, e: string) => getTasksInRange(s, e),
     getTasksByCategory: (c: Task['category']) => getTasksByCategory(c),

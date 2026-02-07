@@ -28,6 +28,21 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
       await saveData();
       return t;
     },
+    subtaskLine: {
+      toggleStatus: async (task: any, lineIndex: number) => {
+        try {
+          if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string') {
+            return null;
+          }
+          const res = await (svc as any).subtaskLine.toggleStatus(task, lineIndex);
+          // persist changes if any
+          if (res && res.newDesc) await saveData();
+          return res;
+        } catch (e) {
+          return null;
+        }
+      },
+    },
     update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
       svc.updateTask(date, taskOrId as any, maybeUpdates);
       await saveData();

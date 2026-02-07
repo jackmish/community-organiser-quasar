@@ -619,8 +619,13 @@ function handleTaskClick(task: any) {
   emit('task-click', task);
 }
 
-function toggleStatus(task: any) {
-  emit('toggle-status', task);
+async function toggleStatus(task: any) {
+  try {
+    const date = task?.date || task?.eventDate || '';
+    await api.task.status.toggleComplete(date, task.id || task._id || task.uuid);
+  } catch (e) {
+    // ignore
+  }
 }
 
 function editTask(task: any) {
