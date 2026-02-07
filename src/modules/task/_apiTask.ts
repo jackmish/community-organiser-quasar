@@ -1,6 +1,6 @@
 import type { Task } from './types';
 import * as taskService from './taskService';
-import { createSubtaskLines } from './subtaskLines';
+import { createSubtaskLines } from './subtaskLines/subtaskLines';
 import { ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 
