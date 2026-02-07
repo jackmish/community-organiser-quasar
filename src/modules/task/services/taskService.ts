@@ -7,39 +7,52 @@ import type { Task } from '../types';
 // Factory that binds a `timeApi` to a simple service object. It sets the
 // module-level days map (via `setTimeApi`) for compatibility, then returns
 // wrappers that operate using the provided `timeApi` where appropriate.
+export class TaskService {
+  timeApi: any;
+  services: { subtaskLine: any };
+
+  constructor(
+    timeApi?: any,
+    state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
+  ) {
+    try {
+      setTimeApi(timeApi);
+    } catch (e) {
+      // ignore
+    }
+    this.timeApi = timeApi;
+    // Construct sub-services and pass this service instance where expected
+    this.services = {
+      subtaskLine: SubtaskLineService.construct(state as any, this, timeApi),
+    };
+  }
+
+  addTask = (date: string, data: any) => addTask(date, data);
+  updateTask = (date: string, taskOrId: Task | string, maybeUpdates?: any) =>
+    updateTask(date, taskOrId as any, maybeUpdates, this.timeApi);
+  deleteTask = (date: string, id: string) => deleteTask(date, id);
+  toggleTaskComplete = (date: string, id: string) => toggleTaskComplete(date, id);
+  undoCycleDone = (date: string, id: string) => undoCycleDone(date, id);
+  getAll = () => getAll(this.timeApi);
+  getTasksInRange = (s: string, e: string) => getTasksInRange(s, e);
+  getTasksByCategory = (c: Task['category']) => getTasksByCategory(c);
+  getTasksByPriority = (p: Task['priority']) => getTasksByPriority(p);
+  getIncompleteTasks = () => getIncompleteTasks();
+  buildFlatTasksList = (daysArg?: Record<string, any>) => buildFlatTasksList(daysArg);
+  get flatTasks() {
+    return flatTasks;
+  }
+  applyActiveSelection = (
+    activeTaskRef: Ref<Task | null>,
+    activeModeRef: Ref<'add' | 'edit' | 'preview'>,
+    payload: string | number | Task | null,
+  ) => applyActiveSelection(activeTaskRef, activeModeRef, payload as any);
+}
+
 export const construct = (
   timeApi?: any,
   state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
-) => {
-  try {
-    setTimeApi(timeApi);
-  } catch (e) {
-    // ignore
-  }
-  const taskService = {
-    addTask,
-    updateTask,
-    deleteTask,
-    toggleTaskComplete,
-    undoCycleDone,
-    getAll,
-    getTasksInRange,
-    getTasksByCategory,
-    getTasksByPriority,
-    getIncompleteTasks,
-    buildFlatTasksList,
-    flatTasks,
-    applyActiveSelection,
-  };
-
-  const services = {
-    subtaskLine: SubtaskLineService.construct(state as any, taskService, timeApi),
-  };
-
-  // Return the task service plus its grouped `services` object. Callers
-  // should access subtask helpers via `svc.services.subtaskLine`.
-  return { services, ...taskService };
-};
+) => new TaskService(timeApi, state);
 
 //// Chaotic generative AI code, not sorted or organized yet.
 // Generate unique ID
