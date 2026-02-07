@@ -1,11 +1,11 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../../types';
-import type { TaskService } from '../taskManager';
+import type { TaskManager } from '../taskManager';
 import { getCycleType } from '../../utlils/occursOnDay';
 
-export function construct(taskService: TaskService) {
-  // Accept only a TaskService instance. Extract `state` and `timeApi` and
+export function construct(taskService: TaskManager) {
+  // Accept only a TaskManager instance. Extract `state` and `timeApi` and
   // build an `opts` object that delegates persistence to
   // `taskService.updateTask(date, taskObj)`.
   let stateOrActiveTask: any = undefined;

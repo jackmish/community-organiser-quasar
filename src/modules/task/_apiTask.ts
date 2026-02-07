@@ -1,5 +1,5 @@
 import type { Task } from './types';
-import { TaskService } from './services/taskManager';
+import { TaskManager } from './services/taskManager';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
@@ -15,7 +15,7 @@ export class ApiTask {
     activeMode: Ref<'add' | 'edit' | 'preview'>;
     parsedLines: Ref<any[]>;
   };
-  svc: TaskService;
+  svc: TaskManager;
 
   constructor(groupApi?: any, timeApi?: any) {
     this.groupApi = groupApi;
@@ -27,7 +27,7 @@ export class ApiTask {
     };
     // Pass the ApiTask instance to the task service; taskService.construct will
     // detect and pull `time` and `state` from this object.
-    this.svc = new TaskService(this);
+    this.svc = new TaskManager(this);
   }
 
   get active() {
