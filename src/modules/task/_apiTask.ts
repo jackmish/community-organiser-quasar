@@ -42,6 +42,18 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
           return null;
         }
       },
+      add: async (text: string) => {
+        try {
+          if (typeof text !== 'string' || !text.trim()) return null;
+          const task = activeTask.value;
+          if (!task) return null;
+          const res = await (svc as any).subtaskLine.add(task, text);
+          if (res && res.newDesc) await saveData();
+          return res;
+        } catch (e) {
+          return null;
+        }
+      },
     },
     update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
       svc.updateTask(date, taskOrId as any, maybeUpdates);

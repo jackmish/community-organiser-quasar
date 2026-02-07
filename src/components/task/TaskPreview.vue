@@ -423,48 +423,13 @@ watch(
 );
 
 function addQuickSubtask() {
-  const text = (quickSubtask.value || '').trim();
-  if (!text) return;
-  const cur = props.task.description || '';
-  // Insert new subtask after the first title line when the description begins with the title;
-  // otherwise prepend at the top.
-  const title = (activeTask.value?.name || '').trim();
-  const lines = cur.split(/\r?\n/);
-  let updated: string;
-  // If there are starred undone subtasks, insert after the last one
-  const parsed = parsedLines.value || [];
-  let lastStarredUndone = -1;
-  for (let i = 0; i < parsed.length; i++) {
-    const it = parsed[i];
-    if (!it) continue;
-    if (it.type === 'list' && it.highlighted && !it.checked) lastStarredUndone = i;
-  }
-  if (lastStarredUndone >= 0) {
-    const newLines = [...lines];
-    const starSuffix = quickSubtaskStar.value ? ' *' : '';
-    newLines.splice(lastStarredUndone + 1, 0, `- ${text}${starSuffix}`);
-    updated = newLines.join('\n');
-  } else if (title && lines.length > 0) {
-    const first = lines[0] || '';
-    const titleMatch = new RegExp('^\\s*' + escapeRegExp(title) + '\\b', 'i');
-    if (titleMatch.test(first)) {
-      if (lines.length === 1) {
-        updated = `${first}\n- ${text}`;
-      } else {
-        updated = `${first}\n- ${text}\n${lines.slice(1).join('\n')}`;
-      }
-    } else {
-      updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-    }
-  } else {
-    updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-  }
-  const newTask = { ...(toRaw(props.task) as any), description: updated } as Task;
-  emit('update-task', newTask);
+  const text = quickSubtask.value;
+  // Delegate insertion and persistence to the task API which will trim/validate input.
+  void api.task.subtaskLine.add(text);
   quickSubtask.value = '';
   quickSubtaskStar.value = false;
   nextTick(() => {
-    // no-op; parent will handle re-render
+    // parent will re-render after API updates
   });
 }
 
