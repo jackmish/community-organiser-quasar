@@ -4,98 +4,106 @@ import type { Task } from '../../types';
 import type { TaskManager } from '../taskManager';
 import { getCycleType } from '../../utlils/occursOnDay';
 
-export function construct(taskManager: TaskManager) {
-  // Accept only a TaskManager instance. Extract `state` and `timeApi` and
-  // build an `opts` object that delegates persistence to
-  // `taskManager.updateTask(date, taskObj)`.
-  let stateOrActiveTask: any = undefined;
-  let opts:
-    | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
-    | undefined = undefined;
-  try {
-    if (taskManager && typeof taskManager === 'object') {
-      stateOrActiveTask = taskManager.apiTask && (taskManager.apiTask.state as any);
-      opts = {
-        timeApi: taskManager.apiTask && taskManager.apiTask.timeApi,
-        persist: async (date: string, taskObj: Task) => {
-          try {
-            if (typeof taskManager.updateTask === 'function') {
-              await Promise.resolve(taskManager.updateTask(date, taskObj));
-            }
-          } catch (e) {
-            // ignore persistence failures
-          }
-        },
-      };
-    }
-  } catch (e) {
-    // fall back to undefined state/opts
-  }
-  // Accept either a state object with `activeTask`, a direct `Ref<Task|null>`,
-  // or `undefined`. If nothing is provided create an internal activeTask ref.
-  let activeTask: Ref<Task | null>;
-  if (
-    stateOrActiveTask &&
-    typeof stateOrActiveTask === 'object' &&
-    'activeTask' in stateOrActiveTask
-  ) {
-    activeTask = stateOrActiveTask.activeTask;
-  } else if (stateOrActiveTask) {
-    activeTask = stateOrActiveTask as Ref<Task | null>;
-  } else {
-    activeTask = ref(null) as Ref<Task | null>;
-  }
-
-  const lastRawLines = ref<string[]>([] as string[]);
-  const lastLineUids = ref<string[]>([] as string[]);
-  let uidCounter = 1;
-
-  const parsedLines = ref(
-    [] as Array<{
+export class SubtaskLineManager {
+  parsedLines: Ref<
+    Array<{
       uid: string;
       type: string;
       raw: string;
       html: string;
       checked?: boolean;
       highlighted?: boolean;
-    }>,
-  );
+    }>
+  >;
+  // Internal state
+  private activeTask: Ref<Task | null>;
+  private lastRawLines = ref<string[]>([] as string[]);
+  private lastLineUids = ref<string[]>([] as string[]);
+  private uidCounter = 1;
+  private opts:
+    | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
+    | undefined = undefined;
 
-  function escapeHtml(s = '') {
+  constructor(taskManager: TaskManager) {
+    let stateOrActiveTask: any = undefined;
+    try {
+      if (taskManager && typeof taskManager === 'object') {
+        stateOrActiveTask = taskManager.apiTask && (taskManager.apiTask.state as any);
+        this.opts = {
+          timeApi: taskManager.apiTask && taskManager.apiTask.timeApi,
+          persist: async (date: string, taskObj: Task) => {
+            try {
+              if (typeof taskManager.updateTask === 'function') {
+                await Promise.resolve(taskManager.updateTask(date, taskObj));
+              }
+            } catch (e) {
+              // ignore persistence failures
+            }
+          },
+        };
+      }
+    } catch (e) {
+      // fall back to undefined state/opts
+    }
+
+    if (
+      stateOrActiveTask &&
+      typeof stateOrActiveTask === 'object' &&
+      'activeTask' in stateOrActiveTask
+    ) {
+      this.activeTask = stateOrActiveTask.activeTask;
+    } else if (stateOrActiveTask) {
+      this.activeTask = stateOrActiveTask as Ref<Task | null>;
+    } else {
+      this.activeTask = ref(null) as Ref<Task | null>;
+    }
+
+    this.parsedLines = ref([]) as typeof this.parsedLines;
+
+    watch(
+      () => this.activeTask.value && this.activeTask.value.description,
+      (d) => {
+        this.parsedLines.value = this.computeParsedLines(String(d || ''));
+      },
+      { immediate: true },
+    );
+
+    try {
+      if (stateOrActiveTask && typeof stateOrActiveTask === 'object') {
+        stateOrActiveTask.parsedLines = this.parsedLines;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private escapeHtml(s = '') {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function escapeRegExp(string = '') {
+  private escapeRegExp(string = '') {
     return String(string).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
   }
 
-  function stripTitleFrom(text = '', title = '') {
+  private stripTitleFrom(text = '', title = '') {
     if (!text || !title) return text;
     const t = title.trim();
     if (!t) return text;
     const pattern = new RegExp(
-      '^\\s*' + escapeRegExp(t) + '(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?',
+      '^\\s*' + this.escapeRegExp(t) + '(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?',
       'i',
     );
     return text.replace(pattern, '');
   }
 
-  function computeParsedLines(desc: string) {
+  private computeParsedLines(desc: string) {
     const d = desc || '';
-    if (!d)
-      return [] as Array<{
-        uid: string;
-        type: string;
-        raw: string;
-        html: string;
-        checked?: boolean;
-        highlighted?: boolean;
-      }>;
+    if (!d) return [] as typeof this.parsedLines.value;
     const lines = d.split(/\r?\n/);
     const prevMap = new Map<string, string[]>();
-    for (let i = 0; i < lastRawLines.value.length; i++) {
-      const raw = lastRawLines.value[i] || '';
-      const uid = lastLineUids.value[i] || '';
+    for (let i = 0; i < this.lastRawLines.value.length; i++) {
+      const raw = this.lastRawLines.value[i] || '';
+      const uid = this.lastLineUids.value[i] || '';
       if (!prevMap.has(raw)) prevMap.set(raw, []);
       prevMap.get(raw)!.push(uid);
     }
@@ -105,19 +113,19 @@ export function construct(taskManager: TaskManager) {
       const queue = prevMap.get(raw);
       if (queue && queue.length > 0) {
         const reused = queue.shift();
-        newUids.push(reused ?? `line-${uidCounter++}`);
+        newUids.push(reused ?? `line-${this.uidCounter++}`);
       } else {
-        newUids.push(`line-${uidCounter++}`);
+        newUids.push(`line-${this.uidCounter++}`);
       }
     }
-    lastRawLines.value = [...lines];
-    lastLineUids.value = [...newUids];
+    this.lastRawLines.value = [...lines];
+    this.lastLineUids.value = [...newUids];
 
     return lines.map((ln, lineIndex) => {
-      const uid = newUids[lineIndex] ?? `line-${uidCounter++}`;
+      const uid = newUids[lineIndex] ?? `line-${this.uidCounter++}`;
       let text = ln;
-      if (lineIndex === 0 && activeTask.value?.name) {
-        text = stripTitleFrom(text, activeTask.value.name);
+      if (lineIndex === 0 && this.activeTask.value?.name) {
+        text = this.stripTitleFrom(text, this.activeTask.value.name);
       }
       const dashMatch = text.match(/^\s*-\s*(.*)$/);
       const numMatch = text.match(/^\s*(\d+)[.)]\s*(.*)$/);
@@ -129,7 +137,7 @@ export function construct(taskManager: TaskManager) {
         const highlighted = !!starMatch;
         let clean = content.replace(/^\s*\[[xX]\]\s*/, '');
         clean = clean.replace(/\s*\*\s*$/, '');
-        const html = escapeHtml(clean).replace(/\n/g, '<br/>');
+        const html = this.escapeHtml(clean).replace(/\n/g, '<br/>');
         return { uid, type: 'list', raw: ln, html, checked, highlighted };
       }
       if (numMatch) {
@@ -138,37 +146,16 @@ export function construct(taskManager: TaskManager) {
         const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
         const checked = !!markerMatch;
         const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
-        let html = escapeHtml(clean).replace(/\n/g, '<br/>');
+        let html = this.escapeHtml(clean).replace(/\n/g, '<br/>');
         html = `${idx}. ${html}`;
         return { uid, type: 'list', raw: ln, html, checked };
       }
-      const html = escapeHtml(text).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
+      const html = this.escapeHtml(text).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
       return { uid, type: 'text', raw: ln, html };
     });
   }
 
-  watch(
-    () => activeTask.value && activeTask.value.description,
-    (d) => {
-      parsedLines.value = computeParsedLines(String(d || ''));
-    },
-    { immediate: true },
-  );
-
-  // If caller passed a mutable `state` object, attach the parsedLines ref
-  // directly so callers can read the Manager-owned parsed representation.
-  try {
-    if (stateOrActiveTask && typeof stateOrActiveTask === 'object') {
-      stateOrActiveTask.parsedLines = parsedLines;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // Compute-only toggle: returns new description and optional appended index
-  // without performing any persistence. The Manager will provide a wrapper
-  // that persists the result when a `persist` callback is supplied.
-  async function toggleStatus(task: any, lineIndex: number) {
+  private async toggleCompute(task: any, lineIndex: number) {
     try {
       if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
         return null;
@@ -305,13 +292,11 @@ export function construct(taskManager: TaskManager) {
     }
   }
 
-  // Compute-only add: returns computed new description (no persistence)
-  async function add(task: any, text: string) {
+  private async addCompute(task: any, text: string) {
     try {
       if (!task || typeof text !== 'string' || !text.trim()) return null;
       const cur = task.description || '';
       const lines = cur.split(/\r?\n/);
-      // find last starred undone list item
       let lastStarredUndone = -1;
       for (let i = 0; i < lines.length; i++) {
         try {
@@ -358,66 +343,87 @@ export function construct(taskManager: TaskManager) {
     }
   }
 
-  // Persistence-aware wrappers: call compute-only helpers and persist via
-  // provided `opts.persist` when available. Compute-only behavior is still
-  // accessible inside this module.
-  const toggleStatusAndPersist = async (task: any, lineIndex: number) => {
-    const res = await toggleStatus(task, lineIndex);
-    if (res && res.newDesc && typeof opts?.persist === 'function') {
+  async toggleStatusAndPersist(task: any, lineIndex: number) {
+    const res = await this.toggleCompute(task, lineIndex);
+    if (res && res.newDesc && typeof this.opts?.persist === 'function') {
       try {
         const isCyclic = Boolean(getCycleType(task));
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
-          : opts?.timeApi && opts.timeApi.currentDate
-            ? opts.timeApi.currentDate.value
+            (this.opts?.timeApi && this.opts.timeApi.currentDate
+              ? this.opts.timeApi.currentDate.value
+              : '')
+          : this.opts?.timeApi && this.opts.timeApi.currentDate
+            ? this.opts.timeApi.currentDate.value
             : '';
-        const merged: any = {
-          ...task,
+        const merged: Task = {
+          ...(task as Task),
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
-        // Await the persist callback in case it returns a Promise
-        try {
-          // Use Promise.resolve to handle both sync and async persist implementations
-          await Promise.resolve(opts.persist(targetDate, merged as Task));
-        } catch (e) {
-          // ignore persistence failures
+        const persist = this.opts?.persist;
+        if (typeof persist === 'function') {
+          try {
+            await Promise.resolve(persist(targetDate, merged));
+          } catch (e) {
+            // ignore persistence failures
+          }
         }
       } catch (e) {
         // ignore persistence failures
       }
     }
     return res;
-  };
+  }
 
-  const addAndPersist = async (task: any, text: string) => {
-    const res = await add(task, text);
-    if (res && res.newDesc && typeof opts?.persist === 'function') {
+  async addAndPersist(task: any, text: string) {
+    const res = await this.addCompute(task, text);
+    if (res && res.newDesc && typeof this.opts?.persist === 'function') {
       try {
         const isCyclic = Boolean(getCycleType(task));
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (opts?.timeApi && opts.timeApi.currentDate ? opts.timeApi.currentDate.value : '')
-          : opts?.timeApi && opts.timeApi.currentDate
-            ? opts.timeApi.currentDate.value
+            (this.opts?.timeApi && this.opts.timeApi.currentDate
+              ? this.opts.timeApi.currentDate.value
+              : '')
+          : this.opts?.timeApi && this.opts.timeApi.currentDate
+            ? this.opts.timeApi.currentDate.value
             : '';
-        const merged: any = {
-          ...task,
+        const merged: Task = {
+          ...(task as Task),
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
-        await Promise.resolve(opts.persist(targetDate, merged as Task));
+        const persist = this.opts?.persist;
+        if (typeof persist === 'function') {
+          await Promise.resolve(persist(targetDate, merged));
+        }
       } catch (e) {
         // ignore persistence failures
       }
     }
     return res;
-  };
+  }
 
-  return { parsedLines, toggleStatus: toggleStatusAndPersist, add: addAndPersist } as const;
+  // Public API compatible with previous factory return
+  async add(task: any, text: string) {
+    return this.addAndPersist(task, text);
+  }
+
+  async toggleStatus(task: any, lineIndex: number) {
+    return this.toggleStatusAndPersist(task, lineIndex);
+  }
+
+  // Provide a compatibility factory
+  static construct(taskManager: TaskManager) {
+    return new SubtaskLineManager(taskManager);
+  }
+}
+
+export function construct(taskManager: TaskManager) {
+  return SubtaskLineManager.construct(taskManager);
 }
 
 export default { construct };
