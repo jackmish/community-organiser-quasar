@@ -12,9 +12,9 @@ export class TaskService {
   timeApi: unknown;
   services: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
   // preserve provided active state for sub-services that expect it
-  state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> };
+  state: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> } | undefined;
 
-  constructor(apiOrTimeApi?: ApiTask | unknown) {
+  constructor(apiOrTimeApi?: ApiTask | Record<string, unknown>) {
     // Accept either an ApiTask/TaskApi instance (which contains `.state` and
     // `.timeApi`) or a raw `timeApi` object for backward compatibility.
     try {
@@ -26,12 +26,10 @@ export class TaskService {
       } else {
         setTimeApi(apiOrTimeApi);
         this.timeApi = apiOrTimeApi;
-        this.state = undefined;
       }
     } catch (e) {
       // ignore
       this.timeApi = undefined;
-      this.state = undefined;
     }
     // Construct sub-services and pass this service instance where expected
     this.services = {

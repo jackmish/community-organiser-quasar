@@ -1,10 +1,8 @@
 import type { Task } from './types';
-import * as taskService from './services/taskService';
 import { TaskService } from './services/taskService';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
-import { parse } from 'path';
 
 export type PreviewPayload = string | number | Task | null;
 

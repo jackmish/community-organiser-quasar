@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../../types';
-import type { TaskService } from '../../taskService';
+import type { TaskService } from '../taskService';
 import { getCycleType } from '../../utlils/occursOnDay';
 
 export function construct(taskService: TaskService) {
