@@ -5,7 +5,7 @@ import { app } from 'src/services/appService';
 import { saveData } from 'src/utils/storageUtils';
 
 // Minimal group API factory. Accepts the shared state object and keeps implementation tiny.
-export function createGroupApi() {
+export function construct() {
   //// shared state REFS
   const activeGroup = ref<{ label: string; value: string | null } | null>(null);
   const groups = ref<any[]>([]);

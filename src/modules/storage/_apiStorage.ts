@@ -3,7 +3,7 @@ import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
 import * as taskService from 'src/modules/task/taskService';
 
-export function createStorageApi(groupApi?: any, timeApi?: any) {
+export function construct(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
 
   // No implicit wiring: storage will populate `timeApi.days` during `loadData`.
@@ -222,4 +222,4 @@ export function createStorageApi(groupApi?: any, timeApi?: any) {
   } as const;
 }
 
-export type ApiStorage = ReturnType<typeof createStorageApi>;
+export type ApiStorage = ReturnType<typeof construct>;

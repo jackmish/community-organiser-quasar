@@ -19,7 +19,7 @@ export const getGroupsByParent = (groups: TaskGroup[] = [], parentId?: string): 
 };
 
 // Build a tree of group nodes for UI. Nodes reference original group objects and do NOT mutate them.
-// Note: tree-building moved into the group API factory (apiGroup.createGroupApi)
+// Note: tree-building moved into the group API factory (apiGroup.construct)
 
 // Determine whether a candidate group id should be visible when `activeGroupValue` is selected.
 export const isVisibleForActive = (

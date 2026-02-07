@@ -34,56 +34,6 @@ export const setTimeApi = (t: any) => {
   }
 };
 
-function sanitizeForHistory(value: any, depth = 2): any {
-  if (value === null || value === undefined) return value;
-  const t = typeof value;
-  if (t === 'string' || t === 'number' || t === 'boolean') return value;
-  if (t === 'function') return '[Function]';
-  if (value instanceof Date) return value.toISOString();
-
-  try {
-    if (Array.isArray(value)) {
-      if (depth <= 0) return '[Array]';
-      return value.map((v) =>
-        v === null || v === undefined
-          ? v
-          : typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
-            ? v
-            : v instanceof Date
-              ? v.toISOString()
-              : sanitizeForHistory(v, depth - 1),
-      );
-    }
-
-    if (depth <= 0) return '[Object]';
-
-    const out: any = {};
-    for (const k of Object.keys(value)) {
-      try {
-        const v = value[k];
-        if (v === null || v === undefined) {
-          out[k] = v;
-        } else if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-          out[k] = v;
-        } else if (v instanceof Date) {
-          out[k] = v.toISOString();
-        } else if (Array.isArray(v)) {
-          out[k] = sanitizeForHistory(v, depth - 1);
-        } else if (typeof v === 'function') {
-          out[k] = '[Function]';
-        } else {
-          out[k] = sanitizeForHistory(v, depth - 1);
-        }
-      } catch (e) {
-        out[k] = '[Unserializable]';
-      }
-    }
-    return out;
-  } catch (e) {
-    return '[Unserializable]';
-  }
-}
-
 export const addTask = (
   date: string,
   taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
@@ -815,9 +765,3 @@ export const getIncompleteTasks = (): Task[] => {
   });
   return tasks.sort((a, b) => a.date.localeCompare(b.date));
 };
-
-// Convenience aliases removed — callers should use the exported core functions
-// (e.g. `addTask`, `updateTask`, `deleteTask`, `getAllTasks`) or use the
-// `api.task` facade which delegates to this service. This keeps the module
-// free of implicit runtime wiring and ensures a single explicit source of
-// truth: `time.days`.

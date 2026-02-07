@@ -6,7 +6,7 @@ import { saveData } from 'src/utils/storageUtils';
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
-export function createTaskApi(groupApi?: any, timeApi?: any) {
+export function construct(groupApi?: any, timeApi?: any) {
   // Construct a task service instance
   const svc = taskService.construct(timeApi);
 

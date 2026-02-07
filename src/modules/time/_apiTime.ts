@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-export function createTimeApi() {
+export function construct() {
   const currentDate = ref<string>(new Date().toISOString().split('T')[0] ?? '');
   const days = ref<Record<string, any>>({});
   const lastModified = ref<string>(new Date().toISOString());
