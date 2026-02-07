@@ -351,9 +351,7 @@ export class SubtaskLineManager {
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (this.opts?.time && this.opts.time.currentDate
-              ? this.opts.time.currentDate.value
-              : '')
+            (this.opts?.time && this.opts.time.currentDate ? this.opts.time.currentDate.value : '')
           : this.opts?.time && this.opts.time.currentDate
             ? this.opts.time.currentDate.value
             : '';
@@ -385,9 +383,7 @@ export class SubtaskLineManager {
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (this.opts?.time && this.opts.time.currentDate
-              ? this.opts.time.currentDate.value
-              : '')
+            (this.opts?.time && this.opts.time.currentDate ? this.opts.time.currentDate.value : '')
           : this.opts?.time && this.opts.time.currentDate
             ? this.opts.time.currentDate.value
             : '';
