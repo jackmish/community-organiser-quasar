@@ -10,8 +10,10 @@ export function construct(
   maybeTimeApi?: any,
 ) {
   // Normalize options into expected shape: { timeApi?, persist? }
-  let opts: { timeApi?: any; persist?: (date: string, taskObj: Task) => void } | undefined =
-    undefined;
+  // `persist` may return a Promise or void; callers will await it.
+  let opts:
+    | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
+    | undefined = undefined;
   try {
     if (
       optsOrTaskService &&
@@ -23,9 +25,12 @@ export function construct(
       const taskService = optsOrTaskService;
       opts = {
         timeApi: maybeTimeApi,
-        persist: (date: string, taskObj: Task) => {
+        persist: async (date: string, taskObj: Task) => {
           try {
-            if (typeof taskService.updateTask === 'function') taskService.updateTask(date, taskObj);
+            if (typeof taskService.updateTask === 'function') {
+              // updateTask is synchronous currently; wrap in Promise.resolve to allow awaiting
+              await Promise.resolve(taskService.updateTask(date, taskObj));
+            }
           } catch (e) {
             // ignore
           }
@@ -384,7 +389,13 @@ export function construct(
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
-        opts.persist(targetDate, merged as Task);
+        // Await the persist callback in case it returns a Promise
+        try {
+          // Use Promise.resolve to handle both sync and async persist implementations
+          await Promise.resolve(opts.persist(targetDate, merged as Task));
+        } catch (e) {
+          // ignore persistence failures
+        }
       } catch (e) {
         // ignore persistence failures
       }
@@ -409,7 +420,7 @@ export function construct(
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
-        opts.persist(targetDate, merged as Task);
+        await Promise.resolve(opts.persist(targetDate, merged as Task));
       } catch (e) {
         // ignore persistence failures
       }

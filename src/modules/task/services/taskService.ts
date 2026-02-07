@@ -50,9 +50,21 @@ export class TaskService {
 }
 
 export const construct = (
-  timeApi?: any,
+  maybeApiOrTimeApi?: any,
   state?: { activeTask?: Ref<Task | null>; activeMode?: Ref<'add' | 'edit' | 'preview'> },
-) => new TaskService(timeApi, state);
+) => {
+  // Backwards-compatible: if an ApiTask instance was passed (it contains a
+  // `state` and `timeApi`), extract those and construct the service.
+  try {
+    if (maybeApiOrTimeApi && typeof maybeApiOrTimeApi === 'object' && maybeApiOrTimeApi.state) {
+      const apiInstance = maybeApiOrTimeApi;
+      return new TaskService(apiInstance.timeApi, apiInstance.state);
+    }
+  } catch (e) {
+    // fall back
+  }
+  return new TaskService(maybeApiOrTimeApi, state);
+};
 
 //// Chaotic generative AI code, not sorted or organized yet.
 // Generate unique ID

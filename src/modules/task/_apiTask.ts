@@ -1,5 +1,6 @@
 import type { Task } from './types';
 import * as taskService from './services/taskService';
+import type { TaskService } from './services/taskService';
 import { ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 import { parse } from 'path';
@@ -7,23 +8,33 @@ import { parse } from 'path';
 export type PreviewPayload = string | number | Task | null;
 
 // Factory to create a task API bound to the given state object
-export function construct(groupApi?: any, timeApi?: any) {
-  // Construct a task service instance. Provide a shared `state` object so the
-  // service can bind parsed-lines and watchers to the active refs directly.
-  // Keep `state` simple and let TypeScript infer the ref types. The
-  // service will attach `parsedLines` to this object when available.
-  const state = {
-    activeTask: ref<Task | null>(null),
-    activeMode: ref<'add' | 'edit' | 'preview'>('add'),
-    parsedLines: ref([]),
+export class ApiTask {
+  groupApi: any;
+  timeApi: any;
+  state: {
+    activeTask: ReturnType<typeof ref>;
+    activeMode: ReturnType<typeof ref>;
+    parsedLines: ReturnType<typeof ref>;
   };
+  svc: TaskService;
 
-  const svc = taskService.construct(timeApi, state as any);
+  constructor(groupApi?: any, timeApi?: any) {
+    this.groupApi = groupApi;
+    this.timeApi = timeApi;
+    this.state = {
+      activeTask: ref<Task | null>(null),
+      activeMode: ref<'add' | 'edit' | 'preview'>('add'),
+      parsedLines: ref([]),
+    };
+    // Pass the ApiTask instance to the task service; taskService.construct will
+    // detect and pull `time` and `state` from this object.
+    this.svc = taskService.construct(this as any);
+  }
 
-  // `state.parsedLines` is attached by the service when available.
-
-  return {
-    active: {
+  get active() {
+    const state = this.state;
+    const svc = this.svc;
+    return {
       task: state.activeTask,
       mode: state.activeMode,
       setTask: (payload: PreviewPayload) =>
@@ -32,34 +43,12 @@ export function construct(groupApi?: any, timeApi?: any) {
         state.activeMode.value = m;
         if (m === 'add') state.activeTask.value = null;
       },
-    },
-    add: async (date: string, taskData: any) => {
-      const t = svc.addTask(date, taskData);
-      await saveData();
-      return t;
-    },
+    } as const;
+  }
 
-    update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
-      svc.updateTask(date, taskOrId as any, maybeUpdates);
-      await saveData();
-    },
-    delete: async (date: string, id: string) => {
-      const removed = svc.deleteTask(date, id);
-      await saveData();
-      return removed;
-    },
-    status: {
-      toggleComplete: async (date: string, id: string) => {
-        svc.toggleTaskComplete(date, id);
-        await saveData();
-      },
-      undoCycleDone: async (date: string, id: string) => {
-        const changed = svc.undoCycleDone(date, id);
-        if (changed) await saveData();
-        return changed;
-      },
-    },
-    list: {
+  get list() {
+    const svc = this.svc;
+    return {
       all: () => svc.getAll().slice(),
       inRange: (s: string, e: string) => svc.getTasksInRange(s, e),
       byCategory: (c: Task['category']) => svc.getTasksByCategory(c),
@@ -75,8 +64,13 @@ export function construct(groupApi?: any, timeApi?: any) {
               ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
           ),
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) => svc.getAll().reduce(fn, init),
-    },
-    subtaskLine: {
+    } as const;
+  }
+
+  get subtaskLine() {
+    const svc = this.svc;
+    const state = this.state;
+    return {
       parsedLines: state.parsedLines,
       add: async (text: string) => {
         const res = await (svc as any).services.subtaskLine.add(state.activeTask.value, text);
@@ -88,6 +82,42 @@ export function construct(groupApi?: any, timeApi?: any) {
         if (res && res.newDesc) await saveData();
         return res;
       },
-    },
-  } as const;
+    } as const;
+  }
+
+  async add(date: string, taskData: any) {
+    const t = this.svc.addTask(date, taskData);
+    await saveData();
+    return t;
+  }
+
+  async update(date: string, taskOrId: Task | string, maybeUpdates?: any) {
+    this.svc.updateTask(date, taskOrId as any, maybeUpdates);
+    await saveData();
+  }
+
+  async delete(date: string, id: string) {
+    const removed = this.svc.deleteTask(date, id);
+    await saveData();
+    return removed;
+  }
+
+  get status() {
+    const svc = this.svc;
+    return {
+      toggleComplete: async (date: string, id: string) => {
+        svc.toggleTaskComplete(date, id);
+        await saveData();
+      },
+      undoCycleDone: async (date: string, id: string) => {
+        const changed = svc.undoCycleDone(date, id);
+        if (changed) await saveData();
+        return changed;
+      },
+    } as const;
+  }
+}
+
+export function construct(groupApi?: any, timeApi?: any) {
+  return new ApiTask(groupApi, timeApi);
 }
