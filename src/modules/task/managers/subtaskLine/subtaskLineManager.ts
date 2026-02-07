@@ -4,23 +4,23 @@ import type { Task } from '../../types';
 import type { TaskManager } from '../taskManager';
 import { getCycleType } from '../../utlils/occursOnDay';
 
-export function construct(taskService: TaskManager) {
+export function construct(taskManager: TaskManager) {
   // Accept only a TaskManager instance. Extract `state` and `timeApi` and
   // build an `opts` object that delegates persistence to
-  // `taskService.updateTask(date, taskObj)`.
+  // `taskManager.updateTask(date, taskObj)`.
   let stateOrActiveTask: any = undefined;
   let opts:
     | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
     | undefined = undefined;
   try {
-    if (taskService && typeof taskService === 'object') {
-      stateOrActiveTask = taskService.apiTask && (taskService.apiTask.state as any);
+    if (taskManager && typeof taskManager === 'object') {
+      stateOrActiveTask = taskManager.apiTask && (taskManager.apiTask.state as any);
       opts = {
-        timeApi: taskService.apiTask && taskService.apiTask.timeApi,
+        timeApi: taskManager.apiTask && taskManager.apiTask.timeApi,
         persist: async (date: string, taskObj: Task) => {
           try {
-            if (typeof taskService.updateTask === 'function') {
-              await Promise.resolve(taskService.updateTask(date, taskObj));
+            if (typeof taskManager.updateTask === 'function') {
+              await Promise.resolve(taskManager.updateTask(date, taskObj));
             }
           } catch (e) {
             // ignore persistence failures
@@ -156,7 +156,7 @@ export function construct(taskService: TaskManager) {
   );
 
   // If caller passed a mutable `state` object, attach the parsedLines ref
-  // directly so callers can read the service-owned parsed representation.
+  // directly so callers can read the Manager-owned parsed representation.
   try {
     if (stateOrActiveTask && typeof stateOrActiveTask === 'object') {
       stateOrActiveTask.parsedLines = parsedLines;
@@ -166,7 +166,7 @@ export function construct(taskService: TaskManager) {
   }
 
   // Compute-only toggle: returns new description and optional appended index
-  // without performing any persistence. The service will provide a wrapper
+  // without performing any persistence. The Manager will provide a wrapper
   // that persists the result when a `persist` callback is supplied.
   async function toggleStatus(task: any, lineIndex: number) {
     try {

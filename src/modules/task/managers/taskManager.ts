@@ -1,13 +1,13 @@
 import { getCycleType } from '../utlils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import * as SubtaskLineService from './subtaskLine/subtaskLineService';
+import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
 import type { ApiTask } from '../_apiTask';
 import type { Task } from '../types';
 
 export class TaskManager {
   apiTask: ApiTask | undefined;
-  managers: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
+  managers: { subtaskLine: ReturnType<typeof SubtaskLineManager.construct> };
 
   constructor(apiTask?: ApiTask) {
     try {
@@ -17,7 +17,7 @@ export class TaskManager {
       // ignore
     }
     this.managers = {
-      subtaskLine: SubtaskLineService.construct(this),
+      subtaskLine: SubtaskLineManager.construct(this),
     };
   }
 
