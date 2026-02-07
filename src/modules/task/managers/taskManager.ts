@@ -7,7 +7,7 @@ import type { Task } from '../types';
 
 export class TaskManager {
   apiTask: ApiTask | undefined;
-  services: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
+  managers: { subtaskLine: ReturnType<typeof SubtaskLineService.construct> };
 
   constructor(apiTask?: ApiTask) {
     try {
@@ -16,7 +16,7 @@ export class TaskManager {
     } catch (e) {
       // ignore
     }
-    this.services = {
+    this.managers = {
       subtaskLine: SubtaskLineService.construct(this),
     };
   }

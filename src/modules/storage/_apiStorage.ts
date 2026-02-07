@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
-import * as taskService from 'src/modules/task/services/taskManager';
+import * as taskService from 'src/modules/task/managers/taskManager';
 
 export function construct(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
