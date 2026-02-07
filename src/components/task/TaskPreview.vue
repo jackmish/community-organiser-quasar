@@ -310,118 +310,6 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: number) {
   itemRefs.value[idx] = null;
 }
 
-// When parent requests an animating line, collapse that element by animating
-// its explicit height/padding/margin to 0 so elements below move up naturally.
-watch(
-  () => props.animatingLines && [...(props.animatingLines || [])],
-  async (newVal, oldVal) => {
-    const added = (newVal || []).filter((i) => !(oldVal || []).includes(i));
-    for (const rawIdx of added) {
-      const expand = rawIdx < 0;
-      const idx = expand ? Math.abs(rawIdx) - 1 : rawIdx;
-      let el = itemRefs.value[idx];
-      if (!el) {
-        await nextTick();
-        el = itemRefs.value[idx];
-        if (!el) continue;
-      }
-      try {
-        const style = el.style;
-        const taskId = activeTask.value && activeTask.value.id;
-        if (expand) {
-          // expanding: animate from the element's current collapsed state
-          // to its natural height. The collapse phase left inline styles
-          // (height:0, overflow:hidden), so measuring `el.scrollHeight` here
-          // gives the target height.
-          const targetHeight = el.scrollHeight + 'px';
-          style.overflow = 'hidden';
-          // ensure start state is collapsed
-          style.maxHeight = style.maxHeight || '0px';
-          await nextTick();
-          void el.offsetHeight;
-          style.transition = 'max-height 0.25s ease-in-out';
-          style.maxHeight = targetHeight;
-          const handler = (ev: TransitionEvent) => {
-            if ((ev && ev.propertyName !== 'max-height') || !el) return;
-            try {
-              style.removeProperty('max-height');
-              style.removeProperty('overflow');
-              style.removeProperty('transition');
-            } catch (e) {
-              void e;
-            }
-            el.removeEventListener('transitionend', handler);
-            const to = transitionFallbacks.get(el);
-            if (to) {
-              clearTimeout(to);
-              transitionFallbacks.delete(el);
-            }
-            emit('line-expanded', { idx, taskId });
-          };
-          el.addEventListener('transitionend', handler);
-          // fallback: ensure cleanup and emit after 700ms if transitionend doesn't fire
-          const fto = window.setTimeout(() => {
-            try {
-              style.removeProperty('max-height');
-              style.removeProperty('overflow');
-              style.removeProperty('transition');
-            } catch (e) {
-              void e;
-            }
-            el.removeEventListener('transitionend', handler);
-            transitionFallbacks.delete(el);
-            emit('line-expanded', { idx, taskId });
-          }, 700) as unknown as number;
-          transitionFallbacks.set(el, fto);
-        } else {
-          // collapsing: animate from current height -> 0
-          const startHeight = el.scrollHeight + 'px';
-          style.overflow = 'hidden';
-          style.maxHeight = startHeight;
-          await nextTick();
-          void el.offsetHeight;
-          style.transition = 'max-height 0.25s ease-in-out';
-          style.maxHeight = '0px';
-          const handler = (ev: TransitionEvent) => {
-            if ((ev && ev.propertyName !== 'max-height') || !el) return;
-            try {
-              // Keep collapsed inline styles (max-height:0, overflow:hidden) so parent
-              // can safely move the element without it popping back to full height.
-              // Only remove the transition and opacity properties here.
-              style.removeProperty('transition');
-              // opacity not used for animation any more
-            } catch (e) {
-              void e;
-            }
-            el.removeEventListener('transitionend', handler);
-            const to = transitionFallbacks.get(el);
-            if (to) {
-              clearTimeout(to);
-              transitionFallbacks.delete(el);
-            }
-            emit('line-collapsed', { idx, taskId });
-          };
-          el.addEventListener('transitionend', handler);
-          // fallback: ensure emit after 700ms if transitionend doesn't fire
-          const fto = window.setTimeout(() => {
-            try {
-              style.removeProperty('transition');
-            } catch (e) {
-              void e;
-            }
-            el.removeEventListener('transitionend', handler);
-            transitionFallbacks.delete(el);
-            emit('line-collapsed', { idx, taskId });
-          }, 700) as unknown as number;
-          transitionFallbacks.set(el, fto);
-        }
-      } catch (e) {
-        void e;
-      }
-    }
-  },
-);
-
 function addQuickSubtask() {
   const text = quickSubtask.value;
   // Delegate insertion and persistence to the task API which will trim/validate input.
@@ -533,106 +421,10 @@ const renderedDescription = computed(() => {
   return escaped;
 });
 
-// Maintain stable uids per description line so Vue keys remain stable across
-// reorders. This prevents DOM reuse issues that caused disappearing items.
-const lastRawLines = ref<string[]>([] as string[]);
-const lastLineUids = ref<string[]>([] as string[]);
-let uidCounter = 1;
-
-// Parse description into lines and detect list lines (dash or numbered)
+// parsedLines is provided by the central task API so components share the same
+// parsed representation and watcher. Use that shared ref here.
+const parsedLines = api.task.subtaskLine.parsedLines;
 const isDone = computed(() => Number(activeTask.value?.status_id) === 0);
-
-// parsedLines is kept in a ref and updated via a watcher so we can maintain
-// stable uids without causing side-effects inside a computed property.
-const parsedLines = ref(
-  [] as Array<{
-    uid: string;
-    type: string;
-    raw: string;
-    html: string;
-    checked?: boolean;
-    highlighted?: boolean;
-  }>,
-);
-
-function computeParsedLines(desc: string) {
-  const d = desc || '';
-  if (!d)
-    return [] as Array<{
-      uid: string;
-      type: string;
-      raw: string;
-      html: string;
-      checked?: boolean;
-      highlighted?: boolean;
-    }>;
-  const lines = d.split(/\r?\n/);
-  // Build a map of previous raw->queue of uids for reuse
-  const prevMap = new Map<string, string[]>();
-  for (let i = 0; i < lastRawLines.value.length; i++) {
-    const raw = lastRawLines.value[i] || '';
-    const uid = lastLineUids.value[i] || '';
-    if (!prevMap.has(raw)) prevMap.set(raw, []);
-    prevMap.get(raw)!.push(uid);
-  }
-  const newUids: string[] = [];
-  for (const ln of lines) {
-    const raw = ln || '';
-    const queue = prevMap.get(raw);
-    if (queue && queue.length > 0) {
-      const reused = queue.shift();
-      newUids.push(reused ?? `line-${uidCounter++}`);
-    } else {
-      newUids.push(`line-${uidCounter++}`);
-    }
-  }
-  // persist for next run
-  lastRawLines.value = [...lines];
-  lastLineUids.value = [...newUids];
-
-  return lines.map((ln, lineIndex) => {
-    const uid = newUids[lineIndex] ?? `line-${uidCounter++}`;
-    let text = ln;
-    // For the very first line, remove a leading title duplicate if present
-    if (lineIndex === 0 && activeTask.value?.name) {
-      text = stripTitleFrom(text, activeTask.value.name);
-    }
-    const dashMatch = text.match(/^\s*-\s*(.*)$/);
-    const numMatch = text.match(/^\s*(\d+)[.)]\s*(.*)$/);
-    if (dashMatch) {
-      const content = dashMatch[1] || '';
-      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
-      const checked = !!markerMatch;
-      // detect trailing star marker (highlight)
-      const starMatch = content.match(/\s*\*\s*$/);
-      const highlighted = !!starMatch;
-      let clean = content.replace(/^\s*\[[xX]\]\s*/, '');
-      clean = clean.replace(/\s*\*\s*$/, '');
-      const html = escapeHtml(clean).replace(/\n/g, '<br/>');
-      return { uid, type: 'list', raw: ln, html, checked, highlighted };
-    }
-    if (numMatch) {
-      const idx = numMatch[1];
-      const content = numMatch[2] || '';
-      const markerMatch = content.match(/^\s*\[[xX]\]\s*/);
-      const checked = !!markerMatch;
-      const clean = content.replace(/^\s*\[[xX]\]\s*/, '');
-      let html = escapeHtml(clean).replace(/\n/g, '<br/>');
-      html = `${idx}. ${html}`;
-      return { uid, type: 'list', raw: ln, html, checked };
-    }
-    const html = escapeHtml(text).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
-    return { uid, type: 'text', raw: ln, html };
-  });
-}
-
-watch(
-  () => activeTask.value && activeTask.value.description,
-  (d) => {
-    parsedLines.value = computeParsedLines(String(d || ''));
-  },
-  { immediate: true },
-);
 
 function toggleHighlight(idx: number) {
   try {
@@ -651,7 +443,7 @@ function toggleHighlight(idx: number) {
       );
     }
     const newLines = [...rawLines];
-    if ((item as any).highlighted) {
+    if (item.highlighted) {
       // remove trailing star if present and ensure it does not remain above other starred subtasks
       if (foundIdx >= 0) {
         // compute other starred indices before changing the line

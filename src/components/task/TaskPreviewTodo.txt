@@ -1,0 +1,113 @@
+//Animation for subtaskLines is now disabled - (maybe its too slow to be usefull at all)
+
+// When parent requests an animating line, collapse that element by animating
+// its explicit height/padding/margin to 0 so elements below move up naturally.
+watch(
+  () => props.animatingLines && [...(props.animatingLines || [])],
+  async (newVal, oldVal) => {
+    const added = (newVal || []).filter((i) => !(oldVal || []).includes(i));
+    for (const rawIdx of added) {
+      const expand = rawIdx < 0;
+      const idx = expand ? Math.abs(rawIdx) - 1 : rawIdx;
+      let el = itemRefs.value[idx];
+      if (!el) {
+        await nextTick();
+        el = itemRefs.value[idx];
+        if (!el) continue;
+      }
+      try {
+        const style = el.style;
+        const taskId = activeTask.value && activeTask.value.id;
+        if (expand) {
+          // expanding: animate from the element's current collapsed state
+          // to its natural height. The collapse phase left inline styles
+          // (height:0, overflow:hidden), so measuring `el.scrollHeight` here
+          // gives the target height.
+          const targetHeight = el.scrollHeight + 'px';
+          style.overflow = 'hidden';
+          // ensure start state is collapsed
+          style.maxHeight = style.maxHeight || '0px';
+          await nextTick();
+          void el.offsetHeight;
+          style.transition = 'max-height 0.25s ease-in-out';
+          style.maxHeight = targetHeight;
+          const handler = (ev: TransitionEvent) => {
+            if ((ev && ev.propertyName !== 'max-height') || !el) return;
+            try {
+              style.removeProperty('max-height');
+              style.removeProperty('overflow');
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            const to = transitionFallbacks.get(el);
+            if (to) {
+              clearTimeout(to);
+              transitionFallbacks.delete(el);
+            }
+            emit('line-expanded', { idx, taskId });
+          };
+          el.addEventListener('transitionend', handler);
+          // fallback: ensure cleanup and emit after 700ms if transitionend doesn't fire
+          const fto = window.setTimeout(() => {
+            try {
+              style.removeProperty('max-height');
+              style.removeProperty('overflow');
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            transitionFallbacks.delete(el);
+            emit('line-expanded', { idx, taskId });
+          }, 700) as unknown as number;
+          transitionFallbacks.set(el, fto);
+        } else {
+          // collapsing: animate from current height -> 0
+          const startHeight = el.scrollHeight + 'px';
+          style.overflow = 'hidden';
+          style.maxHeight = startHeight;
+          await nextTick();
+          void el.offsetHeight;
+          style.transition = 'max-height 0.25s ease-in-out';
+          style.maxHeight = '0px';
+          const handler = (ev: TransitionEvent) => {
+            if ((ev && ev.propertyName !== 'max-height') || !el) return;
+            try {
+              // Keep collapsed inline styles (max-height:0, overflow:hidden) so parent
+              // can safely move the element without it popping back to full height.
+              // Only remove the transition and opacity properties here.
+              style.removeProperty('transition');
+              // opacity not used for animation any more
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            const to = transitionFallbacks.get(el);
+            if (to) {
+              clearTimeout(to);
+              transitionFallbacks.delete(el);
+            }
+            emit('line-collapsed', { idx, taskId });
+          };
+          el.addEventListener('transitionend', handler);
+          // fallback: ensure emit after 700ms if transitionend doesn't fire
+          const fto = window.setTimeout(() => {
+            try {
+              style.removeProperty('transition');
+            } catch (e) {
+              void e;
+            }
+            el.removeEventListener('transitionend', handler);
+            transitionFallbacks.delete(el);
+            emit('line-collapsed', { idx, taskId });
+          }, 700) as unknown as number;
+          transitionFallbacks.set(el, fto);
+        }
+      } catch (e) {
+        void e;
+      }
+    }
+  },
+);

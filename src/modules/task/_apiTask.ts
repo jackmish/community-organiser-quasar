@@ -1,5 +1,6 @@
 import type { Task } from './types';
 import * as taskService from './taskService';
+import { createSubtaskLines } from './subtaskLines';
 import { ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 
@@ -12,6 +13,10 @@ export function construct(groupApi?: any, timeApi?: any) {
 
   const activeTask = ref<Task | null>(null);
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
+
+  // parsed lines and watcher for the active task are managed by a dedicated
+  // helper so UI components can read `api.task.subtaskLine.parsedLines`.
+  const subtaskLines = createSubtaskLines(activeTask);
 
   return {
     active: {
@@ -68,6 +73,7 @@ export function construct(groupApi?: any, timeApi?: any) {
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) => svc.getAll().reduce(fn, init),
     },
     subtaskLine: {
+      parsedLines: subtaskLines.parsedLines,
       add: async (text: string) => {
         const res = await (svc as any).subtaskLine.add(activeTask.value, text);
         if (res && res.newDesc) await saveData();
