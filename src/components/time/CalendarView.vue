@@ -260,17 +260,45 @@ const { startLongPress, cancelLongPress, setLongPressHandler, longPressTriggered
 
 // Long-press should open edit mode; short press shows preview.
 setLongPressHandler((task: any) => {
-  try {
-    emit('edit-task', task?.id ?? null);
-  } catch (e) {
-    // ignore
-  }
+  // Wrap async work in an IIFE and intentionally do not return the Promise
+  void (async () => {
+    try {
+      try {
+        // Prefer to handle edit internally via API so parent doesn't need to wire handlers
+        // Set active task and switch to edit mode
+        // Importing the API dynamically avoids static circular imports and satisfies linter
+        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const api = apiModule as any;
+        if (api && api.task && api.task.active && typeof api.task.active.setMode === 'function') {
+          if (api.task && api.task.active && api.task.active.setTask)
+            api.task.active.setTask(task ?? null);
+          api.task.active.setMode('edit');
+        }
+      } catch (e) {
+        // ignore internal handling failures
+      }
+      emit('edit-task', task?.id ?? null);
+    } catch (e) {
+      // ignore
+    }
+  })();
 });
 
-function onEventPointerUp(task: any) {
+async function onEventPointerUp(task: any) {
   try {
     // If long-press wasn't triggered, treat as a short click -> preview
     if (!longPressTriggered.value) {
+      try {
+        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const api = apiModule as any;
+        if (api && api.task && api.task.active && typeof api.task.active.setMode === 'function') {
+          if (api.task && api.task.active && api.task.active.setTask)
+            api.task.active.setTask(task ?? null);
+          api.task.active.setMode('preview');
+        }
+      } catch (e) {
+        // ignore internal handling failures
+      }
       // Emit the full task/event object (includes `date` when coming from getEventsForDay)
       emit('preview-task', task ?? null);
     }
@@ -644,6 +672,21 @@ function jumpToMonth(dateString: string) {
 }
 
 function handleDateSelect(dateString: string) {
+  try {
+    void (async () => {
+      try {
+        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const api = apiModule as any;
+        if (api && api.time && typeof api.time.setCurrentDate === 'function') {
+          api.time.setCurrentDate(dateString);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  } catch (e) {
+    // ignore
+  }
   emit('update:selectedDate', dateString);
 }
 

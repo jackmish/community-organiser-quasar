@@ -471,17 +471,22 @@ export const applyActiveSelection = (
       ) {
         try {
           if (timeApi && typeof timeApi.setCurrentDate === 'function') {
-            const newDate = (found as any).date || (found as any).eventDate || null;
-            // Only set if different to avoid triggering time watchers unnecessarily
-            try {
-              const currentDate =
-                timeApi && typeof timeApi.currentDate !== 'undefined'
-                  ? timeApi.currentDate
-                  : undefined;
-              if (currentDate !== newDate) timeApi.setCurrentDate(newDate);
-            } catch (e) {
-              // best-effort: call setCurrentDate if we cannot read currentDate
-              timeApi.setCurrentDate(newDate);
+            // Only change the current date for time-based or cyclic tasks. Selecting
+            // a plain Todo should not move the calendar day.
+            const isCyclic = Boolean(getCycleType(found));
+            const isTimeEvent =
+              Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
+            if (isCyclic || isTimeEvent) {
+              const newDate = (found as any).date || (found as any).eventDate || null;
+              try {
+                const currentDate =
+                  timeApi && typeof timeApi.currentDate !== 'undefined'
+                    ? timeApi.currentDate
+                    : undefined;
+                if (currentDate !== newDate) timeApi.setCurrentDate(newDate);
+              } catch (e) {
+                timeApi.setCurrentDate(newDate);
+              }
             }
           }
         } catch (e) {
@@ -493,8 +498,14 @@ export const applyActiveSelection = (
       activeTaskRef.value = found;
       activeModeRef.value = 'preview';
       try {
-        if (timeApi && typeof timeApi.setCurrentDate === 'function')
-          timeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
+        if (timeApi && typeof timeApi.setCurrentDate === 'function') {
+          const isCyclic = Boolean(getCycleType(found));
+          const isTimeEvent =
+            Boolean((found as any).eventTime) || (found as any).type_id === 'TimeEvent';
+          if (isCyclic || isTimeEvent) {
+            timeApi.setCurrentDate((found as any).date || (found as any).eventDate || null);
+          }
+        }
       } catch (e) {
         // ignore
       }

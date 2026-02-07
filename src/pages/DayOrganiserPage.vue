@@ -29,7 +29,7 @@
                       color="primary"
                     />
                     <span class="date-black">{{
-                      getTimeDifferenceDisplay(api.time.currentDate)
+                      getTimeDifferenceDisplay(api.time.currentDate.value)
                     }}</span>
                     <span class="q-mx-sm">|</span>
                     <span :class="['text-weight-bold', getTimeDiffClass(api.time.currentDate)]">{{
@@ -74,29 +74,12 @@
 
       <div class="row q-col-gutter-md q-mt-md">
         <div class="col-12 col-md-8">
-          <CalendarView
-            :key="reloadKey"
-            :selected-date="newTask.eventDate"
-            :tasks="allTasks"
-            @update:selected-date="handleCalendarDateSelect"
-            @preview-task="handleCalendarPreview"
-            @edit-task="handleCalendarEdit"
-          />
+          <CalendarView :key="reloadKey" :selected-date="newTask.eventDate" :tasks="allTasks" />
         </div>
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
             <DoneTasksList :done-tasks="doneTasks" @toggle-status="toggleStatus" />
           </div>
-
-          <!-- ModeSwitcher moved to fixed right-side panel -->
-
-          <!-- Replenishment items are rendered with other tasks (no separate right-column panel) -->
-
-          <!-- Preview/Add form moved to fixed right-side panel -->
-
-          <!-- duplicate replenishment card removed (now in tasks row right column) -->
-
-          <!-- Notes removed per layout update -->
         </div>
       </div>
     </div>
@@ -107,44 +90,6 @@
       :group-options="groupOptions"
       :group-tree="groupTree"
     />
-
-    <!-- Inline Edit Group Dialog -->
-    <q-dialog v-model="showEditGroupDialog">
-      <q-card style="min-width: 360px" v-if="editGroupLocal">
-        <q-card-section>
-          <div class="text-h6">Edit Group</div>
-          <div class="q-mt-md">
-            <q-input v-model="editGroupLocal.name" label="Group name" outlined dense />
-            <q-select
-              v-model="editGroupLocal.parentId"
-              :options="groupOptions"
-              option-value="value"
-              option-label="label"
-              emit-value
-              label="Parent group"
-              outlined
-              dense
-              class="q-mt-sm"
-              clearable
-            />
-            <q-input v-model="editGroupLocal.color" label="Color" outlined dense class="q-mt-sm">
-              <template #append>
-                <input
-                  v-model="editGroupLocal.color"
-                  type="color"
-                  style="width: 40px; height: 30px; border: none; cursor: pointer"
-                />
-              </template>
-            </q-input>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" @click="cancelEditGroup" />
-          <q-btn flat label="Save" color="primary" @click="saveEditedGroup" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
     <!-- First Run Dialog -->
     <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
 
@@ -250,10 +195,9 @@ import logger from 'src/utils/logger';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 
 import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummaryFixed';
-import type { Task, TaskGroup } from '../modules/day-organiser';
+import type { TaskGroup } from '../modules/day-organiser';
 import FirstRunDialog from '../components/settings/FirstRunDialog.vue';
 import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
-import { createGroupUiHandlers } from 'src/modules/group/uiHandlers';
 import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUtils';
 
 const $q = useQuasar();
@@ -283,13 +227,7 @@ const allTasks = computed(() => api.task.list.all());
 
 const showGroupDialog = ref(false);
 
-const showEditGroupDialog = ref(false);
-const editGroupLocal = ref<{
-  id: string;
-  name: string;
-  parentId?: string | null;
-  color?: string;
-} | null>(null);
+// Inline edit-group dialog removed (unused)
 const showFirstRunDialog = ref(false);
 
 const defaultGroupId = ref<string | undefined>(undefined);
@@ -340,11 +278,7 @@ watch(
   },
 );
 
-const { saveEditedGroup, cancelEditGroup } = createGroupUiHandlers({
-  editGroupLocal,
-  showEditGroupDialog,
-  updateGroup: api.group.update,
-});
+// createGroupUiHandlers removed: no UI opens the inline edit dialog
 
 // mode change handling moved into api.task
 

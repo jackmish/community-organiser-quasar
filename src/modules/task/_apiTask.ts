@@ -13,7 +13,7 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   const activeTask = ref<Task | null>(null);
   const activeMode = ref<'add' | 'edit' | 'preview'>('add');
 
-  const setTask = (payload: PreviewPayload) =>
+  const setActiveTask = (payload: PreviewPayload) =>
     svc.applyActiveSelection(activeTask, activeMode, payload as any);
 
   function setMode(m: 'add' | 'edit' | 'preview') {
@@ -22,7 +22,7 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
   }
 
   return {
-    active: { task: activeTask, mode: activeMode, setTask, setMode },
+    active: { task: activeTask, mode: activeMode, setTask: setActiveTask, setMode },
     add: async (date: string, taskData: any) => {
       const t = svc.addTask(date, taskData);
       await saveData();
