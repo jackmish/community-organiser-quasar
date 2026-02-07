@@ -30,29 +30,14 @@ export function createTaskApi(groupApi?: any, timeApi?: any) {
     },
     subtaskLine: {
       toggleStatus: async (task: any, lineIndex: number) => {
-        try {
-          if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string') {
-            return null;
-          }
-          const res = await (svc as any).subtaskLine.toggleStatus(task, lineIndex);
-          // persist changes if any
-          if (res && res.newDesc) await saveData();
-          return res;
-        } catch (e) {
-          return null;
-        }
+        const res = await (svc as any).subtaskLine.toggleStatus(task, lineIndex);
+        if (res && res.newDesc) await saveData();
+        return res;
       },
       add: async (text: string) => {
-        try {
-          if (typeof text !== 'string' || !text.trim()) return null;
-          const task = activeTask.value;
-          if (!task) return null;
-          const res = await (svc as any).subtaskLine.add(task, text);
-          if (res && res.newDesc) await saveData();
-          return res;
-        } catch (e) {
-          return null;
-        }
+        const res = await (svc as any).subtaskLine.add(activeTask.value, text);
+        if (res && res.newDesc) await saveData();
+        return res;
       },
     },
     update: async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
