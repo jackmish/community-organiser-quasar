@@ -10,7 +10,8 @@ export function construct(
   maybeTimeApi?: any,
 ) {
   // Normalize options into expected shape: { timeApi?, persist? }
-  let opts: { timeApi?: any; persist?: (date: string, taskObj: Task) => void } | undefined = undefined;
+  let opts: { timeApi?: any; persist?: (date: string, taskObj: Task) => void } | undefined =
+    undefined;
   try {
     if (
       optsOrTaskService &&
