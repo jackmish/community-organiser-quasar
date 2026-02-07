@@ -173,7 +173,7 @@
                 <q-item
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
-                  @click.stop="api.task.subtaskLine.toggleStatus(props.task, idx)"
+                  @click.stop="api.task.subtaskLine.toggleStatus(api.task.active.task.value, idx)"
                 >
                   <q-item-section side>
                     <q-icon
@@ -230,6 +230,9 @@ const props = defineProps<{
   animatingLines?: number[];
   fixed?: boolean;
 }>();
+// Prefer the central active task reference from the API. Use this alias
+// throughout the component so callers don't need to pass a task prop.
+const activeTask = api.task.active.task;
 const emit = defineEmits([
   'edit',
   'close',
@@ -253,7 +256,7 @@ const transitionFallbacks = new Map<HTMLElement, number>();
 
 function selectPriority(p: string) {
   try {
-    const t: Task = { ...toRaw(props.task) } as Task;
+    const t: Task = { ...toRaw(activeTask.value) } as Task;
     t.priority = p as Task['priority'];
     emit('update-task', t);
   } finally {
@@ -264,11 +267,11 @@ function selectPriority(p: string) {
 async function selectGroup(gid: string | null) {
   try {
     const updateTask = api.task.update;
-    const date = (props.task && (props.task.date || props.task.eventDate)) || '';
-    if (!props.task || !props.task.id) return;
+    const date = (activeTask.value && (activeTask.value.date || activeTask.value.eventDate)) || '';
+    if (!activeTask.value || !activeTask.value.id) return;
     const updates: any = {};
     updates.groupId = gid == null ? undefined : gid;
-    await updateTask(date, props.task.id, updates);
+    await updateTask(date, activeTask.value.id, updates);
   } catch (e) {
     logger.error('Failed to update task group', e);
   } finally {
@@ -324,7 +327,7 @@ watch(
       }
       try {
         const style = el.style;
-        const taskId = props.task && (props.task as any).id;
+        const taskId = activeTask.value && activeTask.value.id;
         if (expand) {
           // expanding: animate from the element's current collapsed state
           // to its natural height. The collapse phase left inline styles
@@ -425,7 +428,7 @@ function addQuickSubtask() {
   const cur = props.task.description || '';
   // Insert new subtask after the first title line when the description begins with the title;
   // otherwise prepend at the top.
-  const title = (props.task?.name || '').trim();
+  const title = (activeTask.value?.name || '').trim();
   const lines = cur.split(/\r?\n/);
   let updated: string;
   // If there are starred undone subtasks, insert after the last one
@@ -513,17 +516,17 @@ function menuItemClass(p?: string) {
 
 const groupName = computed(() => props.groupName || '');
 
-const isTimeEvent = computed(() => (props.task?.type_id || '') === 'TimeEvent');
+const isTimeEvent = computed(() => (activeTask.value?.type_id || '') === 'TimeEvent');
 
 const displayDate = computed(() => {
-  const task = props.task || ({} as any);
+  const task = activeTask.value || ({} as any);
   const dateStr = (task.date || task.eventDate || '').toString();
   if (!dateStr) return '';
   return formatDisplayDate(dateStr);
 });
 
 const eventTimeHoursDisplay = computed(() => {
-  const task = props.task || ({} as any);
+  const task = activeTask.value || ({} as any);
   const dateStr = (task.date || task.eventDate || '').toString();
   const timeStr = task.eventTime || '';
   return formatEventHoursDiff(dateStr, timeStr);
@@ -572,7 +575,7 @@ const lastLineUids = ref<string[]>([] as string[]);
 let uidCounter = 1;
 
 // Parse description into lines and detect list lines (dash or numbered)
-const isDone = computed(() => Number(props.task?.status_id) === 0);
+const isDone = computed(() => Number(activeTask.value?.status_id) === 0);
 
 // parsedLines is kept in a ref and updated via a watcher so we can maintain
 // stable uids without causing side-effects inside a computed property.
@@ -626,8 +629,8 @@ function computeParsedLines(desc: string) {
     const uid = newUids[lineIndex] ?? `line-${uidCounter++}`;
     let text = ln;
     // For the very first line, remove a leading title duplicate if present
-    if (lineIndex === 0 && props.task?.name) {
-      text = stripTitleFrom(text, props.task.name);
+    if (lineIndex === 0 && activeTask.value?.name) {
+      text = stripTitleFrom(text, activeTask.value.name);
     }
     const dashMatch = text.match(/^\s*-\s*(.*)$/);
     const numMatch = text.match(/^\s*(\d+)[.)]\s*(.*)$/);
@@ -659,7 +662,7 @@ function computeParsedLines(desc: string) {
 }
 
 watch(
-  () => props.task && props.task.description,
+  () => activeTask.value && activeTask.value.description,
   (d) => {
     parsedLines.value = computeParsedLines(String(d || ''));
   },
@@ -671,7 +674,7 @@ function toggleHighlight(idx: number) {
     const parsed = parsedLines.value;
     const item = parsed[idx];
     if (!item || item.type !== 'list') return;
-    const rawDesc = String(props.task?.description || '');
+    const rawDesc = String(activeTask.value?.description || '');
     const rawLines = rawDesc.split(/\r?\n/);
     // find exact matching raw line
     let foundIdx = rawLines.findIndex((r) => r === (item?.raw || ''));
@@ -718,7 +721,7 @@ function toggleHighlight(idx: number) {
       newLines.splice(insertAt, 0, candidate);
     }
     const updated = newLines.join('\n');
-    const t = { ...(toRaw(props.task) as any), description: updated } as Task;
+    const t = { ...toRaw(activeTask.value), description: updated } as Task;
     emit('update-task', t);
   } catch (e) {
     void e;
@@ -726,7 +729,7 @@ function toggleHighlight(idx: number) {
 }
 
 async function copyStyledTask() {
-  const t = toRaw(props.task || ({} as any));
+  const t = toRaw(activeTask.value || ({} as any));
   const html = buildHtmlFromParsed(parsedLines.value, t);
   const text = buildPlainTextFromParsed(parsedLines.value, t);
   try {
