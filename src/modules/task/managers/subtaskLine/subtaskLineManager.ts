@@ -21,7 +21,7 @@ export class SubtaskLineManager {
   private lastLineUids = ref<string[]>([] as string[]);
   private uidCounter = 1;
   private opts:
-    | { timeApi?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
+    | { time?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
     | undefined = undefined;
 
   constructor(taskManager: TaskManager) {
@@ -30,7 +30,7 @@ export class SubtaskLineManager {
       if (taskManager && typeof taskManager === 'object') {
         stateOrActiveTask = taskManager.apiTask && (taskManager.apiTask.state as any);
         this.opts = {
-          timeApi: taskManager.apiTask && taskManager.apiTask.timeApi,
+          time: taskManager.apiTask && taskManager.apiTask.time,
           persist: async (date: string, taskObj: Task) => {
             try {
               if (typeof taskManager.updateTask === 'function') {
@@ -351,11 +351,11 @@ export class SubtaskLineManager {
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (this.opts?.timeApi && this.opts.timeApi.currentDate
-              ? this.opts.timeApi.currentDate.value
+            (this.opts?.time && this.opts.time.currentDate
+              ? this.opts.time.currentDate.value
               : '')
-          : this.opts?.timeApi && this.opts.timeApi.currentDate
-            ? this.opts.timeApi.currentDate.value
+          : this.opts?.time && this.opts.time.currentDate
+            ? this.opts.time.currentDate.value
             : '';
         const merged: Task = {
           ...(task as Task),
@@ -385,11 +385,11 @@ export class SubtaskLineManager {
         const targetDate = !isCyclic
           ? task.date ||
             task.eventDate ||
-            (this.opts?.timeApi && this.opts.timeApi.currentDate
-              ? this.opts.timeApi.currentDate.value
+            (this.opts?.time && this.opts.time.currentDate
+              ? this.opts.time.currentDate.value
               : '')
-          : this.opts?.timeApi && this.opts.timeApi.currentDate
-            ? this.opts.timeApi.currentDate.value
+          : this.opts?.time && this.opts.time.currentDate
+            ? this.opts.time.currentDate.value
             : '';
         const merged: Task = {
           ...(task as Task),

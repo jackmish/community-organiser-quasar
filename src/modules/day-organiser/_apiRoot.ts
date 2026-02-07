@@ -3,7 +3,7 @@ import { registerAppService } from 'src/services/appService';
 
 import * as apiTask from '../task/_apiTask';
 import * as apiGroup from '../group/_apiGroup';
-import * as apiTime from '../time/_apiTime';
+import * as apiTime from '../task/managers/timeManager/timeManager';
 
 // Available APIs for external use (e.g. by components or other modules)
 export const time = apiTime.construct() as any;

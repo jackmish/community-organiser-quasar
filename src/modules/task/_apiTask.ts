@@ -9,7 +9,7 @@ export type PreviewPayload = string | number | Task | null;
 // Factory to create a task API bound to the given state object
 export class ApiTask {
   groupApi: any;
-  timeApi: any;
+  time: any;
   state: {
     activeTask: Ref<Task | null>;
     activeMode: Ref<'add' | 'edit' | 'preview'>;
@@ -19,7 +19,7 @@ export class ApiTask {
 
   constructor(groupApi?: any, timeApi?: any) {
     this.groupApi = groupApi;
-    this.timeApi = timeApi;
+    this.time = timeApi;
     this.state = {
       activeTask: ref<Task | null>(null),
       activeMode: ref<'add' | 'edit' | 'preview'>('add'),

@@ -12,7 +12,7 @@ export class TaskManager {
   constructor(apiTask?: ApiTask) {
     try {
       this.apiTask = apiTask;
-      setTimeApi(apiTask?.timeApi);
+      setTimeApi(apiTask?.time);
     } catch (e) {
       // ignore
     }
@@ -23,11 +23,11 @@ export class TaskManager {
 
   addTask = (date: string, data: any) => addTask(date, data);
   updateTask = (date: string, taskOrId: Task | string, maybeUpdates?: any) =>
-    updateTask(date, taskOrId as any, maybeUpdates, this.apiTask?.timeApi);
+    updateTask(date, taskOrId as any, maybeUpdates, this.apiTask?.time);
   deleteTask = (date: string, id: string) => deleteTask(date, id);
   toggleTaskComplete = (date: string, id: string) => toggleTaskComplete(date, id);
   undoCycleDone = (date: string, id: string) => undoCycleDone(date, id);
-  getAll = () => getAll(this.apiTask?.timeApi);
+  getAll = () => getAll(this.apiTask?.time);
   getTasksInRange = (s: string, e: string) => getTasksInRange(s, e);
   getTasksByCategory = (c: Task['category']) => getTasksByCategory(c);
   getTasksByPriority = (p: Task['priority']) => getTasksByPriority(p);
