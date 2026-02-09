@@ -67,6 +67,7 @@
               @task-click="handleTaskClick"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
+              @toggle-status="handleToggleStatus"
             />
           </q-card>
         </div>
@@ -74,7 +75,12 @@
 
       <div class="row q-col-gutter-md q-mt-md">
         <div class="col-12 col-md-8">
-          <CalendarView :key="reloadKey" :selected-date="newTask.eventDate" :tasks="allTasks" />
+          <CalendarView
+            :key="reloadKey"
+            :selected-date="api.task.time.currentDate.value"
+            :tasks="allTasks"
+            @update:selectedDate="(d) => api.task.time.setCurrentDate(d)"
+          />
         </div>
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
@@ -145,6 +151,7 @@
           @add-task="handleAddTask"
           @update-task="handleUpdateTask"
           @delete-task="handleDeleteTask"
+          @toggle-status="handleToggleStatus"
           @cancel-edit="() => clearTaskToEdit()"
           @calendar-date-select="handleCalendarDateSelect"
           @filter-parent-tasks="filterParentTasks"
@@ -395,6 +402,18 @@ const handleDeleteTask = async (payload: any) => {
     }
   } finally {
     openDeleteMenu.value = null;
+  }
+};
+
+const handleToggleStatus = async (task: any) => {
+  try {
+    if (!task) return;
+    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || '';
+    const id = task.id || task._id || task.uuid;
+    if (!id) return;
+    await api.task.status.toggleComplete(date, id);
+  } catch (e) {
+    // ignore
   }
 };
 
