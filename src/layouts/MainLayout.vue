@@ -242,6 +242,15 @@ onMounted(async () => {
   } catch (e) {
     // ignore
   }
+  try {
+    // Initialize testMode from presentation state or persistent flag.
+    const persisted =
+      typeof localStorage !== 'undefined' && localStorage.getItem('co21:testMode') === '1';
+    testMode.value =
+      persisted || (presentation && presentation.mode && presentation.mode.value === 'test');
+  } catch (e) {
+    void e;
+  }
 });
 
 function refreshNotifications() {
@@ -275,19 +284,22 @@ function openAbout() {
 }
 
 function toggleTestMode() {
-  // Toggle test mode: when enabling, replace in-memory data with examples and
-  // block saving. When disabling, reload persisted data from storage.
-  testMode.value = !testMode.value;
+  // Enable test mode only. Disallow reverting to normal mode from the UI.
+  if (testMode.value) {
+    // already in test mode; close menu and do nothing
+    menuOpen.value = false;
+    return;
+  }
+  testMode.value = true;
   menuOpen.value = false;
   try {
-    // toggle presentation module state
+    // set presentation module to test (irreversible from UI)
     presentation.toggleTestMode();
   } catch (e) {
     void e;
   }
   try {
-    if (testMode.value) localStorage.setItem('co21:testMode', '1');
-    else localStorage.removeItem('co21:testMode');
+    localStorage.setItem('co21:testMode', '1');
   } catch (e) {
     void e;
   }
@@ -310,18 +322,6 @@ function toggleTestMode() {
       }
     } catch (e) {
       void e;
-    }
-  } else {
-    // disable test mode: reload persisted data from storage (restore real data)
-    try {
-      if (api && api.storage && typeof api.storage.loadData === 'function') {
-        void api.storage.loadData();
-      } else {
-        // fallback to full reload
-        window.location.reload();
-      }
-    } catch (e) {
-      window.location.reload();
     }
   }
 }

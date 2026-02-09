@@ -20,7 +20,8 @@ export function construct() {
   }
 
   function toggleTestMode() {
-    mode.value = mode.value === 'test' ? 'default' : 'test';
+    // For safety: once test mode is enabled it cannot be toggled back
+    if (mode.value !== 'test') mode.value = 'test';
   }
 
   function setProfile(p: string | null) {
