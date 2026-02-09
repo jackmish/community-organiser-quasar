@@ -347,20 +347,6 @@ const {
   apiGroup: api.group,
 });
 
-// Diagnostic: log replenishTasks so we can confirm data flow
-try {
-  console.log(
-    'DIAG replenishTasks initial:',
-    Array.isArray(replenishTasks.value) ? replenishTasks.value.length : typeof replenishTasks.value,
-    replenishTasks.value,
-  );
-} catch (e) {
-  // ignore
-}
-watch(replenishTasks, (v) =>
-  console.log('DIAG replenishTasks changed:', Array.isArray(v) ? v.length : typeof v, v),
-);
-
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed
 
 // Return weekday and compact date (e.g., "Tuesday, 23.12.2025")

@@ -1,0 +1,63 @@
+const today = new Date().toISOString().slice(0, 10);
+const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const days: Record<string, any> = {};
+
+days[today] = {
+  date: today,
+  tasks: [
+    {
+      id: 't-1',
+      name: 'Buy milk',
+      description: '2L skimmed',
+      date: today,
+      priority: 'medium',
+      status_id: 1,
+      type_id: 'Replenish',
+      groupId: 'g-2',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 't-2',
+      name: 'Meeting with team',
+      description: 'Discuss roadmap',
+      date: today,
+      eventTime: '14:00',
+      priority: 'high',
+      status_id: 1,
+      type_id: 'TimeEvent',
+      groupId: 'g-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+  notes: '',
+};
+
+days[tomorrow] = {
+  date: tomorrow,
+  tasks: [
+    {
+      id: 't-3',
+      name: 'Prepare slides',
+      description: 'Slides for presentation',
+      date: tomorrow,
+      priority: 'low',
+      status_id: 1,
+      type_id: 'Todo',
+      groupId: 'g-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+  notes: '',
+};
+
+export const sampleData = {
+  groups: [
+    { id: 'g-1', name: 'Default', color: '#1976d2', icon: 'group' },
+    { id: 'g-2', name: 'Shopping', color: '#c9a676', icon: 'shopping_cart' },
+  ],
+  days,
+};

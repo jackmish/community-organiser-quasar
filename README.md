@@ -107,7 +107,7 @@ npm test
 yarn test
 ```
 
-(Test mostly manual, but app is growing... so something is already installed)
+(Test mostly manual, but app is growing... so something is already installed. With mobile app execution time profiling would be most wanted)
 
 - **Coverage:** Vitest coverage is configured — to run coverage for unit tests:
 

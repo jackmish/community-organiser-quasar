@@ -1,6 +1,8 @@
 import { ref } from 'vue';
 import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
+import { presentation } from 'src/modules/presentation/presentationManager';
+import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskManager';
 
 export function construct(groupApi?: any, timeApi?: any) {
@@ -11,7 +13,27 @@ export function construct(groupApi?: any, timeApi?: any) {
     isLoading.value = true;
     console.log('apiStorage.loadData called');
     try {
-      const data = await backendStorage.loadData();
+      // If presentation test mode enabled, or localStorage flag present, load sample data instead of backend
+      let data: any;
+      try {
+        const testFlagLocal =
+          typeof localStorage !== 'undefined' && localStorage.getItem('co21:testMode') === '1';
+        const testModeActive =
+          (presentation && presentation.mode && presentation.mode.value === 'test') ||
+          testFlagLocal;
+        if (testModeActive) {
+          console.log('apiStorage.loadData: loading sampleData because test mode is enabled');
+          data = sampleData as any;
+          try {
+            if (presentation && presentation.mode) presentation.mode.value = 'test';
+          } catch (e) {
+            void e;
+          }
+        }
+      } catch (e) {
+        void e;
+      }
+      if (!data) data = await backendStorage.loadData();
       // If backend returns groups with embedded `tasks`, reconstruct `days` map
       const rawGroups: any[] = Array.isArray(data?.groups) ? (data.groups as any[]) : [];
       const daysFromGroups: Record<string, any> = {};
@@ -114,6 +136,15 @@ export function construct(groupApi?: any, timeApi?: any) {
   };
 
   const saveData = async (data?: any) => {
+    // Block saving when test mode enabled
+    try {
+      if (presentation && presentation.mode && presentation.mode.value === 'test') {
+        console.log('apiStorage.saveData blocked in test mode');
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
     try {
       // If caller didn't provide data, build it from refactored APIs
       let payload = data;

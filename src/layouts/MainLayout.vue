@@ -108,6 +108,9 @@
               <q-item clickable v-ripple @click="toggleTestMode">
                 <q-item-section>{{ testMode ? 'Default mode' : 'Test mode' }}</q-item-section>
               </q-item>
+              <q-item clickable v-ripple @click="reloadWithTestData">
+                <q-item-section>Reload with test data</q-item-section>
+              </q-item>
               <q-item clickable v-ripple @click="openAbout">
                 <q-item-section>About v{{ appVersion }}</q-item-section>
               </q-item>
@@ -139,6 +142,9 @@ import * as api from 'src/modules/day-organiser/_apiRoot';
 import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
 import AboutDialog from 'src/components/settings/AboutDialog.vue';
 import ConnectionsDialog from 'src/components/settings/ConnectionsDialog.vue';
+import { sampleData } from 'src/modules/presentation/sampleData';
+import { buildFlatTasksList } from 'src/modules/task/managers/taskManager';
+import { presentation } from 'src/modules/presentation/presentationManager';
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
@@ -269,10 +275,71 @@ function openAbout() {
 }
 
 function toggleTestMode() {
-  // Toggle UI-only test mode flag. Replace this with actual profile switching logic.
+  // Toggle test mode: when enabling, replace in-memory data with examples and
+  // block saving. When disabling, reload persisted data from storage.
   testMode.value = !testMode.value;
   menuOpen.value = false;
-  // TODO: implement profile switch when available, e.g. api.profile.set(...)
+  try {
+    // toggle presentation module state
+    presentation.toggleTestMode();
+  } catch (e) {
+    void e;
+  }
+  try {
+    if (testMode.value) localStorage.setItem('co21:testMode', '1');
+    else localStorage.removeItem('co21:testMode');
+  } catch (e) {
+    void e;
+  }
+  if (testMode.value) {
+    // Load sample data into in-memory APIs
+    try {
+      if (api.group && api.group.list && typeof api.group.list.setGroups === 'function')
+        api.group.list.setGroups(sampleData.groups as any[]);
+    } catch (e) {
+      void e;
+    }
+    try {
+      if (api.task && api.task.time && api.task.time.days)
+        api.task.time.days.value = sampleData.days as any;
+      // Rebuild flat task list
+      try {
+        buildFlatTasksList(sampleData.days as any);
+      } catch (e) {
+        void e;
+      }
+    } catch (e) {
+      void e;
+    }
+  } else {
+    // disable test mode: reload persisted data from storage (restore real data)
+    try {
+      if (api && api.storage && typeof api.storage.loadData === 'function') {
+        void api.storage.loadData();
+      } else {
+        // fallback to full reload
+        window.location.reload();
+      }
+    } catch (e) {
+      window.location.reload();
+    }
+  }
+}
+
+function reloadWithTestData() {
+  try {
+    // Ensure test mode enabled, then reload the renderer to pick up sample dataset
+    try {
+      // mark reload to start in test mode
+      localStorage.setItem('co21:testMode', '1');
+    } catch (e) {
+      void e;
+    }
+  } catch (e) {
+    void e;
+  }
+  // Force a full reload so the app initializes in test mode
+  window.location.reload();
 }
 
 onUnmounted(() => {
