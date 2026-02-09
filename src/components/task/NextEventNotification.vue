@@ -44,9 +44,9 @@ import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } fro
 import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
-const timeApi = api.time;
+const timeApi = api.task.time;
 const groupApi = api.group;
-const setCurrentDate = api.time.setCurrentDate;
+const setCurrentDate = api.task.time.setCurrentDate;
 const setPreviewTask = api.task.active.setTask;
 const getTasksInRange = api.task.list.inRange;
 // data load is handled centrally by DayOrganiserPage; do not call loadData here

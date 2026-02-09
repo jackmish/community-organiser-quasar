@@ -25,22 +25,23 @@
                       dense
                       round
                       icon="chevron_left"
-                      @click="api.time.prevDay"
+                      @click="api.task.time.prevDay"
                       color="primary"
                     />
                     <span class="date-black">{{
-                      getTimeDifferenceDisplay(api.time.currentDate.value)
+                      getTimeDifferenceDisplay(api.task.time.currentDate.value)
                     }}</span>
                     <span class="q-mx-sm">|</span>
-                    <span :class="['text-weight-bold', getTimeDiffClass(api.time.currentDate)]">{{
-                      formatDateOnly(api.time.currentDate.value)
-                    }}</span>
+                    <span
+                      :class="['text-weight-bold', getTimeDiffClass(api.task.time.currentDate)]"
+                      >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
+                    >
                     <q-btn
                       flat
                       dense
                       round
                       icon="chevron_right"
-                      @click="api.time.nextDay"
+                      @click="api.task.time.nextDay"
                       color="primary"
                     />
                   </div>
@@ -201,8 +202,8 @@ import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUti
 const $q = useQuasar();
 
 const currentDayData = computed(() => {
-  const days = api.time.days.value || {};
-  const d = api.time.currentDate.value;
+  const days = api.task.time.days.value || {};
+  const d = api.task.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: '' } as any);
 });
 
@@ -210,7 +211,7 @@ const currentDayData = computed(() => {
 // an `organiserData` ref with `groups` and `days`.
 const organiserLike = computed(() => ({
   groups: api.group.list.all.value,
-  days: api.time.days.value,
+  days: api.task.time.days.value,
 }));
 
 const hiddenGroupSummary = createHiddenGroupSummary(
@@ -244,8 +245,8 @@ const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
   activeMode: api.task.active.mode,
   setActiveTask: api.task.active.setTask,
   panelHidden,
-  currentDate: api.time.currentDate,
-  setCurrentDate: api.time.setCurrentDate,
+  currentDate: api.task.time.currentDate,
+  setCurrentDate: api.task.time.setCurrentDate,
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
@@ -296,8 +297,8 @@ const {
   parseYmdLocal,
   getTimeOffsetDaysForTask,
 } = createTaskViewHelpers({
-  currentDate: api.time.currentDate,
-  setCurrentDate: api.time.setCurrentDate,
+  currentDate: api.task.time.currentDate,
+  setCurrentDate: api.task.time.setCurrentDate,
   currentDayData,
   allTasks,
   groups: api.group.list.all,
@@ -312,7 +313,7 @@ const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
   createCalendarHandlers({
     isClickBlocked,
     newTask,
-    setCurrentDate: api.time.setCurrentDate,
+    setCurrentDate: api.task.time.setCurrentDate,
     allTasks,
     editTask,
     setTask: api.task.active.setTask,
@@ -333,18 +334,25 @@ const {
   groupTree,
 } = createTaskComputed({
   currentDayData,
-  currentDate: api.time.currentDate,
+  currentDate: api.task.time.currentDate,
   allTasks,
-  getTasksInRange: api.task.list.inRange,
-  groups: api.group.list.all,
-  activeGroup: api.group.active.activeGroup,
-  getGroupsByParent: api.group.list.getGroupsByParent,
-  parseYmdLocal,
-  getTimeOffsetDaysForTask,
-  getCycleType,
-  occursOnDay,
-  groupIsVisible,
+  apiTask: api.task,
+  apiGroup: api.group,
 });
+
+// Diagnostic: log replenishTasks so we can confirm data flow
+try {
+  console.log(
+    'DIAG replenishTasks initial:',
+    Array.isArray(replenishTasks.value) ? replenishTasks.value.length : typeof replenishTasks.value,
+    replenishTasks.value,
+  );
+} catch (e) {
+  // ignore
+}
+watch(replenishTasks, (v) =>
+  console.log('DIAG replenishTasks changed:', Array.isArray(v) ? v.length : typeof v, v),
+);
 
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed
 
@@ -359,9 +367,9 @@ const getGroupName = (groupId?: string): string => {
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
-  setCurrentDate: api.time.setCurrentDate,
+  setCurrentDate: api.task.time.setCurrentDate,
   activeGroup: api.group.active.activeGroup,
-  currentDate: api.time.currentDate,
+  currentDate: api.task.time.currentDate,
   allTasks,
   quasar: $q,
   active: api.task.active,
@@ -370,7 +378,7 @@ const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
 const handleDeleteTask = async (payload: any) => {
   try {
     let id: string | undefined;
-    let date: string = api.time.currentDate.value;
+    let date: string = api.task.time.currentDate.value;
     if (!payload) return;
     if (typeof payload === 'string') {
       id = payload;
@@ -425,8 +433,8 @@ onMounted(async () => {
     try {
       // If current active date is before today, move active day to today when refreshing
       const todayStr = format(new Date(), 'yyyy-MM-dd');
-      if (api.time.currentDate && api.time.currentDate.value) {
-        const cur = new Date(api.time.currentDate.value);
+      if (api.task.time.currentDate && api.task.time.currentDate.value) {
+        const cur = new Date(api.task.time.currentDate.value);
         const today = new Date(todayStr);
         // normalize to midnight for comparison
         const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
@@ -437,7 +445,7 @@ onMounted(async () => {
         ).getTime();
         if (curNorm < todayNorm) {
           try {
-            api.time.setCurrentDate(todayStr);
+            api.task.time.setCurrentDate(todayStr);
           } catch (e) {
             // ignore
           }

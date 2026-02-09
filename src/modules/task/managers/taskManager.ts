@@ -1,4 +1,4 @@
-import { getCycleType } from '../utlils/occursOnDay';
+import { getCycleType, occursOnDay } from '../utlils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
@@ -28,6 +28,43 @@ export class TaskManager {
   toggleTaskComplete = (date: string, id: string) => toggleTaskComplete(date, id);
   undoCycleDone = (date: string, id: string) => undoCycleDone(date, id);
   getAll = () => getAll(this.apiTask?.time);
+  getTasksForDay = (date: string): Task[] => {
+    try {
+      const day = String(date || '');
+      const dayTasks = (getDays()[day] && Array.isArray(getDays()[day].tasks) ? getDays()[day].tasks.slice() : []) as Task[];
+      const all = getAll(this.apiTask?.time) || [];
+      const result: Task[] = [...dayTasks];
+      for (const t of all) {
+        try {
+          if (Number(t.status_id) === 0) continue;
+          if (t.type_id === 'Replenish') continue;
+          if (occursOnDay(t, day)) {
+            if (!result.some((existing) => String(existing.id) === String(t.id))) {
+              const clone: any = { ...t, eventDate: day };
+              clone.__isCyclicInstance = true;
+              result.push(clone as Task);
+            }
+          }
+        } catch (e) {
+          // ignore per-task failures
+        }
+      }
+      result.sort((a, b) => {
+        const hasTimeA = !!a.eventTime;
+        const hasTimeB = !!b.eventTime;
+        if (hasTimeA && !hasTimeB) return -1;
+        if (!hasTimeA && hasTimeB) return 1;
+        if (hasTimeA && hasTimeB) return (a.eventTime || '').localeCompare(b.eventTime || '');
+        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        const priorityCompare = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
+        if (priorityCompare !== 0) return priorityCompare;
+        return 0;
+      });
+      return result;
+    } catch (e) {
+      return [];
+    }
+  };
   getTasksInRange = (s: string, e: string) => getTasksInRange(s, e);
   getTasksByCategory = (c: Task['category']) => getTasksByCategory(c);
   getTasksByPriority = (p: Task['priority']) => getTasksByPriority(p);

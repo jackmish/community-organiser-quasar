@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import logger from 'src/utils/logger';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
@@ -7,30 +7,42 @@ export function createTaskComputed(args: {
   currentDayData: Ref<{ tasks: Task[] }>;
   currentDate: Ref<string>;
   allTasks: Ref<Task[]>;
-  getTasksInRange?: (from: string, to: string) => Task[];
-  groups: Ref<any[]>;
-  activeGroup: Ref<any>;
-  getGroupsByParent: (parent?: string) => any[];
-  parseYmdLocal: (s: string) => Date | null;
-  getTimeOffsetDaysForTask: (t: any) => number;
-  getCycleType: (t: any) => any;
-  occursOnDay: (t: any, day: string) => boolean;
-  groupIsVisible: (groups: any, activeGroup: any, candidateId: any) => boolean;
+  apiTask?: any;
+  apiGroup?: any;
 }) {
-  const {
-    currentDayData,
-    currentDate,
-    allTasks,
-    getTasksInRange,
-    groups,
-    activeGroup,
-    getGroupsByParent,
-    parseYmdLocal,
-    getTimeOffsetDaysForTask,
-    getCycleType,
-    occursOnDay,
-    groupIsVisible,
-  } = args;
+  const { currentDayData, currentDate, allTasks, apiTask, apiGroup } = args;
+
+  // Derive helpers from provided APIs (prefer apiTask/apiGroup). Provide
+  // minimal safe fallbacks so this module remains usable in tests.
+  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined =
+    apiTask?.list?.inRange ?? undefined;
+
+  const parseYmdLocal = apiTask?.helpers?.parseYmdLocal ?? ((_: string | undefined | null) => null);
+
+  const getTimeOffsetDaysForTask = apiTask?.helpers?.getTimeOffsetDaysForTask ?? ((_: any) => 0);
+
+  const getCycleType = apiTask?.helpers?.getCycleType ?? ((_: any) => null);
+  const occursOnDay = apiTask?.helpers?.occursOnDay ?? ((_: any, __: string) => false);
+
+  const groups: Ref<any[]> = (apiGroup?.list?.all as Ref<any[]>) ?? ref([] as any[]);
+  const activeGroup: Ref<any> = (apiGroup?.active?.activeGroup as Ref<any>) ?? ref(null as any);
+  const getGroupsByParent = apiGroup?.list?.getGroupsByParent ?? ((p?: string) => [] as any[]);
+  const rawGroupIsVisible = apiGroup?.list?.isVisibleForActive;
+  const groupIsVisibleFallback = (groupsArg: any, activeGroupArg: any, candidateId: any) => true;
+  const groupIsVisible = rawGroupIsVisible ?? groupIsVisibleFallback;
+
+  // Normalize the group visibility helper so callers can always use a single-arg
+  // function `isVisibleForActive(candidateId)` that returns boolean. This adapts
+  // both bound 1-arg helpers and 3-arg helpers from older APIs.
+  const isVisibleForActive: (candidateId: any) => boolean = (() => {
+    if (typeof rawGroupIsVisible === 'function') {
+      if (rawGroupIsVisible.length <= 1) {
+        return (candidateId: any) => rawGroupIsVisible(candidateId);
+      }
+      return (candidateId: any) => rawGroupIsVisible(groups.value, activeGroup.value, candidateId);
+    }
+    return (candidateId: any) => groupIsVisible(groups.value, activeGroup.value, candidateId);
+  })();
 
   const sortedTasks = computed(() => {
     let tasksToSort = currentDayData.value.tasks.slice();
@@ -75,8 +87,8 @@ export function createTaskComputed(args: {
       logger.warn('Failed to include Todo extras for today', err);
     }
 
-    const isVisibleForActive = (candidateId: any) =>
-      groupIsVisible(groups.value, activeGroup.value, candidateId);
+    // use `isVisibleForActive` from outer scope
+    // (defined above so it adapts both 1-arg and 3-arg helpers)
 
     try {
       const dayStr = currentDate.value;
@@ -121,7 +133,7 @@ export function createTaskComputed(args: {
       const hasTimeB = !!b.eventTime;
       if (hasTimeA && !hasTimeB) return -1;
       if (!hasTimeA && hasTimeB) return 1;
-      if (hasTimeA && hasTimeB) return a.eventTime!.localeCompare(b.eventTime!);
+      if (hasTimeA && hasTimeB) return String(a.eventTime).localeCompare(String(b.eventTime));
       const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
       const priorityCompare = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
       if (priorityCompare !== 0) return priorityCompare;
@@ -133,9 +145,11 @@ export function createTaskComputed(args: {
   const replenishTasks = computed(() => {
     try {
       const all = allTasks.value || [];
-      let val = all.filter((t) => t.type_id === 'Replenish' && Number(t.status_id) !== 0);
+      let val = all.filter(
+        (t) => (t.type_id || t.type) === 'Replenish' && Number(t.status_id) !== 0,
+      );
       if (activeGroup.value && activeGroup.value.value !== null) {
-        val = val.filter((t) => groupIsVisible(groups.value, activeGroup.value, t.groupId));
+        val = val.filter((t) => isVisibleForActive(t.groupId));
       }
       val = val.sort((a: any, b: any) => {
         const na = (a.name || '').toLowerCase();
@@ -170,12 +184,10 @@ export function createTaskComputed(args: {
     try {
       const all = allTasks.value || [];
       let replenishDone = all.filter(
-        (t: any) => t.type_id === 'Replenish' && Number(t.status_id) === 0,
+        (t: any) => (t.type_id || t.type) === 'Replenish' && Number(t.status_id) === 0,
       );
       if (activeGroup.value && activeGroup.value.value !== null) {
-        replenishDone = replenishDone.filter((t: any) =>
-          groupIsVisible(groups.value, activeGroup.value, t.groupId),
-        );
+        replenishDone = replenishDone.filter((t: any) => isVisibleForActive(t.groupId));
       }
       const existingIds = new Set(done.map((d: any) => d.id));
       for (const r of replenishDone) {
@@ -353,7 +365,7 @@ export function createTaskComputed(args: {
       } catch (e) {
         // ignore
       }
-      return groupsForParent.map((group) => ({
+      return groupsForParent.map((group: any) => ({
         id: String(group.id),
         label: group.name,
         color: group.color,

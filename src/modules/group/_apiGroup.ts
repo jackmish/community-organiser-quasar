@@ -1,5 +1,5 @@
 import * as groupManager from './groupManager';
-import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
+import { getGroupsByParent as getGroupsByParentUtil, isVisibleForActive } from './groupUtils';
 import { computed, ref } from 'vue';
 import { app } from 'src/services/appService';
 import { saveData } from 'src/utils/storageUtils';
@@ -37,6 +37,9 @@ export function construct() {
       setGroups: (arr: any[]) => {
         groupManager.setGroups(groups, arr);
       },
+      isVisibleForActive: (candidateId: any) =>
+        // bound helper: delegates to shared utility with current refs
+        isVisibleForActive(groups.value || [], activeGroup.value, candidateId),
       tree: groupManager.createTreeComputed(groups),
     },
 

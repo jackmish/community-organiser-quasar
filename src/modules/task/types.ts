@@ -14,6 +14,8 @@ export interface Task {
   status_id?: number | string | undefined;
   // Type of task, e.g. 'TimeEvent' or 'Todo'
   type_id?: string;
+  // Legacy alternative name used in some persisted records
+  type?: string;
   // Alternate event date field; some code uses `eventDate` instead of `date`
   eventDate?: string;
   // `completed` kept for backward compatibility but will be deprecated

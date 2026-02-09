@@ -1,5 +1,6 @@
 import type { Task } from './types';
 import { TaskManager } from './managers/taskManager';
+import * as timeManager from './managers/timeManager/timeManager';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
@@ -17,16 +18,18 @@ export class ApiTask {
   };
   mgr: TaskManager;
 
-  constructor(groupApi?: any, timeApi?: any) {
+  constructor(groupApi?: any) {
     this.groupApi = groupApi;
-    this.time = timeApi;
     this.state = {
       activeTask: ref<Task | null>(null),
       activeMode: ref<'add' | 'edit' | 'preview'>('add'),
       parsedLines: ref([]),
     };
-    // Pass the ApiTask instance to the task service; taskService.construct will
-    // detect and pull `time` and `state` from this object.
+    // Create and expose the time manager on the ApiTask so sub-managers can
+    // derive days/currentDate/lastModified from a single source.
+    this.time = timeManager.construct();
+    // Pass the ApiTask instance to the task manager after `time` exists so
+    // the manager can wire the time API (setTimeApi) correctly.
     this.mgr = new TaskManager(this);
   }
 
@@ -62,6 +65,7 @@ export class ApiTask {
             compare ??
               ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
           ),
+      forDay: (d: string) => mgr.getTasksForDay(String(d || '')),
       aggregate: <R>(fn: (acc: R, t: Task) => R, init: R) => mgr.getAll().reduce(fn, init),
     } as const;
   }
@@ -117,6 +121,6 @@ export class ApiTask {
   }
 }
 
-export function construct(groupApi?: any, timeApi?: any) {
-  return new ApiTask(groupApi, timeApi);
+export function construct(groupApi?: any) {
+  return new ApiTask(groupApi);
 }

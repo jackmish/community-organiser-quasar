@@ -55,19 +55,19 @@ export function useDayOrganiser() {
   }
 
   const getDayData = (date: string): DayData => {
-    if (!api.time.days.value[date]) {
-      api.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
-    }
-    return api.time.days.value[date];
+    if (!api.task.time.days.value[date]) {
+        api.task.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
+      }
+      return api.task.time.days.value[date];
   };
 
-  const currentDayData = computed(() => getDayData(api.time.currentDate.value));
+  const currentDayData = computed(() => getDayData(api.task.time.currentDate.value));
 
   const exportData = () => {
     const payload = {
-      days: api.time.days.value,
+      days: api.task.time.days.value,
       groups: api.group.list.all.value,
-      lastModified: api.time.lastModified.value,
+      lastModified: api.task.time.lastModified.value,
     };
     if (typeof api.storage.exportToFile === 'function') return api.storage.exportToFile(payload);
     return storage.exportToFile(payload);
@@ -88,16 +88,16 @@ export function useDayOrganiser() {
   };
 
   const setCurrentDate = (date: string | number | null) => {
-    if (date && typeof date === 'string') api.time.setCurrentDate(String(date));
+    if (date && typeof date === 'string') api.task.time.setCurrentDate(String(date));
   };
 
-  const goToToday = () => api.time.goToToday();
-  const nextDay = () => api.time.nextDay();
-  const prevDay = () => api.time.prevDay();
+  const goToToday = () => api.task.time.goToToday();
+  const nextDay = () => api.task.time.nextDay();
+  const prevDay = () => api.task.time.prevDay();
 
   const organiserLike = computed(() => ({
     groups: api.group.list.all.value,
-    days: api.time.days.value,
+    days: api.task.time.days.value,
   }));
 
   const hiddenGroupSummary = createHiddenGroupSummary(
@@ -110,7 +110,7 @@ export function useDayOrganiser() {
     // State
     organiserData: organiserLike,
     isLoading: api.storage.isLoading,
-    currentDate: api.time.currentDate,
+    currentDate: api.task.time.currentDate,
     currentDayData,
 
     // Methods
