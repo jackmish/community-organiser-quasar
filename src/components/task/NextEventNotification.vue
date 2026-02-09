@@ -121,6 +121,10 @@ const nextEvents = computed(() => {
       occurrences.push({ task: t, occ, dateStr });
     };
 
+    // Only consider TimeEvent tasks, cyclic tasks, or explicit 'prepare' reminders for notifications
+    const isTimeEvent = t.type_id === 'TimeEvent' || t.timeMode === 'prepare';
+    if (!cycleType && !isTimeEvent) continue;
+
     if (cycleType) {
       for (const day of windowDays) {
         try {
