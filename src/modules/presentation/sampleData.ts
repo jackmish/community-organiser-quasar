@@ -1,5 +1,10 @@
 const today = new Date().toISOString().slice(0, 10);
 const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const day2 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const day3 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const day4 = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const day5 = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const day6 = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const days: Record<string, any> = {};
 
@@ -86,7 +91,7 @@ days[today] = {
     },
     {
       id: 't-2',
-      name: 'Meeting with team',
+      name: 'Discuss roadmap',
       description: 'Discuss roadmap',
       date: today,
       eventTime: '14:00',
@@ -94,6 +99,52 @@ days[today] = {
       status_id: 1,
       type_id: 'TimeEvent',
       groupId: 'g-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 't-9',
+      name: 'Singing Lesson',
+      description: 'Singing Lesson\nTeacher: Ms. Lee',
+      date: today,
+      eventTime: '18:00',
+      priority: 'medium',
+      status_id: 1,
+      type_id: 'TimeEvent',
+      groupId: 'g-adam',
+      repeatMode: 'cyclic',
+      repeatCycleType: 'dayWeek',
+      repeatDays: ['tue'],
+      repeat: { cycleType: 'dayWeek', days: ['tue'] },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 't-10',
+      name: 'Running',
+      description: 'Running\nPark run',
+      date: today,
+      eventTime: '07:30',
+      priority: 'low',
+      status_id: 1,
+      type_id: 'TimeEvent',
+      groupId: 'g-adam',
+      repeatMode: 'cyclic',
+      repeatCycleType: 'dayWeek',
+      repeatDays: ['sat'],
+      repeat: { cycleType: 'dayWeek', days: ['sat'] },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 't-11',
+      name: 'Car fix',
+      description: 'Car fix\nFix brakes and change oil',
+      date: day3,
+      priority: 'critical',
+      status_id: 1,
+      type_id: 'Todo',
+      groupId: 'g-car1',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -109,7 +160,7 @@ days[tomorrow] = {
       name: 'Prepare slides',
       description: 'Slides for presentation',
       date: tomorrow,
-      priority: 'low',
+      priority: 'high',
       status_id: 1,
       type_id: 'Todo',
       groupId: 'g-1',
@@ -119,6 +170,13 @@ days[tomorrow] = {
   ],
   notes: '',
 };
+
+// Add a few more empty days to navigate the calendar during test mode
+days[day2] = { date: day2, tasks: [], notes: '' };
+days[day3] = { date: day3, tasks: [], notes: '' };
+days[day4] = { date: day4, tasks: [], notes: '' };
+days[day5] = { date: day5, tasks: [], notes: '' };
+days[day6] = { date: day6, tasks: [], notes: '' };
 
 export const sampleData = {
   groups: [
