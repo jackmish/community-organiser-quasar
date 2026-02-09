@@ -404,7 +404,7 @@ const typeOptions = [
   { label: 'Time Event', shortLabel: 'Time', value: 'TimeEvent', icon: 'event' },
   { label: 'TODO', shortLabel: 'Todo', value: 'Todo', icon: 'check_box' },
   { label: 'Replenish', shortLabel: 'Repl', value: 'Replenish', icon: 'autorenew' },
-  { label: 'Note/Later', shortLabel: 'Note', value: 'NoteLater', icon: 'description' },
+  { label: 'Note', shortLabel: 'Note', value: 'NoteLater', icon: 'description' },
 ];
 
 // Options for the time type toggle (Whole Day / Exact Hour)
@@ -2159,7 +2159,7 @@ function onSubmit(event: Event) {
                       <q-btn
                         v-for="opt in typeOptions"
                         :key="opt.value"
-                        :label="showFullTypeLabel ? opt.label : opt.shortLabel || opt.label"
+                        :label="opt.shortLabel"
                         :aria-label="opt.label"
                         :icon="opt.icon"
                         :size="btnSize"

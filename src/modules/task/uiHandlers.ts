@@ -93,7 +93,7 @@ export function createTaskViewHelpers(args: {
 
   const typeOptions = [
     { label: 'Command center', value: 'Command center', icon: 'dashboard' },
-    { label: 'Note/Later', value: 'Note/Later', icon: 'note' },
+    { label: 'Note', value: 'Note/Later', icon: 'note' },
     { label: 'TimeEvent', value: 'TimeEvent', icon: 'event' },
     { label: 'Replenishment', value: 'Replenishment', icon: 'shopping_cart' },
   ];
