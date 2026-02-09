@@ -105,6 +105,9 @@
               <q-item clickable v-ripple @click="openSettings">
                 <q-item-section>Settings</q-item-section>
               </q-item>
+              <q-item clickable v-ripple @click="toggleTestMode">
+                <q-item-section>{{ testMode ? 'Default mode' : 'Test mode' }}</q-item-section>
+              </q-item>
               <q-item clickable v-ripple @click="openAbout">
                 <q-item-section>About v{{ appVersion }}</q-item-section>
               </q-item>
@@ -143,6 +146,7 @@ const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
+const testMode = ref(false);
 let headerManageHandler: any = null;
 // Obtain router and route during setup (inject must run inside setup)
 const router = useRouter();
@@ -262,6 +266,13 @@ function openSettings() {
 function openAbout() {
   showAboutDialog.value = true;
   menuOpen.value = false;
+}
+
+function toggleTestMode() {
+  // Toggle UI-only test mode flag. Replace this with actual profile switching logic.
+  testMode.value = !testMode.value;
+  menuOpen.value = false;
+  // TODO: implement profile switch when available, e.g. api.profile.set(...)
 }
 
 onUnmounted(() => {
