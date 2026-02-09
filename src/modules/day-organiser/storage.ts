@@ -56,9 +56,9 @@ export function useDayOrganiser() {
 
   const getDayData = (date: string): DayData => {
     if (!api.task.time.days.value[date]) {
-        api.task.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
-      }
-      return api.task.time.days.value[date];
+      api.task.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
+    }
+    return api.task.time.days.value[date];
   };
 
   const currentDayData = computed(() => getDayData(api.task.time.currentDate.value));

@@ -31,7 +31,9 @@ export class TaskManager {
   getTasksForDay = (date: string): Task[] => {
     try {
       const day = String(date || '');
-      const dayTasks = (getDays()[day] && Array.isArray(getDays()[day].tasks) ? getDays()[day].tasks.slice() : []) as Task[];
+      const dayTasks = (
+        getDays()[day] && Array.isArray(getDays()[day].tasks) ? getDays()[day].tasks.slice() : []
+      ) as Task[];
       const all = getAll(this.apiTask?.time) || [];
       const result: Task[] = [...dayTasks];
       for (const t of all) {
@@ -56,7 +58,8 @@ export class TaskManager {
         if (!hasTimeA && hasTimeB) return 1;
         if (hasTimeA && hasTimeB) return (a.eventTime || '').localeCompare(b.eventTime || '');
         const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-        const priorityCompare = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
+        const priorityCompare =
+          (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
         if (priorityCompare !== 0) return priorityCompare;
         return 0;
       });
