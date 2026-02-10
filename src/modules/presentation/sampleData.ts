@@ -368,5 +368,7 @@ export const sampleData = {
       icon: 'sports_soccer',
     },
   ],
+  // Default active group to select when loading sample/presentation data
+  defaultActiveGroup: 'g-family',
   days,
 };

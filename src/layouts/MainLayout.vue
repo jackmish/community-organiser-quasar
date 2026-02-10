@@ -73,7 +73,7 @@
                       }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="reloadWithTestData">
-                      <q-item-section>Reload with test data</q-item-section>
+                      <q-item-section>Explain CO21 features</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openAbout">
                       <q-item-section>About v{{ appVersion }}</q-item-section>

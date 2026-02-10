@@ -67,6 +67,33 @@ export function construct(groupApi?: any, timeApi?: any) {
             } catch (e) {
               void e;
             }
+
+            // If the loaded payload provides a `defaultActiveGroup`, apply it
+            // (used by presentation/sampleData to indicate which group should be active).
+            try {
+              const defaultActive = (data && data.defaultActiveGroup) || null;
+              if (defaultActive) {
+                const groupsList =
+                  groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : [];
+                const found = (groupsList || []).find(
+                  (g: any) => String(g.id) === String(defaultActive),
+                );
+                if (found) {
+                  if (groupApi.active && groupApi.active.activeGroup)
+                    groupApi.active.activeGroup.value = {
+                      label: found.name || String(found.id),
+                      value: found.id,
+                    };
+                  else if (groupApi.activeGroup)
+                    groupApi.activeGroup.value = {
+                      label: found.name || String(found.id),
+                      value: found.id,
+                    };
+                }
+              }
+            } catch (e) {
+              void e;
+            }
           }
         } catch (e) {
           void e;
