@@ -31,38 +31,30 @@ if (weekDates.some((d) => d < todayIso)) {
   });
 }
 
-const [mondayIso, tuesdayIso, wednesdayIso, thursdayIso, fridayIso, saturdayIso, sundayIso] =
-  weekDates;
-// Shared base Date for today (midnight) and exported ISO `today` string
-const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-export const today = toIsoDate(todayDate);
-
-// Generate day1..day20 from a single array to avoid repetition
-const _daysArray = Array.from({ length: 20 }, (_, i) =>
-  toIsoDate(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() + i)),
-);
-export const day1 = _daysArray[0]!;
-export const day2 = _daysArray[1]!;
-export const day3 = _daysArray[2]!;
-export const day4 = _daysArray[3]!;
-export const day5 = _daysArray[4]!;
-export const day6 = _daysArray[5]!;
-export const day7 = _daysArray[6]!;
-export const day8 = _daysArray[7]!;
-export const day9 = _daysArray[8]!;
-export const day10 = _daysArray[9]!;
-export const day11 = _daysArray[10]!;
-export const day12 = _daysArray[11]!;
-export const day13 = _daysArray[12]!;
-export const day14 = _daysArray[13]!;
-export const day15 = _daysArray[14]!;
-export const day16 = _daysArray[15]!;
-export const day17 = _daysArray[16]!;
-export const day18 = _daysArray[17]!;
-export const day19 = _daysArray[18]!;
-export const day20 = _daysArray[19]!;
-// Backwards-compatible alias used by the rest of the file
-const tomorrow = day2;
+const [mondayIso, tuesdayIso, wednesdayIso, thursdayIso, fridayIso, saturdayIso, sundayIso] = weekDates;
+export const day10 = ((): string => {
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + 9); // roughly next week's Tuesday
+  return toIsoDate(d);
+})();
+export const day20 = ((): string => {
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + 19);
+  return toIsoDate(d);
+})();
+// Preserve the original simple day variables for backwards compatibility
+function addDays(base: Date, n: number) {
+  const d = new Date(base);
+  d.setDate(base.getDate() + n);
+  return toIsoDate(d);
+}
+const today = toIsoDate(now);
+const tomorrow = addDays(now, 1);
+const day2 = addDays(now, 2);
+const day3 = addDays(now, 3);
+const day4 = addDays(now, 4);
+const day5 = addDays(now, 5);
+const day6 = addDays(now, 6);
 const days: Record<string, any> = {};
 
 // Expose computed week options separately so callers can choose a Mon..Sun
