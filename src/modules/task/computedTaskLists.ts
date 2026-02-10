@@ -34,7 +34,14 @@ export function createTaskComputed(args: {
       return new Date(y, m - 1, d);
     });
 
-  const getTimeOffsetDaysForTask = apiTask?.helpers?.getTimeOffsetDaysForTask ?? ((_: any) => 0);
+  const getTimeOffsetDaysForTask =
+    apiTask?.helpers?.getTimeOffsetDaysForTask ??
+    ((t: any): number => {
+      const raw = t && (t.timeOffsetDays ?? t.time_offset_days ?? t.timeOffset ?? t.time_offset);
+      if (raw === null || raw === undefined || raw === '') return 0;
+      const n = Number(raw);
+      return isNaN(n) ? 0 : Math.max(0, Math.floor(n));
+    });
 
   const getCycleType = apiTask?.helpers?.getCycleType ?? utilGetCycleType;
   const occursOnDay = apiTask?.helpers?.occursOnDay ?? utilOccursOnDay;
