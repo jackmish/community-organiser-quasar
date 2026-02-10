@@ -37,6 +37,10 @@ const [mondayIso, tuesdayIso, wednesdayIso, thursdayIso, fridayIso, saturdayIso,
 const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 export const today = toIsoDate(todayDate);
 
+// Compute last day of current month for an expiration test task
+const lastDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 1);
+const lastDayIso = toIsoDate(lastDayOfMonth);
+
 // Generate day1..day20 from a single array to avoid repetition
 const _daysArray = Array.from({ length: 20 }, (_, i) =>
   toIsoDate(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() + i)),
@@ -341,6 +345,24 @@ days[day20] = {
   ],
   notes: '',
 };
+
+// Taxes expiration task at the end of month with 28 days reminder
+if (!days[lastDayIso]) days[lastDayIso] = { date: lastDayIso, tasks: [], notes: '' };
+days[lastDayIso].tasks.push({
+  id: 't-taxes',
+  name: 'Taxes',
+  description: 'Taxes',
+  date: lastDayIso,
+  // eventTime: '09:00',
+  priority: 'critical',
+  status_id: 1,
+  type_id: 'TimeEvent',
+  timeMode: 'expiration',
+  timeOffsetDays: 28,
+  groupId: 'g-family',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
 
 export const sampleData = {
   groups: [
