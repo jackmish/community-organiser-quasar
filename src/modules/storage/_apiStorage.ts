@@ -16,19 +16,16 @@ export function construct(groupApi?: any, timeApi?: any) {
       // If presentation test mode enabled, or localStorage flag present, load sample data instead of backend
       let data: any;
       try {
-        const testFlagLocal =
-          typeof localStorage !== 'undefined' && localStorage.getItem('co21:testMode') === '1';
-        const testModeActive =
-          (presentation && presentation.mode && presentation.mode.value === 'test') ||
-          testFlagLocal;
-        if (testModeActive) {
-          console.log('apiStorage.loadData: loading sampleData because test mode is enabled');
+        // Use sample data when presentation mode is explicitly 'test' or 'presentation'.
+        // Presentation is a safe-read-only session similar to test mode.
+        const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
+        const sampleModeActive = modeVal === 'test' || modeVal === 'presentation';
+        if (sampleModeActive) {
+          console.log(
+            'apiStorage.loadData: loading sampleData because presentation.mode ===',
+            modeVal,
+          );
           data = sampleData as any;
-          try {
-            if (presentation && presentation.mode) presentation.mode.value = 'test';
-          } catch (e) {
-            void e;
-          }
         }
       } catch (e) {
         void e;
@@ -65,6 +62,11 @@ export function construct(groupApi?: any, timeApi?: any) {
         try {
           if (groupApi && groupApi.list && typeof groupApi.list.setGroups === 'function') {
             groupApi.list.setGroups(rawGroups || []);
+            try {
+              console.log('apiStorage.loadData: groups set, count=', (rawGroups || []).length);
+            } catch (e) {
+              void e;
+            }
           }
         } catch (e) {
           void e;
@@ -79,6 +81,14 @@ export function construct(groupApi?: any, timeApi?: any) {
             // Populate taskService flat list immediately so callers can use it
             try {
               taskService.buildFlatTasksList(finalDays || {});
+              try {
+                console.log(
+                  'apiStorage.loadData: time.days populated, days=',
+                  Object.keys(finalDays || {}).length,
+                );
+              } catch (e) {
+                void e;
+              }
             } catch (e) {
               void e;
             }
@@ -138,8 +148,9 @@ export function construct(groupApi?: any, timeApi?: any) {
   const saveData = async (data?: any) => {
     // Block saving when test mode enabled
     try {
-      if (presentation && presentation.mode && presentation.mode.value === 'test') {
-        console.log('apiStorage.saveData blocked in test mode');
+      const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
+      if (modeVal === 'test' || modeVal === 'presentation') {
+        console.log('apiStorage.saveData blocked in presentation/test mode (', modeVal, ')');
         return;
       }
     } catch (e) {

@@ -28,95 +28,62 @@
               <NextEventNotification style="min-width: 0; width: 100%" />
             </div>
             <div style="margin-left: 12px; display: inline-block">
-              <div
-                class="header-today"
-                style="
-                  display: inline-block;
-                  font-size: 0.9rem;
-                  background: #ffffff;
-                  color: #212121;
-                  padding: 6px 10px;
-                  border-radius: 6px;
-                  align-items: center;
-                "
+              <q-btn
+                flat
+                dense
+                round
+                icon="menu"
+                color="primary"
+                text-color="white"
+                style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
+                title="Menu"
               >
-                <div
-                  class="text-caption"
-                  style="color: #424242; margin-right: 6px; display: inline-block"
+                <q-menu
+                  v-model="menuOpen"
+                  anchor="bottom right"
+                  self="top right"
+                  style="width: auto"
                 >
-                  <span style="color: #757575; font-weight: 700"
-                    >{{ currentDateWeekday }},&nbsp;</span
-                  >
-                  <span style="color: #1976d2; font-weight: 700">{{ currentDateShort }}</span>
-                </div>
-                <div
-                  class="text-caption"
-                  style="color: #424242; display: inline-block; margin-left: 6px"
-                >
-                  |&nbsp;<span style="color: #2e7d32; font-weight: 700">{{
-                    currentTimeDisplay
-                  }}</span>
-                </div>
-              </div>
+                  <q-list style="min-width: 160px">
+                    <q-item
+                      clickable
+                      v-ripple
+                      @click="
+                        () => {
+                          showConnectionsDialog = true;
+                          menuOpen = false;
+                        }
+                      "
+                    >
+                      <q-item-section>Connections and data</q-item-section>
+                    </q-item>
+                    <q-item clickable v-ripple @click="openSettings">
+                      <q-item-section>Settings</q-item-section>
+                    </q-item>
+                    <q-item clickable v-ripple @click="toggleTestMode">
+                      <q-item-section>{{ testMode ? 'Default mode' : 'Test mode' }}</q-item-section>
+                    </q-item>
+                    <q-item
+                      clickable
+                      v-ripple
+                      @click="presentationActive ? stopPresentation() : startPresentation()"
+                    >
+                      <q-item-section>{{
+                        presentationActive ? 'Stop presentation' : 'Start presentation'
+                      }}</q-item-section>
+                    </q-item>
+                    <q-item clickable v-ripple @click="reloadWithTestData">
+                      <q-item-section>Reload with test data</q-item-section>
+                    </q-item>
+                    <q-item clickable v-ripple @click="openAbout">
+                      <q-item-section>About v{{ appVersion }}</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
             </div>
           </div>
         </q-toolbar-title>
-
-        <!-- Refresh button with connection status border -->
-        <q-btn
-          flat
-          dense
-          round
-          icon="refresh"
-          :title="isOnline ? 'Refresh notifications (Online)' : 'Refresh notifications (Offline)'"
-          :style="{
-            opacity: 0.95,
-            border: `2px solid var(--q-${isOnline ? 'positive' : 'negative'})`,
-            borderRadius: '50%',
-          }"
-          @click="refreshNotifications"
-        />
-
-        <!-- Menu button (three lines) with configuration options -->
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          color="primary"
-          text-color="white"
-          style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
-          title="Menu"
-        >
-          <q-menu v-model="menuOpen" anchor="bottom right" self="top right" style="width: auto">
-            <q-list style="min-width: 160px">
-              <q-item
-                clickable
-                v-ripple
-                @click="
-                  () => {
-                    showConnectionsDialog = true;
-                    menuOpen = false;
-                  }
-                "
-              >
-                <q-item-section>Connections and data</q-item-section>
-              </q-item>
-              <q-item clickable v-ripple @click="openSettings">
-                <q-item-section>Settings</q-item-section>
-              </q-item>
-              <q-item clickable v-ripple @click="toggleTestMode">
-                <q-item-section>{{ testMode ? 'Default mode' : 'Test mode' }}</q-item-section>
-              </q-item>
-              <q-item clickable v-ripple @click="reloadWithTestData">
-                <q-item-section>Reload with test data</q-item-section>
-              </q-item>
-              <q-item clickable v-ripple @click="openAbout">
-                <q-item-section>About v{{ appVersion }}</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
-        </q-btn>
 
         <AppConfigDialog v-model="showConfigDialog" />
         <ConnectionsDialog v-model="showConnectionsDialog" />
@@ -142,8 +109,7 @@ import * as api from 'src/modules/day-organiser/_apiRoot';
 import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
 import AboutDialog from 'src/components/settings/AboutDialog.vue';
 import ConnectionsDialog from 'src/components/settings/ConnectionsDialog.vue';
-import { sampleData } from 'src/modules/presentation/sampleData';
-import { buildFlatTasksList } from 'src/modules/task/managers/taskManager';
+// sample data is loaded by the presentation manager when requested
 import { presentation } from 'src/modules/presentation/presentationManager';
 
 const isOnline = ref(false);
@@ -152,7 +118,12 @@ const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
-const testMode = ref(false);
+const testMode = computed(() =>
+  presentation && presentation.mode ? presentation.mode.value === 'test' : false,
+);
+const presentationActive = computed(() =>
+  presentation && presentation.active ? presentation.active.value : false,
+);
 let headerManageHandler: any = null;
 // Obtain router and route during setup (inject must run inside setup)
 const router = useRouter();
@@ -242,15 +213,7 @@ onMounted(async () => {
   } catch (e) {
     // ignore
   }
-  try {
-    // Initialize testMode from presentation state or persistent flag.
-    const persisted =
-      typeof localStorage !== 'undefined' && localStorage.getItem('co21:testMode') === '1';
-    testMode.value =
-      persisted || (presentation && presentation.mode && presentation.mode.value === 'test');
-  } catch (e) {
-    void e;
-  }
+  // no-op: `testMode` derived from `presentation.mode` via computed
 });
 
 function refreshNotifications() {
@@ -283,63 +246,57 @@ function openAbout() {
   menuOpen.value = false;
 }
 
-function toggleTestMode() {
+async function toggleTestMode() {
   // Enable test mode only. Disallow reverting to normal mode from the UI.
-  if (testMode.value) {
-    // already in test mode; close menu and do nothing
-    menuOpen.value = false;
-    return;
-  }
-  testMode.value = true;
   menuOpen.value = false;
   try {
-    // set presentation module to test (irreversible from UI)
-    presentation.toggleTestMode();
+    if (presentation && typeof (presentation as any).enableTestModeWithApi === 'function') {
+      await (presentation as any).enableTestModeWithApi(api);
+    } else {
+      presentation.toggleTestMode();
+    }
   } catch (e) {
     void e;
-  }
-  try {
-    localStorage.setItem('co21:testMode', '1');
-  } catch (e) {
-    void e;
-  }
-  if (testMode.value) {
-    // Load sample data into in-memory APIs
-    try {
-      if (api.group && api.group.list && typeof api.group.list.setGroups === 'function')
-        api.group.list.setGroups(sampleData.groups as any[]);
-    } catch (e) {
-      void e;
-    }
-    try {
-      if (api.task && api.task.time && api.task.time.days)
-        api.task.time.days.value = sampleData.days as any;
-      // Rebuild flat task list
-      try {
-        buildFlatTasksList(sampleData.days as any);
-      } catch (e) {
-        void e;
-      }
-    } catch (e) {
-      void e;
-    }
   }
 }
 
-function reloadWithTestData() {
+async function startPresentation() {
+  menuOpen.value = false;
   try {
-    // Ensure test mode enabled, then reload the renderer to pick up sample dataset
-    try {
-      // mark reload to start in test mode
-      localStorage.setItem('co21:testMode', '1');
-    } catch (e) {
-      void e;
+    if (presentation && typeof (presentation as any).startPresentationWithApi === 'function') {
+      await (presentation as any).startPresentationWithApi(api);
+    } else {
+      presentation.start();
     }
   } catch (e) {
     void e;
   }
-  // Force a full reload so the app initializes in test mode
-  window.location.reload();
+}
+
+async function stopPresentation() {
+  menuOpen.value = false;
+  try {
+    if (presentation && typeof (presentation as any).stopPresentationWithApi === 'function') {
+      await (presentation as any).stopPresentationWithApi(api);
+    } else {
+      presentation.stop();
+    }
+  } catch (e) {
+    void e;
+  }
+}
+
+async function reloadWithTestData() {
+  try {
+    menuOpen.value = false;
+    if (presentation && typeof (presentation as any).enableTestModeWithApi === 'function') {
+      await (presentation as any).enableTestModeWithApi(api);
+    } else {
+      presentation.toggleTestMode();
+    }
+  } catch (e) {
+    void e;
+  }
 }
 
 onUnmounted(() => {
