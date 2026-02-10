@@ -1,5 +1,9 @@
 import { computed, ref } from 'vue';
 import logger from 'src/utils/logger';
+import {
+  occursOnDay as utilOccursOnDay,
+  getCycleType as utilGetCycleType,
+} from './utlils/occursOnDay';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
 
@@ -17,12 +21,23 @@ export function createTaskComputed(args: {
   const getTasksInRange: ((from: string, to: string) => Task[]) | undefined =
     apiTask?.list?.inRange ?? undefined;
 
-  const parseYmdLocal = apiTask?.helpers?.parseYmdLocal ?? ((_: string | undefined | null) => null);
+  const parseYmdLocal =
+    apiTask?.helpers?.parseYmdLocal ??
+    ((s: string | undefined | null): Date | null => {
+      if (!s || typeof s !== 'string') return null;
+      const parts = s.split('-');
+      if (parts.length < 3) return null;
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+      return new Date(y, m - 1, d);
+    });
 
   const getTimeOffsetDaysForTask = apiTask?.helpers?.getTimeOffsetDaysForTask ?? ((_: any) => 0);
 
-  const getCycleType = apiTask?.helpers?.getCycleType ?? ((_: any) => null);
-  const occursOnDay = apiTask?.helpers?.occursOnDay ?? ((_: any, __: string) => false);
+  const getCycleType = apiTask?.helpers?.getCycleType ?? utilGetCycleType;
+  const occursOnDay = apiTask?.helpers?.occursOnDay ?? utilOccursOnDay;
 
   const groups: Ref<any[]> = (apiGroup?.list?.all as Ref<any[]>) ?? ref([] as any[]);
   const activeGroup: Ref<any> = (apiGroup?.active?.activeGroup as Ref<any>) ?? ref(null as any);
@@ -117,7 +132,8 @@ export function createTaskComputed(args: {
         if (t.type_id === 'Replenish') continue;
         if (occursOnDay(t, day)) {
           if (!tasksToSort.some((existing) => existing.id === t.id)) {
-            const clone: any = { ...t, eventDate: day };
+            // Ensure display and helpers use the occurrence date (not the seed date)
+            const clone: any = { ...t, eventDate: day, date: day };
             clone.__isCyclicInstance = true;
             if (isVisibleForActive(clone.groupId)) tasksToSort.push(clone);
           }

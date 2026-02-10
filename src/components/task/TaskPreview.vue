@@ -219,12 +219,11 @@ import { format } from 'date-fns';
 import {
   priorityColors,
   priorityTextColor,
-  formatDisplayDate,
-  formatEventHoursDiff,
   priorityDefinitions,
   priorityIcons,
   highlightIcon,
 } from '../theme';
+import { formatDisplayDate, formatEventHoursDiff } from 'src/modules/task/utlils/occursOnDay';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 import type { Task } from 'src/modules/task/types';
 

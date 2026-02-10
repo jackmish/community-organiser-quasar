@@ -252,8 +252,8 @@ days[day3] = {
   tasks: [
     {
       id: 't-9',
-      name: 'Singing Lesson',
-      description: 'Singing Lesson\nTeacher: Ms. Lee',
+      name: 'Piano Lesson',
+      description: 'Piano Lesson\nTeacher: Ms. Lee',
       date: day3,
       eventTime: '18:00',
       priority: 'medium',
@@ -354,8 +354,8 @@ export const sampleData = {
     // Adam's subgroups
     { id: 'g-adam-work', name: 'Work', parentId: 'g-adam', color: '#1976d2', icon: 'work' },
     {
-      id: 'g-adam-singing',
-      name: 'Singing',
+      id: 'g-adam-music',
+      name: 'Music',
       parentId: 'g-adam',
       color: '#ab47bc',
       icon: 'music_note',

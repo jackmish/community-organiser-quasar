@@ -14,10 +14,10 @@ import {
   replenishColorSets as themeReplenishColorSets,
   getReplenishBg as themeGetReplenishBg,
   getReplenishText as themeGetReplenishText,
-  formatEventHoursDiff,
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
 } from '../theme';
+import { formatEventHoursDiff } from 'src/modules/task/utlils/occursOnDay';
 
 const props = defineProps({
   filteredParentOptions: {

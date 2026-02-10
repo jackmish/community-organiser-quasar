@@ -1,4 +1,5 @@
-import { format } from 'date-fns';
+// date helpers (formatDisplayDate, formatEventHoursDiff) are exported from
+// the occursOnDay util to keep theme focused on styling/helpers only.
 
 // Grouped priority definitions: each priority has a background and a preferred text color
 export const priorityDefinitions: Record<string, { bg: string; text: string; icon?: string }> = {
@@ -34,34 +35,7 @@ export const timeDiffClassFor = (label: string) => {
   return 'time-diff-default';
 };
 
-export function formatDisplayDate(date: string) {
-  try {
-    return format(new Date(date), 'EEEE, dd.MM.yyyy');
-  } catch (e) {
-    return date || '';
-  }
-}
-
-export function formatEventHoursDiff(dateStr: string, timeStr: string, now = new Date()) {
-  if (!dateStr || !timeStr) return '';
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  if (isNaN(dt.getTime())) return '';
-  const diffMinutes = Math.round((dt.getTime() - now.getTime()) / (1000 * 60));
-  const sign = diffMinutes >= 0 ? 1 : -1;
-  const absMinutes = Math.abs(diffMinutes);
-  const days = Math.floor(absMinutes / (60 * 24));
-  const remAfterDays = absMinutes - days * 24 * 60;
-  const hours = Math.floor(remAfterDays / 60);
-  const minutes = remAfterDays % 60;
-
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-
-  const str = parts.join(' ');
-  return sign >= 0 ? `In ${str}` : `${str} ago`;
-}
+// (moved) see occursOnDay util
 
 // Shared icon mappings for task types and priorities
 export const typeIcons: Record<string, string> = {

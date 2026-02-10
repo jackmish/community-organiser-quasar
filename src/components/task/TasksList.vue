@@ -339,11 +339,14 @@ import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
   priorityDefinitions as themePriorityDefinitions,
-  formatEventHoursDiff,
-  formatDisplayDate,
   typeIcons,
   highlightIcon,
 } from '../theme';
+import {
+  formatDisplayDate,
+  formatEventHoursDiff,
+  parseYmdLocal,
+} from 'src/modules/task/utlils/occursOnDay';
 
 const openItemMenuId = ref<string | null>(null);
 const pendingDeleteId = ref<string | null>(null);
@@ -531,8 +534,8 @@ const getEventHoursDisplay = (task: any) => {
   }
 
   // No explicit time: show relative day labels when applicable
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return formatDisplayDate(dateStr);
+  const d = parseYmdLocal(dateStr) || new Date(dateStr);
+  if (!d || isNaN(d.getTime())) return formatDisplayDate(dateStr);
   const today = new Date();
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -543,17 +546,8 @@ const getEventHoursDisplay = (task: any) => {
   return formatDisplayDate(dateStr);
 };
 
-// Local YYYY-MM-DD parser to avoid timezone shifts
-const parseYmdLocal = (s: string | undefined | null): Date | null => {
-  if (!s || typeof s !== 'string') return null;
-  const parts = s.split('-');
-  if (parts.length < 3) return null;
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  const d = Number(parts[2]);
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
-  return new Date(y, m - 1, d);
-};
+// parseYmdLocal is imported from the occursOnDay util above to avoid
+// duplicate implementations and timezone issues.
 
 const getDisplayName = (task: any) => {
   if (!task) return '';

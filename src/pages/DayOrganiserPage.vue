@@ -179,7 +179,7 @@ import AddTaskForm from '../components/task/AddTaskForm.vue';
 import DoneTasksList from '../components/task/DoneTasksList.vue';
 import GroupManagementDialog from '../components/group/GroupManagementDialog.vue';
 import TasksList from '../components/task/TasksList.vue';
-import { formatDisplayDate } from '../components/theme';
+import { formatDisplayDate } from 'src/modules/task/utlils/occursOnDay';
 import TaskPreview from '../components/task/TaskPreview.vue';
 import CalendarView from 'src/components/time/CalendarView.vue';
 import GroupSelectHeader from '../components/group/GroupSelectHeader.vue';
