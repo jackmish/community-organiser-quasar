@@ -27,11 +27,11 @@ Below are a few screenshots from the in-app guide (files available in `public/ap
 </p>
 
 <p align="center">
-  <img src="public/app-guide/replenishment.jpg" alt="Replenishment list" style="max-width:800px;width:100%;height:auto" />
+  <img src="public/app-guide/replenishment.jpg" alt="Replenishment list" style="max-width:800px;width:50%;height:auto;float:left;" />
 </p>
 
 <p align="center">
-  <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:100%;height:auto" />
+  <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:50%;height:auto;float:left;" />
 </p>
 
 ## Compatibility
