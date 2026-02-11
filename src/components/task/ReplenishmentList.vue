@@ -10,7 +10,7 @@
     </div> -->
     <div class="replenish-grid">
       <div
-        v-for="(r, idx) in props.replenishTasks"
+        v-for="(r, idx) in sortedReplenish"
         :key="r.id"
         class="replenish-item card q-pa-sm"
         role="button"
@@ -68,13 +68,52 @@ function getGroupName(groupId: any) {
 }
 
 function isNewGroup(idx: number, task: any) {
-  if (!props.replenishTasks || !Array.isArray(props.replenishTasks)) return false;
+  if (!Array.isArray(sortedReplenish.value)) return false;
   const cur = task;
-  const prev = idx > 0 ? props.replenishTasks[idx - 1] : null;
+  const prev = idx > 0 ? sortedReplenish.value[idx - 1] : null;
   const curId = cur?.groupId ?? cur?.group_id ?? null;
   const prevId = prev?.groupId ?? prev?.group_id ?? null;
   return idx === 0 || String(curId) !== String(prevId);
 }
+
+const sortedReplenish = computed(() => {
+  const src = Array.isArray(props.replenishTasks) ? props.replenishTasks.slice() : [];
+  // Sort by group ancestry path (root -> ... -> group) so parent group
+  // replenishments appear before those of their child groups.
+  const getGroupPath = (groupId: any) => {
+    if (!groupId) return [] as string[];
+    const out: string[] = [];
+    let cur = groups.value.find((g: any) => String(g.id) === String(groupId));
+    while (cur) {
+      out.push(cur.name || String(cur.id));
+      const pid = cur.parentId ?? cur.parent_id ?? null;
+      if (pid == null) break;
+      cur = groups.value.find((g: any) => String(g.id) === String(pid));
+    }
+    return out.reverse();
+  };
+
+  src.sort((a: any, b: any) => {
+    const pa = getGroupPath(a.groupId ?? a.group_id);
+    const pb = getGroupPath(b.groupId ?? b.group_id);
+    const max = Math.max(pa.length, pb.length);
+    for (let i = 0; i < max; i++) {
+      if (i >= pa.length) return -1; // a is ancestor (shorter path) -> comes first
+      if (i >= pb.length) return 1; // b is ancestor
+      const na = (pa[i] || '').toLowerCase();
+      const nb = (pb[i] || '').toLowerCase();
+      if (na < nb) return -1;
+      if (na > nb) return 1;
+    }
+    // same group path: fallback to task name
+    const na = (a.name || '').toLowerCase();
+    const nb = (b.name || '').toLowerCase();
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+    return 0;
+  });
+  return src;
+});
 
 // Compute a container style so the whole ReplenishmentList card can span
 // multiple columns in the parent grid. For small mode: 1-3 items -> span 1,
