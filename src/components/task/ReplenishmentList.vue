@@ -10,7 +10,7 @@
     </div> -->
     <div class="replenish-grid">
       <div
-        v-for="r in props.replenishTasks"
+        v-for="(r, idx) in props.replenishTasks"
         :key="r.id"
         class="replenish-item card q-pa-sm"
         role="button"
@@ -21,6 +21,12 @@
         @click="onReplenishClick(r)"
         :style="{ background: getReplenishBg(r) }"
       >
+        <!-- Show a tiny group label above the first item of a group -->
+        <div v-if="isNewGroup(idx, r)" class="group-label">
+          {{ getGroupName(r.groupId || r.group_id) }}
+        </div>
+        <!-- subtle divider spanning the row to separate groups without extra spacing -->
+        <div v-if="isNewGroup(idx, r)" class="group-divider" aria-hidden="true"></div>
         <div class="row items-center justify-between" style="gap: 8px">
           <div
             :class="{ 'text-strike': Number(r.status_id) === 0 }"
@@ -50,6 +56,25 @@ const props = defineProps<{
 const size = props.size || 'default';
 
 import { computed } from 'vue';
+
+// access group list to resolve group names for tiny labels
+import * as api from 'src/modules/day-organiser/_apiRoot';
+const groups = api.group.list.all;
+
+function getGroupName(groupId: any) {
+  if (!groupId) return '';
+  const g = groups.value.find((x: any) => String(x.id) === String(groupId));
+  return g ? g.name : '';
+}
+
+function isNewGroup(idx: number, task: any) {
+  if (!props.replenishTasks || !Array.isArray(props.replenishTasks)) return false;
+  const cur = task;
+  const prev = idx > 0 ? props.replenishTasks[idx - 1] : null;
+  const curId = cur?.groupId ?? cur?.group_id ?? null;
+  const prevId = prev?.groupId ?? prev?.group_id ?? null;
+  return idx === 0 || String(curId) !== String(prevId);
+}
 
 // Compute a container style so the whole ReplenishmentList card can span
 // multiple columns in the parent grid. For small mode: 1-3 items -> span 1,
@@ -102,6 +127,35 @@ function onDoneClick(task: any) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* make each item a positioning context for the absolute label/divider */
+.replenish-item {
+  position: relative;
+}
+
+.group-label {
+  position: absolute;
+  top: -10px;
+  left: 8px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.6);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0 6px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02) inset;
+  pointer-events: none;
+}
+
+.group-divider {
+  position: absolute;
+  top: -6px;
+  left: -8px;
+  right: -8px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  pointer-events: none;
 }
 .done-item {
   filter: grayscale(100%);

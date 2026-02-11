@@ -269,7 +269,7 @@ function selectPriority(p: string) {
 
 async function selectGroup(gid: string | null) {
   try {
-    const updateTask = api.task.update;
+    const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
     const date = (activeTask.value && (activeTask.value.date || activeTask.value.eventDate)) || '';
     if (!activeTask.value || !activeTask.value.id) return;
     const updates: any = {};

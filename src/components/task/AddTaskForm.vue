@@ -85,7 +85,7 @@ const activeGroupLabelShort = computed(() => {
 // Group menu state for edit-mode group changing
 const groupMenu = ref(false);
 const groups = api.group.list.all;
-const updateTask = api.task.update;
+const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
 
 async function selectGroupForEdit(gid: string | null) {
   try {
