@@ -26,11 +26,11 @@ Below are a few screenshots from the in-app guide (files available in `public/ap
   <img src="public/app-guide/CO21%20-%20main%20layout.jpg" alt="Main layout" style="max-width:800px;width:100%;height:auto" />
 </p>
 
-| Ways to complete task/subtask, as whole task or list like:
+| Ways to complete task/subtask, as whole task or list edited anywhere like:
 
--Make an appointment*
--Fix brakes*
--change oil -[x]Replace windshield wipers |
+-Make an appointment*<br/>
+-Fix brakes*<br/>
+-change oil <br/> -[x] Replace windshield wipers |
 
 <p align="center">
   <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:50%;height:auto;float:left;" />
