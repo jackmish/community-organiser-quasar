@@ -183,6 +183,8 @@ type TaskType = {
   parent_id: string | null;
   created_by: string;
   priority: string;
+  // optional replenish color set id (e.g. 'set-1')
+  color_set?: string | null;
   // Optional id when editing an existing task
   id?: string;
   groupId: string | undefined;
@@ -688,6 +690,7 @@ watch(
         parent_id: val.parent_id ?? null,
         created_by: val.created_by || '',
         priority: val.priority || 'medium',
+        color_set: val.color_set ?? val.colorSet ?? undefined,
         groupId: val.groupId,
         eventDate: val.date || val.eventDate || localNewTask.value.eventDate,
         eventTime: val.eventTime || '',
@@ -1179,16 +1182,22 @@ const descriptionRows = computed(() => {
 // Auto-resize textarea to fit content
 const descriptionInput = ref<any>(null);
 
-// When creating new tasks, keep the form open after save by default
-const stayAfterSave = ref(false);
+// When creating new tasks, keep the form open after save by default for Replenish
+// Initialize based on last selected type or current localNewTask type when in add mode.
+const stayAfterSave = ref(
+  (props.mode === 'add' &&
+    (localNewTask.value.type_id === 'Replenish' || lastSelectedType.value === 'Replenish')) ||
+    false,
+);
 
-// When user switches into Replenish type while in add mode, automatically
-// enable "Stay after save" so creating multiple replenish items is easier.
+// When user switches type while in add mode, toggle `stayAfterSave`:
+// - enable when switching to Replenish
+// - disable when switching away from Replenish
 watch(isReplenish, (newVal, oldVal) => {
   try {
-    if (newVal && !oldVal && props.mode === 'add') {
-      stayAfterSave.value = true;
-    }
+    if (props.mode !== 'add') return;
+    if (newVal && !oldVal) stayAfterSave.value = true;
+    else if (!newVal && oldVal) stayAfterSave.value = false;
   } catch (e) {
     // ignore
   }
@@ -1428,7 +1437,7 @@ function onSubmit(event: Event) {
       {{ watermarkIcon }}
     </i>
     <q-card-section>
-      <div v-if="isReplenish && (mode === 'edit' || mode === 'add')" style="margin-bottom: 8px">
+      <div v-if="isReplenish && mode === 'add'" style="margin-bottom: 8px">
         <ReplenishmentList
           :replenish-tasks="smallReplenishTasks"
           :size="'small'"

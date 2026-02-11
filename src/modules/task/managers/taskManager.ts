@@ -140,10 +140,8 @@ export const addTask = (
   }
   getDays()[date].tasks.push(task);
   try {
-    flatTasks.value.push(task);
-    flatTasks.value.sort(
-      (a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority),
-    );
+    // Rebuild flatTasks from days to keep list consistent and avoid duplicates
+    flatTasks.value = listFromDays(getDays());
   } catch (e) {
     // ignore
   }
