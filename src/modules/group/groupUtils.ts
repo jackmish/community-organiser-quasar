@@ -47,11 +47,19 @@ export const isVisibleForActive = (
   let childNode: any = node;
   let cur = getGroupById(parentId);
   while (cur) {
+    // If a descendant explicitly requested to hide tasks from parent views,
+    // do not include it when viewing an ancestor.
     if (childNode && childNode.hideTasksFromParent) return false;
+
+    // If this ancestor node is the active group, include the candidate.
+    if (String(cur.id) === activeId) return true;
+
+    // If this ancestor is not sharing subgroups, stop the chain — do not include.
     if (!cur.shareSubgroups) return false;
+
     const curParent = cur.parentId ?? cur.parent_id ?? null;
     if (curParent == null) return false;
-    if (String(curParent) === activeId) return true;
+
     childNode = cur;
     cur = getGroupById(curParent);
   }

@@ -398,25 +398,21 @@ const mergedTasks = computed(() => {
 
   const filterTask = (t: any) => {
     if (!t) return false;
-    if (!activeId) return true;
-    // if active is a child of someone, we don't want tasks from its ancestors
-    // so exclude tasks whose groupId is an ancestor of the active group
     try {
       const taskGroupId = t.groupId ?? t.group_id ?? null;
       if (!taskGroupId) return true;
-      // Only include tasks that belong to the active group itself or its descendants.
-      // Exclude tasks from ancestor groups and sibling groups.
-      const taskG = String(taskGroupId);
-      const activeG = String(activeId);
-      if (taskG === activeG) return true;
-      // if the task's group is a descendant of the active group, include it
-      if (isAncestor(activeG, taskG)) return true;
-      // otherwise exclude (ancestors, siblings, or unrelated groups)
-      return false;
+      // Delegate visibility rules to the group API which respects
+      // `hideTasksFromParent` and `shareSubgroups` flags.
+      try {
+        return api.group.list.isVisibleForActive(taskGroupId);
+      } catch (e) {
+        // Fallback: if helper unavailable, include task when no active group
+        if (!activeId) return true;
+        return true;
+      }
     } catch (e) {
-      // fall through
+      return true;
     }
-    return true;
   };
 
   out.push(...(props.tasksWithTime || []).filter(filterTask));
