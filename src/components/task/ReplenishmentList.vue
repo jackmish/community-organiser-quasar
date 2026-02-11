@@ -100,10 +100,20 @@ const getReplenishBg = (task: any) => themeGetReplenishBg(task.color_set);
 const getReplenishText = (task: any) => themeGetReplenishText(task.color_set);
 
 // Use local long-press to emit edit requests
-const { startLongPress, cancelLongPress, setLongPressHandler } = useLongPress();
+const { startLongPress, cancelLongPress, setLongPressHandler, longPressTriggered } = useLongPress();
 setLongPressHandler((t: any) => emit('edit-task', t));
 
 function onReplenishClick(task: any) {
+  // If a long-press handler was triggered, don't toggle status on the subsequent click.
+  try {
+    if (longPressTriggered && longPressTriggered.value) {
+      // reset flag and ignore this click which follows a long-press
+      longPressTriggered.value = false;
+      return;
+    }
+  } catch (e) {
+    // ignore and proceed
+  }
   emit('toggle-status', task);
 }
 
