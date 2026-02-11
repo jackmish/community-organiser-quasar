@@ -32,7 +32,7 @@ Below are a few screenshots from the in-app guide (files available in `public/ap
   <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:50%;height:auto;float:left;" />
 </p>
 
-|Replenishment list - with universal input used as:
+| Replenishment list - with universal input used as:
 a) using as searching/selecting element already created items
 b) is used as name of new item |
 
