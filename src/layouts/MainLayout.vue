@@ -45,6 +45,9 @@
                   style="width: auto"
                 >
                   <q-list style="min-width: 160px">
+                    <q-item clickable v-ripple @click="openManageHeader">
+                      <q-item-section>Manage Groups...</q-item-section>
+                    </q-item>
                     <q-item
                       clickable
                       v-ripple
@@ -239,6 +242,18 @@ function handleConnectionClick() {
 function openSettings() {
   showConfigDialog.value = true;
   menuOpen.value = false;
+}
+
+function openManageHeader() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new Event('group:manage-request'));
+    }
+  } catch (e) {
+    // fallback: ignore if dispatch fails
+  } finally {
+    menuOpen.value = false;
+  }
 }
 
 function openAbout() {
