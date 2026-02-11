@@ -324,7 +324,7 @@ days[today] = {
     // Sample completed tasks for testing
     {
       id: 't-done-1',
-      name: 'Wite cheese',
+      name: 'White cheese',
       description: '',
       date: today,
       priority: 'low',

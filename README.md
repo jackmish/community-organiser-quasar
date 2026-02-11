@@ -34,6 +34,15 @@ Below are a few screenshots from the in-app guide (files available in `public/ap
   <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:50%;height:auto;float:left;" />
 </p>
 
+<div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;align-items:flex-start">
+  <div style="flex:0 0 50%;box-sizing:border-box;max-width:50%;padding:0.25rem">
+    <img src="public/app-guide/replenishment.jpg" alt="Replenishment list" style="width:100%;height:auto;display:block" />
+  </div>
+  <div style="flex:0 0 50%;box-sizing:border-box;max-width:50%;padding:0.25rem">
+    <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="width:100%;height:auto;display:block" />
+  </div>
+</div>
+
 ## Compatibility
 
 This project is in early development and is tested mainly at small laptop-like and large-screen resolutions. Many adjustments aim to provide a mobile layout suitable for Android, and later possibly iOS and Linux.
