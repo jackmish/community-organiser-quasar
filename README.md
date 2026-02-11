@@ -18,6 +18,22 @@ The chosen name, CO21, stands for Community Organiser with the number chosen as 
 6. Task, event and shopping list view — allows expanding task details.
 7. Reminder bar at the top — a persistent expandable line to prevent forgetting and to highlight upcoming events.
 
+## App guide
+
+Below are a few screenshots from the in-app guide (files available in `public/app-guide`).
+
+<p align="center">
+  <img src="public/app-guide/CO21%20-%20main%20layout.jpg" alt="Main layout" style="max-width:800px;width:100%;height:auto" />
+</p>
+
+<p align="center">
+  <img src="public/app-guide/replenishment.jpg" alt="Replenishment list" style="max-width:800px;width:100%;height:auto" />
+</p>
+
+<p align="center">
+  <img src="public/app-guide/way-to-complete-task-or-subtask.jpg" alt="How to complete task or subtask" style="max-width:800px;width:100%;height:auto" />
+</p>
+
 ## Compatibility
 
 This project is in early development and is tested mainly at small laptop-like and large-screen resolutions. Many adjustments aim to provide a mobile layout suitable for Android, and later possibly iOS and Linux.
