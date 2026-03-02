@@ -72,6 +72,7 @@
               @delete-task="handleDeleteTask"
               @toggle-status="handleToggleStatus"
             />
+            <Watermark :active-group="api.group.active.activeGroup" />
           </q-card>
         </div>
       </div>
@@ -182,6 +183,7 @@
 import { format } from "date-fns";
 
 import AddTaskForm from "../components/task/AddTaskForm.vue";
+import Watermark from 'src/components/ui/Watermark.vue';
 
 import DoneTasksList from "../components/task/DoneTasksList.vue";
 import GroupManagementDialog from "../components/group/GroupManagementDialog.vue";
