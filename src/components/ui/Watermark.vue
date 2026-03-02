@@ -48,11 +48,9 @@ const label = computed(() => {
   mix-blend-mode: multiply; /* subtly darken background where text overlaps */
 }
 
-@media (prefers-color-scheme: dark) {
-  .co21-watermark-text {
-    color: rgba(0, 255, 255, 1);
-    mix-blend-mode: screen; /* subtly lighten dark backgrounds */
-    opacity: 0.1;
-  }
+.co21-watermark-text {
+  color: rgba(0, 255, 255, 1);
+  mix-blend-mode: screen; /* subtly lighten dark backgrounds */
+  opacity: 0.1;
 }
 </style>
