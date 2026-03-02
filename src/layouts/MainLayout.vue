@@ -97,6 +97,7 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+    <Watermark :active-group="api.group.active.activeGroup" />
   </q-layout>
 </template>
 
@@ -107,6 +108,7 @@ import pkg from '../../package.json';
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from 'vue-router';
 import NextEventNotification from '../components/task/NextEventNotification.vue';
+import Watermark from 'src/components/ui/Watermark.vue';
 import { format } from 'date-fns';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
