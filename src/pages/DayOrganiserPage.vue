@@ -3,7 +3,10 @@
     <!-- top selector removed; groups shown in the header -->
 
     <!-- Loading State -->
-    <div v-if="api.storage.isLoading && api.storage.isLoading.value" class="text-center q-pa-lg">
+    <div
+      v-if="api.storage.isLoading && api.storage.isLoading.value"
+      class="text-center q-pa-lg"
+    >
       <q-spinner color="primary" size="3em" />
     </div>
     <div v-else>
@@ -12,13 +15,38 @@
           <q-card class="task-list-card">
             <q-card-section>
               <div class="text-h6 task-list-header">
-                <div class="row items-center justify-between" style="align-items: center; margin-top: 6px">
+                <div
+                  class="row items-center justify-between"
+                  style="align-items: center; margin-top: 6px"
+                >
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn flat dense round icon="chevron_left" @click="api.task.time.prevDay" color="primary" />
-                    <span class="date-black">{{ getTimeDifferenceDisplay(api.task.time.currentDate.value) }}</span>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="chevron_left"
+                      @click="api.task.time.prevDay"
+                      color="primary"
+                    />
+                    <span class="date-black">{{
+                      getTimeDifferenceDisplay(api.task.time.currentDate.value)
+                    }}</span>
                     <span class="q-mx-sm">|</span>
-                    <span :class="['text-weight-bold', getTimeDiffClass(api.task.time.currentDate)]">{{ formatDateOnly(api.task.time.currentDate.value) }}</span>
-                    <q-btn flat dense round icon="chevron_right" @click="api.task.time.nextDay" color="primary" />
+                    <span
+                      :class="[
+                        'text-weight-bold',
+                        getTimeDiffClass(api.task.time.currentDate),
+                      ]"
+                      >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
+                    >
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="chevron_right"
+                      @click="api.task.time.nextDay"
+                      color="primary"
+                    />
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div style="display: flex; align-items: center; gap: 8px">
@@ -242,8 +270,8 @@ const handleImportFile = async (file: File) => {
   // Safely use Quasar Loading plugin if present
   const safeShow = () => {
     try {
-      if ($q && $q.loading && typeof $q.loading.show === 'function') {
-        $q.loading.show({ message: 'Importing data...' } as any);
+      if ($q && $q.loading && typeof $q.loading.show === "function") {
+        $q.loading.show({ message: "Importing data..." } as any);
       }
     } catch (e) {
       // ignore
@@ -251,7 +279,7 @@ const handleImportFile = async (file: File) => {
   };
   const safeHide = () => {
     try {
-      if ($q && $q.loading && typeof $q.loading.hide === 'function') {
+      if ($q && $q.loading && typeof $q.loading.hide === "function") {
         $q.loading.hide();
       }
     } catch (e) {
@@ -273,7 +301,7 @@ const handleImportFile = async (file: File) => {
     reloadKey.value = reloadKey.value + 1;
     const safeNotify = (opts: any) => {
       try {
-        if ($q && $q.notify && typeof $q.notify === 'function') return $q.notify(opts);
+        if ($q && $q.notify && typeof $q.notify === "function") return $q.notify(opts);
       } catch (e) {
         void e;
       }
@@ -285,13 +313,13 @@ const handleImportFile = async (file: File) => {
       }
     };
 
-    safeNotify({ type: 'positive', message: 'Import successful' });
+    safeNotify({ type: "positive", message: "Import successful" });
   } catch (err) {
     safeHide();
-    console.error('Import failed', err);
+    console.error("Import failed", err);
     const safeNotify = (opts: any) => {
       try {
-        if ($q && $q.notify && typeof $q.notify === 'function') return $q.notify(opts);
+        if ($q && $q.notify && typeof $q.notify === "function") return $q.notify(opts);
       } catch (e) {
         void e;
       }
@@ -301,7 +329,10 @@ const handleImportFile = async (file: File) => {
         // ignore
       }
     };
-    safeNotify({ type: 'negative', message: 'Import failed: ' + String((err as any)?.message || err) });
+    safeNotify({
+      type: "negative",
+      message: "Import failed: " + String((err as any)?.message || err),
+    });
   }
 };
 let organiserGroupManageHandler: any = null;
@@ -330,6 +361,64 @@ watch(
   (val) => {
     if (!val && api.task.active.mode.value !== "add") {
       api.task.active.mode.value = "add";
+    }
+  }
+);
+
+// When the current date changes (via calendar or prev/next arrows), switch to creation mode
+watch(
+  () => api.task.time.currentDate.value,
+  (newDate, oldDate) => {
+    try {
+      if (newDate !== oldDate) {
+        // Defer check so other date-change handlers (e.g. calendar preview) run first.
+        setTimeout(() => {
+          try {
+            // Determine if the selected date has any tasks
+            const all =
+              api.task.list && typeof api.task.list.all === "function"
+                ? api.task.list.all()
+                : [];
+            const tasksOnDate = (all || []).filter((t: any) => {
+              const d = t?.date || t?.eventDate || null;
+              return d === newDate;
+            });
+
+            const activeTask = api.task.active.task.value;
+
+            // If there are no tasks on the new date, or the currently active task doesn't belong
+            // to the new date, clear selection and switch to creation mode.
+            if (
+              !tasksOnDate.length ||
+              (activeTask &&
+                String(activeTask?.date || activeTask?.eventDate) !== String(newDate))
+            ) {
+              try {
+                api.task.active.setTask(null);
+              } catch (e) {
+                try {
+                  api.task.active.task.value = null;
+                } catch (_err) {
+                  void _err;
+                }
+              }
+              try {
+                api.task.active.mode.value = "add";
+              } catch (e) {
+                try {
+                  if (api.task.active.setMode) api.task.active.setMode("add");
+                } catch (_err) {
+                  void _err;
+                }
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }, 50);
+      }
+    } catch (e) {
+      // ignore
     }
   }
 );
