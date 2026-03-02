@@ -131,7 +131,7 @@
                         </div>
                       </div>
                       <Watermark
-                        v-if="new Date(day).getDate() === 1"
+                        v-if="shouldShowMonth(day, index, week, weekIndex === 0)"
                         :label="format(new Date(day), 'MMMM')"
                       />
                       <div
