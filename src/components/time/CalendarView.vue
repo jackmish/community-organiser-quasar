@@ -36,9 +36,9 @@
           :class="['text-weight-bold', { 'first-month-btn': index === 0 }]"
           style="font-size: 16px"
         >
-          {{ String(new Date(month.value).getMonth() + 1).padStart(2, '0') }}.{{
+          {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
             month.label.toUpperCase()
-          }}{{ index === 0 ? ' ' + month.value.slice(0, 4) : '' }}
+          }}{{ index === 0 ? " " + month.value.slice(0, 4) : "" }}
         </q-btn>
       </div>
     </div>
@@ -52,7 +52,7 @@
                 :key="'header-' + day"
                 class="text-center text-weight-bold text-caption text-grey-7"
               >
-                {{ ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][new Date(day).getDay()] }}
+                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
               </th>
             </tr>
           </thead>
@@ -67,7 +67,12 @@
               <td v-for="(day, index) in week" :key="day" class="calendar-cell">
                 <div
                   :class="{
-                    'new-month-start': isNewMonthStart(day, week, weekIndex, allCalendarWeeks),
+                    'new-month-start': isNewMonthStart(
+                      day,
+                      week,
+                      weekIndex,
+                      allCalendarWeeks
+                    ),
                   }"
                 >
                   <div
@@ -98,8 +103,8 @@
                     day === selectedDate
                       ? 'primary'
                       : day < format(new Date(), 'yyyy-MM-dd')
-                        ? 'grey-5'
-                        : 'grey-7'
+                      ? 'grey-5'
+                      : 'grey-7'
                   "
                   @click="handleDateSelect(day)"
                   :title="
@@ -117,7 +122,10 @@
                     { 'calendar-holiday': !!getHoliday(day) },
                     { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
                     { 'calendar-selected': day === selectedDate },
-                    { 'calendar-past': day <= format(addDays(new Date(), -1), 'yyyy-MM-dd') },
+                    {
+                      'calendar-past':
+                        day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
+                    },
                   ]"
                 >
                   <div class="calendar-day-content">
@@ -207,7 +215,7 @@
     <div class="row q-mb-md items-center">
       <div class="col">
         <div class="row items-center q-gutter-md">
-          <div class="text-subtitle2">Calendar View</div>
+          <div class="text-subtitle2">Visible days</div>
           <q-option-group
             v-model="calendarViewDays"
             :options="[
@@ -238,17 +246,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import logger from 'src/utils/logger';
-import { useLongPress } from 'src/composables/useLongPress';
-import { occursOnDay } from 'src/modules/task/utlils/occursOnDay';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { ref, computed, onMounted, watch } from "vue";
+import logger from "src/utils/logger";
+import { useLongPress } from "src/composables/useLongPress";
+import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
+import { format, addDays, startOfWeek } from "date-fns";
 import {
   priorityColors as themePriorityColors,
   priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
-} from '../theme';
-import Watermark from 'src/components/ui/Watermark.vue';
+} from "../theme";
+import Watermark from "src/components/ui/Watermark.vue";
 
 const props = defineProps<{
   selectedDate?: string;
@@ -257,13 +265,18 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:selectedDate', value: string): void;
-  (e: 'preview-task', payload: any): void;
-  (e: 'edit-task', id: string | null): void;
+  (e: "update:selectedDate", value: string): void;
+  (e: "preview-task", payload: any): void;
+  (e: "edit-task", id: string | null): void;
 }>();
 
 // Long-press composable for event pills
-const { startLongPress, cancelLongPress, setLongPressHandler, longPressTriggered } = useLongPress();
+const {
+  startLongPress,
+  cancelLongPress,
+  setLongPressHandler,
+  longPressTriggered,
+} = useLongPress();
 
 // Long-press should open edit mode; short press shows preview.
 setLongPressHandler((task: any) => {
@@ -274,17 +287,22 @@ setLongPressHandler((task: any) => {
         // Prefer to handle edit internally via API so parent doesn't need to wire handlers
         // Set active task and switch to edit mode
         // Importing the API dynamically avoids static circular imports and satisfies linter
-        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const apiModule = await import("src/modules/day-organiser/_apiRoot");
         const api = apiModule as any;
-        if (api && api.task && api.task.active && typeof api.task.active.setMode === 'function') {
+        if (
+          api &&
+          api.task &&
+          api.task.active &&
+          typeof api.task.active.setMode === "function"
+        ) {
           if (api.task && api.task.active && api.task.active.setTask)
             api.task.active.setTask(task ?? null);
-          api.task.active.setMode('edit');
+          api.task.active.setMode("edit");
         }
       } catch (e) {
         // ignore internal handling failures
       }
-      emit('edit-task', task?.id ?? null);
+      emit("edit-task", task?.id ?? null);
     } catch (e) {
       // ignore
     }
@@ -296,18 +314,23 @@ async function onEventPointerUp(task: any) {
     // If long-press wasn't triggered, treat as a short click -> preview
     if (!longPressTriggered.value) {
       try {
-        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const apiModule = await import("src/modules/day-organiser/_apiRoot");
         const api = apiModule as any;
-        if (api && api.task && api.task.active && typeof api.task.active.setMode === 'function') {
+        if (
+          api &&
+          api.task &&
+          api.task.active &&
+          typeof api.task.active.setMode === "function"
+        ) {
           if (api.task && api.task.active && api.task.active.setTask)
             api.task.active.setTask(task ?? null);
-          api.task.active.setMode('preview');
+          api.task.active.setMode("preview");
         }
       } catch (e) {
         // ignore internal handling failures
       }
       // Emit the full task/event object (includes `date` when coming from getEventsForDay)
-      emit('preview-task', task ?? null);
+      emit("preview-task", task ?? null);
     }
   } catch (e) {
     // ignore
@@ -337,7 +360,7 @@ class CalendarDisplayManager {
 
   shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
     const date = new Date(day);
-    const monthYear = format(date, 'yyyy-MM');
+    const monthYear = format(date, "yyyy-MM");
 
     if (isFirstWeek && index === 0) {
       this.shownMonths = new Set();
@@ -368,8 +391,8 @@ class CalendarDisplayManager {
 
   shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
     const date = new Date(day);
-    const year = format(date, 'yyyy');
-    const todayYear = format(new Date(), 'yyyy');
+    const year = format(date, "yyyy");
+    const todayYear = format(new Date(), "yyyy");
 
     if (isFirstWeek && index === 0) {
       this.shownYears = new Set();
@@ -430,7 +453,11 @@ async function getHolidaysFilePath(year: number): Promise<string | null> {
   if (!isElectron) return null;
 
   const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(appDataPath, 'holidays', `holidays_PL_${year}.json`);
+  return (window as any).electronAPI.joinPath(
+    appDataPath,
+    "holidays",
+    `holidays_PL_${year}.json`
+  );
 }
 
 // Load holidays from APPDATA (Electron) or localStorage (browser)
@@ -478,7 +505,7 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    logger.error('Failed to load holidays from cache:', error);
+    logger.error("Failed to load holidays from cache:", error);
     return false;
   }
 }
@@ -500,7 +527,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       // Ensure directory exists
       const dirPath = (window as any).electronAPI.joinPath(
         await (window as any).electronAPI.getAppDataPath(),
-        'holidays',
+        "holidays"
       );
       await (window as any).electronAPI.ensureDir(dirPath);
 
@@ -514,7 +541,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       localStorage.setItem(cacheKey, JSON.stringify(cache));
     }
   } catch (error) {
-    logger.error('Failed to save holidays to cache:', error);
+    logger.error("Failed to save holidays to cache:", error);
   }
 }
 
@@ -531,7 +558,7 @@ async function fetchHolidays(year: number) {
     loadFallbackHolidays(year);
     // Save fallback to cache for next time
     const fallbackList = Array.from(holidays.value.values()).filter((h) =>
-      h.date.startsWith(`${year}-`),
+      h.date.startsWith(`${year}-`)
     );
     await saveHolidaysToCache(year, fallbackList);
     return;
@@ -543,20 +570,20 @@ async function fetchHolidays(year: number) {
     const data: Holiday[] = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.timeout = 5000;
-      xhr.open('GET', `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
+      xhr.open("GET", `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             resolve(JSON.parse(xhr.responseText));
           } catch (e) {
-            reject(new Error('Failed to parse JSON'));
+            reject(new Error("Failed to parse JSON"));
           }
         } else {
           reject(new Error(`HTTP error! status: ${xhr.status}`));
         }
       };
-      xhr.onerror = () => reject(new Error('Network error'));
-      xhr.ontimeout = () => reject(new Error('Request timeout'));
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.ontimeout = () => reject(new Error("Request timeout"));
       xhr.send();
     });
 
@@ -577,30 +604,30 @@ async function fetchHolidays(year: number) {
 // Fallback Polish holidays (major ones that don't change)
 function loadFallbackHolidays(year: number) {
   const fallbackHolidays: Holiday[] = [
-    { date: `${year}-01-01`, localName: 'Nowy Rok', name: "New Year's Day" },
-    { date: `${year}-01-06`, localName: 'Trzech Króli', name: 'Epiphany' },
-    { date: `${year}-05-01`, localName: 'Święto Pracy', name: 'Labour Day' },
+    { date: `${year}-01-01`, localName: "Nowy Rok", name: "New Year's Day" },
+    { date: `${year}-01-06`, localName: "Trzech Króli", name: "Epiphany" },
+    { date: `${year}-05-01`, localName: "Święto Pracy", name: "Labour Day" },
     {
       date: `${year}-05-03`,
-      localName: 'Święto Konstytucji 3 Maja',
-      name: 'Constitution Day',
+      localName: "Święto Konstytucji 3 Maja",
+      name: "Constitution Day",
     },
     {
       date: `${year}-08-15`,
-      localName: 'Wniebowzięcie Najświętszej Maryi Panny',
-      name: 'Assumption of Mary',
+      localName: "Wniebowzięcie Najświętszej Maryi Panny",
+      name: "Assumption of Mary",
     },
-    { date: `${year}-11-01`, localName: 'Wszystkich Świętych', name: "All Saints' Day" },
+    { date: `${year}-11-01`, localName: "Wszystkich Świętych", name: "All Saints' Day" },
     {
       date: `${year}-11-11`,
-      localName: 'Narodowe Święto Niepodległości',
-      name: 'Independence Day',
+      localName: "Narodowe Święto Niepodległości",
+      name: "Independence Day",
     },
-    { date: `${year}-12-25`, localName: 'Boże Narodzenie', name: 'Christmas Day' },
+    { date: `${year}-12-25`, localName: "Boże Narodzenie", name: "Christmas Day" },
     {
       date: `${year}-12-26`,
-      localName: 'Drugi dzień Bożego Narodzenia',
-      name: 'Second Day of Christmas',
+      localName: "Drugi dzień Bożego Narodzenia",
+      name: "Second Day of Christmas",
     },
   ];
 
@@ -623,7 +650,9 @@ onMounted(async () => {
 
 const calendarCurrentWeek = computed(() => {
   const weekStart = startOfWeek(calendarBaseDate.value, { weekStartsOn: 1 });
-  const result = Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), 'yyyy-MM-dd'));
+  const result = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(weekStart, i), "yyyy-MM-dd")
+  );
   return result;
 });
 
@@ -632,8 +661,8 @@ const allCalendarWeeks = computed(() => {
   const numWeeks = Math.ceil(calendarViewDays.value / 7);
   const result = Array.from({ length: numWeeks }, (_, weekIndex) =>
     Array.from({ length: 7 }, (_, dayIndex) =>
-      format(addDays(weekStart, weekIndex * 7 + dayIndex), 'yyyy-MM-dd'),
-    ),
+      format(addDays(weekStart, weekIndex * 7 + dayIndex), "yyyy-MM-dd")
+    )
   );
   return result;
 });
@@ -645,8 +674,8 @@ const nextSixMonths = computed(() => {
   for (let i = 1; i <= 6; i++) {
     const futureDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
     months.push({
-      label: futureDate.toLocaleDateString('en-US', { month: 'short' }),
-      value: format(futureDate, 'yyyy-MM-dd'),
+      label: futureDate.toLocaleDateString("en-US", { month: "short" }),
+      value: format(futureDate, "yyyy-MM-dd"),
     });
   }
 
@@ -666,8 +695,8 @@ function nextCalendarWeeks() {
 function setEventDateToToday() {
   const today = new Date();
   calendarBaseDate.value = new Date();
-  const formatted = format(today, 'yyyy-MM-dd');
-  emit('update:selectedDate', formatted);
+  const formatted = format(today, "yyyy-MM-dd");
+  emit("update:selectedDate", formatted);
 }
 
 function jumpToMonth(dateString: string) {
@@ -682,9 +711,9 @@ function handleDateSelect(dateString: string) {
   try {
     void (async () => {
       try {
-        const apiModule = await import('src/modules/day-organiser/_apiRoot');
+        const apiModule = await import("src/modules/day-organiser/_apiRoot");
         const api = apiModule as any;
-        if (api && api.time && typeof api.time.setCurrentDate === 'function') {
+        if (api && api.time && typeof api.time.setCurrentDate === "function") {
           api.time.setCurrentDate(dateString);
         }
       } catch (e) {
@@ -694,7 +723,7 @@ function handleDateSelect(dateString: string) {
   } catch (e) {
     // ignore
   }
-  emit('update:selectedDate', dateString);
+  emit("update:selectedDate", dateString);
 }
 
 // Helper functions
@@ -706,11 +735,11 @@ function getWeekLabel(dayDate: string) {
   const todayNormalized = new Date(
     todayDate.getFullYear(),
     todayDate.getMonth(),
-    todayDate.getDate(),
+    todayDate.getDate()
   );
 
   const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24),
+    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   if (daysDiff > 0) {
@@ -737,7 +766,12 @@ function shouldWeekHaveMargin(week: string[], weekIndex: number, allWeeks: strin
   return firstDayOfWeek.getMonth() !== lastDayOfPrevWeek.getMonth();
 }
 
-function isNewMonthStart(day: string, week: string[], weekIndex: number, allWeeks: string[][]) {
+function isNewMonthStart(
+  day: string,
+  week: string[],
+  weekIndex: number,
+  allWeeks: string[][]
+) {
   const dayDate = new Date(day);
   const dayOfMonth = dayDate.getDate();
 
@@ -746,7 +780,7 @@ function isNewMonthStart(day: string, week: string[], weekIndex: number, allWeek
 
   // Check if day 1 of this month is in the current week
   const firstDayOfMonth = week.some(
-    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth(),
+    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth()
   );
 
   // Only apply padding if day 1 is in THIS week (not in a previous week)
@@ -763,21 +797,33 @@ function isNewMonthStart(day: string, week: string[], weekIndex: number, allWeek
   if (!previousWeek) return false;
 
   const currentMonth = dayDate.getMonth();
-  const hasPreviousMonth = previousWeek.some((d) => new Date(d).getMonth() !== currentMonth);
+  const hasPreviousMonth = previousWeek.some(
+    (d) => new Date(d).getMonth() !== currentMonth
+  );
 
   return hasPreviousMonth;
 }
 
-function shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
+function shouldShowMonth(
+  day: string,
+  index: number,
+  week: string[],
+  isFirstWeek: boolean
+) {
   return displayManager.shouldShowMonth(day, index, week, isFirstWeek);
 }
 
-function shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
+function shouldShowYear(
+  day: string,
+  index: number,
+  week: string[],
+  isFirstWeek: boolean
+) {
   return displayManager.shouldShowYear(day, index, week, isFirstWeek);
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {
-  const monthName = format(new Date(day), 'MMMM');
+  const monthName = format(new Date(day), "MMMM");
 
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
   const dayOfMonth = new Date(day).getDate();
@@ -811,8 +857,8 @@ function weekHasMonthStart(week: string[]) {
 
 function getWeekWatermarkLabel(week: string[]) {
   const first = week.find((d) => new Date(d).getDate() === 1);
-  if (!first) return '';
-  return format(new Date(first), 'MMMM');
+  if (!first) return "";
+  return format(new Date(first), "MMMM");
 }
 
 function isFirstDayOfMonth(day: string) {
@@ -842,7 +888,7 @@ function getEventsForDay(day: string) {
   // callers (preview/edit) receive the specific instance date for cyclic events.
   return props.tasks
     .filter((t: any) => {
-      if (t.type_id === 'Replenish' || t.type_id === 'Todo') return false;
+      if (t.type_id === "Replenish" || t.type_id === "Todo") return false;
       return occursOnDay(t, day);
     })
     .map((t: any) => ({ ...t, date: day }));
@@ -928,14 +974,19 @@ function getEventsForDay(day: string) {
 
 .calendar-day-btn.calendar-weekend::before,
 .calendar-day-btn.calendar-holiday::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image:
-    repeating-linear-gradient(45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px),
+  background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      #ddd 8px,
+      #ddd 9px
+    ),
     repeating-linear-gradient(-45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px);
   pointer-events: none;
   z-index: 0;
@@ -943,9 +994,20 @@ function getEventsForDay(day: string) {
 
 .calendar-day-btn.calendar-selected.calendar-weekend::before,
 .calendar-day-btn.calendar-selected.calendar-holiday::before {
-  background-image:
-    repeating-linear-gradient(45deg, transparent, transparent 8px, #0d47a1 8px, #0d47a1 9px),
-    repeating-linear-gradient(-45deg, transparent, transparent 8px, #0d47a1 8px, #0d47a1 9px);
+  background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      #0d47a1 8px,
+      #0d47a1 9px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      #0d47a1 8px,
+      #0d47a1 9px
+    );
 }
 
 .calendar-day-btn .calendar-day-content {
@@ -1031,7 +1093,7 @@ function getEventsForDay(day: string) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   /* prefer system fonts with full Latin glyph coverage for diacritics */
-  font-family: Arial, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, sans-serif;
+  font-family: Arial, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, sans-serif;
 }
 
 .calendar-month-label-above {
@@ -1093,7 +1155,7 @@ function getEventsForDay(day: string) {
   overflow: hidden;
   /* allow wrapping inside the pill so titles can span up to two lines */
   white-space: normal;
-  font-family: Arial, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, sans-serif;
+  font-family: Arial, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, sans-serif;
 }
 .today-jump-btn {
   margin-right: 18px;
