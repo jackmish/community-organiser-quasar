@@ -12,8 +12,8 @@
 </template>
 
 <script setup lang="ts">
-defineOptions({ name: 'Co21Watermark' });
-import type { Ref } from 'vue';
+defineOptions({ name: "Co21Watermark" });
+import type { Ref } from "vue";
 
 const props = defineProps<{
   activeGroup?: unknown;
@@ -25,25 +25,27 @@ const props = defineProps<{
 function resolveLabel() {
   const explicit = (props as any).label;
   const explicitVal =
-    explicit && typeof explicit === 'object' && 'value' in explicit ? explicit.value : explicit;
-  if (explicitVal) return explicitVal || '';
+    explicit && typeof explicit === "object" && "value" in explicit
+      ? explicit.value
+      : explicit;
+  if (explicitVal) return explicitVal || "";
 
   const ag = (props as any).activeGroup;
-  const val = ag && typeof ag === 'object' && 'value' in ag ? ag.value : ag;
-  if (!val) return '';
-  return val.label ?? val.value ?? val.id ?? '';
+  const val = ag && typeof ag === "object" && "value" in ag ? ag.value : ag;
+  if (!val) return "";
+  return val.label ?? val.value ?? val.id ?? "";
 }
 
 function resolveTextColor() {
   const c = (props as any).color;
-  const val = c && typeof c === 'object' && 'value' in c ? c.value : c;
-  return val || 'rgba(0, 255, 255, 1)';
+  const val = c && typeof c === "object" && "value" in c ? c.value : c;
+  return val || "rgba(0, 255, 255, 1)";
 }
 
 function resolveJustify() {
   const j = (props as any).justifyContent;
-  const val = j && typeof j === 'object' && 'value' in j ? j.value : j;
-  return val || 'flex-end';
+  const val = j && typeof j === "object" && "value" in j ? j.value : j;
+  return val || "flex-end";
 }
 </script>
 
@@ -65,7 +67,7 @@ function resolveJustify() {
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
-  font-size: 8vw; /* subtle, scales with viewport */
+  font-size: 95px; /* subtle, scales with viewport */
   line-height: 1;
   user-select: none;
   transform: rotate(0deg);
