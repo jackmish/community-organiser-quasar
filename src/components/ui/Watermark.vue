@@ -1,29 +1,50 @@
 <template>
-  <div v-if="label" class="co21-watermark" :title="label">
-    <span class="co21-watermark-text">{{ label }}</span>
+  <div
+    v-if="resolveLabel()"
+    class="co21-watermark"
+    :title="resolveLabel()"
+    :style="{ justifyContent: resolveJustify() }"
+  >
+    <span class="co21-watermark-text" :style="{ color: resolveTextColor() }">{{
+      resolveLabel()
+    }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Co21Watermark' });
-import { computed } from 'vue';
 import type { Ref } from 'vue';
 
-const props = defineProps<{ activeGroup?: unknown; label?: string | Ref<string> }>();
+const props = defineProps<{
+  activeGroup?: unknown;
+  label?: string | Ref<string>;
+  color?: string | Ref<string>;
+  justifyContent?: string | Ref<string>;
+}>();
 
-const label = computed(() => {
+function resolveLabel() {
   const explicit = (props as any).label;
   const explicitVal =
     explicit && typeof explicit === 'object' && 'value' in explicit ? explicit.value : explicit;
   if (explicitVal) return explicitVal || '';
 
   const ag = (props as any).activeGroup;
-  // handle both Ref and plain object
   const val = ag && typeof ag === 'object' && 'value' in ag ? ag.value : ag;
   if (!val) return '';
-  // prefer label, fallback to value or id
   return val.label ?? val.value ?? val.id ?? '';
-});
+}
+
+function resolveTextColor() {
+  const c = (props as any).color;
+  const val = c && typeof c === 'object' && 'value' in c ? c.value : c;
+  return val || 'rgba(0, 255, 255, 1)';
+}
+
+function resolveJustify() {
+  const j = (props as any).justifyContent;
+  const val = j && typeof j === 'object' && 'value' in j ? j.value : j;
+  return val || 'flex-end';
+}
 </script>
 
 <style scoped>
