@@ -88,7 +88,7 @@ const groups = api.group.list.all;
 
 function getGroupIcon(gid: string | undefined) {
   try {
-    const list: any[] = (groups && (groups as any).value) || groups || [];
+    const list: any[] = (groups && groups.value) || groups || [];
     if (!gid) return 'folder';
     const found = list.find((x: any) => String(x.id) === String(gid));
     return (found && found.icon) || 'folder';
@@ -99,7 +99,7 @@ function getGroupIcon(gid: string | undefined) {
 
 function getGroupName(gid: string | undefined) {
   try {
-    const list: any[] = (groups && (groups as any).value) || groups || [];
+    const list: any[] = (groups && groups.value) || groups || [];
     if (!gid) return null;
     const found = list.find((x: any) => String(x.id) === String(gid));
     return (found && found.name) || null;
@@ -1479,7 +1479,7 @@ function onSubmit(event: Event) {
             clickable
             @click.stop="groupMenu = true"
           >
-            {{ (getGroupName(localNewTask.groupId) || activeGroupLabelShort || 'No group') }}
+            {{ getGroupName(localNewTask.groupId) || activeGroupLabelShort || 'No group' }}
           </q-chip>
           <q-menu v-model="groupMenu" anchor="bottom right" self="top right" class="group-menu">
             <q-list dense separator>
@@ -1495,7 +1495,7 @@ function onSubmit(event: Event) {
                 </q-item-section>
               </q-item>
               <q-separator />
-                <q-item
+              <q-item
                 v-for="g in groups || []"
                 :key="g.id"
                 clickable
