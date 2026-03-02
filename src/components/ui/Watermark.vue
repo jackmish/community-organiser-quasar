@@ -9,9 +9,14 @@ defineOptions({ name: 'Co21Watermark' });
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 
-const props = defineProps<{ activeGroup?: unknown }>();
+const props = defineProps<{ activeGroup?: unknown; label?: string | Ref<string> }>();
 
 const label = computed(() => {
+  const explicit = (props as any).label;
+  const explicitVal =
+    explicit && typeof explicit === 'object' && 'value' in explicit ? explicit.value : explicit;
+  if (explicitVal) return explicitVal || '';
+
   const ag = (props as any).activeGroup;
   // handle both Ref and plain object
   const val = ag && typeof ag === 'object' && 'value' in ag ? ag.value : ag;

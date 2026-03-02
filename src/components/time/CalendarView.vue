@@ -130,6 +130,10 @@
                           {{ getWeekLabel(day) }}
                         </div>
                       </div>
+                      <Watermark
+                        v-if="new Date(day).getDate() === 1"
+                        :label="format(new Date(day), 'MMMM')"
+                      />
                       <div
                         v-if="day === format(new Date(), 'yyyy-MM-dd')"
                         class="calendar-today-label calendar-green-label"
@@ -242,6 +246,7 @@ import {
   priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
 } from '../theme';
+import Watermark from 'src/components/ui/Watermark.vue';
 
 const props = defineProps<{
   selectedDate?: string;
@@ -798,6 +803,16 @@ function getMonthAbbr(day: string, index: number, week: string[]) {
   return monthName;
 }
 
+function weekHasMonthStart(week: string[]) {
+  return week.some((d) => new Date(d).getDate() === 1);
+}
+
+function getWeekWatermarkLabel(week: string[]) {
+  const first = week.find((d) => new Date(d).getDate() === 1);
+  if (!first) return '';
+  return format(new Date(first), 'MMMM');
+}
+
 function isFirstDayOfMonth(day: string) {
   return new Date(day).getDate() === 1;
 }
@@ -1107,5 +1122,14 @@ function getEventsForDay(day: string) {
 }
 .calendar-day-btn.calendar-past .calendar-day-number {
   color: #444 !important;
+}
+
+/* Watermark is now rendered inside the first-day cell; adjust cell-level styles if needed */
+.calendar-day-btn .co21-watermark-text {
+  font-size: 6vw;
+  opacity: 0.06;
+  right: 10px;
+  position: absolute;
+  top: 4px;
 }
 </style>
