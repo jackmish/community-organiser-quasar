@@ -1472,10 +1472,12 @@ function onSubmit(event: Event) {
     >
       {{ watermarkIcon }}
     </i>
-    <q-card-section>
-      <div class="text-caption text-grey-7 q-ml-md">
-        <q-icon name="group" size="xs" class="q-mr-xs" />
-        Group:
+    <div v-if="mode !== 'preview'" class="add-task-group-bar">
+      <div class="group-bar-inner">
+        <div class="text-caption text-grey-7">
+          <q-icon name="group" size="xs" class="q-mr-xs" />
+          Group:
+        </div>
         <div style="display: inline-block; margin-left: 8px">
           <q-chip
             size="sm"
@@ -1485,12 +1487,10 @@ function onSubmit(event: Event) {
             @click.stop="groupMenu = true"
           >
             {{
-                                (localNewTask.groupId &&
-                                  (groups || []).find(
-                                    (g: TaskGroup) => g.id === localNewTask.groupId,
-                                  )?.name) ||
-                                activeGroupLabelShort ||
-                                'No group'
+              (localNewTask.groupId &&
+                (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)?.name) ||
+              activeGroupLabelShort ||
+              'No group'
             }}
           </q-chip>
           <q-menu
@@ -1543,6 +1543,8 @@ function onSubmit(event: Event) {
           </q-menu>
         </div>
       </div>
+    </div>
+    <q-card-section>
       <div v-if="isReplenish && mode === 'add'" style="margin-bottom: 8px">
         <ReplenishmentList
           :replenish-tasks="smallReplenishTasks"
@@ -2232,7 +2234,31 @@ function onSubmit(event: Event) {
 /* Replenishment sizing now handled by ReplenishmentList component via `size` prop */
 .add-task-card {
   position: relative;
-  overflow: hidden; /* prevent large watermark from creating horizontal scroll */
+  overflow: unset;
+  overflow-y: unset; /* allow absolute positioned group bar to show; watermark sizing constrained */
+}
+
+/* Absolute group selector bar that uses free space above the main form */
+.add-task-group-bar {
+  position: absolute;
+  top: -26px;
+  left: 16px;
+  right: 16px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  z-index: 6;
+  pointer-events: auto;
+}
+.add-task-group-bar .group-bar-inner {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 .add-watermark-text {
   position: absolute;
