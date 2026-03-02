@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import logger from '../../utils/logger';
 import { storage as backendStorage, loadSettings, saveSettings } from '.';
 import { presentation } from 'src/modules/presentation/presentationManager';
@@ -7,11 +7,15 @@ import * as taskService from 'src/modules/task/managers/taskManager';
 
 export function construct(groupApi?: any, timeApi?: any) {
   const isLoading = ref(false);
+  // Prevent persisting activeGroup while initial load/restore is in progress
+  let suppressPersist = true;
 
   // No implicit wiring: storage will populate `timeApi.days` during `loadData`.
   const loadData = async () => {
+    // While loading data we don't want watcher writes to overwrite restored settings
+    suppressPersist = true;
     isLoading.value = true;
-    console.log('apiStorage.loadData called');
+    logger.debug('apiStorage.loadData called');
     try {
       // If presentation test mode enabled, or localStorage flag present, load sample data instead of backend
       let data: any;
@@ -20,11 +24,8 @@ export function construct(groupApi?: any, timeApi?: any) {
         // Presentation is a safe-read-only session similar to test mode.
         const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
         const sampleModeActive = modeVal === 'test' || modeVal === 'presentation';
-        if (sampleModeActive) {
-          console.log(
-            'apiStorage.loadData: loading sampleData because presentation.mode ===',
-            modeVal,
-          );
+          if (sampleModeActive) {
+          logger.debug('apiStorage.loadData: loading sampleData because presentation.mode ===', modeVal);
           data = sampleData as any;
         }
       } catch (e) {
@@ -63,7 +64,7 @@ export function construct(groupApi?: any, timeApi?: any) {
           if (groupApi && groupApi.list && typeof groupApi.list.setGroups === 'function') {
             groupApi.list.setGroups(rawGroups || []);
             try {
-              console.log('apiStorage.loadData: groups set, count=', (rawGroups || []).length);
+              logger.debug('apiStorage.loadData: groups set, count=', (rawGroups || []).length);
             } catch (e) {
               void e;
             }
@@ -106,19 +107,16 @@ export function construct(groupApi?: any, timeApi?: any) {
             if (timeApi.lastModified)
               timeApi.lastModified.value = data.lastModified || new Date().toISOString();
             // Populate taskService flat list immediately so callers can use it
-            try {
-              taskService.buildFlatTasksList(finalDays || {});
               try {
-                console.log(
-                  'apiStorage.loadData: time.days populated, days=',
-                  Object.keys(finalDays || {}).length,
-                );
+                taskService.buildFlatTasksList(finalDays || {});
+                try {
+                  logger.debug('apiStorage.loadData: time.days populated, days=', Object.keys(finalDays || {}).length);
+                } catch (e) {
+                  void e;
+                }
               } catch (e) {
                 void e;
               }
-            } catch (e) {
-              void e;
-            }
           }
         } catch (e) {
           void e;
@@ -132,13 +130,10 @@ export function construct(groupApi?: any, timeApi?: any) {
         if (groupApi && typeof loadSettings === 'function') {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
-          if (requestedId) {
+            if (requestedId) {
             const groupsList =
               (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [];
-            console.log('Restoring activeGroup:', {
-              requestedId,
-              groupsCount: (groupsList || []).length,
-            });
+            // restored activeGroup silently (no console log)
             const found = (groupsList || []).find((g: any) => String(g.id) === String(requestedId));
             if (found) {
               try {
@@ -168,6 +163,8 @@ export function construct(groupApi?: any, timeApi?: any) {
       logger.error('apiStorage.loadData failed', err);
       throw err;
     } finally {
+      // loading finished; allow watcher writes from now on
+      suppressPersist = false;
       isLoading.value = false;
     }
   };
@@ -176,8 +173,8 @@ export function construct(groupApi?: any, timeApi?: any) {
     // Block saving when test mode enabled
     try {
       const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
-      if (modeVal === 'test' || modeVal === 'presentation') {
-        console.log('apiStorage.saveData blocked in presentation/test mode (', modeVal, ')');
+        if (modeVal === 'test' || modeVal === 'presentation') {
+        logger.debug('apiStorage.saveData blocked in presentation/test mode (', modeVal, ')');
         return;
       }
     } catch (e) {
@@ -277,6 +274,31 @@ export function construct(groupApi?: any, timeApi?: any) {
       loadData: loadData,
       saveData: saveData,
     }) as const;
+
+  // Persist active group selection when provided by groupApi
+  try {
+    if (groupApi && groupApi.active && typeof groupApi.active.activeGroup !== 'undefined') {
+      watch(
+        () => groupApi.active.activeGroup.value,
+        async (val) => {
+          try {
+            if (suppressPersist) {
+              // suppress initial persist silently
+              return;
+            }
+            const existing = (await loadSettings()) || {};
+            const payload = { ...existing, activeGroupId: val?.value ?? null };
+            await saveSettings(payload);
+          } catch (e) {
+            logger.error('[apiStorage] failed to persist activeGroup', e);
+          }
+        },
+        { immediate: true },
+      );
+    }
+  } catch (e) {
+    void e;
+  }
 
   return {
     isLoading,

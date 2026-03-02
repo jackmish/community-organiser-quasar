@@ -41,14 +41,16 @@ export function useDayOrganiser() {
       () => api.group.active.activeGroup.value,
       async (val) => {
         try {
+          logger.info('[day-organiser] activeGroup changed, persisting', { value: val });
           const existing = (await loadSettings()) || {};
           const toSave = { ...existing, activeGroupId: val?.value ?? null };
+          logger.info('[day-organiser] saveSettings payload', toSave);
           await saveSettings(toSave);
         } catch (err) {
           logger.error('Failed to persist activeGroup setting', err);
         }
       },
-      { immediate: false },
+      { immediate: true },
     );
   } catch (e) {
     void e;
