@@ -37,19 +37,57 @@ class DayOrganiserStorage {
   exportToFile(data: OrganiserData): void {}
 
   async importFromFile(file: File): Promise<OrganiserData> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target?.result as string);
-          resolve(data);
-        } catch (error) {
-          reject(new Error('Invalid JSON file'));
+    // Support importing either plain JSON files or zip archives containing a JSON payload.
+    try {
+      const name = String(file.name || '').toLowerCase();
+      if (name.endsWith('.zip')) {
+        // Use `fflate` for client-side zip extraction (works in renderer and browser).
+        // Dynamically import so bundlers can tree-shake when not used.
+        const mod: any = await import('fflate');
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8 = new Uint8Array(arrayBuffer);
+        // unzipSync returns a map of filename -> Uint8Array
+        const files = mod.unzipSync(uint8);
+        // prefer an internal json filename matching the zip name, else first .json
+        const expectedJson = name.replace(/\.zip$/, '.json');
+        let jsonEntry: string | null = null;
+        if (files[expectedJson]) jsonEntry = expectedJson;
+        else {
+          for (const k of Object.keys(files)) {
+            if (k.toLowerCase().endsWith('.json')) {
+              jsonEntry = k;
+              break;
+            }
+          }
         }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
+        if (!jsonEntry) throw new Error('No JSON file found inside zip');
+        const u8 = files[jsonEntry];
+        const text = new TextDecoder().decode(u8);
+        try {
+          return JSON.parse(text) as OrganiserData;
+        } catch (e) {
+          throw new Error('Invalid JSON inside zip');
+        }
+      }
+
+      // Fallback: plain JSON file
+      return await new Promise<OrganiserData>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target?.result as string);
+            resolve(data);
+          } catch (error) {
+            reject(new Error('Invalid JSON file'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+      });
+    } catch (err) {
+      logger.error('importFromFile failed', err);
+      throw err;
+    }
   }
 
   public async getDataFilePathPublic(): Promise<string> {

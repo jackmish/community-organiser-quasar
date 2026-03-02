@@ -97,7 +97,11 @@
       :group-tree="groupTree"
     />
     <!-- First Run Dialog -->
-    <FirstRunDialog v-model="showFirstRunDialog" @create="handleFirstGroupCreation" />
+    <FirstRunDialog
+      v-model="showFirstRunDialog"
+      @create="handleFirstGroupCreation"
+      @import="handleImportFile"
+    />
 
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
@@ -258,6 +262,27 @@ const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
+
+const handleImportFile = async (file: File) => {
+  try {
+    $q.loading.show({ message: 'Importing data...' } as any);
+    // Use storage.importFromFile to accept .zip or .json File and return OrganiserData
+    const data = await api.storage.importFromFile(file);
+    if (data) {
+      await api.storage.saveData(data);
+      await api.storage.loadData();
+    }
+    $q.loading.hide();
+    showFirstRunDialog.value = false;
+    // reload view
+    reloadKey.value = reloadKey.value + 1;
+    $q.notify({ type: 'positive', message: 'Import successful' });
+  } catch (err) {
+    $q.loading.hide();
+    console.error('Import failed', err);
+    $q.notify({ type: 'negative', message: 'Import failed: ' + String((err as any)?.message || err) });
+  }
+};
 let organiserGroupManageHandler: any = null;
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
