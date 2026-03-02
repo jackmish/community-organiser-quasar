@@ -6,44 +6,19 @@
     <div v-if="api.storage.isLoading && api.storage.isLoading.value" class="text-center q-pa-lg">
       <q-spinner color="primary" size="3em" />
     </div>
-
-    <!-- Day View -->
     <div v-else>
       <div class="row q-col-gutter-md tasks-row">
-        <!-- Tasks column (left) and Replenishment column (right) -->
         <div class="col-12 left-panel tasks-column">
           <q-card class="task-list-card">
             <q-card-section>
               <div class="text-h6 task-list-header">
-                <div
-                  class="row items-center justify-between"
-                  style="align-items: center; margin-top: 6px"
-                >
+                <div class="row items-center justify-between" style="align-items: center; margin-top: 6px">
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="chevron_left"
-                      @click="api.task.time.prevDay"
-                      color="primary"
-                    />
-                    <span class="date-black">{{
-                      getTimeDifferenceDisplay(api.task.time.currentDate.value)
-                    }}</span>
+                    <q-btn flat dense round icon="chevron_left" @click="api.task.time.prevDay" color="primary" />
+                    <span class="date-black">{{ getTimeDifferenceDisplay(api.task.time.currentDate.value) }}</span>
                     <span class="q-mx-sm">|</span>
-                    <span
-                      :class="['text-weight-bold', getTimeDiffClass(api.task.time.currentDate)]"
-                      >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
-                    >
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="chevron_right"
-                      @click="api.task.time.nextDay"
-                      color="primary"
-                    />
+                    <span :class="['text-weight-bold', getTimeDiffClass(api.task.time.currentDate)]">{{ formatDateOnly(api.task.time.currentDate.value) }}</span>
+                    <q-btn flat dense round icon="chevron_right" @click="api.task.time.nextDay" color="primary" />
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div style="display: flex; align-items: center; gap: 8px">
@@ -176,46 +151,46 @@
 </template>
 
 <script setup lang="ts">
-import { format } from 'date-fns';
+import { format } from "date-fns";
 
-import AddTaskForm from '../components/task/AddTaskForm.vue';
+import AddTaskForm from "../components/task/AddTaskForm.vue";
 
-import DoneTasksList from '../components/task/DoneTasksList.vue';
-import GroupManagementDialog from '../components/group/GroupManagementDialog.vue';
-import TasksList from '../components/task/TasksList.vue';
-import { formatDisplayDate } from 'src/modules/task/utlils/occursOnDay';
-import TaskPreview from '../components/task/TaskPreview.vue';
-import CalendarView from 'src/components/time/CalendarView.vue';
-import GroupSelectHeader from '../components/group/GroupSelectHeader.vue';
-import { useDayOrganiserView } from 'src/composables/useDayOrganiserView';
-import { createLineEventHandlers } from 'src/modules/task/lineEventHandlers';
-import { createTaskUiHandlers, createTaskViewHelpers } from 'src/modules/task/uiHandlers';
-import { createCalendarHandlers } from 'src/modules/task/calendarHandlers';
-import { createTaskComputed } from 'src/modules/task/computedTaskLists';
-import { createTaskCrudHandlers } from 'src/modules/task/taskCrudHandlers';
+import DoneTasksList from "../components/task/DoneTasksList.vue";
+import GroupManagementDialog from "../components/group/GroupManagementDialog.vue";
+import TasksList from "../components/task/TasksList.vue";
+import { formatDisplayDate } from "src/modules/task/utlils/occursOnDay";
+import TaskPreview from "../components/task/TaskPreview.vue";
+import CalendarView from "src/components/time/CalendarView.vue";
+import GroupSelectHeader from "../components/group/GroupSelectHeader.vue";
+import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
+import { createLineEventHandlers } from "src/modules/task/lineEventHandlers";
+import { createTaskUiHandlers, createTaskViewHelpers } from "src/modules/task/uiHandlers";
+import { createCalendarHandlers } from "src/modules/task/calendarHandlers";
+import { createTaskComputed } from "src/modules/task/computedTaskLists";
+import { createTaskCrudHandlers } from "src/modules/task/taskCrudHandlers";
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useQuasar } from 'quasar';
-import logger from 'src/utils/logger';
-import * as api from 'src/modules/day-organiser/_apiRoot';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { useQuasar } from "quasar";
+import logger from "src/utils/logger";
+import * as api from "src/modules/day-organiser/_apiRoot";
 
-import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummaryFixed';
-import type { TaskGroup } from '../modules/day-organiser';
-import FirstRunDialog from '../components/settings/FirstRunDialog.vue';
-import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
-import { isVisibleForActive as groupIsVisible } from 'src/modules/group/groupUtils';
+import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummaryFixed";
+import type { TaskGroup } from "../modules/day-organiser";
+import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
+import { occursOnDay, getCycleType } from "src/modules/task/utlils/occursOnDay";
+import { isVisibleForActive as groupIsVisible } from "src/modules/group/groupUtils";
 
 const $q = useQuasar();
 
 const currentDayData = computed(() => {
   const days = api.task.time.days.value || {};
   const d = api.task.time.currentDate.value;
-  return days[d] || ({ date: d, tasks: [], notes: '' } as any);
+  return days[d] || ({ date: d, tasks: [], notes: "" } as any);
 });
 
 // Provide a lightweight organiser-like ref for legacy helpers that expect
@@ -227,7 +202,7 @@ const organiserLike = computed(() => ({
 
 const hiddenGroupSummary = createHiddenGroupSummary(
   organiserLike as any,
-  api.group.active.activeGroup,
+  api.group.active.activeGroup
 );
 
 // All tasks across days — used to render calendar events
@@ -264,23 +239,69 @@ const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
 let organiserReloadHandler: any = null;
 
 const handleImportFile = async (file: File) => {
+  // Safely use Quasar Loading plugin if present
+  const safeShow = () => {
+    try {
+      if ($q && $q.loading && typeof $q.loading.show === 'function') {
+        $q.loading.show({ message: 'Importing data...' } as any);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+  const safeHide = () => {
+    try {
+      if ($q && $q.loading && typeof $q.loading.hide === 'function') {
+        $q.loading.hide();
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   try {
-    $q.loading.show({ message: 'Importing data...' } as any);
+    safeShow();
     // Use storage.importFromFile to accept .zip or .json File and return OrganiserData
     const data = await api.storage.importFromFile(file);
     if (data) {
       await api.storage.saveData(data);
       await api.storage.loadData();
     }
-    $q.loading.hide();
+    safeHide();
     showFirstRunDialog.value = false;
     // reload view
     reloadKey.value = reloadKey.value + 1;
-    $q.notify({ type: 'positive', message: 'Import successful' });
+    const safeNotify = (opts: any) => {
+      try {
+        if ($q && $q.notify && typeof $q.notify === 'function') return $q.notify(opts);
+      } catch (e) {
+        void e;
+      }
+      try {
+        // fallback
+        if (opts && opts.message) alert(opts.message);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    safeNotify({ type: 'positive', message: 'Import successful' });
   } catch (err) {
-    $q.loading.hide();
+    safeHide();
     console.error('Import failed', err);
-    $q.notify({ type: 'negative', message: 'Import failed: ' + String((err as any)?.message || err) });
+    const safeNotify = (opts: any) => {
+      try {
+        if ($q && $q.notify && typeof $q.notify === 'function') return $q.notify(opts);
+      } catch (e) {
+        void e;
+      }
+      try {
+        if (opts && opts.message) alert(opts.message);
+      } catch (e) {
+        // ignore
+      }
+    };
+    safeNotify({ type: 'negative', message: 'Import failed: ' + String((err as any)?.message || err) });
   }
 };
 let organiserGroupManageHandler: any = null;
@@ -289,9 +310,15 @@ let organiserGroupManageHandler: any = null;
 onBeforeUnmount(() => {
   try {
     if (organiserReloadHandler)
-      window.removeEventListener('organiser:reloaded', organiserReloadHandler as EventListener);
+      window.removeEventListener(
+        "organiser:reloaded",
+        organiserReloadHandler as EventListener
+      );
     if (organiserGroupManageHandler)
-      window.removeEventListener('group:manage', organiserGroupManageHandler as EventListener);
+      window.removeEventListener(
+        "group:manage",
+        organiserGroupManageHandler as EventListener
+      );
   } catch (e) {
     // ignore
   }
@@ -301,10 +328,10 @@ onBeforeUnmount(() => {
 watch(
   () => api.task.active.task.value,
   (val) => {
-    if (!val && api.task.active.mode.value !== 'add') {
-      api.task.active.mode.value = 'add';
+    if (!val && api.task.active.mode.value !== "add") {
+      api.task.active.mode.value = "add";
     }
-  },
+  }
 );
 
 // createGroupUiHandlers removed: no UI opens the inline edit dialog
@@ -341,18 +368,21 @@ const {
 });
 
 // instantiate calendar handlers (safe: uses refs created above)
-const { handleCalendarDateSelect, handleCalendarEdit, handleCalendarPreview } =
-  createCalendarHandlers({
-    isClickBlocked,
-    newTask,
-    setCurrentDate: api.task.time.setCurrentDate,
-    allTasks,
-    editTask,
-    setTask: api.task.active.setTask,
-    activeMode: api.task.active.mode,
-    setPreviewTask: api.task.active.setTask,
-    notify: (opts: any) => $q.notify(opts),
-  });
+const {
+  handleCalendarDateSelect,
+  handleCalendarEdit,
+  handleCalendarPreview,
+} = createCalendarHandlers({
+  isClickBlocked,
+  newTask,
+  setCurrentDate: api.task.time.setCurrentDate,
+  allTasks,
+  editTask,
+  setTask: api.task.active.setTask,
+  activeMode: api.task.active.mode,
+  setPreviewTask: api.task.active.setTask,
+  notify: (opts: any) => $q.notify(opts),
+});
 
 // compute task lists in a separate module for reuse and testability
 const {
@@ -378,9 +408,9 @@ const {
 const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 const getGroupName = (groupId?: string): string => {
-  if (!groupId) return 'Unknown';
+  if (!groupId) return "Unknown";
   const group = api.group.list.all.value.find((g: TaskGroup) => g.id === groupId);
-  return group ? group.name : 'Unknown';
+  return group ? group.name : "Unknown";
 };
 
 // Extract add/update handlers into a task CRUD module
@@ -398,9 +428,9 @@ const handleDeleteTask = async (payload: any) => {
     let id: string | undefined;
     let date: string = api.task.time.currentDate.value;
     if (!payload) return;
-    if (typeof payload === 'string') {
+    if (typeof payload === "string") {
       id = payload;
-    } else if (typeof payload === 'object') {
+    } else if (typeof payload === "object") {
       id = payload.id;
       if (payload.date) date = payload.date;
     }
@@ -409,7 +439,7 @@ const handleDeleteTask = async (payload: any) => {
     // If the deleted task was currently selected for preview/edit, switch back to create mode
     if (api.task.active.task.value && api.task.active.task.value.id === id) {
       api.task.active.setTask(null);
-      api.task.active.setMode('add');
+      api.task.active.setMode("add");
     }
   } finally {
     openDeleteMenu.value = null;
@@ -419,7 +449,7 @@ const handleDeleteTask = async (payload: any) => {
 const handleToggleStatus = async (task: any) => {
   try {
     if (!task) return;
-    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || '';
+    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || "";
     const id = task.id || task._id || task.uuid;
     if (!id) return;
     await api.task.status.toggleComplete(date, id);
@@ -448,7 +478,7 @@ onMounted(async () => {
   try {
     await api.storage.loadData();
   } catch (error) {
-    logger.error('Failed to load data on mount:', error);
+    logger.error("Failed to load data on mount:", error);
   }
 
   // Listen for global reload events (e.g. from MainLayout refresh button)
@@ -462,16 +492,20 @@ onMounted(async () => {
     }
     try {
       // If current active date is before today, move active day to today when refreshing
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const todayStr = format(new Date(), "yyyy-MM-dd");
       if (api.task.time.currentDate && api.task.time.currentDate.value) {
         const cur = new Date(api.task.time.currentDate.value);
         const today = new Date(todayStr);
         // normalize to midnight for comparison
-        const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
+        const curNorm = new Date(
+          cur.getFullYear(),
+          cur.getMonth(),
+          cur.getDate()
+        ).getTime();
         const todayNorm = new Date(
           today.getFullYear(),
           today.getMonth(),
-          today.getDate(),
+          today.getDate()
         ).getTime();
         if (curNorm < todayNorm) {
           try {
@@ -487,12 +521,12 @@ onMounted(async () => {
     // bump reload key to force child components to re-render where necessary
     reloadKey.value += 1;
   };
-  window.addEventListener('organiser:reloaded', organiserReloadHandler as EventListener);
+  window.addEventListener("organiser:reloaded", organiserReloadHandler as EventListener);
   // allow header group 'manage' button to open the group dialog
   organiserGroupManageHandler = () => {
     showGroupDialog.value = true;
   };
-  window.addEventListener('group:manage', organiserGroupManageHandler as EventListener);
+  window.addEventListener("group:manage", organiserGroupManageHandler as EventListener);
 
   // Show first run dialog if no groups exist
   if (api.group.list.all.value.length === 0) {

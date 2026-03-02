@@ -48,13 +48,42 @@ class DayOrganiserStorage {
         const uint8 = new Uint8Array(arrayBuffer);
         // unzipSync returns a map of filename -> Uint8Array
         const files = mod.unzipSync(uint8);
+        if (!files || typeof files !== 'object') throw new Error('Invalid zip content');
         // prefer an internal json filename matching the zip name, else first .json
         const expectedJson = name.replace(/\.zip$/, '.json');
         let jsonEntry: string | null = null;
-        if (files[expectedJson]) jsonEntry = expectedJson;
-        else {
+        // Helper: get basename of zip entry
+        const basename = (p: string) => {
+          const parts = p.split('/');
+          return parts[parts.length - 1];
+        };
+
+        // Try exact match first
+        if (Object.prototype.hasOwnProperty.call(files, expectedJson)) jsonEntry = expectedJson;
+        // Try basename match (e.g. folder/backup.json)
+        if (!jsonEntry) {
           for (const k of Object.keys(files)) {
-            if (k.toLowerCase().endsWith('.json')) {
+            const b = String(basename(k)).toLowerCase();
+            if (b === expectedJson) {
+              jsonEntry = k;
+              break;
+            }
+          }
+        }
+        // Try common filenames or any .json entry
+        if (!jsonEntry) {
+          const common = ['backup.json', 'data.json', 'connections.json', 'export.json'];
+          for (const k of Object.keys(files)) {
+            const b = String(basename(k)).toLowerCase();
+            if (common.includes(b)) {
+              jsonEntry = k;
+              break;
+            }
+          }
+        }
+        if (!jsonEntry) {
+          for (const k of Object.keys(files)) {
+            if (String(k).toLowerCase().endsWith('.json')) {
               jsonEntry = k;
               break;
             }
@@ -62,6 +91,7 @@ class DayOrganiserStorage {
         }
         if (!jsonEntry) throw new Error('No JSON file found inside zip');
         const u8 = files[jsonEntry];
+        if (!u8) throw new Error('Zip entry is empty');
         const text = new TextDecoder().decode(u8);
         try {
           return JSON.parse(text) as OrganiserData;
