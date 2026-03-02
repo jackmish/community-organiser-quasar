@@ -236,7 +236,7 @@ export async function loadSettings(): Promise<any> {
       void e;
     }
     const settingsPath = window.electronAPI.joinPath(settingsDir, 'settings.json');
-      try {
+    try {
       const exists = await window.electronAPI.fileExists(settingsPath);
       if (!exists) return {};
       const data = await window.electronAPI.readJsonFile(settingsPath);

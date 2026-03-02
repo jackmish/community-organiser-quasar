@@ -24,8 +24,11 @@ export function construct(groupApi?: any, timeApi?: any) {
         // Presentation is a safe-read-only session similar to test mode.
         const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
         const sampleModeActive = modeVal === 'test' || modeVal === 'presentation';
-          if (sampleModeActive) {
-          logger.debug('apiStorage.loadData: loading sampleData because presentation.mode ===', modeVal);
+        if (sampleModeActive) {
+          logger.debug(
+            'apiStorage.loadData: loading sampleData because presentation.mode ===',
+            modeVal,
+          );
           data = sampleData as any;
         }
       } catch (e) {
@@ -107,16 +110,19 @@ export function construct(groupApi?: any, timeApi?: any) {
             if (timeApi.lastModified)
               timeApi.lastModified.value = data.lastModified || new Date().toISOString();
             // Populate taskService flat list immediately so callers can use it
+            try {
+              taskService.buildFlatTasksList(finalDays || {});
               try {
-                taskService.buildFlatTasksList(finalDays || {});
-                try {
-                  logger.debug('apiStorage.loadData: time.days populated, days=', Object.keys(finalDays || {}).length);
-                } catch (e) {
-                  void e;
-                }
+                logger.debug(
+                  'apiStorage.loadData: time.days populated, days=',
+                  Object.keys(finalDays || {}).length,
+                );
               } catch (e) {
                 void e;
               }
+            } catch (e) {
+              void e;
+            }
           }
         } catch (e) {
           void e;
@@ -130,7 +136,7 @@ export function construct(groupApi?: any, timeApi?: any) {
         if (groupApi && typeof loadSettings === 'function') {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
-            if (requestedId) {
+          if (requestedId) {
             const groupsList =
               (groupApi && groupApi.list && groupApi.list.all ? groupApi.list.all.value : []) || [];
             // restored activeGroup silently (no console log)
@@ -173,7 +179,7 @@ export function construct(groupApi?: any, timeApi?: any) {
     // Block saving when test mode enabled
     try {
       const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
-        if (modeVal === 'test' || modeVal === 'presentation') {
+      if (modeVal === 'test' || modeVal === 'presentation') {
         logger.debug('apiStorage.saveData blocked in presentation/test mode (', modeVal, ')');
         return;
       }
