@@ -2,7 +2,9 @@
   <q-layout view="lHh Lpr lFf">
     <q-header>
       <q-toolbar>
-        <q-toolbar-title style="display: flex; align-items: center; gap: 12px; overflow: visible">
+        <q-toolbar-title
+          style="display: flex; align-items: center; gap: 12px; overflow: visible"
+        >
           <div style="display: flex; align-items: center; gap: 12px">
             <img
               src="icons/co21-logo.png"
@@ -64,15 +66,19 @@
                       <q-item-section>Settings</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="toggleTestMode">
-                      <q-item-section>{{ testMode ? 'Default mode' : 'Test mode' }}</q-item-section>
+                      <q-item-section>{{
+                        testMode ? "Default mode" : "Test mode"
+                      }}</q-item-section>
                     </q-item>
                     <q-item
                       clickable
                       v-ripple
-                      @click="presentationActive ? stopPresentation() : startPresentation()"
+                      @click="
+                        presentationActive ? stopPresentation() : startPresentation()
+                      "
                     >
                       <q-item-section>{{
-                        presentationActive ? 'Stop presentation' : 'Start presentation'
+                        presentationActive ? "Stop presentation" : "Start presentation"
                       }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="reloadWithTestData">
@@ -101,19 +107,19 @@
 </template>
 
 <script setup lang="ts">
-import 'src/utils/logger-shim';
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import pkg from '../../package.json';
+import "src/utils/logger-shim";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
-import { useRouter, useRoute } from 'vue-router';
-import NextEventNotification from '../components/task/NextEventNotification.vue';
-import { format } from 'date-fns';
-import * as api from 'src/modules/day-organiser/_apiRoot';
-import AppConfigDialog from 'src/components/settings/AppConfigDialog.vue';
-import AboutDialog from 'src/components/settings/AboutDialog.vue';
-import ConnectionsDialog from 'src/components/settings/ConnectionsDialog.vue';
+import { useRouter, useRoute } from "vue-router";
+import NextEventNotification from "../components/task/NextEventNotification.vue";
+import { format } from "date-fns";
+import * as api from "src/modules/day-organiser/_apiRoot";
+import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
+import AboutDialog from "src/components/settings/AboutDialog.vue";
+import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
 // sample data is loaded by the presentation manager when requested
-import { presentation } from 'src/modules/presentation/presentationManager';
+import { presentation } from "src/modules/presentation/presentationManager";
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
@@ -122,16 +128,16 @@ const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const menuOpen = ref(false);
 const testMode = computed(() =>
-  presentation && presentation.mode ? presentation.mode.value === 'test' : false,
+  presentation && presentation.mode ? presentation.mode.value === "test" : false
 );
 const presentationActive = computed(() =>
-  presentation && presentation.active ? presentation.active.value : false,
+  presentation && presentation.active ? presentation.active.value : false
 );
 let headerManageHandler: any = null;
 // Obtain router and route during setup (inject must run inside setup)
 const router = useRouter();
 const route = useRoute();
-const appVersion = ref<string>(pkg?.version || 'unknown');
+const appVersion = ref<string>(pkg?.version || "unknown");
 
 const now = ref(new Date());
 let clockTimer: any = null;
@@ -143,9 +149,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer);
 });
-const currentDateWeekday = computed(() => format(now.value, 'EEEE'));
-const currentDateShort = computed(() => format(now.value, 'dd.MM.yyyy'));
-const currentTimeDisplay = computed(() => format(now.value, 'HH:mm'));
+const currentDateWeekday = computed(() => format(now.value, "EEEE"));
+const currentDateShort = computed(() => format(now.value, "dd.MM.yyyy"));
+const currentTimeDisplay = computed(() => format(now.value, "HH:mm"));
 
 async function checkInternetConnection(): Promise<boolean> {
   try {
@@ -153,10 +159,10 @@ async function checkInternetConnection(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const response = await fetch('https://www.google.com/favicon.ico', {
-      method: 'HEAD',
-      mode: 'no-cors',
-      cache: 'no-cache',
+    const response = await fetch("https://www.google.com/favicon.ico", {
+      method: "HEAD",
+      mode: "no-cors",
+      cache: "no-cache",
       signal: controller.signal,
     });
 
@@ -183,34 +189,34 @@ onMounted(async () => {
     // ignore
   }
   // Manual checks when browser detects network changes
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', () => {
+  window.addEventListener("online", updateOnlineStatus);
+  window.addEventListener("offline", () => {
     isOnline.value = false; // Immediately mark offline
   });
   // Ensure 'Manage Groups' selection in header opens the dialog in DayOrganiserPage.
   try {
     headerManageHandler = () => {
       try {
-        if (route.path === '/') {
+        if (route.path === "/") {
           // dispatch immediately and again after a short delay to be robust
-          window.dispatchEvent(new Event('group:manage'));
-          setTimeout(() => window.dispatchEvent(new Event('group:manage')), 300);
+          window.dispatchEvent(new Event("group:manage"));
+          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 300);
           return;
         }
-        router.push('/').then(() => {
+        router.push("/").then(() => {
           // ensure page has a chance to mount, then dispatch
-          window.dispatchEvent(new Event('group:manage'));
-          setTimeout(() => window.dispatchEvent(new Event('group:manage')), 400);
+          window.dispatchEvent(new Event("group:manage"));
+          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 400);
         });
       } catch (e) {
         try {
-          window.dispatchEvent(new Event('group:manage'));
+          window.dispatchEvent(new Event("group:manage"));
         } catch (err) {
           // ignore
         }
       }
     };
-    window.addEventListener('group:manage-request', headerManageHandler as EventListener);
+    window.addEventListener("group:manage-request", headerManageHandler as EventListener);
     // Pull injected app version (set by main process) if available
     // appVersion is populated from preload; nothing else required
   } catch (e) {
@@ -224,7 +230,7 @@ function refreshNotifications() {
     // refreshNotifications triggers a UI refresh event; do not reload data here
     try {
       // notify pages that data was reloaded so they can refresh UI (calendar, lists)
-      window.dispatchEvent(new Event('organiser:reloaded'));
+      window.dispatchEvent(new Event("organiser:reloaded"));
     } catch (e) {
       // ignore
     }
@@ -246,8 +252,8 @@ function openSettings() {
 
 function openManageHeader() {
   try {
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new Event('group:manage-request'));
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new Event("group:manage-request"));
     }
   } catch (e) {
     // fallback: ignore if dispatch fails
@@ -265,7 +271,10 @@ async function toggleTestMode() {
   // Enable test mode only. Disallow reverting to normal mode from the UI.
   menuOpen.value = false;
   try {
-    if (presentation && typeof (presentation as any).enableTestModeWithApi === 'function') {
+    if (
+      presentation &&
+      typeof (presentation as any).enableTestModeWithApi === "function"
+    ) {
       await (presentation as any).enableTestModeWithApi(api);
     } else {
       presentation.toggleTestMode();
@@ -278,7 +287,10 @@ async function toggleTestMode() {
 async function startPresentation() {
   menuOpen.value = false;
   try {
-    if (presentation && typeof (presentation as any).startPresentationWithApi === 'function') {
+    if (
+      presentation &&
+      typeof (presentation as any).startPresentationWithApi === "function"
+    ) {
       await (presentation as any).startPresentationWithApi(api);
     } else {
       presentation.start();
@@ -291,7 +303,10 @@ async function startPresentation() {
 async function stopPresentation() {
   menuOpen.value = false;
   try {
-    if (presentation && typeof (presentation as any).stopPresentationWithApi === 'function') {
+    if (
+      presentation &&
+      typeof (presentation as any).stopPresentationWithApi === "function"
+    ) {
       await (presentation as any).stopPresentationWithApi(api);
     } else {
       presentation.stop();
@@ -304,7 +319,10 @@ async function stopPresentation() {
 async function reloadWithTestData() {
   try {
     menuOpen.value = false;
-    if (presentation && typeof (presentation as any).enableTestModeWithApi === 'function') {
+    if (
+      presentation &&
+      typeof (presentation as any).enableTestModeWithApi === "function"
+    ) {
       await (presentation as any).enableTestModeWithApi(api);
     } else {
       presentation.toggleTestMode();
@@ -315,11 +333,14 @@ async function reloadWithTestData() {
 }
 
 onUnmounted(() => {
-  window.removeEventListener('online', updateOnlineStatus);
-  window.removeEventListener('offline', updateOnlineStatus);
+  window.removeEventListener("online", updateOnlineStatus);
+  window.removeEventListener("offline", updateOnlineStatus);
   try {
     if (headerManageHandler)
-      window.removeEventListener('group:manage-request', headerManageHandler as EventListener);
+      window.removeEventListener(
+        "group:manage-request",
+        headerManageHandler as EventListener
+      );
   } catch (e) {
     // ignore
   }
