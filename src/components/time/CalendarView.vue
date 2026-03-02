@@ -133,6 +133,8 @@
                       <Watermark
                         v-if="shouldShowMonth(day, index, week, weekIndex === 0)"
                         :label="format(new Date(day), 'MMMM')"
+                        color="#000000"
+                        justifyContent="flex-start"
                       />
                       <div
                         v-if="day === format(new Date(), 'yyyy-MM-dd')"

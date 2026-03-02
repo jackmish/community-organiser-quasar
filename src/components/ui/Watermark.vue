@@ -55,13 +55,13 @@ function resolveJustify() {
   align-items: flex-start;
   justify-content: flex-end;
   pointer-events: none; /* don't block interaction */
-  z-index: 0; /* top layer but below modal overlays if needed */
+  z-index: 999999999999999; /* top layer but below modal overlays if needed */
   top: 0;
 }
 
 .co21-watermark-text {
   /* color: rgba(0, 0, 0, 1); */
-  color: rgba(0, 255, 255, 1);
+  color: rgb(0, 255, 255);
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
