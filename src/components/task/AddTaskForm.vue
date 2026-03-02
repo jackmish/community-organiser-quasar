@@ -85,6 +85,28 @@ const activeGroupLabelShort = computed(() => {
 // Group menu state for edit-mode group changing
 const groupMenu = ref(false);
 const groups = api.group.list.all;
+
+function getGroupIcon(gid: string | undefined) {
+  try {
+    const list: any[] = (groups && (groups as any).value) || groups || [];
+    if (!gid) return 'folder';
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    return (found && found.icon) || 'folder';
+  } catch (e) {
+    return 'folder';
+  }
+}
+
+function getGroupName(gid: string | undefined) {
+  try {
+    const list: any[] = (groups && (groups as any).value) || groups || [];
+    if (!gid) return null;
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    return (found && found.name) || null;
+  } catch (e) {
+    return null;
+  }
+}
 const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
 
 async function selectGroupForEdit(gid: string | null) {
@@ -1452,21 +1474,16 @@ function onSubmit(event: Event) {
         <div style="display: inline-block; margin-left: 8px">
           <q-chip
             size="md"
-            icon="folder"
+            :icon="getGroupIcon(localNewTask.groupId)"
             class="q-pointer group-select-chip"
             clickable
             @click.stop="groupMenu = true"
           >
-            {{
-              (localNewTask.groupId &&
-                (groups || []).find((g: TaskGroup) => g.id === localNewTask.groupId)?.name) ||
-              activeGroupLabelShort ||
-              'No group'
-            }}
+            {{ (getGroupName(localNewTask.groupId) || activeGroupLabelShort || 'No group') }}
           </q-chip>
           <q-menu v-model="groupMenu" anchor="bottom right" self="top right" class="group-menu">
             <q-list dense separator>
-              <q-item clickable dense @click="() => selectGroupForAdd(null)">
+              <q-item clickable dense @click="selectGroupForAdd(null)">
                 <q-item-section
                   side
                   style="width: 36px; display: flex; align-items: center; justify-content: center"
@@ -1478,18 +1495,18 @@ function onSubmit(event: Event) {
                 </q-item-section>
               </q-item>
               <q-separator />
-              <q-item
+                <q-item
                 v-for="g in groups || []"
                 :key="g.id"
                 clickable
                 dense
-                @click="() => selectGroupForAdd(g.id)"
+                @click="selectGroupForAdd(g.id)"
               >
                 <q-item-section
                   side
                   style="width: 36px; display: flex; align-items: center; justify-content: center"
                 >
-                  <q-icon name="folder" />
+                  <q-icon :name="g.icon || 'folder'" :style="{ color: g.color || 'inherit' }" />
                 </q-item-section>
                 <q-item-section>
                   <div style="font-weight: 600">{{ g.name }}</div>
