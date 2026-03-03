@@ -252,7 +252,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, onUpdated } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  watch,
+  nextTick,
+  onUpdated,
+  onBeforeUnmount,
+} from "vue";
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
 import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
@@ -353,18 +361,18 @@ const tableWrapper = ref<HTMLElement | null>(null);
 const monthEdges = ref<Array<[HTMLElement, HTMLElement]>>([]);
 
 function collectMonthEdges() {
+  console.log("collectMonthEdges -> start");
   monthEdges.value = [];
-  const root = tableWrapper.value ?? document;
-  const nodeList = ((root as any).querySelectorAll?.("td.calendar-cell") ??
-    []) as NodeListOf<HTMLElement>;
+  const rootNode: ParentNode = tableWrapper.value ?? document;
+  const nodeList = rootNode.querySelectorAll<HTMLTableCellElement>("td.calendar-cell");
   const cells = Array.from(nodeList);
   if (!cells.length) return;
 
-  const map = new Map<string, HTMLElement[]>();
+  const map = new Map<string, HTMLTableCellElement[]>();
   for (const cell of cells) {
-    const dayAttr = cell.getAttribute("data-day") || cell.textContent || "";
+    const dayAttr = cell.getAttribute?.("data-day") || cell.textContent || "";
     const month = (
-      cell.getAttribute("data-month") || String(new Date(dayAttr).getMonth() + 1)
+      cell.getAttribute?.("data-month") || String(new Date(dayAttr).getMonth() + 1)
     ).padStart(2, "0");
     if (!map.has(month)) map.set(month, []);
     map.get(month)!.push(cell);
@@ -373,7 +381,6 @@ function collectMonthEdges() {
   for (const [, arr] of map.entries()) {
     if (arr.length) monthEdges.value.push([arr[0]!, arr[arr.length - 1]!]);
   }
-
   try {
     console.log(
       "collectMonthEdges ->",
@@ -382,14 +389,125 @@ function collectMonthEdges() {
   } catch (e) {
     // ignore
   }
+  console.log("collectMonthEdges -> done", {
+    cells: cells.length,
+    months: monthEdges.value.length,
+  });
 }
 
 onMounted(() => {
-  nextTick().then(collectMonthEdges);
+  nextTick().then(() => {
+    collectMonthEdges();
+    createOverlaysFromEdges();
+  });
 });
 
 onUpdated(() => {
   nextTick().then(collectMonthEdges);
+});
+
+// --- DOM overlays (appends absolute divs under the calendar table) ---
+function removeExistingOverlays() {
+  try {
+    document.querySelectorAll(".co21-month-overlay").forEach((n) => n.remove());
+  } catch (e) {
+    // ignore
+  }
+}
+
+function createOverlaysFromEdges() {
+  removeExistingOverlays();
+  const table = document.querySelector<HTMLTableElement>("table.calendar-table");
+  if (!table) return;
+  const tableRect = table.getBoundingClientRect();
+  const z = window.getComputedStyle(table).zIndex || "1";
+
+  for (const [beginEl, endEl] of monthEdges.value) {
+    if (!beginEl || !endEl) continue;
+    const b = beginEl.getBoundingClientRect();
+    const e = endEl.getBoundingClientRect();
+    const top = Math.round(b.top - tableRect.top + (table.offsetTop || 0));
+    const left = Math.round(
+      Math.min(b.left, e.left) - tableRect.left + (table.offsetLeft || 0)
+    );
+    const right = Math.round(
+      Math.max(b.right, e.right) - tableRect.left + (table.offsetLeft || 0)
+    );
+    const bottom = Math.round(e.bottom - tableRect.top + (table.offsetTop || 0));
+    const width = Math.max(0, right - left);
+    const height = Math.max(0, bottom - top);
+    const month = (beginEl.dataset?.month || "01").toString().padStart(2, "0");
+    const url = `/images/months/bg_${month}.jpg`;
+
+    const div = document.createElement("div");
+    div.className = "co21-month-overlay";
+    div.setAttribute("data-month", month);
+
+    // compute coordinates relative to the table so we can append overlay inside it
+    const topRel = Math.round(b.top - tableRect.top);
+    const leftRel = Math.round(Math.min(b.left, e.left) - tableRect.left);
+    const widthRel = Math.max(
+      0,
+      Math.round(Math.max(b.right, e.right) - Math.min(b.left, e.left))
+    );
+    const heightRel = Math.max(0, Math.round(e.bottom - b.top));
+
+    // ensure table can be a positioning context
+    if (getComputedStyle(table).position === "static") table.style.position = "relative";
+
+    Object.assign(div.style, {
+      position: "absolute",
+      top: `${topRel}px`,
+      left: `${leftRel}px`,
+      width: `${widthRel}px`,
+      height: `${heightRel}px`,
+      backgroundImage: `url(${url})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      opacity: "0.14",
+      pointerEvents: "none",
+      mixBlendMode: "multiply",
+      zIndex: String(Math.max(0, Number(z) + 1)),
+    } as any);
+
+    console.log(`month overlay created for ${month}: ${url}`, {
+      top: topRel,
+      left: leftRel,
+      width: widthRel,
+      height: heightRel,
+      z: div.style.zIndex,
+    });
+
+    table.appendChild(div);
+  }
+}
+
+// Refresh overlays after edges collected
+onUpdated(() => {
+  nextTick().then(() => {
+    collectMonthEdges();
+    createOverlaysFromEdges();
+  });
+});
+
+onMounted(() => {
+  window.addEventListener("resize", () => {
+    collectMonthEdges();
+    createOverlaysFromEdges();
+  });
+});
+
+onBeforeUnmount(() => {
+  removeExistingOverlays();
+  try {
+    window.removeEventListener("resize", () => {
+      collectMonthEdges();
+      createOverlaysFromEdges();
+    });
+  } catch (e) {
+    // ignore
+  }
 });
 
 // Manager to handle month/year display state (keeps internal mutable sets
