@@ -288,11 +288,12 @@ html body .q-dialog .q-card textarea::placeholder {
 /* Weekend columns: make Sunday and Saturday light blue (td/th only) */
 .calendar-table thead th:nth-child(6),
 .calendar-table tbody td.calendar-cell:nth-child(6) {
-  background-color: #add8e6 !important;
+  background-color: #cff !important;
+  border-left: 4px solid rgba(55, 150, 150, 0.5) !important;
 }
 .calendar-table thead th:nth-child(7),
 .calendar-table tbody td.calendar-cell:nth-child(7) {
-  background-color: #add8e6 !important;
+  background-color: #cff !important;
 }
 
 /* Responsive overrides imported separately */

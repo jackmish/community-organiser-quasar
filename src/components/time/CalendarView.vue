@@ -50,7 +50,7 @@
               <th
                 v-for="day in calendarCurrentWeek"
                 :key="'header-' + day"
-                class="text-center text-weight-bold text-caption text-grey-7"
+                class="text-center text-weight-bold text-caption"
               >
                 {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
               </th>
@@ -105,13 +105,6 @@
                 </div>
                 <q-btn
                   size="sm"
-                  :color="
-                    day === selectedDate
-                      ? 'primary'
-                      : day < format(new Date(), 'yyyy-MM-dd')
-                      ? 'grey-5'
-                      : 'grey-7'
-                  "
                   @click="handleDateSelect(day)"
                   :title="
                     new Date(day).toLocaleDateString('en-US', {
@@ -422,38 +415,53 @@ function createOverlaysFromEdges() {
   const tableRect = table.getBoundingClientRect();
   const z = window.getComputedStyle(table).zIndex || "1";
 
-  for (const [beginEl, endEl] of monthEdges.value) {
-    if (!beginEl || !endEl) continue;
-    const b = beginEl.getBoundingClientRect();
-    const e = endEl.getBoundingClientRect();
-    const top = Math.round(b.top - tableRect.top + (table.offsetTop || 0));
-    const left = Math.round(
-      Math.min(b.left, e.left) - tableRect.left + (table.offsetLeft || 0)
-    );
-    const right = Math.round(
-      Math.max(b.right, e.right) - tableRect.left + (table.offsetLeft || 0)
-    );
-    const bottom = Math.round(e.bottom - tableRect.top + (table.offsetTop || 0));
-    const width = Math.max(0, right - left);
-    const height = Math.max(0, bottom - top);
+  // Build sortable month entries with begin/end rects
+  const monthEntries = monthEdges.value
+    .map(([bEl, eEl]) => {
+      if (!bEl || !eEl) return null;
+      const bRect = bEl.getBoundingClientRect();
+      const eRect = eEl.getBoundingClientRect();
+      return { beginEl: bEl, endEl: eEl, bRect, eRect } as const;
+    })
+    .filter(Boolean) as Array<{
+    beginEl: HTMLElement;
+    endEl: HTMLElement;
+    bRect: DOMRect;
+    eRect: DOMRect;
+  }>;
+
+  // sort by visual top (calendar order)
+  monthEntries.sort((a, b) => a.bRect.top - b.bRect.top);
+
+  // ensure table can be a positioning context
+  if (getComputedStyle(table).position === "static") table.style.position = "relative";
+
+  for (let i = 0; i < monthEntries.length; i++) {
+    const entry = monthEntries[i];
+    if (!entry) continue;
+    const { beginEl, endEl, bRect, eRect } = entry;
     const month = (beginEl.dataset?.month || "01").toString().padStart(2, "0");
     const url = `/images/months/bg_${month}.jpg`;
+
+    const topRel = Math.round(bRect.top - tableRect.top);
+
+    // by default use the current month's last cell bottom
+    let bottomRel = Math.round(eRect.bottom - tableRect.top);
+
+    // if there's a next month, end this overlay at the top of the row where the next month begins
+    const next = monthEntries[i + 1];
+    if (next) {
+      const nextTop = Math.round(next.bRect.top - tableRect.top);
+      if (nextTop > topRel) bottomRel = nextTop;
+    }
+
+    const heightRel = Math.max(0, bottomRel - topRel);
+    const leftRel = 0;
+    const widthRel = Math.max(0, Math.round(table.clientWidth || tableRect.width));
 
     const div = document.createElement("div");
     div.className = "co21-month-overlay";
     div.setAttribute("data-month", month);
-
-    // compute coordinates relative to the table so we can append overlay inside it
-    const topRel = Math.round(b.top - tableRect.top);
-    const leftRel = Math.round(Math.min(b.left, e.left) - tableRect.left);
-    const widthRel = Math.max(
-      0,
-      Math.round(Math.max(b.right, e.right) - Math.min(b.left, e.left))
-    );
-    const heightRel = Math.max(0, Math.round(e.bottom - b.top));
-
-    // ensure table can be a positioning context
-    if (getComputedStyle(table).position === "static") table.style.position = "relative";
 
     Object.assign(div.style, {
       position: "absolute",
@@ -463,9 +471,9 @@ function createOverlaysFromEdges() {
       height: `${heightRel}px`,
       backgroundImage: `url(${url})`,
       backgroundSize: "cover",
-      backgroundPosition: "center",
+      backgroundPosition: "top",
       backgroundRepeat: "no-repeat",
-      opacity: "0.14",
+      opacity: "0.9",
       pointerEvents: "none",
       mixBlendMode: "multiply",
       zIndex: String(Math.max(0, Number(z) + 1)),
@@ -479,7 +487,7 @@ function createOverlaysFromEdges() {
       z: div.style.zIndex,
     });
 
-    table.appendChild(div);
+    table.prepend(div);
   }
 }
 
@@ -1120,7 +1128,7 @@ function getEventsForDay(day: string) {
   width: calc(100% - 8px);
   margin: 0 auto;
   min-height: 60px;
-  background-color: white !important;
+  background: rgba(255, 255, 255, 0.5) !important;
   color: black !important;
   border: 2px solid #eee;
   position: relative;
@@ -1148,15 +1156,16 @@ function getEventsForDay(day: string) {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: repeating-linear-gradient(
+  /* background-image: repeating-linear-gradient(
       45deg,
       transparent,
       transparent 8px,
-      #ddd 8px,
+      #379 8px,
       #ddd 9px
     ),
-    repeating-linear-gradient(-45deg, transparent, transparent 8px, #ddd 8px, #ddd 9px);
-  pointer-events: none;
+    repeating-linear-gradient(-45deg, transparent, transparent 8px, #169 8px, #ddd 9px);
+  pointer-events: none; */
+  background-color: rgba(50, 200, 255, 0.5);
   z-index: 0;
 }
 
