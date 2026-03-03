@@ -64,7 +64,13 @@
                 'new-month-week': shouldWeekHaveMargin(week, weekIndex, allCalendarWeeks),
               }"
             >
-              <td v-for="(day, index) in week" :key="day" class="calendar-cell">
+              <td
+                v-for="(day, index) in week"
+                :key="day"
+                class="calendar-cell"
+                :data-day="day"
+                :data-month="String(new Date(day).getMonth() + 1).padStart(2, '0')"
+              >
                 <div
                   :class="{
                     'new-month-start': isNewMonthStart(
@@ -246,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onUpdated } from "vue";
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
 import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
@@ -341,6 +347,50 @@ async function onEventPointerUp(task: any) {
 
 const calendarBaseDate = ref(new Date());
 const calendarViewDays = ref(42);
+
+// Minimal month edges collector: stores [firstCell, lastCell] for each month
+const tableWrapper = ref<HTMLElement | null>(null);
+const monthEdges = ref<Array<[HTMLElement, HTMLElement]>>([]);
+
+function collectMonthEdges() {
+  monthEdges.value = [];
+  const root = tableWrapper.value ?? document;
+  const nodeList = ((root as any).querySelectorAll?.("td.calendar-cell") ??
+    []) as NodeListOf<HTMLElement>;
+  const cells = Array.from(nodeList);
+  if (!cells.length) return;
+
+  const map = new Map<string, HTMLElement[]>();
+  for (const cell of cells) {
+    const dayAttr = cell.getAttribute("data-day") || cell.textContent || "";
+    const month = (
+      cell.getAttribute("data-month") || String(new Date(dayAttr).getMonth() + 1)
+    ).padStart(2, "0");
+    if (!map.has(month)) map.set(month, []);
+    map.get(month)!.push(cell);
+  }
+
+  for (const [, arr] of map.entries()) {
+    if (arr.length) monthEdges.value.push([arr[0]!, arr[arr.length - 1]!]);
+  }
+
+  try {
+    console.log(
+      "collectMonthEdges ->",
+      monthEdges.value.map(([b, e]) => [b.dataset?.day, e.dataset?.day])
+    );
+  } catch (e) {
+    // ignore
+  }
+}
+
+onMounted(() => {
+  nextTick().then(collectMonthEdges);
+});
+
+onUpdated(() => {
+  nextTick().then(collectMonthEdges);
+});
 
 // Manager to handle month/year display state (keeps internal mutable sets
 // outside of render-time reactive mutations to avoid recursive updates)
