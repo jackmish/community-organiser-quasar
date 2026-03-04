@@ -42,8 +42,10 @@
         </q-btn>
       </div>
     </div>
-    <div class="row items-center">
-      <div class="col">
+  </div>
+  <div class="row items-center">
+    <div class="col">
+      <div ref="tableWrapper" class="calendar-table-wrapper">
         <table class="calendar-table">
           <thead>
             <tr>
@@ -210,36 +212,36 @@
         </table>
       </div>
     </div>
-    <!-- Prev button and visible days per page option (moved to bottom) -->
-    <div class="row q-mb-md items-center">
-      <div class="col">
-        <div class="row items-center q-gutter-md">
-          <div class="text-subtitle2">Visible days</div>
-          <q-option-group
-            v-model="calendarViewDays"
-            :options="[
-              { label: '14 days', value: 14 },
-              { label: '42 days', value: 42 },
-              { label: '3 months', value: 84 },
-            ]"
-            color="primary"
-            inline
-            dense
-            size="xs"
-          />
-        </div>
-      </div>
-      <div class="col text-right">
-        <q-btn
-          unelevated
-          icon-right="chevron_right"
-          label="Next"
+  </div>
+  <!-- Prev button and visible days per page option (moved to bottom) -->
+  <div class="row q-mb-md items-center">
+    <div class="col">
+      <div class="row items-center q-gutter-md">
+        <div class="text-subtitle2">Visible days</div>
+        <q-option-group
+          v-model="calendarViewDays"
+          :options="[
+            { label: '14 days', value: 14 },
+            { label: '42 days', value: 42 },
+            { label: '3 months', value: 84 },
+          ]"
           color="primary"
-          text-color="white"
-          @click="nextCalendarWeeks"
-          size="sm"
+          inline
+          dense
+          size="xs"
         />
       </div>
+    </div>
+    <div class="col text-right">
+      <q-btn
+        unelevated
+        icon-right="chevron_right"
+        label="Next"
+        color="primary"
+        text-color="white"
+        @click="nextCalendarWeeks"
+        size="sm"
+      />
     </div>
   </div>
 </template>
@@ -410,84 +412,81 @@ function removeExistingOverlays() {
 
 function createOverlaysFromEdges() {
   removeExistingOverlays();
-  const table = document.querySelector<HTMLTableElement>("table.calendar-table");
-  if (!table) return;
-  const tableRect = table.getBoundingClientRect();
-  const z = window.getComputedStyle(table).zIndex || "1";
+  const wrapper =
+    tableWrapper.value ?? document.querySelector<HTMLElement>(".calendar-table-wrapper");
+  if (!wrapper) return;
+  const tableRect = wrapper.getBoundingClientRect();
+  const z = window.getComputedStyle(wrapper).zIndex || "1";
 
-  // Build sortable month entries with begin/end rects
-  const monthEntries = monthEdges.value
-    .map(([bEl, eEl]) => {
-      if (!bEl || !eEl) return null;
-      const bRect = bEl.getBoundingClientRect();
-      const eRect = eEl.getBoundingClientRect();
-      return { beginEl: bEl, endEl: eEl, bRect, eRect } as const;
-    })
-    .filter(Boolean) as Array<{
-    beginEl: HTMLElement;
-    endEl: HTMLElement;
-    bRect: DOMRect;
-    eRect: DOMRect;
-  }>;
+  // group cells by row to create a single overlay segment per contiguous run
+  const rows = Array.from(
+    wrapper.querySelectorAll<HTMLTableRowElement>("table.calendar-table tbody tr")
+  );
+  const tableWidth = Math.max(0, Math.round(wrapper.clientWidth || tableRect.width));
+  const tableHeight = Math.max(0, Math.round(wrapper.clientHeight || tableRect.height));
 
-  // sort by visual top (calendar order)
-  monthEntries.sort((a, b) => a.bRect.top - b.bRect.top);
+  if (getComputedStyle(wrapper).position === "static")
+    wrapper.style.position = "relative";
 
-  // ensure table can be a positioning context
-  if (getComputedStyle(table).position === "static") table.style.position = "relative";
+  // Build map of months -> array of {top,left,width,height} segments (grouped per row)
+  const monthSegments = new Map<
+    string,
+    Array<{ top: number; left: number; width: number; height: number }>
+  >();
 
-  for (let i = 0; i < monthEntries.length; i++) {
-    const entry = monthEntries[i];
-    if (!entry) continue;
-    const { beginEl, endEl, bRect, eRect } = entry;
-    const month = (beginEl.dataset?.month || "01").toString().padStart(2, "0");
-    const url = `/images/months/bg_${month}.jpg`;
+  for (const row of rows) {
+    const cells = Array.from(
+      row.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
+    );
+    for (let i = 0; i < cells.length; ) {
+      const cell = cells[i]!;
+      const month = (cell.dataset?.month ?? "01").toString().padStart(2, "0");
+      // start run
+      let j = i + 1;
+      while (
+        j < cells.length &&
+        (cells[j]!.dataset?.month ?? "") === (cell.dataset?.month ?? "")
+      )
+        j++;
+      // cells from i .. j-1 are contiguous for this month on this row
+      const firstRect = cell.getBoundingClientRect();
+      const lastRect = cells[j - 1]!.getBoundingClientRect();
+      const left = Math.round(firstRect.left - tableRect.left);
+      const top = Math.round(firstRect.top - tableRect.top);
+      const width = Math.max(0, Math.round(lastRect.right - firstRect.left));
+      const height = Math.max(0, Math.round(firstRect.height));
 
-    const topRel = Math.round(bRect.top - tableRect.top);
+      if (!monthSegments.has(month)) monthSegments.set(month, []);
+      monthSegments.get(month)!.push({ top, left, width, height });
 
-    // by default use the current month's last cell bottom
-    let bottomRel = Math.round(eRect.bottom - tableRect.top);
-
-    // if there's a next month, end this overlay at the top of the row where the next month begins
-    const next = monthEntries[i + 1];
-    if (next) {
-      const nextTop = Math.round(next.bRect.top - tableRect.top);
-      if (nextTop > topRel) bottomRel = nextTop;
+      i = j;
     }
+  }
 
-    const heightRel = Math.max(0, bottomRel - topRel);
-    const leftRel = 0;
-    const widthRel = Math.max(0, Math.round(table.clientWidth || tableRect.width));
-
-    const div = document.createElement("div");
-    div.className = "co21-month-overlay";
-    div.setAttribute("data-month", month);
-
-    Object.assign(div.style, {
-      position: "absolute",
-      top: `${topRel}px`,
-      left: `${leftRel}px`,
-      width: `${widthRel}px`,
-      height: `${heightRel}px`,
-      backgroundImage: `url(${url})`,
-      backgroundSize: "cover",
-      backgroundPosition: "top",
-      backgroundRepeat: "no-repeat",
-      opacity: "0.9",
-      pointerEvents: "none",
-      mixBlendMode: "multiply",
-      zIndex: String(Math.max(0, Number(z) + 1)),
-    } as any);
-
-    console.log(`month overlay created for ${month}: ${url}`, {
-      top: topRel,
-      left: leftRel,
-      width: widthRel,
-      height: heightRel,
-      z: div.style.zIndex,
-    });
-
-    table.prepend(div);
+  // Create one overlay per month segment (few per month)
+  for (const [month, segments] of monthSegments.entries()) {
+    const url = `/images/months/bg_${month}.jpg`;
+    for (const seg of segments) {
+      const div = document.createElement("div");
+      div.className = "co21-month-overlay";
+      div.setAttribute("data-month", month);
+      Object.assign(div.style, {
+        position: "absolute",
+        top: `${seg.top}px`,
+        left: `${seg.left}px`,
+        width: `${seg.width}px`,
+        height: `${seg.height}px`,
+        backgroundImage: `url(${url})`,
+        backgroundSize: `${tableWidth}px ${tableHeight}px`,
+        backgroundPosition: `-${seg.left}px -${seg.top}px`,
+        backgroundRepeat: "no-repeat",
+        opacity: "0.84",
+        pointerEvents: "none",
+        mixBlendMode: "multiply",
+        zIndex: String(Math.max(0, Number(z) + 1)),
+      } as any);
+      wrapper.prepend(div);
+    }
   }
 }
 
