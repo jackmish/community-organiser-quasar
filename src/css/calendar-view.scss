@@ -51,18 +51,24 @@ $sep-color: $primary;
 .calendar-day-btn {
   @include btn-base();
 
-  &.calendar-selected {
-    background-color: $highlight !important;
-    color: white !important;
+  &.calendar-today {
+    font-weight: bold;
+    outline: 2px dashed white !important;
+    outline-offset: 8px;
+  }
 
+  &.calendar-selected {
+    background-color: #1976d2 !important;
+    color: white !important;
+    outline: 8px dashed white !important;
+    outline-offset: 4px;
     .calendar-day-number {
       color: white !important;
     }
-  }
-
-  &.calendar-today {
-    outline: 10px dashed $highlight !important;
-    font-weight: bold;
+    .calendar-today-label {
+      background-color: white !important;
+      color: black !important;
+    }
   }
 
   &.calendar-weekend::before,
