@@ -9,7 +9,12 @@ $menu-bg: $inactive-blue;
 
 /* Set main element background to app theme main color */
 main {
-  background: #def !important;
+  // background: #def !important;
+  background-image: url('/images/months/bg_04.jpg') !important;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 /* Global background and text for menus, popovers and dialog inners */
