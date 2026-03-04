@@ -470,6 +470,8 @@ function createOverlaysFromEdges() {
       const div = document.createElement("div");
       div.className = "co21-month-overlay";
       div.setAttribute("data-month", month);
+      div.dataset.left = String(seg.left);
+      div.dataset.top = String(seg.top);
       Object.assign(div.style, {
         position: "absolute",
         top: `${seg.top}px`,
@@ -477,8 +479,9 @@ function createOverlaysFromEdges() {
         width: `${seg.width}px`,
         height: `${seg.height}px`,
         backgroundImage: `url(${url})`,
-        backgroundSize: `${tableWidth}px ${tableHeight}px`,
-        backgroundPosition: `-${seg.left}px -${seg.top}px`,
+        // initial: center the image in each overlay (first-solution behavior)
+        backgroundSize: `cover`,
+        backgroundPosition: `center center`,
         backgroundRepeat: "no-repeat",
         opacity: "0.84",
         pointerEvents: "none",
@@ -487,6 +490,58 @@ function createOverlaysFromEdges() {
       } as any);
       wrapper.prepend(div);
     }
+    // preload and compute cover-scale so all segments align like `background-size: cover`
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+
+        // scale image to behave like `background-size: cover` for the whole table
+        const scale = Math.max(tableWidth / iw, tableHeight / ih);
+        const scaledW = Math.round(iw * scale);
+        const scaledH = Math.round(ih * scale);
+
+        // when an image is cover-scaled and centered, its top-left is offset by
+        // half of the extra dimension. Compute those offsets so each segment can
+        // position the scaled image consistently.
+        const offsetX = Math.round((scaledW - tableWidth) / 2);
+        const offsetY = Math.round((scaledH - tableHeight) / 2);
+
+        const overlays = Array.from(
+          wrapper.querySelectorAll<HTMLDivElement>(
+            `.co21-month-overlay[data-month="${month}"]`
+          )
+        );
+        for (const o of overlays) {
+          const left = Number(o.dataset.left || "0");
+          const top = Number(o.dataset.top || "0");
+
+          // position the scaled image so segments line up as if the whole table
+          // were painted with a single cover-centered background image
+          // When the whole table uses a centered cover image, the image's
+          // top-left is offset by -offsetX/-offsetY relative to the table.
+          // So the segment position should subtract both the scaled cell
+          // offset and the global image offset.
+          // backgroundPosition must be relative to the overlay's top-left
+          // in the same pixel coordinate space as the wrapper, not multiplied
+          // by the image scale. Use the table-centered image top-left (-offset)
+          // minus the segment's left/top (unscaled) so all segments align.
+          const posX = -offsetX - left;
+          const posY = -offsetY - top;
+
+          o.style.backgroundSize = `${scaledW}px ${scaledH}px`;
+          o.style.backgroundPosition = `${posX}px ${posY}px`;
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    img.onerror = () => {
+      console.warn(`month image not found: ${url}`);
+    };
+    img.src = url;
   }
 }
 
