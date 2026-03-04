@@ -52,7 +52,7 @@ $sep-color: $primary;
   @include btn-base();
 
   &.calendar-selected {
-    background-color: $primary !important;
+    background-color: $highlight !important;
     color: white !important;
 
     .calendar-day-number {
@@ -61,7 +61,7 @@ $sep-color: $primary;
   }
 
   &.calendar-today {
-    border: 4px solid $primary !important;
+    outline: 10px dashed $highlight !important;
     font-weight: bold;
   }
 
@@ -171,6 +171,7 @@ $sep-color: $primary;
 }
 .calendar-cell {
   padding: 12px 6px;
+  text-align: center;
   &:has(.first-day-of-month) {
     border-top: none !important;
   }
