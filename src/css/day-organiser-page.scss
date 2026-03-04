@@ -215,9 +215,9 @@
 }
 
 .calendar-cell {
-  padding: 4px;
+  padding: 10px 4px;
   text-align: center;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .calendar-day-btn {
@@ -275,7 +275,7 @@
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
-  min-height: 20px;
+  // min-height: 20px;
 }
 
 .calendar-year-inline {
@@ -293,7 +293,7 @@
 }
 
 .new-month-start {
-  padding-top: 48px;
+  padding-top: 0px;
 }
 
 .date-black {

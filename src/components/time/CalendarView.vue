@@ -103,7 +103,7 @@
                       {{ new Date(day).getFullYear() }}
                     </span>
                   </div>
-                  <div v-else class="calendar-month-label-above">&nbsp;</div>
+                  <div v-else class="calendar-month-label-above"></div>
                 </div>
                 <q-btn
                   size="sm"
@@ -1321,16 +1321,6 @@ function getEventsForDay(day: string) {
   border-right: none !important;
 }
 
-.calendar-cell {
-  padding: 4px;
-  text-align: center;
-  vertical-align: top;
-  border-top: none;
-  border-bottom: none;
-  border-left: 1px dashed #ddd;
-  border-right: 1px dashed #ddd;
-}
-
 .calendar-day-btn {
   white-space: normal !important;
   width: calc(100% - 8px);
@@ -1481,15 +1471,6 @@ function getEventsForDay(day: string) {
   font-family: Arial, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, sans-serif;
 }
 
-.calendar-month-label-above {
-  font-size: 1.2em;
-  color: #1976d2;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-align: center;
-  min-height: 20px;
-}
-
 .calendar-year-inline {
   font-size: 0.75em;
   margin-left: 6px;
@@ -1498,10 +1479,6 @@ function getEventsForDay(day: string) {
 
 .new-month-week {
   border-top: 3px solid #1976d2;
-}
-
-.new-month-start {
-  padding-top: 48px;
 }
 
 .calendar-day-btn.first-day-of-month {

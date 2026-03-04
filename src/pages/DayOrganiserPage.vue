@@ -614,4 +614,4 @@ onMounted(async () => {
 });
 </script>
 
-<style lang="scss" scoped src="../css/day-organiser-page.scss"></style>
+<style lang="scss" src="../css/day-organiser-page.scss"></style>
