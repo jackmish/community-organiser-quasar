@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Quick Date Buttons and Next button (moved to top) -->
-    <div class="row q-gutter-sm q-mt-md q-mb-lg items-center">
+    <div class="top-row row items-center">
       <div class="col-auto">
         <q-btn
           unelevated
@@ -207,7 +207,7 @@
     </div>
   </div>
   <!-- Prev button and visible days per page option (moved to bottom) -->
-  <div class="row q-mb-md items-center">
+  <div class="bottom-row row q-mb-md items-center">
     <div class="col">
       <div class="row items-center q-gutter-md">
         <div class="text-subtitle2">Visible days</div>

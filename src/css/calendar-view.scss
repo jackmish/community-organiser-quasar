@@ -26,6 +26,16 @@ $sep-color: $primary;
     text-align: center;
     border-left: 1px dashed #bbb;
     border-right: 1px dashed #bbb;
+    background: #eeeeeeee;
+    &:nth-of-type(2n) {
+      background: #ffffffee;
+    }
+    &:nth-of-type(6n) {
+      background: #5bf !important;
+    }
+    &:nth-of-type(7n) {
+      background: #5bf !important;
+    }
   }
 
   th:first-child,
@@ -211,7 +221,7 @@ $sep-color: $primary;
 }
 
 .calendar-day-btn.calendar-past {
-  background-color: rgba(205, 205, 205, 0.4) !important;
+  background-color: rgba(205, 205, 205, 0.7) !important;
   border: none !important;
 }
 .calendar-day-btn.calendar-past .calendar-day-number {
@@ -232,4 +242,12 @@ $sep-color: $primary;
   .co21-watermark-text {
     font-size: 25px !important;
   }
+}
+
+.bottom-row,
+.top-row {
+  padding: 10px;
+  background: rgba(111, 255, 255, 0.6);
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
