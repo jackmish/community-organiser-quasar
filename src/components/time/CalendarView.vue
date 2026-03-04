@@ -80,28 +80,27 @@
                       weekIndex,
                       allCalendarWeeks
                     ),
+                    'month-start': true,
                   }"
                 >
-                  <div
+                  <Watermark
                     v-if="
                       shouldShowMonth(day, index, week, weekIndex === 0) ||
                       shouldShowYear(day, index, week, weekIndex === 0)
                     "
+                    :label="
+                      getMonthAbbr(day, index, week) +
+                      (shouldShowYear(day, index, week, weekIndex === 0) ||
+                      new Date(day).getFullYear() !== new Date().getFullYear()
+                        ? ' ' + new Date(day).getFullYear()
+                        : '')
+                    "
+                    background="blur(60px) rgba(100,200,255,0.74)"
+                    color="#00000085"
+                    justifyContent="flex-start"
                     class="calendar-month-label-above"
-                  >
-                    <span>
-                      {{ getMonthAbbr(day, index, week) }}
-                    </span>
-                    <span
-                      v-if="
-                        shouldShowYear(day, index, week, weekIndex === 0) ||
-                        new Date(day).getFullYear() !== new Date().getFullYear()
-                      "
-                      class="calendar-year-inline"
-                    >
-                      {{ new Date(day).getFullYear() }}
-                    </span>
-                  </div>
+                    size="small"
+                  />
                   <div v-else class="calendar-month-label-above"></div>
                 </div>
                 <q-btn
@@ -138,12 +137,7 @@
                           {{ getWeekLabel(day) }}
                         </div>
                       </div>
-                      <Watermark
-                        v-if="shouldShowMonth(day, index, week, weekIndex === 0)"
-                        :label="format(new Date(day), 'MMMM')"
-                        color="#000000"
-                        justifyContent="flex-start"
-                      />
+
                       <div
                         v-if="day === format(new Date(), 'yyyy-MM-dd')"
                         class="calendar-today-label calendar-green-label"
@@ -1203,28 +1197,29 @@ function shouldShowYear(
 function getMonthAbbr(day: string, index: number, week: string[]) {
   const monthName = format(new Date(day), "MMMM");
 
+  // !!! Removed prefix in comment - it's visually clearer with watermark component, but i can change my mind later if needed
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
-  const dayOfMonth = new Date(day).getDate();
+  // const dayOfMonth = new Date(day).getDate();
 
-  // Check if this is the first day shown in the calendar (index 0 of first week)
-  const isFirstDayInCalendar = index === 0;
+  // // Check if this is the first day shown in the calendar (index 0 of first week)
+  // const isFirstDayInCalendar = index === 0;
 
   // Add "..." if it's the first day in calendar but not the 1st of the month
-  if (isFirstDayInCalendar && dayOfMonth !== 1) {
-    return `...${monthName}`;
-  }
+  // if (isFirstDayInCalendar && dayOfMonth !== 1) {
+  //   return `${monthName}`;
+  // }
 
-  // Add "..." if month changed from previous day but we're not on the 1st of the month
-  if (index > 0) {
-    const previousDay = week[index - 1];
-    if (previousDay) {
-      const currentMonth = new Date(day).getMonth();
-      const previousMonth = new Date(previousDay).getMonth();
-      if (currentMonth !== previousMonth && dayOfMonth !== 1) {
-        return `...${monthName}`;
-      }
-    }
-  }
+  // // Add "..." if month changed from previous day but we're not on the 1st of the month
+  // if (index > 0) {
+  //   const previousDay = week[index - 1];
+  //   if (previousDay) {
+  //     const currentMonth = new Date(day).getMonth();
+  //     const previousMonth = new Date(previousDay).getMonth();
+  //     if (currentMonth !== previousMonth && dayOfMonth !== 1) {
+  //       return `...${monthName}`;
+  //     }
+  //   }
+  // }
 
   return monthName;
 }

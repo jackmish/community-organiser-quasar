@@ -11,7 +11,7 @@ $sep-color: $primary;
   width: calc(100% - 8px);
   margin: 0 auto;
   min-height: 60px;
-  background: rgba(255, 255, 255, 0.5) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
   color: black !important;
   //   border: 2px solid $muted;
   position: relative;
@@ -224,4 +224,12 @@ $sep-color: $primary;
   right: 10px;
   position: absolute;
   top: 4px;
+}
+
+.month-start {
+  position: relative;
+  top: -32px;
+  .co21-watermark-text {
+    font-size: 25px !important;
+  }
 }
