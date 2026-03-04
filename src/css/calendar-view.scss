@@ -13,7 +13,7 @@ $sep-color: $primary;
   min-height: 60px;
   background: rgba(255, 255, 255, 0.5) !important;
   color: black !important;
-  border: 2px solid $muted;
+  //   border: 2px solid $muted;
   position: relative;
 }
 
@@ -156,11 +156,11 @@ $sep-color: $primary;
   border-top: 3px solid $primary;
 }
 .calendar-day-btn.first-day-of-month {
-  border-left: 5px solid $primary !important;
-  border-top: 5px solid $primary !important;
+  //   border-left: 5px solid $primary !important;
+  //   border-top: 5px solid $primary !important;
 }
 .calendar-cell {
-  padding: 8px 4px;
+  padding: 12px 6px;
   &:has(.first-day-of-month) {
     border-top: none !important;
   }
@@ -211,7 +211,8 @@ $sep-color: $primary;
 }
 
 .calendar-day-btn.calendar-past {
-  background-color: transparent !important;
+  background-color: rgba(205, 205, 205, 0.4) !important;
+  border: none !important;
 }
 .calendar-day-btn.calendar-past .calendar-day-number {
   color: #444 !important;
