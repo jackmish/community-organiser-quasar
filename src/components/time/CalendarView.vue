@@ -21,7 +21,6 @@
           text-color="white"
           @click="setEventDateToToday"
           class="text-weight-bold today-jump-btn"
-          style="font-size: 16px"
         >
           TODAY
         </q-btn>
@@ -259,7 +258,7 @@ import {
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
 import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
-import { format, addDays, startOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
   priorityColors as themePriorityColors,
   priorityDefinitions as themePriorityDefinitions,
@@ -1113,30 +1112,25 @@ function handleDateSelect(dateString: string) {
 // Helper functions
 function getWeekLabel(dayDate: string) {
   const date = new Date(dayDate);
-  const todayDate = new Date();
+  const today = new Date();
 
-  const dateNormalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayNormalized = new Date(
-    todayDate.getFullYear(),
-    todayDate.getMonth(),
-    todayDate.getDate()
-  );
+  // Use calendar-day difference to avoid timezone/DST off-by-one issues
+  const daysDiff = differenceInCalendarDays(date, today);
+  if (daysDiff <= 0) return null;
 
-  const daysDiff = Math.floor(
-    (dateNormalized.getTime() - todayNormalized.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  // Exact year marker
+  if (daysDiff === 365) return `+${daysDiff}d`;
 
-  if (daysDiff > 0) {
-    if (daysDiff === 365) {
-      return `+${daysDiff}d`;
-    }
-    if (daysDiff % 30 === 0 && daysDiff <= 360) {
-      return `+${daysDiff}d`;
-    }
-    if (daysDiff % 7 === 0) {
-      const weeksDiff = daysDiff / 7;
-      return `+${weeksDiff}w`;
-    }
+  // Exact 30-day multiples (check explicit targets to avoid modulo pitfalls)
+  for (let n = 30; n <= 360; n += 30) {
+    const target = format(addDays(today, n), "yyyy-MM-dd");
+    if (target === dayDate) return `+${n}d`;
+  }
+
+  // Week-based markers: check exact whole-week offsets
+  for (let w = 1; w <= 52; w++) {
+    const target = format(addDays(today, w * 7), "yyyy-MM-dd");
+    if (target === dayDate) return `+${w}w`;
   }
 
   return null;
