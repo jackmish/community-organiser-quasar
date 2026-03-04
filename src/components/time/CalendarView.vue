@@ -257,6 +257,7 @@ import {
   priorityColors as themePriorityColors,
   priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
+  monthColors,
 } from "../theme";
 import Watermark from "src/components/ui/Watermark.vue";
 
@@ -477,6 +478,19 @@ function createOverlaysFromEdges() {
   }
 
   // Create one overlay per month segment (few per month)
+  const todayMonth = new Date().getMonth() + 1; // 1-12
+  // color array matching the buttons (index = relative offset from current month)
+  const overlayColorArray = [
+    "#1976d2", // current month
+    // use the same green as the jump buttons (fallback to a safe hex)
+    "#4caf50",
+    "#9c27b0",
+    "#ff9800",
+    "#009688",
+    "#e91e63",
+    "#3f51b5",
+  ];
+
   for (const [month, segments] of monthSegments.entries()) {
     const url = `/images/months/bg_${month}.jpg`;
     for (const seg of segments) {
@@ -490,6 +504,15 @@ function createOverlaysFromEdges() {
         div.dataset.startCol = String((seg as any).startCol);
       if ((seg as any).endCol !== undefined)
         div.dataset.endCol = String((seg as any).endCol);
+      // compute relative offset (0 = current month, 1 = next month, ...)
+      const monthNum = Number(month);
+      const offset = (monthNum - todayMonth) % 12;
+      let overlayColor = "";
+      if (offset >= 0 && offset < overlayColorArray.length) {
+        overlayColor = overlayColorArray[offset] ?? overlayColorArray[0] ?? "#1976d2";
+      } else {
+        overlayColor = monthColors[month] ?? "#1976d2";
+      }
       Object.assign(div.style, {
         position: "absolute",
         top: `${seg.top}px`,
@@ -497,7 +520,7 @@ function createOverlaysFromEdges() {
         width: `${seg.width}px`,
         height: `${seg.height}px`,
         // backgroundImage: `url(${url})`,
-        backgroundColor: "#1976d2",
+        backgroundColor: overlayColor,
         //Note: "#1976d2", looks very good as bg
         // initial: center the image in each overlay (first-solution behavior)
         backgroundSize: `cover`,
@@ -1060,6 +1083,14 @@ const nextSixMonths = computed(() => {
 
   return months;
 });
+
+// Button colors derived from theme monthColors for the next six months
+const buttonColors = computed(() =>
+  nextSixMonths.value.map((m) => {
+    const mm = String(new Date(m.value).getMonth() + 1).padStart(2, "0");
+    return monthColors[mm] ?? "#1976d2";
+  })
+);
 
 function previousCalendarWeeks() {
   calendarBaseDate.value = addDays(calendarBaseDate.value, -calendarViewDays.value);

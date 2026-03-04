@@ -109,3 +109,19 @@ export const typeTextColors: Record<string, string> = {
   NoteLater: 'white',
   Replenish: '#212121',
 };
+
+// Month color tokens (hex only). Keys are zero-padded month numbers e.g. '01'..'12'.
+export const monthColors: Record<string, string> = {
+  '01': '#90caf9',
+  '02': '#f48fb1',
+  '03': '#a5d6a7',
+  '04': '#ffcc80',
+  '05': '#ffd54f',
+  '06': '#b39ddb',
+  '07': '#ff8a65',
+  '08': '#4db6ac',
+  '09': '#aed581',
+  '10': '#ffb74d',
+  '11': '#81d4fa',
+  '12': '#ce93d8',
+};
