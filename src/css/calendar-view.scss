@@ -11,7 +11,7 @@ $sep-color: $primary;
   width: calc(100% - 8px);
   margin: 0 auto;
   min-height: 60px;
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.9);
   color: black !important;
   //   border: 2px solid $muted;
   position: relative;
@@ -84,6 +84,14 @@ $sep-color: $primary;
   .calendar-day-content {
     position: relative;
     z-index: 1;
+  }
+
+  &.calendar-past {
+    background-color: rgba(205, 205, 205, 0.8);
+    border: none !important;
+  }
+  &.calendar-past .calendar-day-number {
+    color: #444 !important;
   }
 }
 
@@ -219,14 +227,6 @@ $sep-color: $primary;
   word-break: break-word;
   line-height: 1;
   text-transform: none !important;
-}
-
-.calendar-day-btn.calendar-past {
-  background-color: rgba(205, 205, 205, 0.7) !important;
-  border: none !important;
-}
-.calendar-day-btn.calendar-past .calendar-day-number {
-  color: #444 !important;
 }
 
 .calendar-day-btn .co21-watermark-text {
