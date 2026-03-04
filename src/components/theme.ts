@@ -125,3 +125,41 @@ export const monthColors: Record<string, string> = {
   '11': '#81d4fa',
   '12': '#ce93d8',
 };
+
+// Overlay color chooser used for calendar overlays and jump-button alignment.
+export function getOverlayColorForMonth(monthLike: string | number | Date): string {
+  const overlayColorArray = [
+    '#1976d2', // current month
+    '#4caf50',
+    '#9c27b0',
+    '#ff9800',
+    '#009688',
+    '#e91e63',
+    '#3f51b5',
+  ];
+
+  let monthNum: number;
+  if (typeof monthLike === 'number') monthNum = monthLike;
+  else if (monthLike instanceof Date) monthNum = monthLike.getMonth() + 1;
+  else if (typeof monthLike === 'string') {
+    const parsed = new Date(monthLike);
+    if (!isNaN(parsed.getTime())) monthNum = parsed.getMonth() + 1;
+    else {
+      const n = Number(monthLike);
+      monthNum = isNaN(n) ? 1 : n;
+    }
+  } else {
+    const n = Number(String(monthLike));
+    monthNum = isNaN(n) ? 1 : n;
+  }
+
+  const todayMonth = new Date().getMonth() + 1;
+  const offset = (monthNum - todayMonth + 12) % 12;
+
+  if (offset >= 0 && offset < overlayColorArray.length) {
+    return overlayColorArray[offset] ?? overlayColorArray[0] ?? '#1976d2';
+  }
+
+  const key = String(monthNum).padStart(2, '0');
+  return monthColors[key] ?? '#1976d2';
+}

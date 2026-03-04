@@ -95,7 +95,7 @@
                         ? ' ' + new Date(day).getFullYear()
                         : '')
                     "
-                    background="blur(60px) rgba(100,200,255,0.74)"
+                    :background="`blur(60px) ${getOverlayColorForMonth(day)}`"
                     color="#00000085"
                     justifyContent="flex-start"
                     class="calendar-month-label-above"
@@ -258,6 +258,7 @@ import {
   priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
   monthColors,
+  getOverlayColorForMonth,
 } from "../theme";
 import Watermark from "src/components/ui/Watermark.vue";
 
@@ -479,17 +480,7 @@ function createOverlaysFromEdges() {
 
   // Create one overlay per month segment (few per month)
   const todayMonth = new Date().getMonth() + 1; // 1-12
-  // color array matching the buttons (index = relative offset from current month)
-  const overlayColorArray = [
-    "#1976d2", // current month
-    // use the same green as the jump buttons (fallback to a safe hex)
-    "#4caf50",
-    "#9c27b0",
-    "#ff9800",
-    "#009688",
-    "#e91e63",
-    "#3f51b5",
-  ];
+  // overlay color selection is provided by `getOverlayColorForMonth` in theme
 
   for (const [month, segments] of monthSegments.entries()) {
     const url = `/images/months/bg_${month}.jpg`;
@@ -504,15 +495,8 @@ function createOverlaysFromEdges() {
         div.dataset.startCol = String((seg as any).startCol);
       if ((seg as any).endCol !== undefined)
         div.dataset.endCol = String((seg as any).endCol);
-      // compute relative offset (0 = current month, 1 = next month, ...)
-      const monthNum = Number(month);
-      const offset = (monthNum - todayMonth) % 12;
-      let overlayColor = "";
-      if (offset >= 0 && offset < overlayColorArray.length) {
-        overlayColor = overlayColorArray[offset] ?? overlayColorArray[0] ?? "#1976d2";
-      } else {
-        overlayColor = monthColors[month] ?? "#1976d2";
-      }
+      // compute overlay color using shared helper
+      const overlayColor = getOverlayColorForMonth(month);
       Object.assign(div.style, {
         position: "absolute",
         top: `${seg.top}px`,
