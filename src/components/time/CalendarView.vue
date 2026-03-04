@@ -498,6 +498,7 @@ function createOverlaysFromEdges() {
         height: `${seg.height}px`,
         // backgroundImage: `url(${url})`,
         backgroundColor: "#1976d2",
+        //Note: "#1976d2", looks very good as bg
         // initial: center the image in each overlay (first-solution behavior)
         backgroundSize: `cover`,
         backgroundPosition: `center center`,
