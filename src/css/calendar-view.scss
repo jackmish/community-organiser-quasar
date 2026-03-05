@@ -4,6 +4,7 @@ $primary: #1976d2;
 $accent: #0d47a1;
 $muted: #eee;
 $highlight: rgba(50, 200, 255, 0.5);
+$opposite-color: rgba(156, 169, 32);
 $sep-color: $primary;
 
 @mixin btn-base() {
@@ -15,6 +16,15 @@ $sep-color: $primary;
   color: black !important;
   //   border: 2px solid $muted;
   position: relative;
+}
+
+/* Larger Prev/Next navigation buttons in the calendar */
+.calendar-nav-btn {
+  min-height: 56px !important;
+  padding: 10px 18px !important;
+  font-size: 1.05rem !important;
+  line-height: 1 !important;
+  border-radius: 8px !important;
 }
 
 .calendar-table {
@@ -255,7 +265,28 @@ $sep-color: $primary;
 .bottom-row,
 .top-row {
   padding: 10px;
-  background: rgba(111, 255, 255, 0.6);
+  // background: rgba(255, 255, 255, 0.6);
+  // background-color: rgba(156, 169, 32, 1);
+  // background-color: $opposite-color;
+  background-color: $highlight;
   margin-top: 20px;
   margin-bottom: 20px;
+  position: relative;
+  // &::before {
+  //   content: '';
+  //   position: absolute;
+  //   inset: 0;
+  //   // background: rgba(111, 200, 111, 0.6);
+  //   // background: rgba(111, 200, 55, 0.6);
+  //   background: rgba(55, 111, 122, 0.6);
+  //   // background-color: $opposite-color;
+  //   z-index: 1;
+  //   border-radius: 8px;
+  //   mix-blend-mode: hard-light;
+  //   z-index: 0;
+  // }
+}
+
+.pagination-range-options {
+  z-index: 2;
 }

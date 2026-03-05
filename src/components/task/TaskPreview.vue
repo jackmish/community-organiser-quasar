@@ -69,7 +69,9 @@
                       />
                     </q-item-section>
                     <q-item-section>
-                      <div :style="{ color: priorityTextColor(p), fontWeight: 600 }">{{ p }}</div>
+                      <div :style="{ color: priorityTextColor(p), fontWeight: 600 }">
+                        {{ p }}
+                      </div>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -83,9 +85,14 @@
                 clickable
                 @click.stop="groupMenu = true"
               >
-                {{ groupName || 'No group' }}
+                {{ groupName || "No group" }}
               </q-chip>
-              <q-menu v-model="groupMenu" anchor="bottom right" self="top right" class="group-menu">
+              <q-menu
+                v-model="groupMenu"
+                anchor="bottom right"
+                self="top right"
+                class="group-menu"
+              >
                 <q-list dense separator>
                   <q-item clickable dense @click="selectGroup(null)">
                     <q-item-section
@@ -169,14 +176,18 @@
                 class="collapse-wrapper"
                 :ref="(el) => setItemRef(el, idx)"
                 :class="{
-                  shrinking: props.animatingLines && props.animatingLines.includes(Number(idx)),
+                  shrinking:
+                    props.animatingLines && props.animatingLines.includes(Number(idx)),
                 }"
               >
                 <q-item
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
                   @click.stop="
-                    api.task.subtaskLine.toggleStatus(api.task.active.task.value, Number(idx))
+                    api.task.subtaskLine.toggleStatus(
+                      api.task.active.task.value,
+                      Number(idx)
+                    )
                   "
                 >
                   <q-item-section side>
@@ -203,7 +214,7 @@
                 </q-item>
               </div>
             </div>
-            <div v-else class="q-mb-xs" v-html="line.html"></div>
+            <div v-else class="q-mb-xs q-mt-md" v-html="line.html"></div>
           </div>
         </div>
       </div>
@@ -212,20 +223,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRaw, ref, nextTick, watch } from 'vue';
-import type { ComponentPublicInstance } from 'vue';
-import logger from 'src/utils/logger';
-import { format } from 'date-fns';
+import { computed, toRaw, ref, nextTick, watch } from "vue";
+import type { ComponentPublicInstance } from "vue";
+import logger from "src/utils/logger";
+import { format } from "date-fns";
 import {
   priorityColors,
   priorityTextColor,
   priorityDefinitions,
   priorityIcons,
   highlightIcon,
-} from '../theme';
-import { formatDisplayDate, formatEventHoursDiff } from 'src/modules/task/utlils/occursOnDay';
-import * as api from 'src/modules/day-organiser/_apiRoot';
-import type { Task } from 'src/modules/task/types';
+} from "../theme";
+import {
+  formatDisplayDate,
+  formatEventHoursDiff,
+} from "src/modules/task/utlils/occursOnDay";
+import * as api from "src/modules/day-organiser/_apiRoot";
+import type { Task } from "src/modules/task/types";
 
 const props = defineProps<{
   task: Task;
@@ -237,16 +251,16 @@ const props = defineProps<{
 // throughout the component so callers don't need to pass a task prop.
 const activeTask = api.task.active.task;
 const emit = defineEmits([
-  'edit',
-  'close',
-  'toggle-status',
-  'update-task',
-  'line-collapsed',
-  'line-expanded',
+  "edit",
+  "close",
+  "toggle-status",
+  "update-task",
+  "line-collapsed",
+  "line-expanded",
 ]);
 
 // Quick-add subtask helper
-const quickSubtask = ref('');
+const quickSubtask = ref("");
 const quickSubtaskStar = ref(false);
 
 // refs to each rendered list item so we can animate height directly
@@ -260,8 +274,8 @@ const transitionFallbacks = new Map<HTMLElement, number>();
 function selectPriority(p: string) {
   try {
     const t: Task = { ...toRaw(activeTask.value) } as Task;
-    t.priority = p as Task['priority'];
-    emit('update-task', t);
+    t.priority = p as Task["priority"];
+    emit("update-task", t);
   } finally {
     priorityMenu.value = false;
   }
@@ -270,13 +284,14 @@ function selectPriority(p: string) {
 async function selectGroup(gid: string | null) {
   try {
     const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
-    const date = (activeTask.value && (activeTask.value.date || activeTask.value.eventDate)) || '';
+    const date =
+      (activeTask.value && (activeTask.value.date || activeTask.value.eventDate)) || "";
     if (!activeTask.value || !activeTask.value.id) return;
     const updates: any = {};
     updates.groupId = gid == null ? undefined : gid;
     await updateTask(date, activeTask.value.id, updates);
   } catch (e) {
-    logger.error('Failed to update task group', e);
+    logger.error("Failed to update task group", e);
   } finally {
     groupMenu.value = false;
   }
@@ -302,7 +317,7 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: string | 
   // If we received a generic Element (e.g. SVGElement), coerce as a fallback.
   // This is uncommon but avoids a TS error when refs resolve to Element.
   try {
-    const asEl = el as unknown as HTMLElement;
+    const asEl = (el as unknown) as HTMLElement;
     if (asEl && (asEl as any).style !== undefined) {
       itemRefs.value[i] = asEl;
       return;
@@ -318,7 +333,7 @@ function addQuickSubtask() {
   const text = quickSubtask.value;
   // Delegate insertion and persistence to the task API which will trim/validate input.
   void api.task.subtaskLine.add(text);
-  quickSubtask.value = '';
+  quickSubtask.value = "";
   quickSubtaskStar.value = false;
   nextTick(() => {
     // parent will re-render after API updates
@@ -327,20 +342,20 @@ function addQuickSubtask() {
 
 // preview card style: 8px blue border to match AddTaskForm style
 const previewCardStyle = computed(() => ({
-  border: '8px solid #1976d2',
-  backgroundColor: '#ffffff',
+  border: "8px solid #1976d2",
+  backgroundColor: "#ffffff",
 }));
 
 const priorityColor = (p?: string) => {
-  return p ? priorityColors[p] || 'grey-4' : 'grey-4';
+  return p ? priorityColors[p] || "grey-4" : "grey-4";
 };
 
 const looksLikeCssColor = (s?: string) => !!(s && /^\s*(#|rgb|hsl)/i.test(s));
 
 function priorityChipClass(p?: string) {
   const c = priorityColor(p);
-  if (!c) return '';
-  return looksLikeCssColor(c) ? '' : `bg-${c}`;
+  if (!c) return "";
+  return looksLikeCssColor(c) ? "" : `bg-${c}`;
 }
 
 function priorityChipStyle(p?: string) {
@@ -360,68 +375,68 @@ function menuItemStyle(p?: string) {
     return {
       backgroundColor: c,
       color: txt,
-      ['--priority-bg']: c,
-      ['--priority-text']: txt,
+      ["--priority-bg"]: c,
+      ["--priority-text"]: txt,
     } as any;
   // For Quasar color names we rely on bg-<color> class; still set text color variable
-  return { color: txt, ['--priority-text']: txt } as any;
+  return { color: txt, ["--priority-text"]: txt } as any;
 }
 
 function menuItemClass(p?: string) {
   return priorityChipClass(p);
 }
 
-const groupName = computed(() => props.groupName || '');
+const groupName = computed(() => props.groupName || "");
 
-const isTimeEvent = computed(() => (activeTask.value?.type_id || '') === 'TimeEvent');
+const isTimeEvent = computed(() => (activeTask.value?.type_id || "") === "TimeEvent");
 
 const displayDate = computed(() => {
   const task = activeTask.value || ({} as any);
-  const dateStr = (task.date || task.eventDate || '').toString();
-  if (!dateStr) return '';
+  const dateStr = (task.date || task.eventDate || "").toString();
+  if (!dateStr) return "";
   return formatDisplayDate(dateStr);
 });
 
 const eventTimeHoursDisplay = computed(() => {
   const task = activeTask.value || ({} as any);
-  const dateStr = (task.date || task.eventDate || '').toString();
-  const timeStr = task.eventTime || '';
+  const dateStr = (task.date || task.eventDate || "").toString();
+  const timeStr = task.eventTime || "";
   return formatEventHoursDiff(dateStr, timeStr);
 });
 
 // Rendered description with simple replacements:
 // - replace '[x]' with a check emoji
 // - escape HTML, then convert newlines to <br>
-function escapeHtml(s = '') {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function escapeHtml(s = "") {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function escapeRegExp(string = '') {
-  return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function escapeRegExp(string = "") {
+  return String(string).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
  * If `text` begins with `title` (ignoring case and surrounding whitespace),
  * remove the title and any common separators that follow it (e.g. " - ", ": ", "—", "|", newline).
  */
-function stripTitleFrom(text = '', title = '') {
+function stripTitleFrom(text = "", title = "") {
   if (!text || !title) return text;
   const t = title.trim();
   if (!t) return text;
   const pattern = new RegExp(
-    '^\\s*' + escapeRegExp(t) + '(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?',
-    'i',
+    "^\\s*" + escapeRegExp(t) + "(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?",
+    "i"
   );
-  return text.replace(pattern, '');
+  return text.replace(pattern, "");
 }
 
 const renderedDescription = computed(() => {
-  const d = props.task?.description || '';
+  const d = props.task?.description || "";
   // If the description begins with the title, strip that prefix for preview clarity
-  const stripped = stripTitleFrom(d, props.task?.name || '');
+  const stripped = stripTitleFrom(d, props.task?.name || "");
   let escaped = escapeHtml(stripped);
-  escaped = escaped.replace(/\[x\]/gi, '✅');
-  escaped = escaped.replace(/\n/g, '<br/>');
+  escaped = escaped.replace(/\[x\]/gi, "✅");
+  escaped = escaped.replace(/\n/g, "<br/>");
   return escaped;
 });
 
@@ -434,16 +449,16 @@ function toggleHighlight(idx: number) {
   try {
     const parsed = parsedLines.value;
     const item = parsed[idx];
-    if (!item || item.type !== 'list') return;
-    const rawDesc = String(activeTask.value?.description || '');
+    if (!item || item.type !== "list") return;
+    const rawDesc = String(activeTask.value?.description || "");
     const rawLines = rawDesc.split(/\r?\n/);
     // find exact matching raw line
-    let foundIdx = rawLines.findIndex((r) => r === (item?.raw || ''));
+    let foundIdx = rawLines.findIndex((r) => r === (item?.raw || ""));
     // fallback: try loose match by stripping list marker
     if (foundIdx === -1) {
-      const stripped = (item?.raw || '').replace(/^\s*[-*]\s*/, '').trim();
+      const stripped = (item?.raw || "").replace(/^\s*[-*]\s*/, "").trim();
       foundIdx = rawLines.findIndex(
-        (r) => (r || '').replace(/^\s*[-*]\s*/, '').trim() === stripped,
+        (r) => (r || "").replace(/^\s*[-*]\s*/, "").trim() === stripped
       );
     }
     const newLines = [...rawLines];
@@ -456,7 +471,7 @@ function toggleHighlight(idx: number) {
           .filter((i) => i >= 0 && i !== foundIdx);
         const lastOtherStar = otherStarIdxs.length ? Math.max(...otherStarIdxs) : -1;
         // remove trailing star marker
-        newLines[foundIdx] = (newLines[foundIdx] ?? '').replace(/\s*\*\s*$/, '');
+        newLines[foundIdx] = (newLines[foundIdx] ?? "").replace(/\s*\*\s*$/, "");
         // If this item was above other starred items, move it below the last starred item
         if (lastOtherStar >= 0 && foundIdx < lastOtherStar) {
           const removed = newLines.splice(foundIdx, 1)[0];
@@ -468,22 +483,22 @@ function toggleHighlight(idx: number) {
       }
     } else {
       // add star and move to top (after title if present)
-      const candidate = (item?.raw || '').replace(/\s*\*\s*$/, '') + ' *';
+      const candidate = (item?.raw || "").replace(/\s*\*\s*$/, "") + " *";
       if (foundIdx >= 0) {
         newLines.splice(foundIdx, 1);
       }
-      const title = props.task?.name || '';
+      const title = props.task?.name || "";
       let insertAt = 0;
       if (title && newLines.length > 0) {
-        const first = newLines[0] || '';
-        const titleMatch = new RegExp('^\\s*' + escapeRegExp(title) + '\\b', 'i');
+        const first = newLines[0] || "";
+        const titleMatch = new RegExp("^\\s*" + escapeRegExp(title) + "\\b", "i");
         if (titleMatch.test(first)) insertAt = 1;
       }
       newLines.splice(insertAt, 0, candidate);
     }
-    const updated = newLines.join('\n');
+    const updated = newLines.join("\n");
     const t = { ...toRaw(activeTask.value), description: updated } as Task;
-    emit('update-task', t);
+    emit("update-task", t);
   } catch (e) {
     void e;
   }
@@ -495,24 +510,24 @@ async function copyStyledTask() {
   const text = buildPlainTextFromParsed(parsedLines.value, t);
   try {
     const nav: any = navigator as any;
-    if (nav.clipboard && nav.clipboard.write && typeof ClipboardItem !== 'undefined') {
-      const blobHtml = new Blob([html], { type: 'text/html' });
-      const blobText = new Blob([text], { type: 'text/plain' });
+    if (nav.clipboard && nav.clipboard.write && typeof ClipboardItem !== "undefined") {
+      const blobHtml = new Blob([html], { type: "text/html" });
+      const blobText = new Blob([text], { type: "text/plain" });
       await nav.clipboard.write([
-        new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText }),
+        new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText }),
       ]);
     } else if (nav.clipboard && nav.clipboard.writeText) {
       await nav.clipboard.writeText(text);
     } else {
-      const ta = document.createElement('textarea');
+      const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(ta);
     }
   } catch (err) {
-    logger.error('Copy failed', err);
+    logger.error("Copy failed", err);
   }
 }
 
@@ -524,34 +539,34 @@ function buildPlainTextFromParsed(
     checked?: boolean;
     highlighted?: boolean;
   }>,
-  task: any,
+  task: any
 ) {
   const lines: string[] = [];
   // omit title per user request; include date/time only (formatted)
   if (task.date || task.eventTime) {
     try {
-      const d = task.date || task.eventDate || '';
-      const disp = d ? format(new Date(d), 'EEEE, dd.MM.yyyy') : '';
-      lines.push(`${disp} ${task.eventTime || ''}`.trim());
+      const d = task.date || task.eventDate || "";
+      const disp = d ? format(new Date(d), "EEEE, dd.MM.yyyy") : "";
+      lines.push(`${disp} ${task.eventTime || ""}`.trim());
     } catch (e) {
-      lines.push(`${task.date || ''} ${task.eventTime || ''}`.trim());
+      lines.push(`${task.date || ""} ${task.eventTime || ""}`.trim());
     }
   }
-  lines.push('');
+  lines.push("");
   for (const item of parsed) {
-    if (item.type === 'list') {
-      let raw = item.raw || '';
-      raw = raw.replace(/^\s*[-*]\s*/, '').replace(/^\s*\d+[.)]\s*/, '');
-      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
-      const clean = raw.replace(/^\s*\[[xX]\]\s*/, '').trim();
-      lines.push(`${checked ? '✔' : '-'} ${clean}`);
+    if (item.type === "list") {
+      let raw = item.raw || "";
+      raw = raw.replace(/^\s*[-*]\s*/, "").replace(/^\s*\d+[.)]\s*/, "");
+      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || "");
+      const clean = raw.replace(/^\s*\[[xX]\]\s*/, "").trim();
+      lines.push(`${checked ? "✔" : "-"} ${clean}`);
     } else {
-      const text = (item.raw || '').trim();
+      const text = (item.raw || "").trim();
       if (text) lines.push(text);
     }
   }
   // omit priority/group per user request
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function buildHtmlFromParsed(
@@ -562,10 +577,10 @@ function buildHtmlFromParsed(
     checked?: boolean;
     highlighted?: boolean;
   }>,
-  task: any,
+  task: any
 ) {
-  const esc = (s = '') =>
-    String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const esc = (s = "") =>
+    String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // use shared `priorityColors` imported from theme
   const parts: string[] = [];
   // overall container; use default font for title (omitted) and smaller font for content
@@ -573,42 +588,48 @@ function buildHtmlFromParsed(
   // include only date/time (no title)
   if (task.date || task.eventTime) {
     try {
-      const d = task.date || task.eventDate || '';
-      const disp = d ? format(new Date(d), 'EEEE, dd.MM.yyyy') : '';
+      const d = task.date || task.eventDate || "";
+      const disp = d ? format(new Date(d), "EEEE, dd.MM.yyyy") : "";
       parts.push(
-        `<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(disp)} ${esc(task.eventTime || '')}</div>`,
+        `<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(disp)} ${esc(
+          task.eventTime || ""
+        )}</div>`
       );
     } catch (e) {
       parts.push(
-        `<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(task.date || '')} ${esc(task.eventTime || '')}</div>`,
+        `<div style="color:#666;font-size:0.9em;margin-bottom:8px;">${esc(
+          task.date || ""
+        )} ${esc(task.eventTime || "")}</div>`
       );
     }
   }
   // Render content using parsed lines; lists get smaller font
-  const listItems = parsed.filter((p) => p.type === 'list');
+  const listItems = parsed.filter((p) => p.type === "list");
   if (listItems.length > 0) {
     parts.push(
-      '<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;font-size:13px;line-height:1.4;font-weight:normal;">',
+      '<ul style="padding-left:18px;margin-top:0;margin-bottom:8px;font-size:13px;line-height:1.4;font-weight:normal;">'
     );
     for (const item of listItems) {
-      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || '');
+      const checked = !!item.checked || /^\s*\[[xX]\]\s*/.test(item.raw || "");
       parts.push(
-        `<li style="margin-bottom:4px;font-weight:normal;">${checked ? '&#x2705; ' : ''}${item.html}</li>`,
+        `<li style="margin-bottom:4px;font-weight:normal;">${checked ? "&#x2705; " : ""}${
+          item.html
+        }</li>`
       );
     }
-    parts.push('</ul>');
+    parts.push("</ul>");
   } else {
     for (const item of parsed) {
-      if (item.type === 'text' && item.html && item.html.trim()) {
+      if (item.type === "text" && item.html && item.html.trim()) {
         parts.push(
-          `<p style="margin:0 0 6px 0;font-size:13px;line-height:1.4;font-weight:normal;">${item.html}</p>`,
+          `<p style="margin:0 0 6px 0;font-size:13px;line-height:1.4;font-weight:normal;">${item.html}</p>`
         );
       }
     }
   }
   // omit priority/group per user request
-  parts.push('</div>');
-  return parts.join('');
+  parts.push("</div>");
+  return parts.join("");
 }
 </script>
 
@@ -751,7 +772,7 @@ body .q-menu.priority-menu .q-item.q-item--active::before {
 /* Use a subtle semi-transparent white overlay on hover so the colored background brightens
    instead of being replaced by the global blue overlay. */
 body .q-menu.priority-menu .q-item::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;

@@ -10,7 +10,8 @@
           color="primary"
           text-color="white"
           @click="previousCalendarWeeks"
-          size="sm"
+          size="md"
+          class="calendar-nav-btn"
         />
       </div>
       <div class="col text-right">
@@ -208,7 +209,7 @@
   </div>
   <!-- Prev button and visible days per page option (moved to bottom) -->
   <div class="bottom-row row q-mb-md items-center">
-    <div class="col">
+    <div class="col pagination-range-options">
       <div class="row items-center q-gutter-md">
         <div class="text-subtitle2">Visible days</div>
         <q-option-group
@@ -230,10 +231,11 @@
         unelevated
         icon-right="chevron_right"
         label="Next"
-        color="primary"
-        text-color="white"
-        @click="nextCalendarWeeks"
-        size="sm"
+          color="primary"
+          text-color="white"
+          @click="nextCalendarWeeks"
+          size="md"
+          class="calendar-nav-btn"
       />
     </div>
   </div>
