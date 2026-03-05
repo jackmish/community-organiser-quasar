@@ -8,6 +8,14 @@
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-h5">{{ task.name }}</div>
         <div style="display: flex; gap: 8px; align-items: center">
+          <q-checkbox
+            dense
+            keep-color
+            :model-value="isDone"
+            @update:model-value="onToggleDone"
+            color="green"
+            style="margin-right: 6px"
+          />
           <q-btn
             dense
             unelevated
@@ -16,7 +24,7 @@
             label="Edit"
             @click.stop="$emit('edit')"
           />
-          <q-btn dense flat icon="content_copy" label="Copy" @click="copyStyledTask" />
+          <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
         </div>
       </div>
       <div>
@@ -444,6 +452,19 @@ const renderedDescription = computed(() => {
 // parsed representation and watcher. Use that shared ref here.
 const parsedLines = api.task.subtaskLine.parsedLines;
 const isDone = computed(() => Number(activeTask.value?.status_id) === 0);
+
+async function onToggleDone(val: boolean) {
+  try {
+    const task = activeTask.value;
+    if (!task) return;
+    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || "";
+    const id = task.id || task._id || task.uuid;
+    if (!id) return;
+    await api.task.status.toggleComplete(date, id);
+  } catch (e) {
+    // ignore
+  }
+}
 
 function toggleHighlight(idx: number) {
   try {
