@@ -231,11 +231,11 @@
         unelevated
         icon-right="chevron_right"
         label="Next"
-          color="primary"
-          text-color="white"
-          @click="nextCalendarWeeks"
-          size="md"
-          class="calendar-nav-btn"
+        color="primary"
+        text-color="white"
+        @click="nextCalendarWeeks"
+        size="md"
+        class="calendar-nav-btn"
       />
     </div>
   </div>

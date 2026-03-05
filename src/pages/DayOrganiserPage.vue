@@ -381,7 +381,19 @@ watch(
               (activeTask && String(activeTask?.date || activeTask?.eventDate) !== String(newDate))
             ) {
               try {
-                api.task.active.setTask(null);
+                // Clear any active task so the form enters add mode (no initialTask)
+                if (api.task && api.task.active && api.task.active.setTask)
+                  api.task.active.setTask(null);
+                else if (api.task && api.task.active) api.task.active.task.value = null;
+
+                // Ensure the newTask helper defaults to a TimeEvent type so the form
+                // shows the TimeEvent chooser when creating a new task.
+                try {
+                  if (typeof newTask !== 'undefined' && newTask && 'value' in newTask)
+                    (newTask as any).value.type_id = 'TimeEvent';
+                } catch (e) {
+                  // ignore if newTask isn't available
+                }
               } catch (e) {
                 try {
                   api.task.active.task.value = null;
