@@ -18,91 +18,11 @@
             @edit-task="$emit('edit-task', $event)"
           />
         </template>
-        <template v-else-if="item.__isHiddenGroup">
-          <q-item
-            class="q-pa-sm task-card hidden-group-item"
-            clickable
-            @click.stop="selectHiddenGroup(item._group)"
-          >
-            <q-item-section>
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
-                <q-avatar
-                  size="40"
-                  :style="{
-                    background: item._group.color || getGroupColor(item._group.id),
-                  }"
-                >
-                  <q-icon
-                    :name="item._group.icon || getGroupIcon(item._group.id) || 'group'"
-                    size="18"
-                    color="white"
-                  />
-                </q-avatar>
-                <div class="title-main">
-                  <div class="title-text">
-                    <q-item-label class="title-ellipsis"
-                      ><strong>{{ item._group.name }}</strong></q-item-label
-                    >
-                    <div class="text-caption">{{ item._group.total }} tasks</div>
-                  </div>
-                </div>
-              </div>
-            </q-item-section>
-            <q-item-section side>
-              <div class="priority-summary-grid">
-                <span
-                  v-if="item._group.critical > 0"
-                  class="priority-summary"
-                  :style="{ background: '#b71c1c', color: 'white' }"
-                >
-                  <q-icon name="warning" size="14px" /> {{ item._group.critical }}
-                </span>
-                <span
-                  v-if="item._group.high > 0"
-                  class="priority-summary"
-                  :style="{
-                    background: themePriorityColors.high,
-                    color: themePriorityTextColor('high'),
-                  }"
-                >
-                  <q-icon
-                    :name="themePriorityDefinitions['high']?.icon || 'priority_high'"
-                    size="14px"
-                  />
-                  {{ item._group.high }}
-                </span>
-                <span
-                  v-if="item._group.medium > 0"
-                  class="priority-summary"
-                  :style="{
-                    background: themePriorityColors.medium,
-                    color: themePriorityTextColor('medium'),
-                  }"
-                >
-                  <q-icon
-                    :name="themePriorityDefinitions['medium']?.icon || 'label'"
-                    size="14px"
-                  />
-                  {{ item._group.medium }}
-                </span>
-                <span
-                  v-if="item._group.low > 0"
-                  class="priority-summary"
-                  :style="{
-                    background: themePriorityColors.low,
-                    color: themePriorityTextColor('low'),
-                  }"
-                >
-                  <q-icon
-                    :name="themePriorityDefinitions['low']?.icon || 'label_outline'"
-                    size="14px"
-                  />
-                  {{ item._group.low }}
-                </span>
-              </div>
-            </q-item-section>
-          </q-item>
-        </template>
+        <HiddenGroupItem
+          v-else-if="item.__isHiddenGroup"
+          :group="item._group"
+          @select="selectHiddenGroup"
+        />
 
         <q-item
           v-else
@@ -251,6 +171,7 @@ import {
   typeIcons,
   highlightIcon,
 } from "../theme";
+import HiddenGroupItem from "./HiddenGroupItem.vue";
 import {
   formatDisplayDate,
   formatEventHoursDiff,
@@ -911,11 +832,5 @@ function confirmDelete(id: string) {
   border-bottom-right-radius: 8px;
 }
 
-/* compact the hidden-group q-item padding on top/right/bottom */
-.hidden-group-item {
-  padding: 0px !important;
-  /* make left side appear pill-like */
-  border-top-left-radius: 26px !important;
-  border-bottom-left-radius: 26px !important;
-}
+/* hidden-group styles moved into HiddenGroupItem.vue to scope them there */
 </style>
