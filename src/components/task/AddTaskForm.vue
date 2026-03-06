@@ -1008,6 +1008,21 @@ watch(
   (val) => {
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
+      // When parent changes the selected date (e.g. calendar day click),
+      // default new tasks to `TimeEvent` so the TimeEvent chooser is shown.
+      try {
+        if (props.mode === 'add') {
+          localNewTask.value.type_id = 'TimeEvent';
+          lastSelectedType.value = 'TimeEvent';
+          try {
+            localStorage.setItem(STORAGE_KEY, 'TimeEvent');
+          } catch (e) {
+            void e;
+          }
+        }
+      } catch (e) {
+        void e;
+      }
     }
   },
 );
