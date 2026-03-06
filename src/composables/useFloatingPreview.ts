@@ -12,15 +12,59 @@ export function useFloatingPreview(opts?: {
     if (!rect) return {};
     const vw = window.innerWidth || document.documentElement.clientWidth;
     const vh = window.innerHeight || document.documentElement.clientHeight;
-    let left = rect.left;
-    const topCandidate = rect.bottom + 8; // place below item
     const preferredWidth = PREVIEW_WIDTH;
-    if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
-    let top = topCandidate;
     const estimatedHeight = Math.min(600, vh - 64);
-    if (top + estimatedHeight + 16 > vh) {
-      top = Math.max(8, rect.top - estimatedHeight - 8);
+
+    // Try placing below first
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    // clamp horizontal if overflowing
+    if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
+    // If fits vertically below, use it
+    if (top + estimatedHeight + 16 <= vh) {
+      return {
+        position: 'fixed',
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(top)}px`,
+        width: `${preferredWidth}px`,
+        zIndex: 2000,
+      } as any;
     }
+
+    // Otherwise try placing to the right of the cell
+    left = rect.right + 8;
+    top = rect.top;
+    // If right placement would overflow horizontally, try left side
+    if (left + preferredWidth + 16 <= vw) {
+      // ensure it fits vertically by clamping top if needed
+      if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
+      return {
+        position: 'fixed',
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(top)}px`,
+        width: `${preferredWidth}px`,
+        zIndex: 2000,
+      } as any;
+    }
+
+    // Try left side
+    left = rect.left - preferredWidth - 8;
+    top = rect.top;
+    if (left >= 8) {
+      if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
+      return {
+        position: 'fixed',
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(top)}px`,
+        width: `${preferredWidth}px`,
+        zIndex: 2000,
+      } as any;
+    }
+
+    // Fallback: place above the cell if nothing else fits
+    left = rect.left;
+    if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
+    top = Math.max(8, rect.top - estimatedHeight - 8);
     return {
       position: 'fixed',
       left: `${Math.round(left)}px`,
