@@ -8,6 +8,8 @@ export function useFloatingPreview(opts?: {
   const previewFloating = ref(false);
   const previewRect = ref<DOMRect | null>(null);
   const preferBelow = ref(false);
+  const ignoreNextClickUntil = ref(0);
+  const lastMouseDownTarget = ref<Node | null>(null);
 
   function computePreviewStyle(rect: DOMRect | null) {
     if (!rect) return {};
@@ -143,6 +145,15 @@ export function useFloatingPreview(opts?: {
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
     preferBelow.value = !!options?.forceBelow;
+    // When showing the floating preview, ignore the next global click briefly
+    // to avoid the same click (mouse up) immediately closing or resetting it.
+    if (previewFloating.value) {
+      ignoreNextClickUntil.value = Date.now() + 250;
+    } else {
+      // clearing floating should also clear preferBelow
+      preferBelow.value = false;
+      ignoreNextClickUntil.value = 0;
+    }
   }
 
   function closeFloatingPreview() {
@@ -153,6 +164,21 @@ export function useFloatingPreview(opts?: {
 
   function onDocClick(e: MouseEvent) {
     try {
+      // Ignore the click that immediately follows opening the preview (same click/up)
+      if (Date.now() < ignoreNextClickUntil.value) return;
+      // If the mousedown started inside the wrapper (or an ignored element), do not close
+      if (lastMouseDownTarget.value) {
+        try {
+          const wrapper = document.querySelector('.floating-preview-wrapper');
+          const t = lastMouseDownTarget.value as Node | null;
+          if (wrapper && t && (wrapper.contains(t) || (opts?.shouldIgnoreClick && opts.shouldIgnoreClick(t)))) {
+            lastMouseDownTarget.value = null;
+            return;
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
       const wrapper = document.querySelector(".floating-preview-wrapper");
       if (!wrapper) {
         closeFloatingPreview();
@@ -172,10 +198,24 @@ export function useFloatingPreview(opts?: {
   }
 
   onMounted(() => {
-    document.addEventListener("click", onDocClick);
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('mousedown', (e) => {
+      try {
+        lastMouseDownTarget.value = e.target as Node | null;
+      } catch (err) {
+        lastMouseDownTarget.value = null;
+      }
+    });
   });
   onBeforeUnmount(() => {
-    document.removeEventListener("click", onDocClick);
+    document.removeEventListener('click', onDocClick);
+    document.removeEventListener('mousedown', (e) => {
+      try {
+        lastMouseDownTarget.value = e.target as Node | null;
+      } catch (err) {
+        lastMouseDownTarget.value = null;
+      }
+    });
   });
 
   return {

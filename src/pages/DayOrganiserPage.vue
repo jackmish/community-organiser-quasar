@@ -159,38 +159,12 @@
           :fixed="!previewFloating"
         />
 
-        <!-- Floating wrapper for AddTaskForm when previewFloating is true -->
-        <div class="floating-preview-wrapper" v-if="previewFloating">
+        <!-- Single AddTaskForm instance. When `previewFloating` is true the parent
+             `.fixed-content` will receive the floating style, preventing remounts
+             and preserving the form state. -->
+        <div class="floating-preview-wrapper" :class="{ floating: previewFloating }" :style="previewFloating ? computePreviewStyle(previewRect) : {}">
           <AddTaskForm
-            v-if="
-              api.task.active.mode.value === 'add' ||
-              api.task.active.mode.value === 'edit'
-            "
-            :filtered-parent-options="filteredParentOptions"
-            :active-group="api.group.active.activeGroup"
-            :show-calendar="false"
-            :selected-date="newTask.eventDate"
-            :all-tasks="allTasks"
-            :replenish-tasks="replenishTasks"
-            :initial-task="api.task.active.task.value"
-            :mode="api.task.active.mode.value"
-            @update:mode="(v) => api.task.active.setMode(v)"
-            @add-task="handleAddTask"
-            @update-task="handleUpdateTask"
-            @delete-task="handleDeleteTask"
-            @toggle-status="handleToggleStatus"
-            @cancel-edit="() => clearTaskToEdit()"
-            @calendar-date-select="handleCalendarDateSelect"
-            @filter-parent-tasks="filterParentTasks"
-          />
-        </div>
-
-        <!-- When not floating, render AddTaskForm inside the fixed panel as before -->
-        <div v-if="!previewFloating">
-          <AddTaskForm
-            v-if="
-              api.task.active.mode.value === 'add' ||
-              api.task.active.mode.value === 'edit'
+            v-if="api.task.active.mode.value === 'add' || api.task.active.mode.value === 'edit'
             "
             :filtered-parent-options="filteredParentOptions"
             :active-group="api.group.active.activeGroup"
