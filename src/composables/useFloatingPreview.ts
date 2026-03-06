@@ -15,12 +15,32 @@ export function useFloatingPreview(opts?: {
     const preferredWidth = PREVIEW_WIDTH;
     const estimatedHeight = Math.min(600, vh - 64);
 
-    // Try placing below first
-    let left = rect.left;
-    let top = rect.bottom + 8;
-    // clamp horizontal if overflowing
+    // Prefer placing to the right of the cell so the description appears beside it.
+    // Fallback order: right -> below -> left -> above.
+    // 1) Right
+    let left = rect.right + 8;
+    let top = rect.top;
+    if (left + preferredWidth + 16 <= vw) {
+      // start from full upward offset, then clamp using viewport rules so the
+      // effective offset decreases automatically when there isn't space below.
+      const fullDesiredTop = rect.top - 230;
+      let desiredTop = fullDesiredTop;
+      // clamp into viewport if needed (same rules used elsewhere)
+      if (desiredTop + estimatedHeight + 16 > vh) desiredTop = Math.max(8, vh - estimatedHeight - 16);
+      if (desiredTop < 8) desiredTop = 8;
+      return {
+        position: 'fixed',
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(desiredTop)}px`,
+        width: `${preferredWidth}px`,
+        zIndex: 2000,
+      } as any;
+    }
+
+    // 2) Below
+    left = rect.left;
+    top = rect.bottom + 8;
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
-    // If fits vertically below, use it
     if (top + estimatedHeight + 16 <= vh) {
       return {
         position: 'fixed',
@@ -31,23 +51,7 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // Otherwise try placing to the right of the cell
-    left = rect.right + 8;
-    top = rect.top;
-    // If right placement would overflow horizontally, try left side
-    if (left + preferredWidth + 16 <= vw) {
-      // ensure it fits vertically by clamping top if needed
-      if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
-      return {
-        position: 'fixed',
-        left: `${Math.round(left)}px`,
-        top: `${Math.round(top)}px`,
-        width: `${preferredWidth}px`,
-        zIndex: 2000,
-      } as any;
-    }
-
-    // Try left side
+    // 3) Left
     left = rect.left - preferredWidth - 8;
     top = rect.top;
     if (left >= 8) {
@@ -61,7 +65,7 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // Fallback: place above the cell if nothing else fits
+    // 4) Above (fallback)
     left = rect.left;
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     top = Math.max(8, rect.top - estimatedHeight - 8);
