@@ -106,7 +106,8 @@
                 </div>
                 <q-btn
                   size="sm"
-                  @click="(ev) => handleDateSelect(ev, day)"
+                  @click="handleDateSelect($event, day, false)"
+                  @contextmenu="handleDateSelect($event, day, true)"
                   :title="
                     new Date(day).toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -1104,46 +1105,54 @@ function jumpToMonth(dateString: string) {
   displayManager.reset();
 }
 
-function handleDateSelect(e: Event | string, dateString?: string) {
-  // Support both call signatures: (ev, date) and (date)
+function handleDateSelect(e: Event | string, dateString?: string, isContext = false) {
+  // Support both call signatures: (ev, date, isContext) and (date)
   let ev: Event | undefined;
-  let date = "";
-  if (typeof e === "string") {
+  let date = '';
+  if (typeof e === 'string') {
     date = e;
   } else {
     ev = e;
-    date = dateString || "";
+    date = dateString || '';
   }
   try {
-    // compute bounding rect of clicked day button for positioning
+    // If this was a contextmenu (right-click), prevent the native menu and
+    // compute the bounding rect so parent can position the add form.
     let rect: DOMRect | null = null;
-    try {
-      if (ev) {
+    if (isContext && ev) {
+      try {
+        ev.preventDefault?.();
+        ev.stopPropagation?.();
+      } catch (err) {
+        void err;
+      }
+      try {
         const el = ev.currentTarget ?? ev.target;
         if (el instanceof Element) rect = el.getBoundingClientRect();
+      } catch (err) {
+        void err;
       }
-    } catch (err) {
-      void err;
     }
 
     void (async () => {
       try {
-        const apiModule = await import("src/modules/day-organiser/_apiRoot");
+        const apiModule = await import('src/modules/day-organiser/_apiRoot');
         const api = apiModule as any;
-        if (api && api.time && typeof api.time.setCurrentDate === "function") {
+        if (api && api.time && typeof api.time.setCurrentDate === 'function') {
           api.time.setCurrentDate(date);
         }
       } catch (e) {
         // ignore
       }
     })();
-    // Emit both the selected date and the optional rect for parent to position forms
-    emit("update:selectedDate", date);
-    emit("day-click", { date, rect });
+    // Always update the selected date on left or right click
+    emit('update:selectedDate', date);
+    // Only emit `day-click` (for positioning add form) on right-click/contextmenu
+    if (isContext) emit('day-click', { date, rect });
   } catch (e) {
     // ignore
-    emit("update:selectedDate", date);
-    emit("day-click", { date, rect: null });
+    emit('update:selectedDate', date);
+    if (isContext) emit('day-click', { date, rect: null });
   }
 }
 

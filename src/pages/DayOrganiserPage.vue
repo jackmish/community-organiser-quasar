@@ -700,12 +700,32 @@ function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
       }
     }
 
+    // Ensure the newTask helper is initialized to the clicked date and TimeEvent type
+    try {
+      if (typeof newTask !== "undefined" && newTask && "value" in newTask) {
+        (newTask as any).value.eventDate =
+          payload?.date || api.task.time.currentDate.value;
+        (newTask as any).value.type_id = "TimeEvent";
+      }
+    } catch (e) {
+      void e;
+    }
+
+    // Ensure the calendar's currentDate is in sync
+    try {
+      api.task.time.setCurrentDate(payload?.date || api.task.time.currentDate.value);
+    } catch (e) {
+      void e;
+    }
+
     if (payload && payload.rect) {
       // Position the add form near the clicked calendar day
       setPreviewFloating(payload.rect);
+      panelHidden.value = false;
     } else {
       // No rect provided => ensure default placement
       setPreviewFloating(null);
+      panelHidden.value = false;
     }
   } catch (e) {
     void e;
