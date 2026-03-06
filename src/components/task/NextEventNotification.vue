@@ -140,9 +140,15 @@ const nextEvents = computed(() => {
   }
 
   // Keep only occurrences: cyclic must be >= now, non-cyclic allowed if >= now - 1 hour
+  // Additionally, treat all-day occurrences (no `eventTime`) for TODAY as valid
+  // for the whole day so they show up regardless of the current hour.
   const cutoff = new Date(now.getTime() - 60 * 60 * 1000);
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const future = occurrences.filter((o) => {
     const isCyclic = Boolean(getCycleType(o.task));
+    const isAllDay = !o.task.eventTime;
+    const isToday = o.dateStr === todayStr;
+    if (isAllDay && isToday) return true;
     return isCyclic ? o.occ.getTime() >= now.getTime() : o.occ.getTime() >= cutoff.getTime();
   });
 
