@@ -251,7 +251,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
@@ -260,8 +260,6 @@ import * as api from "src/modules/day-organiser/_apiRoot";
 import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummaryFixed";
 import type { TaskGroup } from "../modules/day-organiser";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
-import { occursOnDay, getCycleType } from "src/modules/task/utlils/occursOnDay";
-import { isVisibleForActive as groupIsVisible } from "src/modules/group/groupUtils";
 
 const $q = useQuasar();
 
@@ -271,7 +269,7 @@ const currentDayData = computed(() => {
   return days[d] || ({ date: d, tasks: [], notes: "" } as any);
 });
 
-function onTaskClicked(task: any, rect?: DOMRect | null) {
+async function onTaskClicked(task: any, rect?: DOMRect | null) {
   try {
     const activeId = api.task.active.task.value?.id;
     if (
@@ -297,8 +295,14 @@ function onTaskClicked(task: any, rect?: DOMRect | null) {
         void err;
       }
     }
-    // If we received a bounding rect, show floating preview near it
-    setPreviewFloating(rect ?? null);
+    // If we received a bounding rect, wait for DOM to render then show floating preview near it
+    if (rect) {
+      await nextTick();
+      setPreviewFloating(rect);
+    } else {
+      // clear floating placement
+      setPreviewFloating(null);
+    }
   } catch (e) {
     void e;
   }
@@ -680,7 +684,7 @@ const {
 
 const lastAddFromCalendar = ref(false);
 
-function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
+async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
   try {
     lastAddFromCalendar.value = true;
     // Clear any active task so AddTaskForm enters add mode
@@ -719,7 +723,8 @@ function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
     }
 
     if (payload && payload.rect) {
-      // Position the add form near the clicked calendar day
+      // Position the add form near the clicked calendar day after DOM render
+      await nextTick();
       setPreviewFloating(payload.rect);
       panelHidden.value = false;
     } else {
