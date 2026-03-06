@@ -298,7 +298,19 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
     // If we received a bounding rect, wait for DOM to render then show floating preview near it
     if (rect) {
       await nextTick();
-      setPreviewFloating(rect);
+      // wait for layout to settle
+      await new Promise((r) => requestAnimationFrame(r));
+      // try to find the task element again (in case DOM reflow changed position)
+      try {
+        const selector = `[data-task-id="${task?.id}"]`;
+        const el = document.querySelector(selector);
+        let newRect: DOMRect | null = null;
+        if (el instanceof Element) newRect = el.getBoundingClientRect();
+        else newRect = rect ?? null;
+        setPreviewFloating(newRect);
+      } catch (e) {
+        setPreviewFloating(rect);
+      }
     } else {
       // clear floating placement
       setPreviewFloating(null);
@@ -725,8 +737,20 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
     if (payload && payload.rect) {
       // Position the add form near the clicked calendar day after DOM render
       await nextTick();
-      setPreviewFloating(payload.rect);
-      panelHidden.value = false;
+      // wait one animation frame for layout to stabilize
+      await new Promise((r) => requestAnimationFrame(r));
+      try {
+        const selector = `[data-day="${payload.date}"]`;
+        const el = document.querySelector(selector);
+        let newRect: DOMRect | null = null;
+        if (el instanceof Element) newRect = el.getBoundingClientRect();
+        else newRect = payload.rect ?? null;
+        setPreviewFloating(newRect);
+        panelHidden.value = false;
+      } catch (e) {
+        setPreviewFloating(payload.rect);
+        panelHidden.value = false;
+      }
     } else {
       // No rect provided => ensure default placement
       setPreviewFloating(null);
