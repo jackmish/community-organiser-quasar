@@ -828,6 +828,18 @@ watch(
         // ignore
       }
 
+      // Ensure the time-type toggle reflects whether the loaded task has an hour set
+      try {
+        timeType.value = localNewTask.value.eventTime && String(localNewTask.value.eventTime).trim() !== "" ? "exactHour" : "wholeDay";
+        // clear cachedTime when loading an explicit time so toggles behave predictably
+        if (timeType.value === "exactHour") {
+          cachedTime.value.hour = null;
+          cachedTime.value.minute = null;
+        }
+      } catch (e) {
+        void e;
+      }
+
       emit("update:mode", "edit");
     } else {
       // switch back to add mode and reset fields
