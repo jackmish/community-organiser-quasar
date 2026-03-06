@@ -28,10 +28,7 @@
                       @click="api.task.time.prevDay"
                       color="primary"
                     />
-                    <span class="date-black">{{
-                      getTimeDifferenceDisplay(api.task.time.currentDate.value)
-                    }}</span>
-                    <span class="q-mx-sm">|</span>
+
                     <span
                       :class="[
                         'text-weight-bold',

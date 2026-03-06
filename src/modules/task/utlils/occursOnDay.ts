@@ -14,9 +14,17 @@ export function parseYmdLocal(s: string | undefined | null): Date | null {
 
 export function formatDisplayDate(date: string) {
   try {
-    const parsed = parseYmdLocal(date);
-    if (parsed) return format(parsed, 'EEEE, dd.MM.yyyy');
-    return format(new Date(date), 'EEEE, dd.MM.yyyy');
+    const parsed = parseYmdLocal(date) || (date ? new Date(date) : null);
+    if (!parsed || isNaN(parsed.getTime())) return date || '';
+    // Prefer a relative label for dates that are near (Today/Tomorrow)
+    const now = new Date();
+    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const evMid = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / msPerDay);
+    if (diffDays === 0) return `TODAY, ${format(parsed, 'dd.MM.yyyy')}`;
+    if (diffDays === 1) return `TOMORROW, ${format(parsed, 'dd.MM.yyyy')}`;
+    return format(parsed, 'EEEE, dd.MM.yyyy');
   } catch (e) {
     return date || '';
   }
