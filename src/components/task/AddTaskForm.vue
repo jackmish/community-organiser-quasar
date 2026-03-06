@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from 'vue';
-import type { TaskGroup } from 'src/modules/day-organiser';
-import { useQuasar, Dialog } from 'quasar';
-import * as api from 'src/modules/day-organiser/_apiRoot';
-import logger from 'src/utils/logger';
-import { useTimeDiff } from 'src/composables/useTimeDiff';
-import CalendarView from 'src/components/time/CalendarView.vue';
-import ReplenishmentList from './ReplenishmentList.vue';
+import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from "vue";
+import type { TaskGroup } from "src/modules/day-organiser";
+import { useQuasar, Dialog } from "quasar";
+import * as api from "src/modules/day-organiser/_apiRoot";
+import logger from "src/utils/logger";
+import { useTimeDiff } from "src/composables/useTimeDiff";
+import CalendarView from "src/components/time/CalendarView.vue";
+import ReplenishmentList from "./ReplenishmentList.vue";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -16,8 +16,8 @@ import {
   getReplenishText as themeGetReplenishText,
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
-} from '../theme';
-import { formatEventHoursDiff } from 'src/modules/task/utlils/occursOnDay';
+} from "../theme";
+import { formatEventHoursDiff } from "src/modules/task/utlils/occursOnDay";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -38,7 +38,7 @@ const props = defineProps({
   },
   selectedDate: {
     type: String,
-    default: '',
+    default: "",
   },
   allTasks: {
     type: Array,
@@ -51,19 +51,19 @@ const props = defineProps({
   },
   mode: {
     type: String,
-    default: 'add',
+    default: "add",
   },
 });
 const emit = defineEmits([
-  'add-task',
-  'update-task',
-  'cancel-edit',
-  'calendar-date-select',
-  'filter-parent-tasks',
-  'update:mode',
-  'delete-task',
-  'toggle-status',
-  'edit-task',
+  "add-task",
+  "update-task",
+  "cancel-edit",
+  "calendar-date-select",
+  "filter-parent-tasks",
+  "update:mode",
+  "delete-task",
+  "toggle-status",
+  "edit-task",
 ]);
 
 // Robust active group label: supports either a plain object or a Ref-like object
@@ -76,7 +76,7 @@ const activeGroupLabelShort = computed(() => {
   const lab = activeGroupLabel.value;
   if (!lab) return null;
   try {
-    return String(lab).split(' (')[0];
+    return String(lab).split(" (")[0];
   } catch (e) {
     return String(lab);
   }
@@ -89,11 +89,11 @@ const groups = api.group.list.all;
 function getGroupIcon(gid: string | undefined) {
   try {
     const list: any[] = (groups && groups.value) || groups || [];
-    if (!gid) return 'folder';
+    if (!gid) return "folder";
     const found = list.find((x: any) => String(x.id) === String(gid));
-    return (found && found.icon) || 'folder';
+    return (found && found.icon) || "folder";
   } catch (e) {
-    return 'folder';
+    return "folder";
   }
 }
 
@@ -112,7 +112,7 @@ const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, an
 async function selectGroupForEdit(gid: string | null) {
   try {
     // Use localNewTask eventDate (fallback to selectedDate prop)
-    const date = localNewTask.value.eventDate || props.selectedDate || '';
+    const date = localNewTask.value.eventDate || props.selectedDate || "";
     const taskId = localNewTask.value.id;
     if (!taskId) return;
     const updates: any = { groupId: gid == null ? undefined : gid };
@@ -120,7 +120,7 @@ async function selectGroupForEdit(gid: string | null) {
     // Also reflect immediately in the form state
     localNewTask.value.groupId = gid == null ? undefined : gid;
   } catch (e) {
-    logger.error('Failed to change task group (edit mode)', e);
+    logger.error("Failed to change task group (edit mode)", e);
   } finally {
     groupMenu.value = false;
   }
@@ -130,7 +130,7 @@ async function selectGroupForAdd(gid: string | null) {
   try {
     localNewTask.value.groupId = gid == null ? undefined : gid;
   } catch (e) {
-    logger.error('Failed to change task group (add mode)', e);
+    logger.error("Failed to change task group (add mode)", e);
   } finally {
     groupMenu.value = false;
   }
@@ -148,32 +148,32 @@ const replenishInput = ref<any>(null);
 const autoIncrementYear = ref(true);
 
 // Time type radio (Whole Day / Exact Hour)
-const timeType = ref<'wholeDay' | 'exactHour'>('wholeDay');
+const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
 
 // Repeat mode for events: one-time or cyclic
-const repeatMode = ref<'oneTime' | 'cyclic'>('oneTime');
+const repeatMode = ref<"oneTime" | "cyclic">("oneTime");
 const repeatOptions = [
-  { label: 'One time', value: 'oneTime', icon: 'event' },
-  { label: 'Cyclic', value: 'cyclic', icon: 'repeat' },
+  { label: "One time", value: "oneTime", icon: "event" },
+  { label: "Cyclic", value: "cyclic", icon: "repeat" },
 ];
 
 // When cyclic, choose period
-const repeatCycleType = ref<'dayWeek' | 'interval' | 'nth'>('dayWeek');
+const repeatCycleType = ref<"dayWeek" | "interval" | "nth">("dayWeek");
 const repeatCycleOptions = [
-  { label: 'Day/Week', value: 'dayWeek', icon: 'today' },
-  { label: 'Interval', value: 'interval', icon: 'repeat' },
-  { label: 'Nth', value: 'nth', icon: 'looks_one' },
+  { label: "Day/Week", value: "dayWeek", icon: "today" },
+  { label: "Interval", value: "interval", icon: "repeat" },
+  { label: "Nth", value: "nth", icon: "looks_one" },
 ];
 
 // Weekday multi-select for day/week repeat
 const weekDayOptions = [
-  { label: 'Mon', value: 'mon' },
-  { label: 'Tue', value: 'tue' },
-  { label: 'Wed', value: 'wed' },
-  { label: 'Thu', value: 'thu' },
-  { label: 'Fri', value: 'fri' },
-  { label: 'Sat', value: 'sat' },
-  { label: 'Sun', value: 'sun' },
+  { label: "Mon", value: "mon" },
+  { label: "Tue", value: "tue" },
+  { label: "Wed", value: "wed" },
+  { label: "Thu", value: "thu" },
+  { label: "Fri", value: "fri" },
+  { label: "Sat", value: "sat" },
+  { label: "Sun", value: "sun" },
 ];
 const repeatDays = ref<string[]>([]);
 // Option to quickly set an exact day-of-month (e.g. 10)
@@ -196,7 +196,7 @@ function toggleDay(day: string) {
 
 // Local newTask state, default to today
 const today = new Date();
-const pad = (n: number) => String(n).padStart(2, '0');
+const pad = (n: number) => String(n).padStart(2, "0");
 type TaskType = {
   name: string;
   description: string;
@@ -214,39 +214,43 @@ type TaskType = {
   eventTime: string;
   // timeMode controls how the time is interpreted in the UI
   // 'event' = normal event (default), 'prepare' = preparation time, 'expiration' = expiration time
-  timeMode?: 'event' | 'prepare' | 'expiration';
+  timeMode?: "event" | "prepare" | "expiration";
   // number of days before the event (used for prepare/expiration modes)
   timeOffsetDays?: number | null;
 };
 
 const localNewTask = ref<TaskType>({
-  name: '',
-  description: '',
-  type_id: 'TimeEvent',
+  name: "",
+  description: "",
+  type_id: "TimeEvent",
   // default to '1' = just created
   // default to 1 = just created (use numeric codes, not boolean)
   status_id: 1,
   parent_id: null,
-  created_by: '',
-  priority: 'medium',
+  created_by: "",
+  priority: "medium",
   groupId: undefined,
-  eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
-  eventTime: '',
-  timeMode: 'event',
+  eventDate: `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(
+    today.getDate()
+  )}`,
+  eventTime: "",
+  timeMode: "event",
   timeOffsetDays: 7,
 });
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
 // Persist to localStorage so the selection survives form resets/remounts.
-const STORAGE_KEY = 'coq:lastTaskType';
-let initialStored = 'TimeEvent';
+const STORAGE_KEY = "coq:lastTaskType";
+let initialStored = "TimeEvent";
 try {
   const s = localStorage.getItem(STORAGE_KEY);
   if (s) initialStored = s;
 } catch (e) {
   // ignore (e.g. SSR or blocked storage)
 }
-const lastSelectedType = ref<string>(initialStored || localNewTask.value.type_id || 'TimeEvent');
+const lastSelectedType = ref<string>(
+  initialStored || localNewTask.value.type_id || "TimeEvent"
+);
 watch(
   () => localNewTask.value.type_id,
   (v) => {
@@ -258,27 +262,31 @@ watch(
         // ignore
       }
     }
-  },
+  }
 );
 
 // Mode is controlled by parent via prop `mode` and `update:mode` emit
-const modeRef = toRef(props, 'mode') as any;
+const modeRef = toRef(props, "mode") as any;
 // Friendly label for current mode (match ModeSwitcher labels)
 const modeLabel = computed(() => {
-  return props.mode === 'add' ? 'Add new thing' : props.mode === 'edit' ? 'Edit thing' : 'Preview';
+  return props.mode === "add"
+    ? "Add new thing"
+    : props.mode === "edit"
+    ? "Edit thing"
+    : "Preview";
 });
 
 // Convert hex like '#aabbcc' to rgba string with given alpha
 function hexToRgba(hex: string, alpha = 1) {
-  const h = hex.replace('#', '');
+  const h = hex.replace("#", "");
   const bigint = parseInt(
     h.length === 3
       ? h
-          .split('')
+          .split("")
           .map((c) => c + c)
-          .join('')
+          .join("")
       : h,
-    16,
+    16
   );
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
@@ -288,68 +296,70 @@ function hexToRgba(hex: string, alpha = 1) {
 
 // Mode-based accent color (creation/edit)
 const modeAccentColor = computed(() => {
-  if (props.mode === 'add') return '#4caf50'; // green for creation
-  if (props.mode === 'edit') return '#ff9800'; // orange for edit
-  return '#1976d2'; // default primary
+  if (props.mode === "add") return "#4caf50"; // green for creation
+  if (props.mode === "edit") return "#ff9800"; // orange for edit
+  return "#1976d2"; // default primary
 });
 
 // Card background style depending on mode; draw an 8px solid border on all sides using mode color
 const cardStyle = computed(() => {
   // If the current task type is Replenish, use a light yellow background
   if (isReplenish.value) {
-    const bg = '#f5efe6'; // latte-like light beige
-    const accent = '#c9a676';
+    const bg = "#f5efe6"; // latte-like light beige
+    const accent = "#c9a676";
     return { backgroundColor: bg, border: `8px solid ${accent}` };
   }
-  const bg = props.mode === 'add' ? '#e8f5e9' : props.mode === 'edit' ? '#fff3e0' : '#ffffff';
-  const accent = modeAccentColor.value || '#000000';
+  const bg =
+    props.mode === "add" ? "#e8f5e9" : props.mode === "edit" ? "#fff3e0" : "#ffffff";
+  const accent = modeAccentColor.value || "#000000";
   return { backgroundColor: bg, border: `8px solid ${accent}` };
 });
 
 // Watermark icon depending on mode/type
 const watermarkIcon = computed(() => {
   try {
-    const type = (localNewTask as any)?.value?.type_id ?? (localNewTask as any)?.type_id ?? null;
-    if (props.mode === 'add') {
+    const type =
+      (localNewTask as any)?.value?.type_id ?? (localNewTask as any)?.type_id ?? null;
+    if (props.mode === "add") {
       switch (type) {
-        case 'Todo':
-          return 'check_box';
-        case 'TimeEvent':
-          return 'event';
-        case 'Replenish':
-          return 'autorenew';
-        case 'NoteLater':
-          return 'description';
+        case "Todo":
+          return "check_box";
+        case "TimeEvent":
+          return "event";
+        case "Replenish":
+          return "autorenew";
+        case "NoteLater":
+          return "description";
         default:
-          return 'add_circle';
+          return "add_circle";
       }
     }
-    if (props.mode === 'edit') {
+    if (props.mode === "edit") {
       switch (type) {
-        case 'Todo':
-          return 'check_box';
-        case 'TimeEvent':
-          return 'event';
-        case 'Replenish':
-          return 'autorenew';
-        case 'NoteLater':
-          return 'description';
+        case "Todo":
+          return "check_box";
+        case "TimeEvent":
+          return "event";
+        case "Replenish":
+          return "autorenew";
+        case "NoteLater":
+          return "description";
         default:
-          return 'edit';
+          return "edit";
       }
     }
-    if (props.mode === 'preview') {
+    if (props.mode === "preview") {
       switch (type) {
-        case 'Todo':
-          return 'check_box';
-        case 'TimeEvent':
-          return 'event';
-        case 'Replenish':
-          return 'autorenew';
-        case 'NoteLater':
-          return 'description';
+        case "Todo":
+          return "check_box";
+        case "TimeEvent":
+          return "event";
+        case "Replenish":
+          return "autorenew";
+        case "NoteLater":
+          return "description";
         default:
-          return 'visibility';
+          return "visibility";
       }
     }
   } catch (e) {
@@ -362,8 +372,8 @@ const watermarkIcon = computed(() => {
 
 // Quasar screen for responsive button sizing
 const $q = useQuasar();
-const btnSize = computed(() => ($q.screen.gt.sm ? 'md' : 'sm'));
-const isReplenish = computed(() => (localNewTask.value.type_id || '') === 'Replenish');
+const btnSize = computed(() => ($q.screen.gt.sm ? "md" : "sm"));
+const isReplenish = computed(() => (localNewTask.value.type_id || "") === "Replenish");
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
@@ -371,52 +381,55 @@ const showFullTypeLabel = computed(() => $q.screen.gt.md);
 const submitColor = computed(() => {
   // When creating a Replenish item, prefer the selected replenish set
   try {
-    if (props.mode === 'add' && isReplenish.value) {
+    if (props.mode === "add" && isReplenish.value) {
       const cs = (localNewTask as any).color_set;
       const bg = (themeGetReplenishBg as any)(cs);
-      return bg && bg !== 'transparent' ? bg : themeTypeColors.Replenish || '#f5efe6';
+      return bg && bg !== "transparent" ? bg : themeTypeColors.Replenish || "#f5efe6";
     }
   } catch (e) {
     // fall back
   }
-  if (props.mode === 'add') return '#4caf50';
-  if (props.mode === 'edit') return '#ff9800';
-  return 'primary';
+  if (props.mode === "add") return "#4caf50";
+  if (props.mode === "edit") return "#ff9800";
+  return "primary";
 });
 
 const submitTextColor = computed(() => {
   try {
-    if (props.mode === 'add' && isReplenish.value) {
+    if (props.mode === "add" && isReplenish.value) {
       const cs = (localNewTask as any).color_set;
       const txt = (themeGetReplenishText as any)(cs);
-      return txt && txt !== 'inherit' ? txt : themeTypeTextColors.Replenish || '#212121';
+      return txt && txt !== "inherit" ? txt : themeTypeTextColors.Replenish || "#212121";
     }
   } catch (e) {
     // ignore
   }
-  return '#ffffff';
+  return "#ffffff";
 });
 
 const submitIcon = computed(() => {
-  if (props.mode === 'add') return 'add';
-  if (props.mode === 'edit') return 'edit';
-  return '';
+  if (props.mode === "add") return "add";
+  if (props.mode === "edit") return "edit";
+  return "";
 });
 
 function extractGroupId(ag: any) {
   if (!ag) return undefined;
   try {
-    if (Object.prototype.hasOwnProperty.call(ag, 'value')) {
+    if (Object.prototype.hasOwnProperty.call(ag, "value")) {
       const inner = ag.value;
       if (!inner) return undefined;
-      if (typeof inner === 'object' && Object.prototype.hasOwnProperty.call(inner, 'value'))
+      if (
+        typeof inner === "object" &&
+        Object.prototype.hasOwnProperty.call(inner, "value")
+      )
         return inner.value;
-      if (typeof inner === 'string' || typeof inner === 'number') return inner;
+      if (typeof inner === "string" || typeof inner === "number") return inner;
       return undefined;
     }
-    if (typeof ag === 'object' && Object.prototype.hasOwnProperty.call(ag, 'value'))
+    if (typeof ag === "object" && Object.prototype.hasOwnProperty.call(ag, "value"))
       return ag.value;
-    if (typeof ag === 'string' || typeof ag === 'number') return ag;
+    if (typeof ag === "string" || typeof ag === "number") return ag;
   } catch (e) {
     // ignore
   }
@@ -425,29 +438,29 @@ function extractGroupId(ag: any) {
 
 // Type options for task type selector (local only)
 const typeOptions = [
-  { label: 'Time Event', shortLabel: 'Time', value: 'TimeEvent', icon: 'event' },
-  { label: 'TODO', shortLabel: 'Todo', value: 'Todo', icon: 'check_box' },
-  { label: 'Replenish', shortLabel: 'Repl', value: 'Replenish', icon: 'autorenew' },
-  { label: 'Note', shortLabel: 'Note', value: 'NoteLater', icon: 'description' },
+  { label: "Time Event", shortLabel: "Time", value: "TimeEvent", icon: "event" },
+  { label: "TODO", shortLabel: "Todo", value: "Todo", icon: "check_box" },
+  { label: "Replenish", shortLabel: "Repl", value: "Replenish", icon: "autorenew" },
+  { label: "Note", shortLabel: "Note", value: "NoteLater", icon: "description" },
 ];
 
 // Options for the time type toggle (Whole Day / Exact Hour)
 const timeTypeOptions = [
-  { label: '', value: 'wholeDay', icon: 'calendar_today' },
-  { label: '', value: 'exactHour', icon: 'schedule' },
+  { label: "", value: "wholeDay", icon: "calendar_today" },
+  { label: "", value: "exactHour", icon: "schedule" },
 ];
 
 // Options for interpreting the time value: event (default), prepare, expiration
 // Labels are shown inside each toggle button so the option describes its mode
 const timeModeOptions = [
-  { label: 'Event', value: 'event', icon: 'event' },
-  { label: 'Prepare', value: 'prepare', icon: 'local_shipping' },
-  { label: 'Expiration', value: 'expiration', icon: 'hourglass_empty' },
+  { label: "Event", value: "event", icon: "event" },
+  { label: "Prepare", value: "prepare", icon: "local_shipping" },
+  { label: "Expiration", value: "expiration", icon: "hourglass_empty" },
 ];
 
-const eventTimeMode = computed<'event' | 'prepare' | 'expiration'>({
+const eventTimeMode = computed<"event" | "prepare" | "expiration">({
   get() {
-    return localNewTask.value.timeMode || 'event';
+    return localNewTask.value.timeMode || "event";
   },
   set(v) {
     localNewTask.value.timeMode = v;
@@ -474,7 +487,7 @@ const replenishColorSets = themeReplenishColorSets;
 // Split into four rows for display and include a transparent 'x' swatch
 const replenishColorRows = computed(() => {
   // include a transparent option at the start
-  const transparent = { id: 'transparent', bg: 'transparent', text: '#000000' };
+  const transparent = { id: "transparent", bg: "transparent", text: "#000000" };
   const all = [transparent, ...replenishColorSets];
   const n = all.length;
   const per = Math.ceil(n / 4);
@@ -487,17 +500,17 @@ const replenishColorRows = computed(() => {
 });
 
 // Replenish helper state
-const replenishQuery = ref('');
+const replenishQuery = ref("");
 const selectedReplenishId = ref<string | null>(null);
 const showReplenishList = ref(false);
-const replenishListStyle = ref<any>({ display: 'none' });
+const replenishListStyle = ref<any>({ display: "none" });
 
 const replenishMatches = computed<any[]>(() => {
-  const q = (replenishQuery.value || '').toLowerCase().trim();
-  if (!q) return (props.allTasks || []).filter((t: any) => t.type_id === 'Replenish');
+  const q = (replenishQuery.value || "").toLowerCase().trim();
+  if (!q) return (props.allTasks || []).filter((t: any) => t.type_id === "Replenish");
   return (props.allTasks || [])
-    .filter((t: any) => t.type_id === 'Replenish')
-    .filter((t: any) => (t.name || '').toLowerCase().indexOf(q) !== -1);
+    .filter((t: any) => t.type_id === "Replenish")
+    .filter((t: any) => (t.name || "").toLowerCase().indexOf(q) !== -1);
 });
 
 const smallReplenishTasks = computed(() => {
@@ -508,24 +521,24 @@ const smallReplenishTasks = computed(() => {
     props.replenishTasks.length > 0
   )
     return props.replenishTasks;
-  return (props.allTasks || []).filter((t: any) => (t.type_id || t.type) === 'Replenish');
+  return (props.allTasks || []).filter((t: any) => (t.type_id || t.type) === "Replenish");
 });
 
 // Return true when a replenish match is already present for the current selected date
 function replenishAlreadyAdded(m: any) {
   try {
-    const name = (m && m.name && String(m.name).trim().toLowerCase()) || '';
+    const name = (m && m.name && String(m.name).trim().toLowerCase()) || "";
     if (!name) return false;
-    const sel = String(props.selectedDate || '').trim();
+    const sel = String(props.selectedDate || "").trim();
     return (props.allTasks || []).some((t: any) => {
-      if ((t.type_id || t.type) !== 'Replenish') return false;
+      if ((t.type_id || t.type) !== "Replenish") return false;
       // exact id match
       if (t.id && m.id && String(t.id) === String(m.id)) return true;
-      const tn = (t.name || '').trim().toLowerCase();
+      const tn = (t.name || "").trim().toLowerCase();
       if (tn !== name) return false;
       // if selected date provided, check task date matches selected date
-      const taskDate = t.date || t.eventDate || '';
-      if (sel) return String(taskDate || '') === sel;
+      const taskDate = t.date || t.eventDate || "";
+      if (sel) return String(taskDate || "") === sel;
       // otherwise treat same-name replenish task as present
       return true;
     });
@@ -537,18 +550,19 @@ function replenishAlreadyAdded(m: any) {
 async function selectReplenishMatch(t: any) {
   // Immediately restore selected replenish task to undone
   selectedReplenishId.value = t.id;
-  replenishQuery.value = t.name || '';
+  replenishQuery.value = t.name || "";
   try {
-    const targetDate = t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
+    const targetDate =
+      t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
     await updateTask(targetDate, t.id, { status_id: 1 });
     // Ask parent to clear any preview/edit state
-    emit('cancel-edit');
+    emit("cancel-edit");
   } catch (e) {
-    logger.error('Failed to restore replenish task', e);
+    logger.error("Failed to restore replenish task", e);
   }
   // clear selection/input after restore
   selectedReplenishId.value = null;
-  replenishQuery.value = '';
+  replenishQuery.value = "";
   showReplenishList.value = false;
 }
 
@@ -557,23 +571,23 @@ function handleReplItemPointer(t: any) {
 }
 
 function createReplenishFromInput() {
-  const name = (replenishQuery.value || '').trim();
+  const name = (replenishQuery.value || "").trim();
   if (!name) return;
   // ensure task is Replenish type and undone (status_id = 1)
   localNewTask.value.name = name;
-  localNewTask.value.type_id = 'Replenish';
+  localNewTask.value.type_id = "Replenish";
   localNewTask.value.status_id = 1;
-  emit('add-task', { ...localNewTask.value }, { preview: !stayAfterSave.value });
+  emit("add-task", { ...localNewTask.value }, { preview: !stayAfterSave.value });
   // reset fields after creating
-  replenishQuery.value = '';
+  replenishQuery.value = "";
   selectedReplenishId.value = null;
-  localNewTask.value.description = '';
+  localNewTask.value.description = "";
   showReplenishList.value = false;
 }
 
 // Auto-capitalize first letter typed into the replenish search box
 watch(replenishQuery, (val) => {
-  if (typeof val !== 'string') return;
+  if (typeof val !== "string") return;
   if (!val) return;
   const corrected = val.charAt(0).toUpperCase() + val.slice(1);
   if (corrected !== val) replenishQuery.value = corrected;
@@ -581,13 +595,13 @@ watch(replenishQuery, (val) => {
 
 function onReplenishInput(val: string | number | null) {
   // coerce to string safely (Quasar may emit number|null)
-  const s = val == null ? '' : String(val);
+  const s = val == null ? "" : String(val);
   // show list only when there's non-empty input
   showReplenishList.value = !!(s && s.trim());
   if (showReplenishList.value) {
     nextTick(positionReplenishList);
   } else {
-    replenishListStyle.value = { display: 'none' };
+    replenishListStyle.value = { display: "none" };
   }
 }
 
@@ -604,9 +618,9 @@ function onReplenishFocus() {
 function positionReplenishList() {
   try {
     const inputEl = replenishInput.value?.$el || replenishInput.value;
-    const input = inputEl?.querySelector ? inputEl.querySelector('input') : inputEl;
+    const input = inputEl?.querySelector ? inputEl.querySelector("input") : inputEl;
     if (!input) {
-      replenishListStyle.value = { display: 'none' };
+      replenishListStyle.value = { display: "none" };
       return;
     }
     const rect = input.getBoundingClientRect();
@@ -614,79 +628,82 @@ function positionReplenishList() {
     const top = rect.bottom + (window.scrollY || window.pageYOffset || 0) + 6;
     const width = rect.width || input.offsetWidth || 280;
     replenishListStyle.value = {
-      position: 'fixed',
+      position: "fixed",
       left: `${left}px`,
       top: `${top}px`,
       width: `${width}px`,
-      background: '#fff',
-      borderRadius: '8px',
-      boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
-      padding: '8px',
+      background: "#fff",
+      borderRadius: "8px",
+      boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+      padding: "8px",
       zIndex: 4000,
-      maxHeight: '260px',
-      overflow: 'auto',
-      display: 'block',
+      maxHeight: "260px",
+      overflow: "auto",
+      display: "block",
     };
   } catch (e) {
-    replenishListStyle.value = { display: 'none' };
+    replenishListStyle.value = { display: "none" };
   }
 }
 
 onMounted(() => {
-  window.addEventListener('resize', positionReplenishList);
-  window.addEventListener('scroll', positionReplenishList, true);
+  window.addEventListener("resize", positionReplenishList);
+  window.addEventListener("scroll", positionReplenishList, true);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', positionReplenishList);
-  window.removeEventListener('scroll', positionReplenishList, true);
+  window.removeEventListener("resize", positionReplenishList);
+  window.removeEventListener("scroll", positionReplenishList, true);
 });
 
 // When user switches type to Replenish while in add mode, focus the search input
 watch(
   () => localNewTask.value.type_id,
   (val) => {
-    if (props.mode !== 'add') return;
+    if (props.mode !== "add") return;
 
     nextTick(() => {
       try {
-        if (val === 'Replenish') {
+        if (val === "Replenish") {
           // prefer Quasar focus API
-          if (replenishInput.value && typeof replenishInput.value.focus === 'function') {
+          if (replenishInput.value && typeof replenishInput.value.focus === "function") {
             replenishInput.value.focus();
             return;
           }
           const el = replenishInput.value?.$el || replenishInput.value;
-          const input = el?.querySelector ? el.querySelector('input') : null;
-          if (input && typeof input.focus === 'function') {
+          const input = el?.querySelector ? el.querySelector("input") : null;
+          if (input && typeof input.focus === "function") {
             input.focus();
             return;
           }
         }
 
-        if (val === 'Todo' || val === 'NoteLater') {
+        if (val === "Todo" || val === "NoteLater") {
           // focus description textarea/input
-          if (descriptionInput.value && typeof descriptionInput.value.focus === 'function') {
+          if (
+            descriptionInput.value &&
+            typeof descriptionInput.value.focus === "function"
+          ) {
             descriptionInput.value.focus();
             return;
           }
           const el = descriptionInput.value?.$el || descriptionInput.value;
-          const input = el?.querySelector ? el.querySelector('textarea, input') : null;
-          if (input && typeof input.focus === 'function') {
+          const input = el?.querySelector ? el.querySelector("textarea, input") : null;
+          if (input && typeof input.focus === "function") {
             input.focus();
             return;
           }
         }
 
-        if (val === 'TimeEvent') {
+        if (val === "TimeEvent") {
           // focus hour input
-          if (hourInput.value && typeof hourInput.value.focus === 'function') {
+          if (hourInput.value && typeof hourInput.value.focus === "function") {
             hourInput.value.focus();
             return;
           }
           const el = hourInput.value?.$el || hourInput.value;
-          const input = el?.querySelector ? el.querySelector('input') : null;
-          if (input && typeof input.focus === 'function') {
+          const input = el?.querySelector ? el.querySelector("input") : null;
+          if (input && typeof input.focus === "function") {
             input.focus();
             return;
           }
@@ -695,7 +712,7 @@ watch(
         // ignore
       }
     });
-  },
+  }
 );
 
 // When parent provides an initialTask, populate localNewTask
@@ -705,29 +722,29 @@ watch(
     if (val) {
       // copy relevant fields
       localNewTask.value = {
-        name: val.name || '',
-        description: val.description || '',
-        type_id: val.type_id || 'TimeEvent',
+        name: val.name || "",
+        description: val.description || "",
+        type_id: val.type_id || "TimeEvent",
         status_id: val.status_id ?? 1,
         parent_id: val.parent_id ?? null,
-        created_by: val.created_by || '',
-        priority: val.priority || 'medium',
+        created_by: val.created_by || "",
+        priority: val.priority || "medium",
         color_set: val.color_set ?? val.colorSet ?? undefined,
         groupId: val.groupId,
         eventDate: val.date || val.eventDate || localNewTask.value.eventDate,
-        eventTime: val.eventTime || '',
-        timeMode: val.timeMode || 'event',
+        eventTime: val.eventTime || "",
+        timeMode: val.timeMode || "event",
         timeOffsetDays: val.timeOffsetDays == null ? 7 : val.timeOffsetDays,
         id: val.id,
       };
       // Populate repeat-related form fields from canonical `repeat` object if present
       try {
-        if (val.repeat && typeof val.repeat === 'object') {
-          repeatMode.value = 'cyclic';
-          const incomingCycle = val.repeat.cycleType || 'dayWeek';
+        if (val.repeat && typeof val.repeat === "object") {
+          repeatMode.value = "cyclic";
+          const incomingCycle = val.repeat.cycleType || "dayWeek";
           // Map legacy cycle names to new UI choices
-          if (incomingCycle === 'month') {
-            repeatCycleType.value = 'nth';
+          if (incomingCycle === "month") {
+            repeatCycleType.value = "nth";
             // If seed eventDate has a day, set it
             try {
               const ev = val.repeat.eventDate || val.eventDate || val.date || null;
@@ -738,9 +755,9 @@ watch(
             } catch (e) {
               // ignore
             }
-          } else if (incomingCycle === 'other' || incomingCycle === 'year') {
-            repeatCycleType.value = 'interval';
-            if (typeof val.repeat.intervalDays === 'number')
+          } else if (incomingCycle === "other" || incomingCycle === "year") {
+            repeatCycleType.value = "interval";
+            if (typeof val.repeat.intervalDays === "number")
               repeatIntervalDays.value = val.repeat.intervalDays;
           } else {
             repeatCycleType.value = incomingCycle;
@@ -756,7 +773,7 @@ watch(
           }
           // load interval days if present
           try {
-            if (typeof val.repeat.intervalDays === 'number')
+            if (typeof val.repeat.intervalDays === "number")
               repeatIntervalDays.value = val.repeat.intervalDays;
             else repeatIntervalDays.value = null;
           } catch (e) {
@@ -767,14 +784,14 @@ watch(
             localNewTask.value.eventDate = val.repeat.eventDate;
           }
         } else {
-          repeatMode.value = 'oneTime';
-          repeatCycleType.value = 'dayWeek';
+          repeatMode.value = "oneTime";
+          repeatCycleType.value = "dayWeek";
           repeatDays.value = [];
           everyNDayOfMonth.value = null;
         }
       } catch (e) {
-        repeatMode.value = 'oneTime';
-        repeatCycleType.value = 'dayWeek';
+        repeatMode.value = "oneTime";
+        repeatCycleType.value = "dayWeek";
         repeatDays.value = [];
         repeatIntervalDays.value = null;
         everyNDayOfMonth.value = null;
@@ -798,7 +815,7 @@ watch(
 
       // Ensure nth/day seed is restored for edit mode if applicable (fallback)
       try {
-        if (repeatCycleType.value === 'nth' && !everyNDayOfMonth.value) {
+        if (repeatCycleType.value === "nth" && !everyNDayOfMonth.value) {
           const ev = localNewTask.value.eventDate || props.selectedDate || null;
           if (ev) {
             const d = new Date(ev);
@@ -811,61 +828,62 @@ watch(
         // ignore
       }
 
-      emit('update:mode', 'edit');
+      emit("update:mode", "edit");
     } else {
       // switch back to add mode and reset fields
-      emit('update:mode', 'add');
+      emit("update:mode", "add");
       // preserve currently selected type so the chooser doesn't jump back to default
-      const prevType = lastSelectedType.value || localNewTask.value?.type_id || 'TimeEvent';
+      const prevType =
+        lastSelectedType.value || localNewTask.value?.type_id || "TimeEvent";
       // keep date if provided via selectedDate prop
       localNewTask.value = {
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         type_id: prevType,
         status_id: 1,
         parent_id: null,
-        created_by: '',
-        priority: 'medium',
+        created_by: "",
+        priority: "medium",
         groupId: extractGroupId((props as any).activeGroup),
         eventDate:
           props.selectedDate ||
           `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
-        eventTime: '',
-        timeMode: 'event',
+        eventTime: "",
+        timeMode: "event",
         timeOffsetDays: 7,
       };
       // Reset repeat inputs when clearing the form
-      repeatMode.value = 'oneTime';
-      repeatCycleType.value = 'dayWeek';
+      repeatMode.value = "oneTime";
+      repeatCycleType.value = "dayWeek";
       repeatDays.value = [];
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // Auto-generate name from description (local)
 const autoGeneratedName = computed(() => {
-  if (!localNewTask.value.description) return '';
+  if (!localNewTask.value.description) return "";
   // Take up to a marker ' -' if present (e.g. "Title - details")
   const desc = localNewTask.value.description.trim();
   // Stop title at a newline or at the explicit marker ' -' (whichever comes first)
-  const newlineIndex = desc.indexOf('\n');
-  let markerIndex = desc.indexOf(' -');
+  const newlineIndex = desc.indexOf("\n");
+  let markerIndex = desc.indexOf(" -");
   if (newlineIndex >= 0 && (markerIndex === -1 || newlineIndex < markerIndex)) {
     markerIndex = newlineIndex;
   }
-  let head = '';
+  let head = "";
   if (markerIndex > 0) {
     head = desc.substring(0, markerIndex).trim();
   } else {
     // Take first sentence or first 50 characters
-    const firstSentence = desc.split(/[.!?]/)[0] || '';
+    const firstSentence = desc.split(/[.!?]/)[0] || "";
     head = firstSentence || desc.substring(0, 50);
   }
 
-  const name = head.length > 50 ? head.substring(0, 50) + '...' : head;
+  const name = head.length > 50 ? head.substring(0, 50) + "..." : head;
   // Capitalize first letter
-  const val = name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+  const val = name ? name.charAt(0).toUpperCase() + name.slice(1) : "";
   return val;
 });
 
@@ -877,44 +895,42 @@ watch(autoGeneratedName, (gen) => {
 // Computed for eventTime hour and minute with setters so inputs can `v-model` directly
 const eventTimeHour = computed<number | string>({
   get() {
-    if (!localNewTask.value.eventTime) return '';
-    const val = Number(localNewTask.value.eventTime.split(':')[0]);
+    if (!localNewTask.value.eventTime) return "";
+    const val = Number(localNewTask.value.eventTime.split(":")[0]);
     return val;
   },
   set(v: number | string) {
-    if (v === null || v === '') {
+    if (v === null || v === "") {
       // ignore transient empty updates (don't clear stored eventTime)
       return;
     }
     const hour = Number(v);
     if (isNaN(hour) || hour < 0 || hour > 23) return;
-    timeType.value = 'exactHour';
+    timeType.value = "exactHour";
     const minute = Number(eventTimeMinute.value) || 0;
-    localNewTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(
-      2,
-      '0',
-    )}`;
+    localNewTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(
+      minute
+    ).padStart(2, "0")}`;
   },
 });
 const eventTimeMinute = computed<number | string>({
   get() {
-    if (!localNewTask.value.eventTime) return '';
-    const val = Number(localNewTask.value.eventTime.split(':')[1]);
+    if (!localNewTask.value.eventTime) return "";
+    const val = Number(localNewTask.value.eventTime.split(":")[1]);
     return val;
   },
   set(v: number | string) {
-    if (v === null || v === '') {
+    if (v === null || v === "") {
       // ignore transient empty updates (don't clear stored eventTime)
       return;
     }
     const minute = Number(v);
     if (isNaN(minute) || minute < 0 || minute > 59) return;
-    timeType.value = 'exactHour';
+    timeType.value = "exactHour";
     const hour = Number(eventTimeHour.value) || 0;
-    localNewTask.value.eventTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(
-      2,
-      '0',
-    )}`;
+    localNewTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(
+      minute
+    ).padStart(2, "0")}`;
   },
 });
 
@@ -943,16 +959,16 @@ const cachedTime = ref<{ hour: string | number | null; minute: string | number |
   minute: null,
 });
 watch(timeType, (newValue, oldValue) => {
-  if (newValue === 'wholeDay') {
+  if (newValue === "wholeDay") {
     // Cache existing hour/minute if present
-    cachedTime.value.hour = eventTimeHour.value === '' ? null : eventTimeHour.value;
-    cachedTime.value.minute = eventTimeMinute.value === '' ? null : eventTimeMinute.value;
+    cachedTime.value.hour = eventTimeHour.value === "" ? null : eventTimeHour.value;
+    cachedTime.value.minute = eventTimeMinute.value === "" ? null : eventTimeMinute.value;
     // Clear displayed time for whole-day view
-    localNewTask.value.eventTime = '';
-  } else if (oldValue === 'wholeDay' && newValue === 'exactHour') {
+    localNewTask.value.eventTime = "";
+  } else if (oldValue === "wholeDay" && newValue === "exactHour") {
     // Only restore cached time if there is no user-provided time while in wholeDay
     const current = localNewTask.value.eventTime;
-    const currentIsEmpty = !current || current === '' || current === '00:00';
+    const currentIsEmpty = !current || current === "" || current === "00:00";
     if (!currentIsEmpty) {
       // user set a time while in wholeDay — do not overwrite
       return;
@@ -965,14 +981,17 @@ watch(timeType, (newValue, oldValue) => {
     }
     const h = hour == null ? 0 : Number(hour);
     const m = minute == null ? 0 : Number(minute);
-    localNewTask.value.eventTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    localNewTask.value.eventTime = `${String(h).padStart(2, "0")}:${String(m).padStart(
+      2,
+      "0"
+    )}`;
   }
 });
 
 function updateTaskField(field: string, value: any) {
-  if (field === 'eventDateDay') eventDateDay.value = value;
-  else if (field === 'eventDateMonth') eventDateMonth.value = value;
-  else if (field === 'eventDateYear') eventDateYear.value = value;
+  if (field === "eventDateDay") eventDateDay.value = value;
+  else if (field === "eventDateMonth") eventDateMonth.value = value;
+  else if (field === "eventDateYear") eventDateYear.value = value;
   else {
     (localNewTask.value as any)[field] = value;
   }
@@ -980,7 +999,7 @@ function updateTaskField(field: string, value: any) {
 
 function onCalendarDateSelect(date: string) {
   localNewTask.value.eventDate = date;
-  emit('calendar-date-select', date);
+  emit("calendar-date-select", date);
 }
 
 // Inline delete confirmation state (matches TasksList behavior)
@@ -997,8 +1016,8 @@ function cancelDeleteConfirm() {
 
 function performDelete() {
   if (!localNewTask.value || !localNewTask.value.id) return;
-  emit('delete-task', { id: localNewTask.value.id, date: localNewTask.value.eventDate });
-  emit('cancel-edit');
+  emit("delete-task", { id: localNewTask.value.id, date: localNewTask.value.eventDate });
+  emit("cancel-edit");
   showDeleteConfirm.value = false;
 }
 
@@ -1011,11 +1030,11 @@ watch(
       // When parent changes the selected date (e.g. calendar day click),
       // default new tasks to `TimeEvent` so the TimeEvent chooser is shown.
       try {
-        if (props.mode === 'add') {
-          localNewTask.value.type_id = 'TimeEvent';
-          lastSelectedType.value = 'TimeEvent';
+        if (props.mode === "add") {
+          localNewTask.value.type_id = "TimeEvent";
+          lastSelectedType.value = "TimeEvent";
           try {
-            localStorage.setItem(STORAGE_KEY, 'TimeEvent');
+            localStorage.setItem(STORAGE_KEY, "TimeEvent");
           } catch (e) {
             void e;
           }
@@ -1024,19 +1043,19 @@ watch(
         void e;
       }
     }
-  },
+  }
 );
 // ...existing code continues...
 
 // Helper: format date as yyyy-MM-dd
 function formatDate(y: number, m: number, d: number) {
-  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
 // Update handlers with auto-advance and auto-increment logic
 const isUpdatingDate = ref(false);
 function updateEventDateDay(val: number | string | null) {
-  if (val === null || val === '' || isUpdatingDate.value) return;
+  if (val === null || val === "" || isUpdatingDate.value) return;
   isUpdatingDate.value = true;
   try {
     const day = Number(val);
@@ -1048,7 +1067,7 @@ function updateEventDateDay(val: number | string | null) {
     // Auto-focus to month input after filling day (when day is 2 digits)
     if (String(val).length >= 2) {
       setTimeout(() => {
-        monthInput.value?.$el?.querySelector('input')?.focus();
+        monthInput.value?.$el?.querySelector("input")?.focus();
       }, 0);
     }
   } finally {
@@ -1057,7 +1076,7 @@ function updateEventDateDay(val: number | string | null) {
 }
 
 function updateEventDateMonth(val: number | string | null) {
-  if (val === null || val === '' || isUpdatingDate.value) return;
+  if (val === null || val === "" || isUpdatingDate.value) return;
   isUpdatingDate.value = true;
   try {
     const month = Number(val);
@@ -1079,12 +1098,15 @@ function updateEventDateMonth(val: number | string | null) {
       }
     }
     // Always update full date string using computed setter
-    const newDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+      2,
+      "0"
+    )}`;
     localNewTask.value.eventDate = newDate;
     // Auto-focus to hour input after filling month (when month is 2 digits)
     if (String(val).length >= 2) {
       setTimeout(() => {
-        hourInput.value?.$el?.querySelector('input')?.focus();
+        hourInput.value?.$el?.querySelector("input")?.focus();
       }, 0);
     }
   } finally {
@@ -1093,7 +1115,7 @@ function updateEventDateMonth(val: number | string | null) {
 }
 
 function updateEventDateYear(val: number | string | null) {
-  if (val === null || val === '') return;
+  if (val === null || val === "") return;
   eventDateYear.value = Number(val);
 }
 
@@ -1102,11 +1124,11 @@ function updateEventDateYear(val: number | string | null) {
 const { getTimeDifferenceDisplay } = useTimeDiff();
 // Computed for eventDate parts, always in sync with eventDate
 const eventDate = computed(() => {
-  const val = localNewTask.value.eventDate || '';
+  const val = localNewTask.value.eventDate || "";
   return val;
 });
 const eventDateParts = computed(() => {
-  const val = eventDate.value.split('-');
+  const val = eventDate.value.split("-");
   return val;
 });
 const eventDateYear = computed({
@@ -1127,7 +1149,7 @@ const eventDateYear = computed({
           const baseCentury = Math.floor(new Date().getFullYear() / 100) * 100;
           yearNum = baseCentury + yearNum;
         }
-        localNewTask.value.eventDate = `${String(yearNum).padStart(4, '0')}-${
+        localNewTask.value.eventDate = `${String(yearNum).padStart(4, "0")}-${
           eventDateParts.value[1]
         }-${eventDateParts.value[2]}`;
       }
@@ -1145,68 +1167,70 @@ const eventDateMonth = computed({
     if (eventDateParts.value.length === 3) {
       localNewTask.value.eventDate = `${eventDateParts.value[0]}-${String(val).padStart(
         2,
-        '0',
+        "0"
       )}-${eventDateParts.value[2]}`;
     }
   },
 });
 const eventDateDay = computed({
   get: () => {
-    const val = eventDateParts.value[2] ? Number(eventDateParts.value[2]) : new Date().getDate();
+    const val = eventDateParts.value[2]
+      ? Number(eventDateParts.value[2])
+      : new Date().getDate();
     return val;
   },
   set: (val: number) => {
     if (eventDateParts.value.length === 3) {
       localNewTask.value.eventDate = `${eventDateParts.value[0]}-${
         eventDateParts.value[1]
-      }-${String(val).padStart(2, '0')}`;
+      }-${String(val).padStart(2, "0")}`;
     }
   },
 });
 const priorityOptions = [
   {
-    label: 'Crit',
-    value: 'critical',
-    icon: 'warning',
+    label: "Crit",
+    value: "critical",
+    icon: "warning",
     background: themePriorityColors.critical,
-    textColor: themePriorityTextColor('critical'),
+    textColor: themePriorityTextColor("critical"),
   },
   {
-    label: 'Hi',
-    value: 'high',
-    icon: 'priority_high',
+    label: "Hi",
+    value: "high",
+    icon: "priority_high",
     background: themePriorityColors.high,
-    textColor: themePriorityTextColor('high'),
+    textColor: themePriorityTextColor("high"),
   },
   {
-    label: 'Med',
-    value: 'medium',
-    icon: 'drag_handle',
+    label: "Med",
+    value: "medium",
+    icon: "drag_handle",
     background: themePriorityColors.medium,
-    textColor: themePriorityTextColor('medium'),
+    textColor: themePriorityTextColor("medium"),
   },
   {
-    label: 'Lo',
-    value: 'low',
-    icon: 'low_priority',
+    label: "Lo",
+    value: "low",
+    icon: "low_priority",
     background: themePriorityColors.low,
-    textColor: themePriorityTextColor('low'),
+    textColor: themePriorityTextColor("low"),
   },
 ];
 
 // Colors for task types (used to color type buttons when active)
 const typeColors: Record<string, string> = {
-  TimeEvent: '#2196f3', // blue
-  Todo: '#4caf50', // green
-  NoteLater: '#9e9e9e', // grey
-  Replenish: '#c9a676', // yellow
+  TimeEvent: "#2196f3", // blue
+  Todo: "#4caf50", // green
+  NoteLater: "#9e9e9e", // grey
+  Replenish: "#c9a676", // yellow
 };
 
 const typeTextColors: Record<string, string> = {
-  TimeEvent: 'white',
-  Todo: 'white',
-  NoteLater: 'white',
-  Replenish: '#212121',
+  TimeEvent: "white",
+  Todo: "white",
+  NoteLater: "white",
+  Replenish: "#212121",
 };
 
 // Map checkbox to numeric status_id (0 = done, 1 = just created)
@@ -1220,7 +1244,7 @@ const statusValue = computed<number>({
 
 // Rows for description textarea: expand after ~100 characters
 const descriptionRows = computed(() => {
-  const len = (localNewTask.value.description || '').length;
+  const len = (localNewTask.value.description || "").length;
   return len > 100 ? 8 : 4;
 });
 
@@ -1230,9 +1254,10 @@ const descriptionInput = ref<any>(null);
 // When creating new tasks, keep the form open after save by default for Replenish
 // Initialize based on last selected type or current localNewTask type when in add mode.
 const stayAfterSave = ref(
-  (props.mode === 'add' &&
-    (localNewTask.value.type_id === 'Replenish' || lastSelectedType.value === 'Replenish')) ||
-    false,
+  (props.mode === "add" &&
+    (localNewTask.value.type_id === "Replenish" ||
+      lastSelectedType.value === "Replenish")) ||
+    false
 );
 
 // When user switches type while in add mode, toggle `stayAfterSave`:
@@ -1240,7 +1265,7 @@ const stayAfterSave = ref(
 // - disable when switching away from Replenish
 watch(isReplenish, (newVal, oldVal) => {
   try {
-    if (props.mode !== 'add') return;
+    if (props.mode !== "add") return;
     if (newVal && !oldVal) stayAfterSave.value = true;
     else if (!newVal && oldVal) stayAfterSave.value = false;
   } catch (e) {
@@ -1252,10 +1277,10 @@ function adjustDescriptionHeight() {
     try {
       const root = descriptionInput.value?.$el || descriptionInput.value;
       const ta: HTMLTextAreaElement | null = root?.querySelector
-        ? root.querySelector('textarea')
+        ? root.querySelector("textarea")
         : null;
       if (ta) {
-        ta.style.height = 'auto';
+        ta.style.height = "auto";
         ta.style.height = `${ta.scrollHeight}px`;
       }
     } catch (e) {
@@ -1268,13 +1293,13 @@ watch(
   () => localNewTask.value.description,
   () => {
     adjustDescriptionHeight();
-  },
+  }
 );
 
 // When user switches the repeat cycle type, set sensible defaults for month/year
 watch(repeatCycleType, (val) => {
   try {
-    if (val === 'interval') {
+    if (val === "interval") {
       if (
         !everyNDayOfMonth.value &&
         (repeatIntervalDays.value == null || repeatIntervalDays.value === 0)
@@ -1282,7 +1307,7 @@ watch(repeatCycleType, (val) => {
         repeatIntervalDays.value = 30;
       }
     }
-    if (val === 'nth') {
+    if (val === "nth") {
       try {
         if (!everyNDayOfMonth.value) {
           // Prefer the current event date day, otherwise fall back to selectedDate prop
@@ -1290,7 +1315,7 @@ watch(repeatCycleType, (val) => {
           if (dayNum && !isNaN(dayNum)) {
             everyNDayOfMonth.value = dayNum;
           } else if (props.selectedDate) {
-            const parts = String(props.selectedDate).split('-');
+            const parts = String(props.selectedDate).split("-");
             if (parts.length === 3) everyNDayOfMonth.value = Number(parts[2]);
           }
         }
@@ -1310,11 +1335,11 @@ onMounted(() => {
 function onSubmit(event: Event) {
   event.preventDefault();
   // Prevent creating Notes — show message instead
-  if (localNewTask.value.type_id === 'NoteLater') {
+  if (localNewTask.value.type_id === "NoteLater") {
     try {
       $q.notify({
-        type: 'info',
-        message: 'Notes needs to be redesigned and coded in some future',
+        type: "info",
+        message: "Notes needs to be redesigned and coded in some future",
       });
     } catch (e) {
       // ignore notify failures
@@ -1323,38 +1348,38 @@ function onSubmit(event: Event) {
   }
   // If this is a Replenish task and the user typed a query, use it as the name
   if (
-    localNewTask.value.type_id === 'Replenish' &&
+    localNewTask.value.type_id === "Replenish" &&
     replenishQuery.value &&
     replenishQuery.value.trim()
   ) {
     localNewTask.value.name = replenishQuery.value.trim();
     localNewTask.value.status_id = 1; // ensure undone
     // clear the query so subsequent submits don't reuse it
-    replenishQuery.value = '';
+    replenishQuery.value = "";
   }
   // Ensure a name exists: prefer explicit name, otherwise use auto-generated name
   if (!localNewTask.value.name || !localNewTask.value.name.trim()) {
-    const generated = autoGeneratedName.value || '';
+    const generated = autoGeneratedName.value || "";
     if (generated) localNewTask.value.name = generated;
   }
-  if (props.mode === 'add') {
+  if (props.mode === "add") {
     const payload: any = { ...localNewTask.value };
     // Canonical repeat object
-    if (repeatMode.value === 'cyclic') {
+    if (repeatMode.value === "cyclic") {
       let outCycle = repeatCycleType.value as string;
       const repeatObj: any = {
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
       };
 
-      if (repeatCycleType.value === 'interval') {
+      if (repeatCycleType.value === "interval") {
         if (everyNDayOfMonth.value) {
-          outCycle = 'month';
+          outCycle = "month";
           try {
-            const base = localNewTask.value.eventDate || '';
-            const parts = base.split('-');
+            const base = localNewTask.value.eventDate || "";
+            const parts = base.split("-");
             if (parts.length === 3) {
-              parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
-              repeatObj.eventDate = parts.join('-');
+              parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
+              repeatObj.eventDate = parts.join("-");
             } else {
               repeatObj.eventDate = localNewTask.value.eventDate || null;
             }
@@ -1362,19 +1387,19 @@ function onSubmit(event: Event) {
             repeatObj.eventDate = localNewTask.value.eventDate || null;
           }
         } else {
-          outCycle = 'other';
-          if (typeof repeatIntervalDays.value === 'number')
+          outCycle = "other";
+          if (typeof repeatIntervalDays.value === "number")
             repeatObj.intervalDays = repeatIntervalDays.value;
           repeatObj.eventDate = localNewTask.value.eventDate || null;
         }
-      } else if (repeatCycleType.value === 'nth') {
-        outCycle = 'month';
+      } else if (repeatCycleType.value === "nth") {
+        outCycle = "month";
         try {
-          const base = localNewTask.value.eventDate || '';
-          const parts = base.split('-');
+          const base = localNewTask.value.eventDate || "";
+          const parts = base.split("-");
           if (parts.length === 3 && everyNDayOfMonth.value) {
-            parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
-            repeatObj.eventDate = parts.join('-');
+            parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
+            repeatObj.eventDate = parts.join("-");
           } else {
             repeatObj.eventDate = localNewTask.value.eventDate || null;
           }
@@ -1393,9 +1418,9 @@ function onSubmit(event: Event) {
     } else {
       payload.repeat = null;
     }
-    emit('add-task', payload, { preview: !stayAfterSave.value });
+    emit("add-task", payload, { preview: !stayAfterSave.value });
     // Clear the description textarea after adding the task
-    localNewTask.value.description = '';
+    localNewTask.value.description = "";
     // Reset status checkbox to '1' (just created)
     try {
       (statusValue as any).value = 1;
@@ -1405,21 +1430,21 @@ function onSubmit(event: Event) {
   } else {
     // Edit mode: convert repeat form fields into canonical object before update
     const updated = { ...localNewTask.value } as any;
-    if (repeatMode.value === 'cyclic') {
+    if (repeatMode.value === "cyclic") {
       let outCycle = repeatCycleType.value as string;
       const repeatObj: any = {
         days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
       };
 
-      if (repeatCycleType.value === 'interval') {
+      if (repeatCycleType.value === "interval") {
         if (everyNDayOfMonth.value) {
-          outCycle = 'month';
+          outCycle = "month";
           try {
-            const base = localNewTask.value.eventDate || '';
-            const parts = base.split('-');
+            const base = localNewTask.value.eventDate || "";
+            const parts = base.split("-");
             if (parts.length === 3) {
-              parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
-              repeatObj.eventDate = parts.join('-');
+              parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
+              repeatObj.eventDate = parts.join("-");
             } else {
               repeatObj.eventDate = localNewTask.value.eventDate || null;
             }
@@ -1427,19 +1452,19 @@ function onSubmit(event: Event) {
             repeatObj.eventDate = localNewTask.value.eventDate || null;
           }
         } else {
-          outCycle = 'other';
-          if (typeof repeatIntervalDays.value === 'number')
+          outCycle = "other";
+          if (typeof repeatIntervalDays.value === "number")
             repeatObj.intervalDays = repeatIntervalDays.value;
           repeatObj.eventDate = localNewTask.value.eventDate || null;
         }
-      } else if (repeatCycleType.value === 'nth') {
-        outCycle = 'month';
+      } else if (repeatCycleType.value === "nth") {
+        outCycle = "month";
         try {
-          const base = localNewTask.value.eventDate || '';
-          const parts = base.split('-');
+          const base = localNewTask.value.eventDate || "";
+          const parts = base.split("-");
           if (parts.length === 3 && everyNDayOfMonth.value) {
-            parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
-            repeatObj.eventDate = parts.join('-');
+            parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
+            repeatObj.eventDate = parts.join("-");
           } else {
             repeatObj.eventDate = localNewTask.value.eventDate || null;
           }
@@ -1459,7 +1484,7 @@ function onSubmit(event: Event) {
       updated.repeat = null;
     }
     // Emit update; parent will switch to preview and clear edit selection
-    emit('update-task', updated);
+    emit("update-task", updated);
   }
 }
 </script>
@@ -1494,14 +1519,26 @@ function onSubmit(event: Event) {
             clickable
             @click.stop="groupMenu = true"
           >
-            {{ getGroupName(localNewTask.groupId) || activeGroupLabelShort || 'No group' }}
+            {{
+              getGroupName(localNewTask.groupId) || activeGroupLabelShort || "No group"
+            }}
           </q-chip>
-          <q-menu v-model="groupMenu" anchor="bottom right" self="top right" class="group-menu">
+          <q-menu
+            v-model="groupMenu"
+            anchor="bottom right"
+            self="top right"
+            class="group-menu"
+          >
             <q-list dense separator>
               <q-item clickable dense @click="selectGroupForAdd(null)">
                 <q-item-section
                   side
-                  style="width: 36px; display: flex; align-items: center; justify-content: center"
+                  style="
+                    width: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
                 >
                   <q-icon name="clear" />
                 </q-item-section>
@@ -1519,9 +1556,17 @@ function onSubmit(event: Event) {
               >
                 <q-item-section
                   side
-                  style="width: 36px; display: flex; align-items: center; justify-content: center"
+                  style="
+                    width: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
                 >
-                  <q-icon :name="g.icon || 'folder'" :style="{ color: g.color || 'inherit' }" />
+                  <q-icon
+                    :name="g.icon || 'folder'"
+                    :style="{ color: g.color || 'inherit' }"
+                  />
                 </q-item-section>
                 <q-item-section>
                   <div style="font-weight: 600">{{ g.name }}</div>
@@ -1556,7 +1601,7 @@ function onSubmit(event: Event) {
             {{ watermarkIcon }}
           </i>
           <span style="color: #ff9800; font-weight: 600">Edit:</span>
-          <span style="font-weight: 500">{{ localNewTask.name || 'Untitled' }}</span>
+          <span style="font-weight: 500">{{ localNewTask.name || "Untitled" }}</span>
         </div>
         <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
           <q-btn
@@ -1586,7 +1631,10 @@ function onSubmit(event: Event) {
                       bordered
                       class="q-pa-sm bg-blue-1"
                     >
-                      <div class="row items-center q-mb-xs" style="gap: 8px; align-items: center">
+                      <div
+                        class="row items-center q-mb-xs"
+                        style="gap: 8px; align-items: center"
+                      >
                         <div class="text-caption text-grey-7">Date</div>
 
                         <div class="col-auto">
@@ -1649,8 +1697,8 @@ function onSubmit(event: Event) {
                           />
                           <div v-if="everyNDayOfMonth" class="text-caption q-mb-xs">
                             <template v-if="everyNDayOfMonth >= 29">
-                              Repeats every month on day {{ everyNDayOfMonth }} (uses the last day
-                              of the month when that day doesn't exist).
+                              Repeats every month on day {{ everyNDayOfMonth }} (uses the
+                              last day of the month when that day doesn't exist).
                             </template>
                             <template v-else>
                               Repeats every month on day {{ everyNDayOfMonth }}.
@@ -1697,13 +1745,29 @@ function onSubmit(event: Event) {
                               @click="toggleDay(opt.value)"
                               class="weekday-btn q-ma-none"
                               :class="{
-                                'weekday-btn-selected': repeatDays.indexOf(opt.value) !== -1,
+                                'weekday-btn-selected':
+                                  repeatDays.indexOf(opt.value) !== -1,
                               }"
                             />
                           </div>
-                          <div class="row" style="gap: 8px; margin-top: 6px; align-items: center">
-                            <q-btn dense flat size="sm" label="Check all" @click="checkAllDays" />
-                            <q-btn dense flat size="sm" label="Clear" @click="clearDays" />
+                          <div
+                            class="row"
+                            style="gap: 8px; margin-top: 6px; align-items: center"
+                          >
+                            <q-btn
+                              dense
+                              flat
+                              size="sm"
+                              label="Check all"
+                              @click="checkAllDays"
+                            />
+                            <q-btn
+                              dense
+                              flat
+                              size="sm"
+                              label="Clear"
+                              @click="clearDays"
+                            />
                           </div>
                         </div>
                       </div>
@@ -1715,7 +1779,12 @@ function onSubmit(event: Event) {
                       >
                         <div
                           class="row q-gutter-xs date-inputs-row"
-                          style="gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto"
+                          style="
+                            gap: 8px;
+                            align-items: center;
+                            flex-wrap: nowrap;
+                            overflow-x: auto;
+                          "
                         >
                           <q-input
                             ref="dayInput"
@@ -1773,9 +1842,21 @@ function onSubmit(event: Event) {
                       </div>
                       <div
                         class="row q-gutter-xs"
-                        style="gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto"
+                        style="
+                          gap: 8px;
+                          align-items: center;
+                          flex-wrap: nowrap;
+                          overflow-x: auto;
+                        "
                       >
-                        <div style="flex: 0 0 auto; display: flex; gap: 8px; align-items: center">
+                        <div
+                          style="
+                            flex: 0 0 auto;
+                            display: flex;
+                            gap: 8px;
+                            align-items: center;
+                          "
+                        >
                           <q-input
                             ref="hourInput"
                             v-model="eventTimeHour"
@@ -1948,7 +2029,10 @@ function onSubmit(event: Event) {
                               <q-item-section>
                                 <div class="text-body1">{{ m.name }}</div>
                               </q-item-section>
-                              <q-item-section side style="display: flex; align-items: center">
+                              <q-item-section
+                                side
+                                style="display: flex; align-items: center"
+                              >
                                 <q-icon
                                   v-if="replenishAlreadyAdded(m)"
                                   name="check_circle"
@@ -1964,10 +2048,14 @@ function onSubmit(event: Event) {
 
                       <!-- Color chooser for Replenish tasks (moved above submit buttons) -->
                       <div
-                        v-if="isReplenish && (props.mode === 'add' || props.mode === 'edit')"
+                        v-if="
+                          isReplenish && (props.mode === 'add' || props.mode === 'edit')
+                        "
                         class="q-pa-sm col"
                       >
-                        <div class="text-caption text-grey-7 q-mb-xs">Replenish color</div>
+                        <div class="text-caption text-grey-7 q-mb-xs">
+                          Replenish color
+                        </div>
                         <div class="row" style="gap: 8px; align-items: center">
                           <div style="flex: 0 1 auto">
                             <div
@@ -2007,7 +2095,11 @@ function onSubmit(event: Event) {
                                   "
                                   :title="cs.id === 'transparent' ? 'Transparent' : cs.id"
                                 >
-                                  <q-icon v-if="cs.id === 'transparent'" name="close" size="14px" />
+                                  <q-icon
+                                    v-if="cs.id === 'transparent'"
+                                    name="close"
+                                    size="14px"
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -2027,10 +2119,14 @@ function onSubmit(event: Event) {
                       >
                         <q-btn
                           :color="
-                            localNewTask.priority === option.value ? option.background : 'grey-3'
+                            localNewTask.priority === option.value
+                              ? option.background
+                              : 'grey-3'
                           "
                           :text-color="
-                            localNewTask.priority === option.value ? option.textColor : 'grey-7'
+                            localNewTask.priority === option.value
+                              ? option.textColor
+                              : 'grey-7'
                           "
                           :icon="option.icon"
                           :aria-label="option.label"
@@ -2045,7 +2141,9 @@ function onSubmit(event: Event) {
                                 ? option.background
                                 : undefined,
                             color:
-                              localNewTask.priority === option.value ? option.textColor : undefined,
+                              localNewTask.priority === option.value
+                                ? option.textColor
+                                : undefined,
                           }"
                         />
                       </div>
@@ -2059,7 +2157,11 @@ function onSubmit(event: Event) {
                           unelevated
                           :icon="submitIcon || undefined"
                           :label="
-                            mode === 'add' ? 'Create' : mode === 'edit' ? 'Update' : 'Preview'
+                            mode === 'add'
+                              ? 'Create'
+                              : mode === 'edit'
+                              ? 'Update'
+                              : 'Preview'
                           "
                           :disable="mode === 'preview'"
                           :style="`background: ${submitColor} !important; background-color: ${submitColor} !important; border-color: ${submitColor} !important; color: ${submitTextColor} !important;`"
@@ -2108,7 +2210,12 @@ function onSubmit(event: Event) {
                               label="Yes"
                               @click.stop="performDelete"
                             />
-                            <q-btn flat dense label="No" @click.stop="cancelDeleteConfirm" />
+                            <q-btn
+                              flat
+                              dense
+                              label="No"
+                              @click.stop="cancelDeleteConfirm"
+                            />
                           </div>
                         </div>
                       </div>
@@ -2133,7 +2240,9 @@ function onSubmit(event: Event) {
                         @click="localNewTask.type_id = opt.value"
                         :style="{
                           backgroundColor:
-                            localNewTask.type_id === opt.value ? typeColors[opt.value] : undefined,
+                            localNewTask.type_id === opt.value
+                              ? typeColors[opt.value]
+                              : undefined,
                           color:
                             localNewTask.type_id === opt.value
                               ? typeTextColors[opt.value]
@@ -2194,7 +2303,7 @@ function onSubmit(event: Event) {
   position: absolute;
   right: 8px;
   bottom: 8px;
-  font-family: 'Material Icons';
+  font-family: "Material Icons";
   font-size: 260px;
   opacity: 0.14;
   color: rgba(0, 0, 0, 0.1);

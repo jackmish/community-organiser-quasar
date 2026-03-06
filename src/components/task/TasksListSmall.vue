@@ -253,7 +253,7 @@ function selectHiddenGroup(g: any) {
 }
 .group-label {
   position: absolute;
-  top: -10px;
+  top: -7px;
   left: 8px;
   font-size: 11px;
   line-height: 1;

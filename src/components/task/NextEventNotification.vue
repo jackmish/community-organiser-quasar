@@ -361,6 +361,14 @@ function onClickEvent(ev: any) {
   top: 8px;
   transform: none;
 }
+.next-event-title {
+  /* single-line truncation with ellipsis */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 160px; /* keep reasonable length inside notification */
+}
 .next-event-meta {
   line-height: 1;
 }
