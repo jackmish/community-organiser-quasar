@@ -138,6 +138,19 @@
                       'title-ellipsis',
                     ]"
                   >
+                    <span
+                      class="priority-inline"
+                      :title="item.priority"
+                      :style="{
+                        backgroundColor: priorityColor(item.priority),
+                        color: priorityTextColor(item.priority),
+                      }"
+                    >
+                      <q-icon
+                        :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
+                        size="12px"
+                      />
+                    </span>
                     <strong>
                       <span v-if="countTodoSubtasks(item).total > 0">
                         ({{ countTodoSubtasks(item).done }}/{{
@@ -157,178 +170,37 @@
                     </strong>
                   </q-item-label>
                 </div>
-                <div class="title-checkbox">
-                  <q-checkbox
-                    class="task-checkbox"
-                    :model-value="Number(item.status_id) === 0"
-                    @click.stop="toggleStatus(item)"
-                  />
-                </div>
-              </div>
-              <q-item-label
-                v-if="
-                  !isTodoType(item) &&
-                  (item.type === 'event' ||
-                    item.type_id === 'TimeEvent' ||
-                    item.type === 'TimeEvent' ||
-                    item.timeMode === 'event') &&
-                  getEventHoursDisplay(item)
-                "
-                caption
-                :class="[
-                  'task-desc',
-                  {
-                    'has-date': hasDate(item),
-                    'prepare-desc': item.timeMode === 'prepare',
-                    'expiration-desc': item.timeMode === 'expiration',
-                  },
-                ]"
-              >
-                <span
-                  class="priority-inline"
-                  :title="item.priority"
-                  :style="{
-                    backgroundColor: priorityColor(item.priority),
-                    color: priorityTextColor(item.priority),
-                  }"
+                <!-- DATE AND TIME INFO | REMINDER OF INCOMING EVENT - needed preparation or has expiration -->
+                <q-item-label
+                  v-if="
+                    !isTodoType(item) &&
+                    (item.type === 'event' ||
+                      item.type_id === 'TimeEvent' ||
+                      item.type === 'TimeEvent' ||
+                      item.timeMode === 'event') &&
+                    getEventHoursDisplay(item)
+                  "
+                  caption
+                  :class="[
+                    'task-desc',
+                    {
+                      'has-date': hasDate(item),
+                      'prepare-desc': item.timeMode === 'prepare',
+                      'expiration-desc': item.timeMode === 'expiration',
+                    },
+                  ]"
                 >
-                  <q-icon
-                    :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
-                    size="12px"
-                  />
-                </span>
-                {{ getEventHoursDisplay(item) }}
-              </q-item-label>
-              <q-item-label
-                v-else-if="getDisplayDescription(item)"
-                caption
-                class="task-desc"
-              >
-                <span
-                  class="priority-inline"
-                  :title="item.priority"
-                  :style="{
-                    backgroundColor: priorityColor(item.priority),
-                    color: priorityTextColor(item.priority),
-                  }"
+                  <span style="white-space: pre-line">{{
+                    getEventHoursDisplay(item)
+                  }}</span>
+                </q-item-label>
+                <!-- <q-item-label
+                  v-else-if="getDisplayDescription(item)"
+                  caption
+                  class="task-desc"
                 >
-                  <q-icon
-                    :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
-                    size="12px"
-                  />
-                </span>
-                {{ getDisplayDescription(item) }}
-              </q-item-label>
-            </div>
-          </q-item-section>
-          <q-item-section side>
-            <div class="task-controls-grid">
-              <div class="controls-edit">
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="edit"
-                  class="edit-btn"
-                  @click.stop="editTask(item)"
-                />
-              </div>
-
-              <div class="controls-menu">
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="more_vert"
-                  class="menu-btn"
-                  @click.stop="openItemMenuId = item.id"
-                />
-                <q-menu
-                  class="use-default"
-                  :model-value="openItemMenuId === item.id"
-                  @update:model-value="(val) => onItemMenuToggle(val, item.id)"
-                  anchor="top right"
-                  self="top right"
-                >
-                  <q-list padding>
-                    <q-item
-                      clickable
-                      v-ripple
-                      @click.stop="
-                        () => {
-                          editTask(item);
-                          openItemMenuId = null;
-                        }
-                      "
-                      style="
-                        background: rgba(255, 152, 0, 1) !important;
-                        color: rgba(0, 0, 0, 0.95) !important;
-                      "
-                    >
-                      <q-item-section avatar style="min-width: 36px">
-                        <q-icon name="edit" color="#ff9800" />
-                      </q-item-section>
-                      <q-item-section style="color: rgba(0, 0, 0, 0.95) !important"
-                        >Edit</q-item-section
-                      >
-                    </q-item>
-                    <template v-if="pendingDeleteId !== item.id">
-                      <q-item
-                        clickable
-                        v-ripple
-                        @click.stop="
-                          () => {
-                            requestDelete(item.id);
-                          }
-                        "
-                        style="background: #b71c1c !important; color: #ffffff !important"
-                      >
-                        <q-item-section avatar style="min-width: 36px">
-                          <q-icon name="delete" color="#ffffff" />
-                        </q-item-section>
-                        <q-item-section style="color: #ffffff !important"
-                          >Delete</q-item-section
-                        >
-                      </q-item>
-                    </template>
-                    <template v-else>
-                      <q-item>
-                        <q-item-section>
-                          <div style="display: flex; align-items: center; gap: 8px">
-                            <div
-                              style="
-                                flex: 1;
-                                font-weight: 600;
-                                color: rgba(0, 0, 0, 0.95);
-                              "
-                            >
-                              Confirm delete?
-                            </div>
-                            <div style="display: flex; gap: 6px">
-                              <q-btn
-                                dense
-                                flat
-                                color="negative"
-                                label="Delete"
-                                @click.stop="() => performDelete(item.id)"
-                              />
-                              <q-btn
-                                dense
-                                flat
-                                label="Cancel"
-                                @click.stop="cancelDelete"
-                              />
-                            </div>
-                          </div>
-                        </q-item-section>
-                      </q-item>
-                    </template>
-                  </q-list>
-                </q-menu>
-              </div>
-
-              <div class="group-name">
-                {{ getGroupName(item.groupId || item.group_id) }}
+                  {{ getDisplayDescription(item) }}
+                </q-item-label> -->
               </div>
             </div>
           </q-item-section>
@@ -421,18 +293,6 @@ const mergedTasks = computed(() => {
   // to any ancestor (parent) groups so parent tasks don't appear inside child view.
   const activeId =
     activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
-
-  const isAncestor = (ancestorId: any, childId: any) => {
-    if (!ancestorId || !childId) return false;
-    let cur = groups.value.find((g: any) => String(g.id) === String(childId));
-    while (cur) {
-      const pid = cur.parentId ?? cur.parent_id ?? null;
-      if (pid == null) return false;
-      if (String(pid) === String(ancestorId)) return true;
-      cur = groups.value.find((g: any) => String(g.id) === String(pid));
-    }
-    return false;
-  };
 
   const filterTask = (t: any) => {
     if (!t) return false;
@@ -531,15 +391,15 @@ const getEventHoursDisplay = (task: any) => {
         let rel = "";
         if (diffDays === 0) rel = "Today";
         else if (diffDays === 1) rel = "Tomorrow";
-        else if (diffDays > 1) rel = `In ${diffDays}days`;
-        else rel = `${Math.abs(diffDays)} days ago`;
+        else if (diffDays > 1) rel = `In\u00A0${diffDays}\u00A0days`;
+        else rel = `${Math.abs(diffDays)}\u00A0days\u00A0ago`;
 
         const shortDate = formatShortDate(dateStr);
         if (timeStr) {
           // Prefer two-line format when both relative and exact time are present
           return `${rel}\n${shortDate} | ${timeStr}`;
         }
-        return `${rel}, ${shortDate}`;
+        return `${rel}\n${shortDate}`;
       }
     }
   } catch (e) {
@@ -838,16 +698,16 @@ function confirmDelete(id: string) {
   -webkit-line-clamp: 2 !important;
 }
 .task-desc {
-  display: -webkit-box !important;
-  -webkit-box-orient: vertical !important;
-  -webkit-line-clamp: 1 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
+  display: block;
+  /* -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 1 !important; */
+  /* overflow: hidden !important; */
+  /* text-overflow: ellipsis !important; */
+  /* white-space: nowrap !important; */
   line-height: 1.3 !important;
   margin: 0 !important;
-  max-width: 100%;
-  max-height: calc(1 * 1.3em + 8px) !important; /* extra buffer to avoid clipping */
+  /* max-width: 100%; */
+  /* max-height: calc(1 * 1.3em + 8px) !important;  */
   padding-top: 0 !important; /* reset top padding per request */
 
   color: inherit; /* respect item text color */
@@ -882,10 +742,7 @@ function confirmDelete(id: string) {
 .task-checkbox .q-icon {
   font-size: 14px !important;
 }
-/* ensure truncation applies in title rows */
-.title-row .task-desc {
-  max-width: calc(100%);
-}
+
 .priority-left {
   vertical-align: middle;
 }
