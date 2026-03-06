@@ -50,7 +50,7 @@
                 :key="t.id"
                 :item="t"
                 :selected-task-id="selectedTaskId"
-                @task-click="$emit('task-click', $event)"
+                @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
               />
             </div>
           </q-card>
@@ -69,7 +69,7 @@
             <TaskCardSmall
               :item="item"
               :selected-task-id="selectedTaskId"
-              @task-click="$emit('task-click', $event)"
+              @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
             />
           </div>
         </template>
@@ -96,7 +96,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "toggle-status", task: any): void;
   (e: "edit-task", task: any): void;
-  (e: "task-click", task: any): void;
+  (e: "task-click", task: any, rect?: DOMRect | null): void;
   (e: "delete-task", id: string): void;
 }>();
 

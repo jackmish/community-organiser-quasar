@@ -5,6 +5,7 @@
       'bg-grey-2': Number(item.status_id) === 0,
       'selected-task': selectedTaskId === item.id,
     }"
+    :data-task-id="item.id"
     :style="itemStyle(item)"
     :active="selectedTaskId === item.id"
     clickable
@@ -12,7 +13,7 @@
     @pointerup="cancelLongPress"
     @pointercancel="cancelLongPress"
     @pointerleave="cancelLongPress"
-    @click="handleTaskClick"
+    @click="handleTaskClick($event)"
   >
     <q-icon
       v-if="typeIcons[item.type_id || item.type]"
@@ -109,7 +110,7 @@ import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utlils/occurs
 
 const props = defineProps<{ item: any; selectedTaskId: string | null }>();
 const emit = defineEmits<{
-  (e: "task-click", t: any): void;
+  (e: "task-click", t: any, rect?: DOMRect | null): void;
 }>();
 
 const { startLongPress, cancelLongPress, longPressTriggered } = useLongPress();
@@ -236,12 +237,18 @@ const itemStyle = (task: any) => {
   } as Record<string, string>;
 };
 
-const handleTaskClick = () => {
+const handleTaskClick = (evt: Event) => {
   if (longPressTriggered.value) {
     longPressTriggered.value = false;
     return;
   }
-  emit("task-click", item);
+  try {
+    const el = ((evt.currentTarget as unknown) as HTMLElement) || ((evt.target as unknown) as HTMLElement);
+    const rect = el ? el.getBoundingClientRect() : null;
+    emit("task-click", item, rect);
+  } catch (e) {
+    emit("task-click", item, null);
+  }
 };
 
 // exports removed - `<script setup>` must not contain ES module exports

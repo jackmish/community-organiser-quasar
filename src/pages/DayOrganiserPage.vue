@@ -9,6 +9,9 @@
     >
       <q-spinner color="primary" size="3em" />
     </div>
+    <!-- Single TaskPreview instance: when `previewFloating` is true it will be positioned
+         near the clicked task by applying an inline fixed-position style; otherwise it
+         stays inside the fixed-right-panel as before. This avoids rendering two copies. -->
     <div v-else>
       <div class="row q-col-gutter-md tasks-row">
         <div class="col-12 left-panel tasks-column">
@@ -72,7 +75,7 @@
               :hidden-groups="hiddenGroupSummary.groups"
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
-              @task-click="handleTaskClick"
+              @task-click="onTaskClicked"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
               @toggle-status="handleToggleStatus"
@@ -88,6 +91,7 @@
             :selected-date="api.task.time.currentDate.value"
             :tasks="allTasks"
             @update:selectedDate="(d) => api.task.time.setCurrentDate(d)"
+            @day-click="onCalendarDayClick"
           />
         </div>
         <div class="col-12 col-md-4">
@@ -132,7 +136,12 @@
         icon="keyboard_arrow_down"
         @click="panelHidden = true"
       />
-      <div class="fixed-content">
+      <div
+        class="fixed-content"
+        :class="{ floating: previewFloating }"
+        :style="previewFloating ? computePreviewStyle(previewRect) : {}"
+      >
+        <!-- Single TaskPreview instance: toggles between floating and fixed placement -->
         <TaskPreview
           v-if="api.task.active.mode.value === 'preview' && api.task.active.task.value"
           :task="api.task.active.task.value"
@@ -147,27 +156,60 @@
           "
           @close="clearTaskToEdit"
           @update-task="(t) => handleUpdateTask(t)"
-          :fixed="false"
+          :fixed="!previewFloating"
         />
-        <AddTaskForm
-          v-else
-          :filtered-parent-options="filteredParentOptions"
-          :active-group="api.group.active.activeGroup"
-          :show-calendar="false"
-          :selected-date="newTask.eventDate"
-          :all-tasks="allTasks"
-          :replenish-tasks="replenishTasks"
-          :initial-task="api.task.active.task.value"
-          :mode="api.task.active.mode.value"
-          @update:mode="(v) => api.task.active.setMode(v)"
-          @add-task="handleAddTask"
-          @update-task="handleUpdateTask"
-          @delete-task="handleDeleteTask"
-          @toggle-status="handleToggleStatus"
-          @cancel-edit="() => clearTaskToEdit()"
-          @calendar-date-select="handleCalendarDateSelect"
-          @filter-parent-tasks="filterParentTasks"
-        />
+
+        <!-- Floating wrapper for AddTaskForm when previewFloating is true -->
+        <div class="floating-preview-wrapper" v-if="previewFloating">
+          <AddTaskForm
+            v-if="
+              api.task.active.mode.value === 'add' ||
+              api.task.active.mode.value === 'edit'
+            "
+            :filtered-parent-options="filteredParentOptions"
+            :active-group="api.group.active.activeGroup"
+            :show-calendar="false"
+            :selected-date="newTask.eventDate"
+            :all-tasks="allTasks"
+            :replenish-tasks="replenishTasks"
+            :initial-task="api.task.active.task.value"
+            :mode="api.task.active.mode.value"
+            @update:mode="(v) => api.task.active.setMode(v)"
+            @add-task="handleAddTask"
+            @update-task="handleUpdateTask"
+            @delete-task="handleDeleteTask"
+            @toggle-status="handleToggleStatus"
+            @cancel-edit="() => clearTaskToEdit()"
+            @calendar-date-select="handleCalendarDateSelect"
+            @filter-parent-tasks="filterParentTasks"
+          />
+        </div>
+
+        <!-- When not floating, render AddTaskForm inside the fixed panel as before -->
+        <div v-if="!previewFloating">
+          <AddTaskForm
+            v-if="
+              api.task.active.mode.value === 'add' ||
+              api.task.active.mode.value === 'edit'
+            "
+            :filtered-parent-options="filteredParentOptions"
+            :active-group="api.group.active.activeGroup"
+            :show-calendar="false"
+            :selected-date="newTask.eventDate"
+            :all-tasks="allTasks"
+            :replenish-tasks="replenishTasks"
+            :initial-task="api.task.active.task.value"
+            :mode="api.task.active.mode.value"
+            @update:mode="(v) => api.task.active.setMode(v)"
+            @add-task="handleAddTask"
+            @update-task="handleUpdateTask"
+            @delete-task="handleDeleteTask"
+            @toggle-status="handleToggleStatus"
+            @cancel-edit="() => clearTaskToEdit()"
+            @calendar-date-select="handleCalendarDateSelect"
+            @filter-parent-tasks="filterParentTasks"
+          />
+        </div>
       </div>
     </div>
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
@@ -210,6 +252,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import * as api from "src/modules/day-organiser/_apiRoot";
@@ -227,6 +270,39 @@ const currentDayData = computed(() => {
   const d = api.task.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: "" } as any);
 });
+
+function onTaskClicked(task: any, rect?: DOMRect | null) {
+  try {
+    const activeId = api.task.active.task.value?.id;
+    if (
+      activeId &&
+      task &&
+      String(activeId) === String(task.id) &&
+      previewFloating.value
+    ) {
+      // second click on same task -> return preview to default place
+      previewFloating.value = false;
+      previewRect.value = null;
+      return;
+    }
+    // Delegate to existing handler which sets preview task and mode
+    try {
+      handleTaskClick(task);
+    } catch (e) {
+      try {
+        // fallback: use api directly
+        api.task.active.setTask(task);
+        api.task.active.mode.value = "preview";
+      } catch (err) {
+        void err;
+      }
+    }
+    // If we received a bounding rect, show floating preview near it
+    setPreviewFloating(rect ?? null);
+  } catch (e) {
+    void e;
+  }
+}
 
 // Provide a lightweight organiser-like ref for legacy helpers that expect
 // an `organiserData` ref with `groups` and `days`.
@@ -442,6 +518,32 @@ watch(
   }
 );
 
+// When mode changes to 'add' we usually reset the floating preview to default placement
+// unless the add was initiated from a calendar day click (in which case the calendar
+// handler already positioned the add form near the clicked day).
+watch(
+  () => api.task.active.mode.value,
+  (mode) => {
+    try {
+      if (mode === "add") {
+        if (lastAddFromCalendar.value) {
+          // allow calendar-initiated add to keep its floating placement, then reset flag
+          lastAddFromCalendar.value = false;
+        } else {
+          // reset floating preview to default
+          try {
+            setPreviewFloating(null);
+          } catch (e) {
+            void e;
+          }
+        }
+      }
+    } catch (e) {
+      void e;
+    }
+  }
+);
+
 // createGroupUiHandlers removed: no UI opens the inline edit dialog
 
 // mode change handling moved into api.task
@@ -553,6 +655,62 @@ const handleDeleteTask = async (payload: any) => {
     openDeleteMenu.value = null;
   }
 };
+
+// Floating preview logic moved to composable to keep page code tidy
+const {
+  previewFloating,
+  previewRect,
+  setFloating: setPreviewFloating,
+  closeFloatingPreview,
+  computePreviewStyle,
+} = useFloatingPreview({
+  width: 360,
+  shouldIgnoreClick: (target) => {
+    try {
+      const activeId = api.task.active.task.value?.id;
+      if (activeId && target && (target as Element).closest) {
+        return Boolean((target as Element).closest(`[data-task-id="${activeId}"]`));
+      }
+    } catch (e) {
+      void e;
+    }
+    return false;
+  },
+});
+
+const lastAddFromCalendar = ref(false);
+
+function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
+  try {
+    lastAddFromCalendar.value = true;
+    // Clear any active task so AddTaskForm enters add mode
+    try {
+      api.task.active.setTask(null);
+    } catch (e) {
+      void e;
+    }
+    // switch to add mode
+    try {
+      api.task.active.mode.value = "add";
+    } catch (e) {
+      try {
+        if (api.task.active.setMode) api.task.active.setMode("add");
+      } catch (_err) {
+        void _err;
+      }
+    }
+
+    if (payload && payload.rect) {
+      // Position the add form near the clicked calendar day
+      setPreviewFloating(payload.rect);
+    } else {
+      // No rect provided => ensure default placement
+      setPreviewFloating(null);
+    }
+  } catch (e) {
+    void e;
+  }
+}
 
 const handleToggleStatus = async (task: any) => {
   try {

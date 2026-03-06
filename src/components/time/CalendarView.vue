@@ -106,7 +106,7 @@
                 </div>
                 <q-btn
                   size="sm"
-                  @click="handleDateSelect(day)"
+                  @click="(ev) => handleDateSelect(ev, day)"
                   :title="
                     new Date(day).toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -274,6 +274,7 @@ const emit = defineEmits<{
   (e: "update:selectedDate", value: string): void;
   (e: "preview-task", payload: any): void;
   (e: "edit-task", id: string | null): void;
+  (e: "day-click", payload: { date: string; rect: DOMRect | null }): void;
 }>();
 
 // Long-press composable for event pills
@@ -1103,23 +1104,47 @@ function jumpToMonth(dateString: string) {
   displayManager.reset();
 }
 
-function handleDateSelect(dateString: string) {
+function handleDateSelect(e: Event | string, dateString?: string) {
+  // Support both call signatures: (ev, date) and (date)
+  let ev: Event | undefined;
+  let date = "";
+  if (typeof e === "string") {
+    date = e;
+  } else {
+    ev = e;
+    date = dateString || "";
+  }
   try {
+    // compute bounding rect of clicked day button for positioning
+    let rect: DOMRect | null = null;
+    try {
+      if (ev) {
+        const el = ev.currentTarget ?? ev.target;
+        if (el instanceof Element) rect = el.getBoundingClientRect();
+      }
+    } catch (err) {
+      void err;
+    }
+
     void (async () => {
       try {
         const apiModule = await import("src/modules/day-organiser/_apiRoot");
         const api = apiModule as any;
         if (api && api.time && typeof api.time.setCurrentDate === "function") {
-          api.time.setCurrentDate(dateString);
+          api.time.setCurrentDate(date);
         }
       } catch (e) {
         // ignore
       }
     })();
+    // Emit both the selected date and the optional rect for parent to position forms
+    emit("update:selectedDate", date);
+    emit("day-click", { date, rect });
   } catch (e) {
     // ignore
+    emit("update:selectedDate", date);
+    emit("day-click", { date, rect: null });
   }
-  emit("update:selectedDate", dateString);
 }
 
 // Helper functions
