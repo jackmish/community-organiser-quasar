@@ -240,7 +240,7 @@ function selectHiddenGroup(g: any) {
 .task-list {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
-  gap: 8px 8px !important; /* row-gap 8px, column-gap 2px */
+  gap: 8px 0px !important; /* row-gap 8px, column-gap 2px */
   align-items: start;
   padding: 0 8px 8px 8px;
   box-sizing: border-box;

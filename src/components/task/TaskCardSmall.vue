@@ -34,6 +34,7 @@
               ]"
             >
               <span
+                v-if="item.priority === 'high' || item.priority === 'critical'"
                 class="priority-inline"
                 :title="item.priority"
                 :style="{
@@ -47,11 +48,6 @@
                 />
               </span>
               <strong>
-                <span v-if="countTodoSubtasks(item).total > 0">
-                  ({{ countTodoSubtasks(item).done }}/{{
-                    countTodoSubtasks(item).total
-                  }})&nbsp;
-                </span>
                 {{ getDisplayName(item) }}
                 <span class="star-count" v-if="countStarredUndone(item) > 0">
                   <q-icon
@@ -61,6 +57,11 @@
                     color="amber"
                     size="14px"
                   />
+                </span>
+                <span v-if="countTodoSubtasks(item).total > 0">
+                  ({{ countTodoSubtasks(item).done }}/{{
+                    countTodoSubtasks(item).total
+                  }})&nbsp;
                 </span>
               </strong>
             </q-item-label>
@@ -279,6 +280,9 @@ const handleTaskClick = () => {
   align-items: center;
 }
 .priority-inline {
+  /* position: absolute;
+  top: -10px;
+  left: -2px; */
   display: inline-flex;
   align-items: center;
   justify-content: center;
