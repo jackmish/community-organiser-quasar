@@ -77,7 +77,15 @@ export class ApiTask {
       parsedLines: state.parsedLines,
       add: async (text: string) => {
         const res = await mgr.managers.subtaskLine.add(state.activeTask.value, text);
-        if (res && res.newDesc) await saveData();
+        try {
+          if (res && res.newDesc) await saveData();
+        } catch (err) {
+          try {
+            console.error('subtaskLine.add: failed to save data', err);
+          } catch (e) {
+            void e;
+          }
+        }
         return res;
       },
       toggleStatus: async (task: any, lineIndex: number) => {

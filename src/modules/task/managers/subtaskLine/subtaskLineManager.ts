@@ -360,6 +360,19 @@ export class SubtaskLineManager {
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
+        // Update activeTask description in-memory so watchers react immediately
+        try {
+          if (
+            this.activeTask &&
+            this.activeTask.value &&
+            String(this.activeTask.value.id) === String(merged.id)
+          ) {
+            this.activeTask.value.description = merged.description;
+            this.activeTask.value.updatedAt = merged.updatedAt;
+          }
+        } catch (e) {
+          // ignore
+        }
         const persist = this.opts?.persist;
         if (typeof persist === 'function') {
           try {
@@ -392,6 +405,19 @@ export class SubtaskLineManager {
           description: res.newDesc,
           updatedAt: new Date().toISOString(),
         };
+        // Update activeTask description in-memory so UI updates immediately
+        try {
+          if (
+            this.activeTask &&
+            this.activeTask.value &&
+            String(this.activeTask.value.id) === String(merged.id)
+          ) {
+            this.activeTask.value.description = merged.description;
+            this.activeTask.value.updatedAt = merged.updatedAt;
+          }
+        } catch (e) {
+          // ignore
+        }
         const persist = this.opts?.persist;
         if (typeof persist === 'function') {
           await Promise.resolve(persist(targetDate, merged));

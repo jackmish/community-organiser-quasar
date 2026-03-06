@@ -199,23 +199,66 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
   if (window.electronAPI && window.electronAPI.writeFile && window.electronAPI.joinPath) {
     const appDataDir = await window.electronAPI.getAppDataPath();
     for (const group of groups) {
-      if (Array.isArray(group.tasks)) {
-        group.tasks = group.tasks.map((task: any) => ({ ...task, groupId: group.id }));
-      }
+      // Do not mutate the original group object (may contain circular refs).
+      const safeTasks = Array.isArray(group.tasks)
+        ? group.tasks.map((task: any) => {
+            // copy primitive and plain properties only
+            const t = Object.assign({}, task);
+            t.groupId = group.id;
+            // remove internal back-references that commonly cause circular refs
+            if (t._group) delete t._group;
+            return t;
+          })
+        : undefined;
+      const groupToWrite: any = Object.assign({}, group);
+      if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
       const filename = getGroupFilename(group.id);
       const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
       await window.electronAPI.ensureDir(groupDir);
 
       const filePath = window.electronAPI.joinPath(groupDir, filename);
       try {
-        await window.electronAPI.writeFile(filePath, JSON.stringify(group));
+        // Safe stringify to avoid circular references (skip properties starting with underscore and functions)
+        const seen = new WeakSet();
+        const text = JSON.stringify(
+          groupToWrite,
+          function (k: string, v: any) {
+            if (typeof v === 'object' && v !== null) {
+              if (seen.has(v)) return undefined;
+              seen.add(v);
+            }
+            if (typeof v === 'function') return undefined;
+            if (k && k.startsWith('_')) return undefined;
+            return v;
+          },
+          2,
+        );
+        await window.electronAPI.writeFile(filePath, text);
       } catch (err) {
         logger.error('[saveGroupsToFiles] Error writing file:', filePath, err);
         throw err;
       }
     }
   } else if (typeof window !== 'undefined' && window.localStorage) {
-    localStorage.setItem('day-organiser-groups', JSON.stringify(groups, null, 2));
+    try {
+      const seen = new WeakSet();
+      const text = JSON.stringify(
+        groups,
+        function (k: string, v: any) {
+          if (typeof v === 'object' && v !== null) {
+            if (seen.has(v)) return undefined;
+            seen.add(v);
+          }
+          if (typeof v === 'function') return undefined;
+          if (k && k.startsWith('_')) return undefined;
+          return v;
+        },
+        2,
+      );
+      localStorage.setItem('day-organiser-groups', text);
+    } catch (e) {
+      // ignore storage errors
+    }
   } else {
     throw new Error('No supported storage method available.');
   }

@@ -10,6 +10,66 @@ export function useFloatingPreview(opts?: {
   const preferBelow = ref(false);
   const ignoreNextClickUntil = ref(0);
   const lastMouseDownTarget = ref<Node | null>(null);
+  const focusInsideWrapper = ref(false);
+  // small debounce window to protect against accidental immediate closures
+  const PROTECT_WINDOW_MS = 500;
+  const handleMouseDown = (e: MouseEvent) => {
+    try {
+      lastMouseDownTarget.value = e.target as Node | null;
+    } catch (err) {
+      lastMouseDownTarget.value = null;
+    }
+  };
+
+  function onDocKeyDown(e: KeyboardEvent) {
+    try {
+      const wrapper =
+        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+      const active = document.activeElement;
+      if (wrapper && active instanceof Node && wrapper.contains(active)) {
+        // User is typing inside the floating UI — protect it from being closed
+        ignoreNextClickUntil.value = Date.now() + PROTECT_WINDOW_MS;
+        focusInsideWrapper.value = true;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  function onDocFocusIn(e: FocusEvent) {
+    try {
+      const wrapper =
+        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+      const target = e.target;
+      if (wrapper && target instanceof Node && wrapper.contains(target)) {
+        focusInsideWrapper.value = true;
+        ignoreNextClickUntil.value = Date.now() + PROTECT_WINDOW_MS;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  function onDocFocusOut(e: FocusEvent) {
+    try {
+      const wrapper =
+        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+      const related = (e as any).relatedTarget as Node | null;
+      if (wrapper) {
+        if (related instanceof Node && wrapper.contains(related)) {
+          // focus moved within wrapper
+          focusInsideWrapper.value = true;
+          return;
+        }
+        // focus left the wrapper
+        focusInsideWrapper.value = false;
+        // short protection window in case a click follows
+        ignoreNextClickUntil.value = Date.now() + PROTECT_WINDOW_MS;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
 
   function computePreviewStyle(rect: DOMRect | null) {
     if (!rect) return {};
@@ -166,12 +226,16 @@ export function useFloatingPreview(opts?: {
     try {
       // Ignore the click that immediately follows opening the preview (same click/up)
       if (Date.now() < ignoreNextClickUntil.value) return;
-      // If the mousedown started inside the wrapper (or an ignored element), do not close
+      // If the mousedown started inside the wrapper (or an ignored element), do not close.
+      // The floating UI may be rendered either in `.floating-preview-wrapper` (AddTaskForm)
+      // or as a floating `.fixed-content.floating` (TaskPreview). Prefer either element.
+      const getWrapper = () =>
+        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
       if (lastMouseDownTarget.value) {
         try {
-          const wrapper = document.querySelector('.floating-preview-wrapper');
-          const t = lastMouseDownTarget.value as Node | null;
-          if (wrapper && t && (wrapper.contains(t) || (opts?.shouldIgnoreClick && opts.shouldIgnoreClick(t)))) {
+          const wrapper = getWrapper();
+          const t = lastMouseDownTarget.value;
+          if (wrapper && t && (t instanceof Node) && (wrapper.contains(t) || (opts?.shouldIgnoreClick && opts.shouldIgnoreClick(t)))) {
             lastMouseDownTarget.value = null;
             return;
           }
@@ -179,18 +243,26 @@ export function useFloatingPreview(opts?: {
           // ignore
         }
       }
-      const wrapper = document.querySelector(".floating-preview-wrapper");
+      const wrapper = getWrapper();
       if (!wrapper) {
         closeFloatingPreview();
         return;
       }
-      const target = e.target as Node | null;
+      const target = e.target;
       if (!target) {
         closeFloatingPreview();
         return;
       }
-      if (wrapper.contains(target)) return;
-      if (opts?.shouldIgnoreClick && opts.shouldIgnoreClick(target)) return;
+      // If the event target is inside the floating wrapper, ignore.
+      if (target instanceof Node && wrapper.contains(target)) return;
+      // If an input inside the wrapper currently has focus (typing), do not close.
+      try {
+        const active = document.activeElement;
+        if (active instanceof Node && wrapper.contains(active)) return;
+      } catch (err) {
+        // ignore
+      }
+      if (opts?.shouldIgnoreClick && (target instanceof Node) && opts.shouldIgnoreClick(target)) return;
       closeFloatingPreview();
     } catch (err) {
       closeFloatingPreview();
@@ -198,24 +270,18 @@ export function useFloatingPreview(opts?: {
   }
 
   onMounted(() => {
-    document.addEventListener('click', onDocClick);
-    document.addEventListener('mousedown', (e) => {
-      try {
-        lastMouseDownTarget.value = e.target as Node | null;
-      } catch (err) {
-        lastMouseDownTarget.value = null;
-      }
-    });
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", onDocKeyDown);
+    document.addEventListener("focusin", onDocFocusIn);
+    document.addEventListener("focusout", onDocFocusOut);
   });
   onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocClick);
-    document.removeEventListener('mousedown', (e) => {
-      try {
-        lastMouseDownTarget.value = e.target as Node | null;
-      } catch (err) {
-        lastMouseDownTarget.value = null;
-      }
-    });
+    document.removeEventListener("click", onDocClick);
+    document.removeEventListener("mousedown", handleMouseDown);
+    document.removeEventListener("keydown", onDocKeyDown);
+    document.removeEventListener("focusin", onDocFocusIn);
+    document.removeEventListener("focusout", onDocFocusOut);
   });
 
   return {

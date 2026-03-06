@@ -43,7 +43,19 @@ export function createTaskCrudHandlers(args: {
       groupId: groupIdToUse,
     };
 
-    const created = await api.task.add(targetDate, taskData);
+    let created: any = null;
+    try {
+      created = await api.task.add(targetDate, taskData);
+    } catch (err) {
+      try {
+        quasar.notify({ type: 'negative', message: 'Failed to save task', position: 'top' });
+      } catch (e) {
+        // ignore notify failures
+      }
+      // log and swallow to avoid unhandled rejection
+      console.error('handleAddTask: api.task.add failed', err);
+      return;
+    }
     if (opts && opts.preview && created) {
       if (setTask) setTask(created);
       else taskToEdit.value = created;
