@@ -280,16 +280,16 @@ const handleTaskClick = () => {
   align-items: center;
 }
 .priority-inline {
-  /* position: absolute;
-  top: -10px;
-  left: -2px; */
+  position: relative;
+  top: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  /* height: 18px; */
+  /* border-radius: 4px; */
   font-size: 12px;
+  /* line-height: 1; */
 }
 
 .type-watermark {
