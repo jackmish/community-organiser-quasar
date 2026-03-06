@@ -307,9 +307,9 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
         let newRect: DOMRect | null = null;
         if (el instanceof Element) newRect = el.getBoundingClientRect();
         else newRect = rect ?? null;
-        setPreviewFloating(newRect);
+        setPreviewFloating(newRect, { forceBelow: true });
       } catch (e) {
-        setPreviewFloating(rect);
+        setPreviewFloating(rect, { forceBelow: true });
       }
     } else {
       // clear floating placement

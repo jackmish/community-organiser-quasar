@@ -1,4 +1,4 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 export function useFloatingPreview(opts?: {
   width?: number;
@@ -7,6 +7,7 @@ export function useFloatingPreview(opts?: {
   const PREVIEW_WIDTH = opts?.width || 360;
   const previewFloating = ref(false);
   const previewRect = ref<DOMRect | null>(null);
+  const preferBelow = ref(false);
 
   function computePreviewStyle(rect: DOMRect | null) {
     if (!rect) return {};
@@ -15,7 +16,66 @@ export function useFloatingPreview(opts?: {
     const preferredWidth = PREVIEW_WIDTH;
     const estimatedHeight = Math.min(600, vh - 64);
 
-    // Prefer placing to the right of the cell so the description appears beside it.
+    // Two placement modes:
+    // - preferBelow: used for task-list items — place below the item first
+    // - default: prefer right of the cell (calendar) with the upward offset hack
+    if (preferBelow.value) {
+      // Below-first: below -> right -> left -> above
+      let left = rect.left;
+      let top = rect.bottom + 8;
+      if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
+      if (top + estimatedHeight + 16 <= vh) {
+        return {
+          position: "fixed",
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`,
+          width: `${preferredWidth}px`,
+          zIndex: 2000,
+        } as any;
+      }
+
+      // Try right
+      left = rect.right + 8;
+      top = rect.top;
+      if (left + preferredWidth + 16 <= vw) {
+        if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
+        return {
+          position: "fixed",
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`,
+          width: `${preferredWidth}px`,
+          zIndex: 2000,
+        } as any;
+      }
+
+      // Try left
+      left = rect.left - preferredWidth - 8;
+      top = rect.top;
+      if (left >= 8) {
+        if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
+        return {
+          position: "fixed",
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`,
+          width: `${preferredWidth}px`,
+          zIndex: 2000,
+        } as any;
+      }
+
+      // Above fallback
+      left = rect.left;
+      if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
+      top = Math.max(8, rect.top - estimatedHeight - 8);
+      return {
+        position: "fixed",
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(top)}px`,
+        width: `${preferredWidth}px`,
+        zIndex: 2000,
+      } as any;
+    }
+
+    // Default: Prefer placing to the right of the cell so the description appears beside it.
     // Fallback order: right -> below -> left -> above.
     // 1) Right
     let left = rect.right + 8;
@@ -26,10 +86,11 @@ export function useFloatingPreview(opts?: {
       const fullDesiredTop = rect.top - 230;
       let desiredTop = fullDesiredTop;
       // clamp into viewport if needed (same rules used elsewhere)
-      if (desiredTop + estimatedHeight + 16 > vh) desiredTop = Math.max(8, vh - estimatedHeight - 16);
+      if (desiredTop + estimatedHeight + 16 > vh)
+        desiredTop = Math.max(8, vh - estimatedHeight - 16);
       if (desiredTop < 8) desiredTop = 8;
       return {
-        position: 'fixed',
+        position: "fixed",
         left: `${Math.round(left)}px`,
         top: `${Math.round(desiredTop)}px`,
         width: `${preferredWidth}px`,
@@ -43,7 +104,7 @@ export function useFloatingPreview(opts?: {
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     if (top + estimatedHeight + 16 <= vh) {
       return {
-        position: 'fixed',
+        position: "fixed",
         left: `${Math.round(left)}px`,
         top: `${Math.round(top)}px`,
         width: `${preferredWidth}px`,
@@ -57,7 +118,7 @@ export function useFloatingPreview(opts?: {
     if (left >= 8) {
       if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
       return {
-        position: 'fixed',
+        position: "fixed",
         left: `${Math.round(left)}px`,
         top: `${Math.round(top)}px`,
         width: `${preferredWidth}px`,
@@ -70,7 +131,7 @@ export function useFloatingPreview(opts?: {
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     top = Math.max(8, rect.top - estimatedHeight - 8);
     return {
-      position: 'fixed',
+      position: "fixed",
       left: `${Math.round(left)}px`,
       top: `${Math.round(top)}px`,
       width: `${preferredWidth}px`,
@@ -78,19 +139,21 @@ export function useFloatingPreview(opts?: {
     } as any;
   }
 
-  function setFloating(rect?: DOMRect | null) {
+  function setFloating(rect?: DOMRect | null, options?: { forceBelow?: boolean }) {
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
+    preferBelow.value = !!options?.forceBelow;
   }
 
   function closeFloatingPreview() {
     previewFloating.value = false;
     previewRect.value = null;
+    preferBelow.value = false;
   }
 
   function onDocClick(e: MouseEvent) {
     try {
-      const wrapper = document.querySelector('.floating-preview-wrapper');
+      const wrapper = document.querySelector(".floating-preview-wrapper");
       if (!wrapper) {
         closeFloatingPreview();
         return;
@@ -109,10 +172,10 @@ export function useFloatingPreview(opts?: {
   }
 
   onMounted(() => {
-    document.addEventListener('click', onDocClick);
+    document.addEventListener("click", onDocClick);
   });
   onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocClick);
+    document.removeEventListener("click", onDocClick);
   });
 
   return {
