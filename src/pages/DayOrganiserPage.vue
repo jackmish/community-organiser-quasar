@@ -17,7 +17,7 @@
               <div class="text-h6 task-list-header">
                 <div
                   class="row items-center justify-between"
-                  style="align-items: center; margin-top: 6px"
+                  style="align-items: center; margin-top: 6px; justify-content: center"
                 >
                   <div class="row items-center" style="gap: 8px">
                     <q-btn
