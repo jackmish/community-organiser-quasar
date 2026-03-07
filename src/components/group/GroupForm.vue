@@ -4,28 +4,6 @@
       <div class="row q-gutter-sm items-end">
         <q-input v-model="localName" label="Group Name" outlined dense class="col" />
 
-        <div style="min-width: 180px; display: flex; align-items: center">
-          <q-btn
-            flat
-            dense
-            round
-            unelevated
-            style="flex: 1; justify-content: flex-start"
-            @click.stop.prevent="parentMenuOpen = !parentMenuOpen"
-          >
-            <div style="display: flex; align-items: center; gap: 8px">
-              <q-icon
-                :name="getIconName(localParentIcon)"
-                :style="{ color: localParentColor || 'inherit' }"
-              />
-              <span
-                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
-                >{{ parentLabel }}</span
-              >
-            </div>
-          </q-btn>
-        </div>
-
         <q-input
           :model-value="''"
           label="Color"
@@ -236,6 +214,27 @@
 
       <!-- Second line: checkboxes and action buttons -->
       <div class="row q-gutter-sm items-center" style="margin-top: 8px; width: 100%">
+        <div style="min-width: 180px; display: flex; align-items: center">
+          <q-btn
+            flat
+            dense
+            round
+            unelevated
+            style="flex: 1; justify-content: flex-start"
+            @click.stop.prevent="parentMenuOpen = !parentMenuOpen"
+          >
+            <div style="display: flex; align-items: center; gap: 8px">
+              <q-icon
+                :name="getIconName(localParentIcon)"
+                :style="{ color: localParentColor || 'inherit' }"
+              />
+              <span
+                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                >{{ parentLabel }}</span
+              >
+            </div>
+          </q-btn>
+        </div>
         <q-menu
           v-model="parentMenuOpen"
           anchor="bottom left"
