@@ -80,6 +80,7 @@
     gap: 12px;
     padding: 0;
   }
+
   .hidden-children-list .task-card {
     // min-width: 280px;
     // max-width: 360px;
@@ -299,4 +300,67 @@
   border-bottom-right-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
+}
+
+/* Ensure hidden-group summary items (q-item wrappers) keep a visible background
+   even when Quasar applies its own q-item styles. Target multiple class
+   combinations to be robust against class ordering. */
+.hidden-children-list__list .task-card.hidden-group-item,
+.hidden-children-list__list .task-card.hidden-group-item.q-item,
+.hidden-children-list__list .task-card.hidden-group-item.q-item--clickable {
+  /* light gray background, no extra padding; left side pill-shaped */
+  background-color: #f2f2f2 !important;
+  background-image: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-top-left-radius: 999px !important;
+  border-bottom-left-radius: 999px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
+
+/* Make sure inner q-item sections don't override the wrapper background */
+.hidden-children-list__list .task-card.hidden-group-item .q-item__section,
+.hidden-children-list__list .task-card.hidden-group-item .q-item__label,
+.hidden-children-list__list .task-card.hidden-group-item .q-item__content {
+  background: transparent !important;
+}
+
+/* Enforce avatar sizing for hidden-group summary */
+.hidden-children-list__list .hidden-group-item .q-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+}
+
+/* Broad fallback: ensure hidden-group items show background when placed
+   outside of `.hidden-children-list__list`. This covers various Quasar
+   class combinations applied to q-item elements. */
+.task-card.hidden-group-item,
+.hidden-group-item,
+.hidden-group-item.q-item,
+.hidden-group-item.q-item--clickable,
+.task-card.hidden-group-item.q-pa-sm,
+.task-card.hidden-group-item.q-link,
+.q-item.task-card.hidden-group-item {
+  background-color: #f2f2f2 !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-top-left-radius: 999px !important;
+  border-bottom-left-radius: 999px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  color: inherit !important;
+}
+
+/* Ensure internal q-item sections don't paint over the wrapper background */
+.hidden-group-item .q-item__section,
+.hidden-group-item .q-item__label,
+.hidden-group-item .q-item__content {
+  background: transparent !important;
 }

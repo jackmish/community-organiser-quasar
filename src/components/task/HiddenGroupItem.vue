@@ -89,9 +89,12 @@ function onSelect() {
 <style scoped>
 .hidden-group-item {
   padding: 0px !important;
-  /* make left side appear pill-like */
-  border-top-left-radius: 26px !important;
-  border-bottom-left-radius: 26px !important;
+  /* make left side appear pill-like (half-circle) */
+  border-top-left-radius: 999px !important;
+  border-bottom-left-radius: 999px !important;
+  /* small rounding on the right side */
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
 }
 .hidden-group-avatar {
   padding-right: 8px;
