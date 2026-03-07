@@ -141,6 +141,7 @@
           icon="keyboard_arrow_down"
           @click="panelHidden = true"
         />
+
         <!-- Single TaskPreview instance: toggles between floating and fixed placement -->
         <TaskPreview
           v-if="api.task.active.mode.value === 'preview' && api.task.active.task.value"
@@ -159,15 +160,14 @@
           :fixed="previewFloating"
         />
 
-        <!-- Single AddTaskForm instance. When `previewFloating` is true the parent
-             `.fixed-content` will receive the floating style, preventing remounts
-             and preserving the form state. -->
-        <div class="floating-preview-wrapper" :class="{ floating: previewFloating }">
+        <div
+          class="floating-preview-wrapper"
+          :class="{ floating: previewFloating }"
+          v-if="
+            api.task.active.mode.value === 'add' || api.task.active.mode.value === 'edit'
+          "
+        >
           <AddTaskForm
-            v-if="
-              api.task.active.mode.value === 'add' ||
-              api.task.active.mode.value === 'edit'
-            "
             :filtered-parent-options="filteredParentOptions"
             :active-group="api.group.active.activeGroup"
             :show-calendar="false"

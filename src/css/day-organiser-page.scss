@@ -210,8 +210,6 @@
   right: 16px;
   bottom: 16px;
   z-index: 999999999999;
-  width: 360px;
-  max-width: calc(100% - 32px);
   display: flex;
   flex-direction: column;
   gap: 0px;
@@ -222,13 +220,12 @@
   max-height: calc(100vh - 32px);
 }
 .fixed-right-panel .fixed-content {
-  width: 100%;
+  /* allow content to size naturally; do not enforce a min-width here */
   /* Base layout for the content; do NOT force positioning here so inline
      `position: fixed` applied when floating can take effect. */
   display: block;
   box-sizing: border-box;
   width: 100%;
-  min-width: 280px;
   /* overflow-y: auto; */
   max-height: calc(100vh - 120px);
   -webkit-overflow-scrolling: touch;

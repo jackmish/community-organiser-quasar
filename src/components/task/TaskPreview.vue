@@ -817,7 +817,8 @@ body .q-menu.priority-menu .q-item.q-item--active:hover::after {
      here so non-floating instances are not forced into fixed layout. */
   z-index: 1600;
   width: 360px;
-  max-width: calc(100% - 32px);
+  /* max-width removed to allow resizing */
+  width: auto; /* Optional: Adjust width if needed */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 </style>
