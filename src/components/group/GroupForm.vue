@@ -45,9 +45,9 @@
             class="gm-icon-item"
             @click="selectIcon(ic)"
             style="
-              width: 36px;
-              height: 36px;
-              border-radius: 6px;
+              width: 44px;
+              height: 44px;
+              border-radius: 8px;
               cursor: pointer;
               border: 1px solid #0002;
               display: flex;
@@ -57,7 +57,7 @@
             "
             :title="ic"
           >
-            <q-icon :name="getIconName(ic)" />
+            <q-icon :name="getIconName(ic)" size="24" />
           </div>
           <div style="flex-basis: 100%; height: 0"></div>
           <div
@@ -643,5 +643,23 @@ function onCancel() {
   color: rgba(0, 0, 0, 0.87) !important;
   fill: rgba(0, 0, 0, 0.87) !important;
   -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* Ensure icons inside the larger selector tiles scale up */
+::v-deep .gm-icon-item .q-icon,
+::v-deep .gm-icon-item .q-icon * {
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  line-height: 22px !important;
+}
+
+/* Preview icon slightly smaller than tiles */
+::v-deep .gm-icon-preview .q-icon,
+::v-deep .gm-icon-preview .q-icon * {
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  line-height: 20px !important;
 }
 </style>
