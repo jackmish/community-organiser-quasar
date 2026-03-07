@@ -119,14 +119,15 @@
         style="display: flex; gap: 8px; align-items: center"
       >
         <q-btn
-          v-for="g in filteredShortcutGroups"
+          v-for="g in shortcutGroups"
           :key="g.id"
           dense
           rounded
           unelevated
           class="shortcut-header"
+          :class="{ inactive: isShortcutActive(g) }"
           :title="`Go to ${g.name}`"
-          @click.stop.prevent="activateGroup(g)"
+          @click.stop.prevent="onShortcutClick(g)"
           :style="`background-color: ${g.color || 'transparent'} !important; color: ${
             g.color ? '#ffffff' : 'inherit'
           }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; border-color: transparent !important; box-shadow: none !important;`"
@@ -417,6 +418,27 @@ function isNodeShortcut(node: any) {
     return false;
   }
 }
+
+function isShortcutActive(g: any) {
+  try {
+    if (!g) return false;
+    const gid = String(g.id ?? g.value ?? "");
+    const cur =
+      localValue.value ?? activeGroup?.value?.value ?? activeGroup?.value ?? null;
+    return gid && String(gid) === String(cur ?? "");
+  } catch (e) {
+    return false;
+  }
+}
+
+function onShortcutClick(g: any) {
+  try {
+    if (isShortcutActive(g)) return; // do nothing for active shortcut
+    activateGroup(g);
+  } catch (e) {
+    void e;
+  }
+}
 </script>
 
 <style scoped>
@@ -427,5 +449,12 @@ function isNodeShortcut(node: any) {
   min-height: 28px;
   display: inline-flex;
   align-items: center;
+}
+
+/* Inactive visual state for shortcuts (when the shortcut matches the active group) */
+.shortcut-header.inactive {
+  opacity: 0.5;
+  filter: grayscale(100%);
+  /* keep pointer cursor but ignore click via handler */
 }
 </style>
