@@ -127,20 +127,20 @@
       title="Add new task"
     />
     <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
-      <q-btn
-        v-if="!panelHidden"
-        unelevated
-        color="dark"
-        class="panel-toggle-btn"
-        label="Hide"
-        icon="keyboard_arrow_down"
-        @click="panelHidden = true"
-      />
       <div
         class="fixed-content"
         :class="{ floating: previewFloating }"
         :style="previewFloating ? computePreviewStyle(previewRect) : {}"
       >
+        <q-btn
+          v-if="!panelHidden"
+          unelevated
+          color="dark"
+          class="panel-toggle-btn"
+          label="Hide"
+          icon="keyboard_arrow_down"
+          @click="panelHidden = true"
+        />
         <!-- Single TaskPreview instance: toggles between floating and fixed placement -->
         <TaskPreview
           v-if="api.task.active.mode.value === 'preview' && api.task.active.task.value"
@@ -156,15 +156,17 @@
           "
           @close="clearTaskToEdit"
           @update-task="(t) => handleUpdateTask(t)"
-          :fixed="!previewFloating"
+          :fixed="previewFloating"
         />
 
         <!-- Single AddTaskForm instance. When `previewFloating` is true the parent
              `.fixed-content` will receive the floating style, preventing remounts
              and preserving the form state. -->
-        <div class="floating-preview-wrapper" :class="{ floating: previewFloating }" :style="previewFloating ? computePreviewStyle(previewRect) : {}">
+        <div class="floating-preview-wrapper" :class="{ floating: previewFloating }">
           <AddTaskForm
-            v-if="api.task.active.mode.value === 'add' || api.task.active.mode.value === 'edit'
+            v-if="
+              api.task.active.mode.value === 'add' ||
+              api.task.active.mode.value === 'edit'
             "
             :filtered-parent-options="filteredParentOptions"
             :active-group="api.group.active.activeGroup"

@@ -223,17 +223,41 @@
 }
 .fixed-right-panel .fixed-content {
   width: 100%;
-  // overflow-y: auto;
+  /* Base layout for the content; do NOT force positioning here so inline
+     `position: fixed` applied when floating can take effect. */
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 280px;
+  /* overflow-y: auto; */
   max-height: calc(100vh - 120px);
   -webkit-overflow-scrolling: touch;
   z-index: 999999;
 }
 
-.fixed-right-panel .panel-toggle-btn {
+/* Establish a positioned ancestor only when the content is NOT floating. */
+.fixed-right-panel .fixed-content:not(.floating) {
+  position: relative;
+}
+
+/* Note: positioning for `.panel-toggle-btn` is handled relative to
+   `.fixed-content` to avoid forcing absolute layout during floating.
+   Avoid global absolute fallback which broke floating placement. */
+
+/* When the toggle button is placed inside .fixed-content, position it relative
+   to that container so it appears attached to the panel even when the panel is
+   not floated. This selector overrides the broader rule above because
+   .fixed-content is now positioned. */
+.fixed-right-panel .fixed-content > .panel-toggle-btn {
+  /* Anchor the toggle to the top-right of .fixed-content and position it
+     slightly above the form so it appears 'above' the panel's top edge. */
   position: absolute;
-  top: -36px;
+  top: 0;
+  transform: translateY(-100%);
   right: 8px;
+  margin: 0 !important;
   z-index: 2200;
+  /* Restore original visual appearance without altering dimensions */
   padding: 10px 14px;
   font-weight: 600;
   color: #fff !important;
@@ -241,6 +265,16 @@
   border-radius: 8px;
   border-bottom-left-radius: 0px;
   border-bottom-right-radius: 0px;
+}
+
+/* Ensure the inner wrapper and forms provide full width/height in the fixed panel */
+.floating-preview-wrapper {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+.floating-preview-wrapper.floating {
+  /* when floating, inline fixed styles are applied via computePreviewStyle */
 }
 
 .panel-show-btn {

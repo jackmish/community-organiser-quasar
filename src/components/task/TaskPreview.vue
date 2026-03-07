@@ -1,6 +1,6 @@
 <template>
   <q-card
-    :class="['q-mb-md task-preview', { 'fixed-preview': props.fixed !== false }]"
+    :class="['q-mb-md task-preview', { 'fixed-preview': props.fixed === true }]"
     :style="previewCardStyle"
   >
     <q-card-section>
@@ -812,9 +812,9 @@ body .q-menu.priority-menu .q-item.q-item--active:hover::after {
 
 <style>
 .task-preview.fixed-preview {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
+  /* Positioning for floating previews is applied inline via
+     `computePreviewStyle(...)`. Avoid hardcoding `position: fixed`
+     here so non-floating instances are not forced into fixed layout. */
   z-index: 1600;
   width: 360px;
   max-width: calc(100% - 32px);
