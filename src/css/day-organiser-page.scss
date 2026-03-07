@@ -7,14 +7,6 @@
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.06);
 }
 
-.task-list {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-
 .task-card {
   // min-width: 280px;
   // max-width: 360px;
@@ -77,7 +69,8 @@
   .hidden-children-list__list {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    /* use gap for spacing between summaries (row-gap column-gap) */
+    gap: 16px 20px;
     padding: 0;
   }
 
@@ -321,6 +314,33 @@
   color: inherit !important;
 }
 
+/* Top-level hidden children list: ensure it's a flex container so `gap` works
+   reliably, and remove horizontal padding from child summary items so gaps
+   reflect spacing between items rather than internal padding. */
+.hidden-children-list__list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 16px 20px !important; /* row-gap then column-gap */
+  align-items: center !important;
+}
+
+.hidden-children-list__list > .grouped-item,
+.hidden-children-list__list > .grouped-item.card,
+.hidden-children-list__list > .grouped-item.card.q-pa-sm,
+.hidden-children-list__list > .q-item.task-card.hidden-group-item,
+.hidden-children-list__list > .task-card.hidden-group-item {
+  /* Remove Quasar padding utilities which can be present in various class orders */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Catch grouped items that include any q-pa-* utility class (e.g. q-pa-sm) */
+.hidden-children-list__list .grouped-item[class*='q-pa-'],
+.hidden-children-list__list .grouped-item[class*='q-pa'] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 /* Make sure inner q-item sections don't override the wrapper background */
 .hidden-children-list__list .task-card.hidden-group-item .q-item__section,
 .hidden-children-list__list .task-card.hidden-group-item .q-item__label,
@@ -364,3 +384,5 @@
 .hidden-group-item .q-item__content {
   background: transparent !important;
 }
+
+/* spacing is handled by the parent `gap` on .hidden-children-list__list */

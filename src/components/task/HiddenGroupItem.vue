@@ -1,5 +1,5 @@
 <template>
-  <q-item class="q-pa-sm task-card hidden-group-item" clickable @click.stop="onSelect">
+  <q-item class="task-card hidden-group-item" clickable @click.stop="onSelect">
     <q-item-section>
       <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
         <q-avatar
