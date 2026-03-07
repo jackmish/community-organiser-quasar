@@ -121,16 +121,19 @@
         <q-btn
           v-for="g in filteredShortcutGroups"
           :key="g.id"
-          flat
           dense
-          style="display: flex; align-items: center; gap: 8px; text-transform: none"
+          rounded
+          unelevated
           class="shortcut-header"
           :title="`Go to ${g.name}`"
           @click.stop.prevent="activateGroup(g)"
+          :style="`background-color: ${g.color || 'transparent'} !important; color: ${
+            g.color ? '#ffffff' : 'inherit'
+          }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; border-color: transparent !important; box-shadow: none !important;`"
         >
           <q-icon
             :name="g.icon || 'folder_open'"
-            :style="{ color: g.color || 'inherit' }"
+            :style="{ color: g.color ? '#ffffff' : g.color || 'inherit' }"
           />
           <span
             style="
@@ -141,7 +144,6 @@
             "
             >{{ g.name }}</span
           >
-          <q-tooltip>Go to {{ g.name }}</q-tooltip>
         </q-btn>
       </div>
     </template>
@@ -417,4 +419,13 @@ function isNodeShortcut(node: any) {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.shortcut-header {
+  border-radius: 6px;
+  padding: 2px 6px !important;
+  font-size: 0.88rem;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+</style>
