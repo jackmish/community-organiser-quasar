@@ -24,72 +24,6 @@
               >
             </div>
           </q-btn>
-
-          <q-menu
-            v-model="parentMenuOpen"
-            anchor="bottom left"
-            self="top left"
-            :offset="[0, 6]"
-          >
-            <div style="min-width: 300px; max-height: 60vh; overflow: auto; padding: 8px">
-              <q-list padding>
-                <q-item clickable v-ripple @click="clearParent">
-                  <q-item-section avatar style="min-width: 36px"
-                    ><q-icon name="folder_open"
-                  /></q-item-section>
-                  <q-item-section>None (no parent)</q-item-section>
-                </q-item>
-              </q-list>
-              <q-separator />
-              <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
-                <q-tree
-                  :nodes="groupTree || []"
-                  node-key="id"
-                  default-expand-all
-                  :selected="localParent ? [String(localParent)] : []"
-                  @update:selected="onParentTreeSelect"
-                >
-                  <template #default-header="prop">
-                    <div class="row items-center full-width">
-                      <q-icon
-                        :name="getIconName(prop.node.icon)"
-                        class="q-mr-sm"
-                        :style="{ color: prop.node.color }"
-                      />
-                      <span>{{ prop.node.label }}</span>
-                    </div>
-                  </template>
-                </q-tree>
-              </div>
-              <q-separator />
-              <div
-                style="
-                  display: flex;
-                  gap: 8px;
-                  justify-content: flex-end;
-                  margin-top: 6px;
-                "
-              >
-                <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
-              </div>
-            </div>
-          </q-menu>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
-          <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
-          <q-checkbox
-            v-model="localHideTasksInParent"
-            label="Hide tasks from parent"
-            dense
-          />
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
-          <q-checkbox v-model="localShortcut" label="Make shortcut" dense />
         </div>
 
         <q-input
@@ -298,8 +232,71 @@
             </div>
           </template>
         </q-input>
+      </div>
 
-        <div style="display: flex; gap: 8px; align-items: center">
+      <!-- Second line: checkboxes and action buttons -->
+      <div class="row q-gutter-sm items-center" style="margin-top: 8px; width: 100%">
+        <q-menu
+          v-model="parentMenuOpen"
+          anchor="bottom left"
+          self="top left"
+          :offset="[0, 6]"
+        >
+          <div style="min-width: 300px; max-height: 60vh; overflow: auto; padding: 8px">
+            <q-list padding>
+              <q-item clickable v-ripple @click="clearParent">
+                <q-item-section avatar style="min-width: 36px"
+                  ><q-icon name="folder_open"
+                /></q-item-section>
+                <q-item-section>None (no parent)</q-item-section>
+              </q-item>
+            </q-list>
+            <q-separator />
+            <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
+              <q-tree
+                :nodes="groupTree || []"
+                node-key="id"
+                default-expand-all
+                :selected="localParent ? [String(localParent)] : []"
+                @update:selected="onParentTreeSelect"
+              >
+                <template #default-header="prop">
+                  <div class="row items-center full-width">
+                    <q-icon
+                      :name="getIconName(prop.node.icon)"
+                      class="q-mr-sm"
+                      :style="{ color: prop.node.color }"
+                    />
+                    <span>{{ prop.node.label }}</span>
+                  </div>
+                </template>
+              </q-tree>
+            </div>
+            <q-separator />
+            <div
+              style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
+            >
+              <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+            </div>
+          </div>
+        </q-menu>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px">
+          <q-checkbox
+            v-model="localHideTasksInParent"
+            label="Hide tasks from parent"
+            dense
+          />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px">
+          <q-checkbox v-model="localShortcut" label="Make shortcut" dense />
+        </div>
+
+        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
           <q-btn v-if="!editingGroupId" type="submit" color="primary" icon="add" dense />
           <q-btn v-else type="submit" color="primary" icon="save" dense />
           <q-btn
