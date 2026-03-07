@@ -107,10 +107,10 @@
                 <q-btn
                   size="sm"
                   @pointerdown="onDayPointerDown($event, day)"
-                  @pointerup="onDayPointerUp($event, day)"
+                  @pointerup="onDayPointerUp($event)"
                   @pointercancel="cancelLongPressDay"
                   @pointerleave="cancelLongPressDay"
-                  @click="handleDateSelect($event, day, false)"
+                  @click="onDayClick($event, day)"
                   @contextmenu="handleDateSelect($event, day, true)"
                   :title="
                     new Date(day).toLocaleDateString('en-US', {
@@ -331,10 +331,20 @@ setLongPressHandler((task: any) => {
 // For day buttons, long-press should trigger the same behaviour as right-click
 setLongPressHandlerDay((payload: any) => {
   try {
-    // payload is expected to be a date string (yyyy-MM-dd)
-    const date = typeof payload === "string" ? payload : String(payload);
-    // Emit day-click with null rect so parent can open add form at fallback position
-    emit("day-click", { date, rect: null });
+    // payload may be either a date string (yyyy-MM-dd) or an object
+    // { date: string, rect: DOMRect | null } supplied from pointerdown
+    let date = "";
+    let rect: DOMRect | null = null;
+    if (payload && typeof payload === "object" && "date" in payload) {
+      // payload is an object with `date` and optional `rect`
+      // direct property access is fine here (payload is `any`-like)
+      date = String(payload.date);
+      rect = payload.rect ?? null;
+    } else {
+      date = typeof payload === "string" ? payload : String(payload);
+    }
+    // Emit day-click with rect so parent can position the add form like a right-click
+    emit("day-click", { date, rect });
     // Also update selectedDate/time via api like right-click handler does
     try {
       if (
@@ -383,30 +393,67 @@ async function onEventPointerUp(task: any) {
   }
 }
 
-async function onDayPointerUp(ev: PointerEvent, day: string) {
+// Note: day pointerup is intentionally ignored — long-press handler fires on timeout
+
+function onDayPointerDown(ev: PointerEvent, day: string) {
   try {
-    // If long-press wasn't triggered, treat as a short click -> normal select
-    if (!longPressTriggeredDay.value) {
-      // call same logic as click
-      handleDateSelect(ev, day, false);
-    } else {
-      // long-press triggered -> emulate right-click/contextmenu behavior
-      handleDateSelect(ev, day, true);
+    // start the long-press for this day; `startLongPressDay` expects (payload, ev?)
+    try {
+      (ev.currentTarget as Element | null)?.setPointerCapture?.(ev.pointerId);
+    } catch (e) {
+      void e;
     }
+    // Capture bounding rect of the target so long-press can act like a contextmenu
+    let rect: DOMRect | null = null;
+    try {
+      const el = (ev.currentTarget ?? ev.target) as Element | null;
+      if (el instanceof Element) rect = el.getBoundingClientRect();
+    } catch (e) {
+      void e;
+    }
+    startLongPressDay({ date: day, rect }, ev);
   } catch (e) {
     // ignore
+  }
+}
+
+function onDayPointerUp(ev: PointerEvent) {
+  try {
+    try {
+      (ev.currentTarget as Element | null)?.releasePointerCapture?.(ev.pointerId);
+    } catch (e) {
+      void e;
+    }
+    // If long-press already triggered, prevent the following click by
+    // stopping propagation and marking suppression flag (handled by onDayClick)
+    if (longPressTriggeredDay.value) {
+      try {
+        ev.preventDefault?.();
+        ev.stopPropagation?.();
+      } catch (e) {
+        void e;
+      }
+    }
   } finally {
     cancelLongPressDay();
   }
 }
 
-function onDayPointerDown(ev: PointerEvent, day: string) {
-  try {
-    // start the long-press for this day; `startLongPressDay` expects (payload, ev?)
-    startLongPressDay(day, ev);
-  } catch (e) {
-    // ignore
+const dayLongPressedRecently = ref(false);
+
+function onDayClick(ev: Event, day: string) {
+  // Ignore clicks that immediately follow a long-press
+  if (dayLongPressedRecently.value || longPressTriggeredDay.value) {
+    dayLongPressedRecently.value = false;
+    try {
+      ev.stopPropagation?.();
+      ev.preventDefault?.();
+    } catch (e) {
+      void e;
+    }
+    return;
   }
+  handleDateSelect(ev, day, false);
 }
 
 const calendarBaseDate = ref(new Date());
