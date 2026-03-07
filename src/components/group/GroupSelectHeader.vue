@@ -114,30 +114,36 @@
       >
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
-      <q-btn
-        v-if="shortcutGroup && String(shortcutGroup.id) !== String(localValue)"
-        flat
-        dense
-        style="display: flex; align-items: center; gap: 8px; text-transform: none"
-        class="shortcut-header"
-        title="Go to shortcut group"
-        @click.stop.prevent="activateGroup(shortcutGroup)"
+      <div
+        v-if="shortcutGroups && shortcutGroups.length"
+        style="display: flex; gap: 8px; align-items: center"
       >
-        <q-icon
-          :name="shortcutGroup.icon || 'folder_open'"
-          :style="{ color: shortcutGroup.color || 'inherit' }"
-        />
-        <span
-          style="
-            max-width: 160px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          "
-          >{{ shortcutGroup.name }}</span
+        <q-btn
+          v-for="g in filteredShortcutGroups"
+          :key="g.id"
+          flat
+          dense
+          style="display: flex; align-items: center; gap: 8px; text-transform: none"
+          class="shortcut-header"
+          :title="`Go to ${g.name}`"
+          @click.stop.prevent="activateGroup(g)"
         >
-        <q-tooltip>Go to {{ shortcutGroup.name }}</q-tooltip>
-      </q-btn>
+          <q-icon
+            :name="g.icon || 'folder_open'"
+            :style="{ color: g.color || 'inherit' }"
+          />
+          <span
+            style="
+              max-width: 140px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            "
+            >{{ g.name }}</span
+          >
+          <q-tooltip>Go to {{ g.name }}</q-tooltip>
+        </q-btn>
+      </div>
     </template>
     <template v-else>
       <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
@@ -355,11 +361,21 @@ const selectedGroupObj = computed(() => {
   }
 });
 
-const shortcutGroup = computed(() => {
+const shortcutGroups = computed(() => {
   try {
-    return (groups.value || []).find((g: any) => g && g.shortcut) || null;
+    return (groups.value || []).filter((g: any) => g && g.shortcut) || [];
   } catch (e) {
-    return null;
+    return [];
+  }
+});
+
+const filteredShortcutGroups = computed(() => {
+  try {
+    return (shortcutGroups.value || []).filter(
+      (g: any) => String(g.id) !== String(localValue.value ?? "")
+    );
+  } catch (e) {
+    return [];
   }
 });
 
