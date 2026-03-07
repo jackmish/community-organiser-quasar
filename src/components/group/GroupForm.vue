@@ -378,18 +378,106 @@ const iconMenuStyle = ref<Record<string, string>>({
 const iconOptions = (() => {
   const set = new Set<string>();
   [
+    // basic/folders
     "folder",
     "label",
-    "group",
-    "account_circle",
     "bookmarks",
+    "inbox",
+
+    // people / groups
+    "group",
+    "group_add",
+    "account_circle",
+    "people",
+
+    // places / home
     "home",
     "location_city",
-    "factory",
-    "park",
+    "place",
+    "public",
+
+    // transport / travel
     "directions_car",
     "local_shipping",
     "alt_route",
+    "flight",
+    "train",
+    "directions_bus",
+    "directions_bike",
+    "directions_boat",
+    "local_taxi",
+
+    // food / coffee
+    "restaurant",
+    "local_dining",
+    "local_cafe",
+    "fastfood",
+
+    // shopping / finance
+    "shopping_cart",
+    "local_grocery_store",
+    "payment",
+    "account_balance_wallet",
+    "attach_money",
+    "monetization_on",
+
+    // media / camera
+    "music_note",
+    "movie",
+    "videocam",
+    "camera_alt",
+    "photo_camera",
+
+    // work / code / tools
+    "work",
+    "business",
+    "code",
+    "bug_report",
+    "build",
+    "settings",
+
+    // calendar / time
+    "schedule",
+    "calendar_today",
+    "alarm",
+    "watch",
+
+    // ideas / notes
+    "lightbulb",
+    "emoji_objects",
+    "description",
+    "note",
+
+    // health / fitness
+    "fitness_center",
+    "sports_soccer",
+    "sports_basketball",
+
+    // nature / leisure
+    "park",
+    "local_florist",
+    "spa",
+    "beach_access",
+
+    // misc
+    "favorite",
+    "star",
+    "visibility",
+    "palette",
+    "brush",
+    "camera",
+    "mail",
+    "chat",
+    "comment",
+    "place",
+    "pets",
+    "umbrella",
+    "light_mode",
+    "dark_mode",
+    "cloud",
+    "wifi",
+    "battery_charging_full",
+    "attach_file",
   ].forEach((i) => set.add(i));
   return Array.from(set);
 })();
