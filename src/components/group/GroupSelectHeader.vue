@@ -125,7 +125,9 @@
           rounded
           unelevated
           class="shortcut-header"
-          :class="{ inactive: isShortcutActive(g) }"
+          :class="{ selected: isShortcutActive(g) }"
+          :aria-disabled="isShortcutActive(g)"
+          :tabindex="isShortcutActive(g) ? -1 : 0"
           :title="`Go to ${g.name}`"
           @click.stop.prevent="onShortcutClick(g)"
           :style="`background-color: ${g.color || 'transparent'} !important; color: ${
@@ -451,10 +453,18 @@ function onShortcutClick(g: any) {
   align-items: center;
 }
 
-/* Inactive visual state for shortcuts (when the shortcut matches the active group) */
-.shortcut-header.inactive {
-  opacity: 0.5;
-  filter: grayscale(100%);
-  /* keep pointer cursor but ignore click via handler */
+/* Disabled visual state for shortcuts (when the shortcut matches the active group)
+   Use a selected-like appearance rather than muting the item. Clicks are still
+   ignored by the handler when this state applies. */
+.shortcut-header.selected {
+  /* Selected-like appearance for the active shortcut. Non-interactive. */
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  outline-offset: 2px;
+  outline: 2px dashed rgb(255, 255, 255) !important;
+  pointer-events: none;
+  cursor: default;
 }
 </style>
