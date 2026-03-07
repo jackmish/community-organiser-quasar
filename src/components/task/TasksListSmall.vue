@@ -242,7 +242,7 @@ function selectHiddenGroup(g: any) {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
   gap: 8px 10px !important; /* row-gap 8px, column-gap 2px */
   align-items: start;
-  padding: 0 8px 8px 8px;
+  padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;
 }
