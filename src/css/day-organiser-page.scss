@@ -150,14 +150,6 @@
   position: relative;
 }
 
-.floating-add-btn {
-  position: fixed;
-  right: 0px;
-  bottom: 0px;
-  z-index: 1900 !important;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
-
 .done-floating {
   position: absolute;
   right: 12px;
@@ -302,7 +294,7 @@
   position: fixed;
   right: 0px;
   bottom: 0px;
-  z-index: 1900 !important;
+  z-index: 9999999999 !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   border-bottom-right-radius: 0 !important;
   border-bottom-left-radius: 0 !important;

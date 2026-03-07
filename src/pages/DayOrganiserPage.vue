@@ -115,17 +115,6 @@
       @import="handleImportFile"
     />
 
-    <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
-    <q-btn
-      v-if="panelHidden || api.task.active.mode.value !== 'add'"
-      class="floating-add-btn"
-      color="green"
-      fab
-      icon="add"
-      dense
-      @click="clearTaskToEdit"
-      title="Add new task"
-    />
     <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
       <div
         class="fixed-content"
@@ -188,6 +177,18 @@
         </div>
       </div>
     </div>
+
+    <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
+    <q-btn
+      v-if="panelHidden || api.task.active.mode.value !== 'add'"
+      class="floating-add-btn"
+      color="green"
+      fab
+      icon="add"
+      dense
+      @click="clearTaskToEdit"
+      title="Add new task"
+    />
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
       v-if="panelHidden && api.task.active.mode.value !== 'add'"
