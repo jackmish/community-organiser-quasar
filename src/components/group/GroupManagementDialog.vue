@@ -119,6 +119,10 @@
                 <q-checkbox v-model="localHideTasksInParent" label="Hide tasks from parent" dense />
               </div>
 
+              <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px">
+                <q-checkbox v-model="localShortcut" label="Make shortcut" dense />
+              </div>
+
               <q-input
                 :model-value="''"
                 label="Color"
@@ -431,6 +435,7 @@ const localColor = ref('#1976d2');
 const localIcon = ref<string | null>('folder');
 const localShareSubgroups = ref(false);
 const localHideTasksInParent = ref(false);
+const localShortcut = ref(false);
 const pendingDeleteId = ref<string | null>(null);
 const privilegeMode = ref<'preview' | 'edit' | 'remove'>('edit');
 const colorInput = ref<HTMLInputElement | null>(null);
@@ -672,6 +677,7 @@ watch(
       localIcon.value = 'folder';
       localShareSubgroups.value = false;
       localHideTasksInParent.value = false;
+      localShortcut.value = false;
     }
   },
 );
@@ -697,6 +703,7 @@ async function onAddGroup() {
         ...(typeof localHideTasksInParent.value === 'boolean'
           ? { hideTasksFromParent: localHideTasksInParent.value }
           : {}),
+        ...(typeof localShortcut.value === 'boolean' ? { shortcut: localShortcut.value } : {}),
       });
     } else {
       // add new via api.group
@@ -707,6 +714,7 @@ async function onAddGroup() {
         icon: icon as any,
         shareSubgroups: localShareSubgroups.value,
         hideTasksFromParent: localHideTasksInParent.value,
+        shortcut: localShortcut.value,
       });
     }
   } catch (e) {
@@ -782,6 +790,7 @@ function startEdit(node: any) {
     localIcon.value = g?.icon || node.icon || 'folder';
     localShareSubgroups.value = Boolean(g?.shareSubgroups);
     localHideTasksInParent.value = Boolean(g?.hideTasksFromParent);
+    localShortcut.value = Boolean(g?.shortcut);
     // populate parent preview icon/color
     try {
       const p = localParent.value;
@@ -807,6 +816,7 @@ function cancelEdit() {
   localParent.value = null;
   localColor.value = '#1976d2';
   localIcon.value = 'folder';
+  localShortcut.value = false;
 }
 
 function onColorInput(e: Event) {

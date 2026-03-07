@@ -9,7 +9,12 @@
           class="group-select--header"
           color="white"
           text-color="white"
-          style="display: flex; align-items: center; justify-content: space-between; width: 100%"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+          "
           @click.stop.prevent="menuOpen = !menuOpen"
         >
           <div style="display: flex; align-items: center; gap: 8px">
@@ -17,9 +22,10 @@
               :name="selectedOption?.icon || 'folder_open'"
               :style="{ color: selectedOption?.color || 'inherit' }"
             />
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{
-              selectedOption?.label
-            }}</span>
+            <span
+              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+              >{{ selectedOption?.label }}</span
+            >
           </div>
           <q-icon name="arrow_drop_down" />
         </q-btn>
@@ -53,6 +59,35 @@
                       :style="{ color: prop.node.color }"
                     />
                     <span>{{ prop.node.label }}</span>
+                    <q-space />
+                    <q-btn
+                      v-if="isNodeShortcut(prop.node)"
+                      flat
+                      dense
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        text-transform: none;
+                      "
+                      class="q-ml-sm"
+                      @click.stop.prevent="activateTreeShortcut(prop.node)"
+                    >
+                      <q-icon
+                        :name="prop.node.icon || 'folder'"
+                        :style="{ color: prop.node.color }"
+                      />
+                      <span
+                        style="
+                          max-width: 120px;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          white-space: nowrap;
+                        "
+                        >{{ prop.node.label }}</span
+                      >
+                      <q-tooltip>Shortcut</q-tooltip>
+                    </q-btn>
                   </div>
                 </template>
               </q-tree>
@@ -79,6 +114,30 @@
       >
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
+      <q-btn
+        v-if="shortcutGroup && String(shortcutGroup.id) !== String(localValue)"
+        flat
+        dense
+        style="display: flex; align-items: center; gap: 8px; text-transform: none"
+        class="shortcut-header"
+        title="Go to shortcut group"
+        @click.stop.prevent="activateGroup(shortcutGroup)"
+      >
+        <q-icon
+          :name="shortcutGroup.icon || 'folder_open'"
+          :style="{ color: shortcutGroup.color || 'inherit' }"
+        />
+        <span
+          style="
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          "
+          >{{ shortcutGroup.name }}</span
+        >
+        <q-tooltip>Go to {{ shortcutGroup.name }}</q-tooltip>
+      </q-btn>
     </template>
     <template v-else>
       <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
@@ -89,8 +148,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import * as api from 'src/modules/day-organiser/_apiRoot';
+import { computed, ref, watch } from "vue";
+import * as api from "src/modules/day-organiser/_apiRoot";
 
 const groups = api.group.list.all;
 const activeGroup = api.group.active.activeGroup;
@@ -100,7 +159,7 @@ const isLoading = api.storage.isLoading;
 // Normalize parent id values: accept string/number or object like { value, id }
 const normalizeId = (v: any): string | null => {
   if (v == null) return null;
-  if (typeof v === 'object') {
+  if (typeof v === "object") {
     const maybe = v.value ?? v.id ?? null;
     return maybe == null ? null : String(maybe);
   }
@@ -118,14 +177,16 @@ watch(
   (loading) => {
     if (loading === false) optionsReady.value = true;
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // assemble flat list of options from groups list (shorter)
 const options = computed(() => {
-  const manage = { label: 'Manage Groups...', value: '__manage_groups__' };
+  const manage = { label: "Manage Groups...", value: "__manage_groups__" };
 
-  const base: any[] = [{ label: 'All Groups', value: null, icon: 'folder_open', color: null }];
+  const base: any[] = [
+    { label: "All Groups", value: null, icon: "folder_open", color: null },
+  ];
 
   const groupOptions = (groups.value || [])
     .slice()
@@ -133,7 +194,7 @@ const options = computed(() => {
     .map((g: any) => ({
       label: g.name,
       value: String(g.id),
-      icon: g.icon || 'folder',
+      icon: g.icon || "folder",
       color: g.color || null,
     }));
 
@@ -143,16 +204,17 @@ const options = computed(() => {
   const cur = activeGroup.value;
   if (cur) {
     const curVal =
-      typeof cur === 'string' || typeof cur === 'number'
+      typeof cur === "string" || typeof cur === "number"
         ? String(cur)
-        : String((cur && (cur.value ?? cur.id)) ?? '');
+        : String((cur && (cur.value ?? cur.id)) ?? "");
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
-      const label = (typeof cur === 'object' && cur.label) || (found && found.name) || curVal;
+      const label =
+        (typeof cur === "object" && cur.label) || (found && found.name) || curVal;
       combined.push({
         label,
         value: curVal,
-        icon: found?.icon || 'folder',
+        icon: found?.icon || "folder",
         color: found?.color || null,
       });
     }
@@ -182,7 +244,7 @@ const selectedOption = computed(() => {
 const convertNode = (n: any): any => ({
   id: String(n.id),
   label: n.label,
-  icon: n.icon || 'folder',
+  icon: n.icon || "folder",
   color: n.color || null,
   children: (n.children || []).map(convertNode),
 });
@@ -195,7 +257,9 @@ const treeNodes = computed(() => {
   }
 });
 
-const selectedKeyArray = computed(() => (localValue.value ? [String(localValue.value)] : []));
+const selectedKeyArray = computed(() =>
+  localValue.value ? [String(localValue.value)] : []
+);
 
 // keep localValue in sync with shared activeGroup
 watch(
@@ -207,11 +271,13 @@ watch(
       return;
     }
     const val =
-      typeof v === 'string' || typeof v === 'number' ? String(v) : String(extractIdFrom(v) ?? '');
+      typeof v === "string" || typeof v === "number"
+        ? String(v)
+        : String(extractIdFrom(v) ?? "");
     localValue.value = val || null;
     prevValue = val || null;
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // ensure activeGroup is set to a sensible default when groups load
@@ -230,21 +296,21 @@ watch(
     // sync label/value with group record if possible
     const ag = activeGroup.value;
     const gid =
-      typeof ag === 'string' || typeof ag === 'number'
+      typeof ag === "string" || typeof ag === "number"
         ? String(ag)
-        : String(extractIdFrom(ag) ?? '');
+        : String(extractIdFrom(ag) ?? "");
     if (!gid) return;
     const found = (list || []).find((g: any) => String(g.id) === gid);
     if (found) {
-      const agObj = typeof ag === 'object' && ag ? (ag as Record<string, any>) : null;
+      const agObj = typeof ag === "object" && ag ? (ag as Record<string, any>) : null;
       const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
       const agValue = agObj ? (agObj.value as string | undefined) : undefined;
-      if (agLabel !== found.name || String(agValue ?? '') !== gid)
+      if (agLabel !== found.name || String(agValue ?? "") !== gid)
         activeGroup.value = { label: found.name, value: gid };
       if (localValue.value !== gid) localValue.value = gid;
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 function onSelectAll() {
@@ -272,12 +338,67 @@ function onTreeSelect(val: any) {
 }
 
 function openManage() {
-  window.dispatchEvent(new Event('group:manage-request'));
+  window.dispatchEvent(new Event("group:manage-request"));
   menuOpen.value = false;
 }
 
 const parentButtonVisible = computed(() => Boolean(parentGroup.value));
 const parentName = computed(() => (parentGroup.value ? parentGroup.value.name : null));
+
+const selectedGroupObj = computed(() => {
+  try {
+    const gid = localValue.value;
+    if (!gid) return null;
+    return (groups.value || []).find((g: any) => String(g.id) === String(gid)) || null;
+  } catch (e) {
+    return null;
+  }
+});
+
+const shortcutGroup = computed(() => {
+  try {
+    return (groups.value || []).find((g: any) => g && g.shortcut) || null;
+  } catch (e) {
+    return null;
+  }
+});
+
+function activateGroup(g: any) {
+  try {
+    if (!g) return;
+    api.group.active.activeGroup.value = {
+      label: g.name || String(g.id),
+      value: String(g.id),
+    };
+  } catch (e) {
+    void e;
+  }
+}
+
+function activateTreeShortcut(node: any) {
+  try {
+    const grp =
+      node && node.group
+        ? node.group
+        : (groups.value || []).find((gg: any) => String(gg.id) === String(node.id));
+    if (grp) activateGroup(grp);
+  } catch (e) {
+    void e;
+  }
+}
+
+function isNodeShortcut(node: any) {
+  try {
+    if (!node) return false;
+    const gid = String(node.id ?? node.value ?? "");
+    if (!gid) return false;
+    const grp = (groups.value || []).find((g: any) => String(g.id) === gid);
+    if (!grp) return false;
+    return Boolean(grp.shortcut) && String(gid) !== String(localValue.value ?? "");
+  } catch (e) {
+    return false;
+  }
+}
 </script>
 
 <style scoped></style>

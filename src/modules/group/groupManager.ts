@@ -13,13 +13,14 @@ export type CreateGroupInput = {
   icon?: string | undefined;
   shareSubgroups?: boolean | undefined;
   hideTasksFromParent?: boolean | undefined;
+  shortcut?: boolean | undefined;
 };
 
 export function addGroup(
   organiserData: OrganiserData | any[],
   payload: CreateGroupInput,
 ): TaskGroup {
-  const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent } = payload;
+  const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent, shortcut } = payload;
   const now = new Date().toISOString();
   const group: TaskGroup = {
     id: generateGroupId(name),
@@ -30,6 +31,7 @@ export function addGroup(
     ...(icon && { icon }),
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
+    ...(typeof shortcut === 'boolean' ? { shortcut } : {}),
   };
 
   // Allow callers to pass either the full organiserData object or the groups array directly.

@@ -2,6 +2,7 @@ export interface TaskGroup {
   id: string;
   name: string;
   color?: string;
+  shortcut?: boolean;
   shareSubgroups?: boolean;
   hideTasksFromParent?: boolean;
   icon?: string;
