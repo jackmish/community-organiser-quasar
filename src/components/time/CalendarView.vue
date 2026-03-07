@@ -106,6 +106,10 @@
                 </div>
                 <q-btn
                   size="sm"
+                  @pointerdown="onDayPointerDown($event, day)"
+                  @pointerup="onDayPointerUp($event, day)"
+                  @pointercancel="cancelLongPressDay"
+                  @pointerleave="cancelLongPressDay"
                   @click="handleDateSelect($event, day, false)"
                   @contextmenu="handleDateSelect($event, day, true)"
                   :title="
@@ -254,6 +258,7 @@ import {
 } from "vue";
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
+import * as api from "src/modules/day-organiser/_apiRoot";
 import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
@@ -286,7 +291,15 @@ const {
   longPressTriggered,
 } = useLongPress();
 
-// Long-press should open edit mode; short press shows preview.
+// Long-press composable for calendar DAY buttons (separate instance)
+const {
+  startLongPress: startLongPressDay,
+  cancelLongPress: cancelLongPressDay,
+  setLongPressHandler: setLongPressHandlerDay,
+  longPressTriggered: longPressTriggeredDay,
+} = useLongPress();
+
+// Long-press should open edit mode for events; short press shows preview.
 setLongPressHandler((task: any) => {
   // Wrap async work in an IIFE and intentionally do not return the Promise
   void (async () => {
@@ -294,9 +307,7 @@ setLongPressHandler((task: any) => {
       try {
         // Prefer to handle edit internally via API so parent doesn't need to wire handlers
         // Set active task and switch to edit mode
-        // Importing the API dynamically avoids static circular imports and satisfies linter
-        const apiModule = await import("src/modules/day-organiser/_apiRoot");
-        const api = apiModule as any;
+        // Using static `api` import at top
         if (
           api &&
           api.task &&
@@ -317,13 +328,38 @@ setLongPressHandler((task: any) => {
   })();
 });
 
+// For day buttons, long-press should trigger the same behaviour as right-click
+setLongPressHandlerDay((payload: any) => {
+  try {
+    // payload is expected to be a date string (yyyy-MM-dd)
+    const date = typeof payload === "string" ? payload : String(payload);
+    // Emit day-click with null rect so parent can open add form at fallback position
+    emit("day-click", { date, rect: null });
+    // Also update selectedDate/time via api like right-click handler does
+    try {
+      if (
+        api &&
+        api.task &&
+        api.task.time &&
+        typeof api.task.time.setCurrentDate === "function"
+      ) {
+        api.task.time.setCurrentDate(date);
+      }
+    } catch (e) {
+      // ignore
+    }
+  } catch (e) {
+    // ignore
+  }
+});
+
+// Using static `api` import at top (no dynamic loader needed)
+
 async function onEventPointerUp(task: any) {
   try {
     // If long-press wasn't triggered, treat as a short click -> preview
     if (!longPressTriggered.value) {
       try {
-        const apiModule = await import("src/modules/day-organiser/_apiRoot");
-        const api = apiModule as any;
         if (
           api &&
           api.task &&
@@ -344,6 +380,32 @@ async function onEventPointerUp(task: any) {
     // ignore
   } finally {
     cancelLongPress();
+  }
+}
+
+async function onDayPointerUp(ev: PointerEvent, day: string) {
+  try {
+    // If long-press wasn't triggered, treat as a short click -> normal select
+    if (!longPressTriggeredDay.value) {
+      // call same logic as click
+      handleDateSelect(ev, day, false);
+    } else {
+      // long-press triggered -> emulate right-click/contextmenu behavior
+      handleDateSelect(ev, day, true);
+    }
+  } catch (e) {
+    // ignore
+  } finally {
+    cancelLongPressDay();
+  }
+}
+
+function onDayPointerDown(ev: PointerEvent, day: string) {
+  try {
+    // start the long-press for this day; `startLongPressDay` expects (payload, ev?)
+    startLongPressDay(day, ev);
+  } catch (e) {
+    // ignore
   }
 }
 
@@ -1108,12 +1170,12 @@ function jumpToMonth(dateString: string) {
 function handleDateSelect(e: Event | string, dateString?: string, isContext = false) {
   // Support both call signatures: (ev, date, isContext) and (date)
   let ev: Event | undefined;
-  let date = '';
-  if (typeof e === 'string') {
+  let date = "";
+  if (typeof e === "string") {
     date = e;
   } else {
     ev = e;
-    date = dateString || '';
+    date = dateString || "";
   }
   try {
     // If this was a contextmenu (right-click), prevent the native menu and
@@ -1134,25 +1196,26 @@ function handleDateSelect(e: Event | string, dateString?: string, isContext = fa
       }
     }
 
-    void (async () => {
-      try {
-        const apiModule = await import('src/modules/day-organiser/_apiRoot');
-        const api = apiModule as any;
-        if (api && api.time && typeof api.time.setCurrentDate === 'function') {
-          api.time.setCurrentDate(date);
-        }
-      } catch (e) {
-        // ignore
+    try {
+      if (
+        api &&
+        api.task &&
+        api.task.time &&
+        typeof api.task.time.setCurrentDate === "function"
+      ) {
+        api.task.time.setCurrentDate(date);
       }
-    })();
+    } catch (e) {
+      // ignore
+    }
     // Always update the selected date on left or right click
-    emit('update:selectedDate', date);
+    emit("update:selectedDate", date);
     // Only emit `day-click` (for positioning add form) on right-click/contextmenu
-    if (isContext) emit('day-click', { date, rect });
+    if (isContext) emit("day-click", { date, rect });
   } catch (e) {
     // ignore
-    emit('update:selectedDate', date);
-    if (isContext) emit('day-click', { date, rect: null });
+    emit("update:selectedDate", date);
+    if (isContext) emit("day-click", { date, rect: null });
   }
 }
 
