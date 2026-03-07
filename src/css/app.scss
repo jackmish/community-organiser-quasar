@@ -17,6 +17,9 @@ main {
   background-attachment: fixed;
 }
 
+.fullscreen {
+  z-index: 9999999000;
+}
 /* Global background and text for menus, popovers and dialog inners */
 .q-menu,
 .q-menu__content,

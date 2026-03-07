@@ -7,22 +7,26 @@
         <!-- Icon preview and selector (moved out of the input) -->
         <div
           ref="gmIconPreview"
-          class="gm-icon-preview"
+          class="gm-icon-preview gm-icon-swatch"
           @click.stop.prevent="toggleIconMenu"
-          style="
-            width: 36px;
-            height: 28px;
-            border-radius: 6px;
-            border: 1px solid white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f5f5f5;
-            margin-left: 8px;
-          "
+          :style="{
+            background: localColor,
+            width: '36px',
+            height: '36px',
+            borderRadius: '6px',
+            border: '1px solid #ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: '8px',
+          }"
         >
-          <q-icon :name="getIconName(localIcon)" size="18" />
+          <q-icon
+            :name="getIconName(localIcon)"
+            :style="'color: ' + localTextColor + ' !important; '"
+            size="24"
+          />
         </div>
         <div
           v-if="iconMenuVisible"
@@ -86,7 +90,7 @@
           label="Color (hex)"
           outlined
           dense
-          style="max-width: 160px; overflow: visible"
+          style="width: 160px; overflow: visible"
         >
           <template #append>
             <div style="display: flex; align-items: center; gap: 8px">
@@ -209,7 +213,7 @@
           label="Text color (hex)"
           outlined
           dense
-          style="min-width: 120px; margin-left: 8px"
+          style="width: 160px; margin-left: 8px; overflow: visible"
         >
           <template #append>
             <div style="display: flex; align-items: center; gap: 8px">
@@ -914,7 +918,6 @@ function onCancel() {
 <style scoped>
 ::v-deep .gm-controls .q-icon,
 ::v-deep .gm-controls .q-icon *,
-::v-deep .gm-icon-preview .q-icon,
 ::v-deep .gm-icon-item .q-icon,
 ::v-deep .gm-icon-item .q-icon * {
   color: rgba(0, 0, 0, 0.87) !important;
@@ -934,10 +937,21 @@ function onCancel() {
 /* Preview icon slightly smaller than tiles */
 ::v-deep .gm-icon-preview .q-icon,
 ::v-deep .gm-icon-preview .q-icon * {
-  font-size: 20px !important;
-  width: 20px !important;
-  height: 20px !important;
-  line-height: 20px !important;
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+}
+
+/* Allow the preview to use the chosen text color (via CSS variable) */
+.gm-icon-preview {
+  --gm-text-color: #ffffff;
+}
+::v-deep .gm-icon-preview .q-icon,
+::v-deep .gm-icon-preview .q-icon * {
+  color: var(--gm-text-color) !important;
+  fill: var(--gm-text-color) !important;
+  -webkit-text-fill-color: var(--gm-text-color) !important;
 }
 
 /* Reduce right padding inside the color/text-color inputs */
