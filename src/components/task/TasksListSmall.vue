@@ -263,6 +263,7 @@ function selectHiddenGroup(g: any) {
   border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02) inset;
   pointer-events: none;
+  z-index: 1;
 }
 .group-divider {
   position: absolute;
