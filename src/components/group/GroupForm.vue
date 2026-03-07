@@ -214,18 +214,27 @@
           "
         />
 
-        <!-- Text color selector (white / black) -->
-        <q-select
-          v-model="localTextColor"
-          :options="[
-            { label: 'White', value: '#ffffff' },
-            { label: 'Black', value: '#000000' },
-          ]"
-          dense
-          outlined
-          style="min-width: 120px; margin-left: 8px"
-          label="Text color"
-        />
+        <!-- Text color selector (swatch + palette) -->
+        <q-input v-model="localTextColor" label="Text color (hex)" outlined dense style="min-width:120px; margin-left:8px">
+          <template #append>
+            <div style="display:flex; align-items:center; gap:8px">
+              <div :style="{ width: '28px', height: '20px', borderRadius: '4px', border: '1px solid rgba(0,0,0,0.12)', background: localTextColor, boxSizing:'border-box' }" @click.stop.prevent="textMenuVisible = !textMenuVisible"></div>
+              <div style="position:relative; display:inline-block">
+                <q-btn dense flat round icon="palette" @click.stop.prevent="textMenuVisible = !textMenuVisible" />
+
+                <div v-if="textMenuVisible" style="position:absolute; right:0; top:calc(100% + 6px); background:var(--q-popup-bg, #fff); box-shadow:0 6px 18px rgba(0,0,0,0.12); padding:8px; border-radius:6px; z-index:10010; display:flex; flex-wrap:wrap; gap:6px; max-width:200px;">
+                  <div v-for="c in textPalette" :key="c" @click="selectTextPaletteColor(c)" style="width:28px; height:28px; border-radius:4px; cursor:pointer; border:1px solid #0002;" :title="c" :style="{ background: c }"></div>
+                  <div style="flex-basis:100%; height:0"></div>
+                  <div style="width:100%; margin-top:6px; display:flex; gap:6px; align-items:center;">
+                    <q-btn dense unelevated color="primary" @click="openTextCustom" style="padding:6px 10px">Custom…</q-btn>
+                    <q-btn dense unelevated color="negative" @click="resetTextColor" style="padding:6px 10px">Reset</q-btn>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </q-input>
+        <input ref="textColorInput" :value="localTextColor" @input="onTextColorInput" type="color" style="width:40px; height:30px; border:none; cursor:pointer; position:relative; z-index:100000; pointer-events:auto; opacity:0; position:absolute; left:-9999px;" />
       </div>
 
       <!-- Second line: checkboxes and action buttons -->
@@ -354,7 +363,9 @@ const localShortcut = ref(false);
 const localTextColor = ref("#ffffff");
 
 const colorInput = ref<HTMLInputElement | null>(null);
+const textColorInput = ref<HTMLInputElement | null>(null);
 const menuVisible = ref(false);
+const textMenuVisible = ref(false);
 const paletteColors = [
   "#1976d2",
   "#e91e63",
@@ -367,6 +378,12 @@ const paletteColors = [
   "#ffffff",
   "#000000",
 ];
+
+const textPalette = computed(() => {
+  const front = ["#000000", "#ffffff"];
+  const rest = paletteColors.filter((c) => !front.includes(c));
+  return [...front, ...rest];
+});
 
 const iconMenuVisible = ref(false);
 const gmIconPreview = ref<HTMLElement | null>(null);
@@ -582,6 +599,7 @@ watch(
       localShareSubgroups.value = false;
       localHideTasksInParent.value = false;
       localShortcut.value = false;
+        localTextColor.value = '#ffffff';
       return;
     } // try populate from props.groupOptions
     try {
@@ -592,6 +610,7 @@ watch(
         localName.value = found.name || found.label || "";
         localParent.value = found.parentId || found.parent_id || null;
         localColor.value = found.color || "#1976d2";
+        localTextColor.value = found.textColor || found.text_color || localTextColor.value;
         localIcon.value = found.icon || "folder";
         localShareSubgroups.value = Boolean(found.shareSubgroups);
         localHideTasksInParent.value = Boolean(found.hideTasksFromParent);
@@ -607,6 +626,104 @@ watch(
 function onColorInput(e: Event) {
   const t = e.target as HTMLInputElement | null;
   if (t && typeof t.value === "string") localColor.value = t.value;
+}
+function onTextColorInput(e: Event) {
+  const t = e.target as HTMLInputElement | null;
+  if (t && typeof t.value === "string") localTextColor.value = t.value;
+}
+function selectTextPaletteColor(c: string) {
+  localTextColor.value = c;
+  textMenuVisible.value = false;
+}
+function resetTextColor() {
+  localTextColor.value = '#ffffff';
+  textMenuVisible.value = false;
+}
+function openTextCustom() {
+  textMenuVisible.value = false;
+  setTimeout(() => openTextColorPicker(), 120);
+}
+
+function openTextColorPicker() {
+  try {
+    if (textColorInput.value) {
+      const orig = textColorInput.value;
+      const clone = orig.cloneNode(true) as HTMLInputElement;
+      clone.value = orig.value || localTextColor.value || '#ffffff';
+      clone.style.position = 'fixed';
+      clone.style.width = '1px';
+      clone.style.height = '1px';
+      clone.style.opacity = '0';
+      clone.style.pointerEvents = 'auto';
+      try {
+        const rect = orig.getBoundingClientRect();
+        const left = Math.max(0, rect.left + window.scrollX + 4);
+        const top = Math.max(0, rect.bottom + window.scrollY + 4);
+        clone.style.left = `${left}px`;
+        clone.style.top = `${top}px`;
+      } catch (e) {
+        void e;
+        clone.style.left = '0px';
+        clone.style.top = '0px';
+      }
+      document.body.appendChild(clone);
+      const onInputClone = (ev: Event) => {
+        const tt = ev.target as HTMLInputElement | null;
+        if (tt && typeof tt.value === 'string') localTextColor.value = tt.value;
+      };
+      clone.addEventListener('input', onInputClone);
+      clone.addEventListener('change', onInputClone);
+      setTimeout(() => {
+        try {
+          clone.click();
+        } catch (e) {
+          void e;
+        }
+      }, 50);
+      setTimeout(() => {
+        clone.removeEventListener('input', onInputClone);
+        clone.removeEventListener('change', onInputClone);
+        if (clone.parentElement) clone.parentElement.removeChild(clone);
+      }, 5000);
+      return;
+    }
+
+    const temp = document.createElement('input');
+    temp.type = 'color';
+    temp.value = localTextColor.value || '#ffffff';
+    temp.style.position = 'fixed';
+    temp.style.left = '0';
+    temp.style.top = '0';
+    temp.style.width = '1px';
+    temp.style.height = '1px';
+    temp.style.opacity = '0';
+    temp.style.pointerEvents = 'auto';
+    document.body.appendChild(temp);
+
+    const onInput = (ev: Event) => {
+      const tt = ev.target as HTMLInputElement | null;
+      if (tt && typeof tt.value === 'string') localTextColor.value = tt.value;
+    };
+
+    temp.addEventListener('input', onInput);
+    temp.addEventListener('change', onInput);
+
+    setTimeout(() => {
+      try {
+        temp.click();
+      } catch (e) {
+        void e;
+      }
+    }, 50);
+
+    setTimeout(() => {
+      temp.removeEventListener('input', onInput);
+      temp.removeEventListener('change', onInput);
+      if (temp.parentElement) temp.parentElement.removeChild(temp);
+    }, 5000);
+  } catch (e) {
+    void e;
+  }
 }
 function selectPaletteColor(c: string) {
   localColor.value = c;
