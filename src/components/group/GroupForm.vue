@@ -4,212 +4,228 @@
       <div class="row q-gutter-sm items-end">
         <q-input v-model="localName" label="Group Name" outlined dense class="col" />
 
+        <!-- Icon preview and selector (moved out of the input) -->
+        <div
+          ref="gmIconPreview"
+          class="gm-icon-preview"
+          @click.stop.prevent="toggleIconMenu"
+          style="
+            width: 36px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            margin-left: 8px;
+          "
+        >
+          <q-icon :name="getIconName(localIcon)" size="18" />
+        </div>
+        <div
+          v-if="iconMenuVisible"
+          :style="iconMenuStyle"
+          style="
+            background: var(--q-popup-bg, #fff);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            padding: 8px;
+            border-radius: 6px;
+            z-index: 10010;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-width: 320px;
+          "
+        >
+          <div
+            v-for="ic in iconOptions"
+            :key="ic"
+            class="gm-icon-item"
+            @click="selectIcon(ic)"
+            style="
+              width: 36px;
+              height: 36px;
+              border-radius: 6px;
+              cursor: pointer;
+              border: 1px solid #0002;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #f5f5f5;
+            "
+            :title="ic"
+          >
+            <q-icon :name="getIconName(ic)" />
+          </div>
+          <div style="flex-basis: 100%; height: 0"></div>
+          <div
+            style="
+              width: 100%;
+              margin-top: 6px;
+              display: flex;
+              gap: 6px;
+              align-items: center;
+            "
+          >
+            <q-btn
+              dense
+              unelevated
+              color="primary"
+              @click="resetIcon"
+              style="padding: 6px 10px"
+              >Reset Icon</q-btn
+            >
+          </div>
+        </div>
+
         <q-input
-          :model-value="''"
-          label="Color"
+          v-model="localColor"
+          label="Color (hex)"
           outlined
           dense
-          style="max-width: 120px; overflow: visible"
+          style="max-width: 160px; overflow: visible"
         >
           <template #append>
-            <div class="gm-controls" style="display: flex; align-items: center; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px">
               <div
                 @click.stop.prevent="menuVisible = !menuVisible"
                 style="
-                  width: 28px;
-                  height: 20px;
+                  float: right;
+                  width: 35px;
+                  height: 30px;
                   border-radius: 4px;
-                  border: 1px solid rgba(0, 0, 0, 0.12);
+                  border: 1px solid rgba(255, 255, 255, 1);
                   cursor: pointer;
-                  margin-right: 8px;
+                  margin-right: 0px;
                   box-sizing: border-box;
                 "
                 :style="{ background: localColor }"
               ></div>
-              <div
-                ref="gmIconPreview"
-                class="gm-icon-preview"
-                @click.stop.prevent="toggleIconMenu"
-                style="
-                  width: 28px;
-                  height: 20px;
-                  border-radius: 4px;
-                  border: 1px solid rgba(0, 0, 0, 0.12);
-                  cursor: pointer;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  background: #f5f5f5;
-                "
-              >
-                <q-icon :name="getIconName(localIcon)" size="18" />
-              </div>
+              <div style="position: relative; display: inline-block">
+                <!-- <q-btn
+                  dense
+                  flat
+                  round
+                  icon="palette"
+                  @click.stop.prevent="menuVisible = !menuVisible"
+                  class="q-ml-sm"
+                /> -->
 
-              <div
-                v-if="iconMenuVisible"
-                :style="iconMenuStyle"
-                style="
-                  background: var(--q-popup-bg, #fff);
-                  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-                  padding: 8px;
-                  border-radius: 6px;
-                  z-index: 10010;
-                  display: flex;
-                  flex-wrap: wrap;
-                  gap: 6px;
-                  max-width: 320px;
-                "
-              >
                 <div
-                  v-for="ic in iconOptions"
-                  :key="ic"
-                  class="gm-icon-item"
-                  @click="selectIcon(ic)"
+                  v-if="menuVisible"
                   style="
-                    width: 36px;
-                    height: 36px;
+                    position: absolute;
+                    right: 0;
+                    top: calc(100% + 6px);
+                    background: var(--q-popup-bg, #fff);
+                    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+                    padding: 8px;
                     border-radius: 6px;
-                    cursor: pointer;
-                    border: 1px solid #0002;
+                    z-index: 10010;
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: #f5f5f5;
-                  "
-                  :title="ic"
-                >
-                  <q-icon :name="getIconName(ic)" />
-                </div>
-                <div style="flex-basis: 100%; height: 0"></div>
-                <div
-                  style="
-                    width: 100%;
-                    margin-top: 6px;
-                    display: flex;
+                    flex-wrap: wrap;
                     gap: 6px;
-                    align-items: center;
+                    max-width: 240px;
                   "
                 >
-                  <q-btn
-                    dense
-                    unelevated
-                    color="primary"
-                    @click="resetIcon"
-                    style="padding: 6px 10px"
-                    >Reset Icon</q-btn
-                  >
-                </div>
-              </div>
-            </div>
-
-            <input
-              ref="colorInput"
-              :value="localColor"
-              @input="onColorInput"
-              type="color"
-              style="
-                width: 40px;
-                height: 30px;
-                border: none;
-                cursor: pointer;
-                position: relative;
-                z-index: 100000;
-                pointer-events: auto;
-                opacity: 0;
-                position: absolute;
-                left: -9999px;
-              "
-            />
-
-            <div style="position: relative; display: inline-block">
-              <q-btn
-                dense
-                flat
-                round
-                icon="palette"
-                @click.stop.prevent="menuVisible = !menuVisible"
-                class="q-ml-sm"
-              />
-
-              <div
-                v-if="menuVisible"
-                style="
-                  position: absolute;
-                  right: 0;
-                  top: calc(100% + 6px);
-                  background: var(--q-popup-bg, #fff);
-                  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-                  padding: 8px;
-                  border-radius: 6px;
-                  z-index: 10010;
-                  display: flex;
-                  flex-wrap: wrap;
-                  gap: 6px;
-                  max-width: 240px;
-                "
-              >
-                <div
-                  v-for="c in paletteColors"
-                  :key="c"
-                  @click="selectPaletteColor(c)"
-                  style="
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    border: 1px solid #0002;
-                  "
-                  :title="c"
-                  :style="{ background: c }"
-                ></div>
-                <div style="flex-basis: 100%; height: 0"></div>
-                <div
-                  style="
-                    width: 100%;
-                    margin-top: 6px;
-                    display: flex;
-                    gap: 6px;
-                    align-items: center;
-                  "
-                >
-                  <q-btn
-                    dense
-                    unelevated
-                    color="primary"
-                    @click="openCustom"
+                  <div
+                    v-for="c in paletteColors"
+                    :key="c"
+                    @click="selectPaletteColor(c)"
                     style="
+                      width: 28px;
+                      height: 28px;
+                      border-radius: 4px;
+                      cursor: pointer;
+                      border: 1px solid #0002;
+                    "
+                    :title="c"
+                    :style="{ background: c }"
+                  ></div>
+                  <div style="flex-basis: 100%; height: 0"></div>
+                  <div
+                    style="
+                      width: 100%;
+                      margin-top: 6px;
                       display: flex;
+                      gap: 6px;
                       align-items: center;
-                      gap: 8px;
-                      padding: 6px 10px;
                     "
                   >
-                    <div style="display: flex; align-items: center; gap: 8px">
-                      <span>Custom…</span>
-                      <div
-                        :style="{
-                          width: '18px',
-                          height: '18px',
-                          background: localColor,
-                          borderRadius: '4px',
-                          border: '1px solid rgba(0,0,0,0.12)',
-                        }"
-                      ></div>
-                    </div>
-                  </q-btn>
-                  <q-btn
-                    dense
-                    unelevated
-                    color="negative"
-                    @click="resetColor"
-                    style="padding: 6px 10px"
-                    >Reset</q-btn
-                  >
+                    <q-btn
+                      dense
+                      unelevated
+                      color="primary"
+                      @click="openCustom"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 6px 10px;
+                      "
+                    >
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <span>Custom…</span>
+                        <div
+                          :style="{
+                            width: '18px',
+                            height: '18px',
+                            background: localColor,
+                            borderRadius: '4px',
+                            border: '1px solid rgba(0,0,0,0.12)',
+                          }"
+                        ></div>
+                      </div>
+                    </q-btn>
+                    <q-btn
+                      dense
+                      unelevated
+                      color="negative"
+                      @click="resetColor"
+                      style="padding: 6px 10px"
+                      >Reset</q-btn
+                    >
+                  </div>
                 </div>
               </div>
             </div>
           </template>
         </q-input>
+
+        <!-- hidden color input used for native color picker fallback -->
+        <input
+          ref="colorInput"
+          :value="localColor"
+          @input="onColorInput"
+          type="color"
+          style="
+            width: 40px;
+            height: 30px;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            z-index: 100000;
+            pointer-events: auto;
+            opacity: 0;
+            position: absolute;
+            left: -9999px;
+          "
+        />
+
+        <!-- Text color selector (white / black) -->
+        <q-select
+          v-model="localTextColor"
+          :options="[
+            { label: 'White', value: '#ffffff' },
+            { label: 'Black', value: '#000000' },
+          ]"
+          dense
+          outlined
+          style="min-width: 120px; margin-left: 8px"
+          label="Text color"
+        />
       </div>
 
       <!-- Second line: checkboxes and action buttons -->
@@ -314,7 +330,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import type { QTreeNode } from "quasar";
-import * as api from "src/modules/day-organiser/_apiRoot";
 
 const props = defineProps<{
   groupTree?: QTreeNode<any>[];
@@ -336,6 +351,7 @@ const localIcon = ref<string | null>("folder");
 const localShareSubgroups = ref(false);
 const localHideTasksInParent = ref(false);
 const localShortcut = ref(false);
+const localTextColor = ref("#ffffff");
 
 const colorInput = ref<HTMLInputElement | null>(null);
 const menuVisible = ref(false);
@@ -604,6 +620,7 @@ function onSubmit() {
     name: localName.value.trim(),
     parent: localParent.value || undefined,
     color: localColor.value,
+    textColor: localTextColor.value,
     icon: localIcon.value,
     shareSubgroups: localShareSubgroups.value,
     hideTasksFromParent: localHideTasksInParent.value,
