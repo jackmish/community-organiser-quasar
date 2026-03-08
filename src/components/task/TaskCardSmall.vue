@@ -14,6 +14,7 @@
     @pointercancel="cancelLongPress"
     @pointerleave="cancelLongPress"
     @click="handleTaskClick($event)"
+    @contextmenu.stop.prevent="openEditMode($event)"
   >
     <q-icon
       v-if="typeIcons[item.type_id || item.type]"
@@ -248,6 +249,16 @@ const handleTaskClick = (evt: Event) => {
     emit("task-click", item.value, rect);
   } catch (e) {
     emit("task-click", item.value, null);
+  }
+};
+
+const openEditMode = (evt: MouseEvent) => {
+  try {
+    // set active task and switch to edit mode
+    api.task.active.setTask(item.value);
+    api.task.active.setMode('edit');
+  } catch (e) {
+    void e;
   }
 };
 
