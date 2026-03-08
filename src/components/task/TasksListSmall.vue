@@ -51,6 +51,7 @@
                 :item="t"
                 :selected-task-id="selectedTaskId"
                 @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
+                @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
               />
             </div>
           </q-card>
@@ -70,6 +71,7 @@
               :item="item"
               :selected-task-id="selectedTaskId"
               @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
+              @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
             />
           </div>
         </template>
@@ -97,6 +99,7 @@ const emit = defineEmits<{
   (e: "toggle-status", task: any): void;
   (e: "edit-task", task: any): void;
   (e: "task-click", task: any, rect?: DOMRect | null): void;
+  (e: "task-context", task: any, rect?: DOMRect | null): void;
   (e: "delete-task", id: string): void;
 }>();
 

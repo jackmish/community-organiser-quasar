@@ -14,7 +14,7 @@
     @pointercancel="cancelLongPress"
     @pointerleave="cancelLongPress"
     @click="handleTaskClick($event)"
-    @contextmenu.stop.prevent="openEditMode($event)"
+    @contextmenu.stop.prevent="() => emit('task-context', item.value, getBoundingRect())"
   >
     <q-icon
       v-if="typeIcons[item.type_id || item.type]"
@@ -112,6 +112,7 @@ import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utlils/occurs
 const props = defineProps<{ item: any; selectedTaskId: string | null }>();
 const emit = defineEmits<{
   (e: "task-click", t: any, rect?: DOMRect | null): void;
+  (e: "task-context", t: any, rect?: DOMRect | null): void;
 }>();
 
 const { startLongPress, cancelLongPress, longPressTriggered } = useLongPress();
@@ -252,14 +253,15 @@ const handleTaskClick = (evt: Event) => {
   }
 };
 
-const openEditMode = (evt: MouseEvent) => {
+const getBoundingRect = (): DOMRect | null => {
   try {
-    // set active task and switch to edit mode
-    api.task.active.setTask(item.value);
-    api.task.active.setMode('edit');
+    const sel = `[data-task-id="${item.value?.id}"]`;
+    const el = document.querySelector(sel);
+    if (el instanceof Element) return el.getBoundingClientRect();
   } catch (e) {
     void e;
   }
+  return null;
 };
 
 // exports removed - `<script setup>` must not contain ES module exports

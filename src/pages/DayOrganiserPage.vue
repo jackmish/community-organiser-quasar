@@ -76,6 +76,7 @@
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
               @task-click="onTaskClicked"
+              @task-context="handleTaskContext"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
               @toggle-status="handleToggleStatus"
@@ -290,6 +291,41 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
       }
     } else {
       // clear floating placement
+      setPreviewFloating(null);
+    }
+  } catch (e) {
+    void e;
+  }
+}
+
+async function handleTaskContext(task: any, rect?: DOMRect | null) {
+  try {
+    // Open editor (edit mode) for the task
+    try {
+      editTask(task);
+    } catch (e) {
+      try {
+        api.task.active.setTask(task);
+        api.task.active.setMode('edit');
+      } catch (err) {
+        void err;
+      }
+    }
+    // If we received a bounding rect, show floating editor near it
+    if (rect) {
+      await nextTick();
+      await new Promise((r) => requestAnimationFrame(r));
+      try {
+        const selector = `[data-task-id="${task?.id}"]`;
+        const el = document.querySelector(selector);
+        let newRect: DOMRect | null = null;
+        if (el instanceof Element) newRect = el.getBoundingClientRect();
+        else newRect = rect ?? null;
+        setPreviewFloating(newRect, { forceBelow: true });
+      } catch (e) {
+        setPreviewFloating(rect, { forceBelow: true });
+      }
+    } else {
       setPreviewFloating(null);
     }
   } catch (e) {
