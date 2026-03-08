@@ -57,7 +57,12 @@ export class TaskManager {
         if (hasTimeA && !hasTimeB) return -1;
         if (!hasTimeA && hasTimeB) return 1;
         if (hasTimeA && hasTimeB) return (a.eventTime || '').localeCompare(b.eventTime || '');
-        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        const priorityOrder: Record<string, number> = {
+          critical: 0,
+          high: 1,
+          medium: 2,
+          low: 3,
+        };
         const priorityCompare =
           (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
         if (priorityCompare !== 0) return priorityCompare;
@@ -141,7 +146,8 @@ export const addTask = (
   getDays()[date].tasks.push(task);
   try {
     // Rebuild flatTasks from days to keep list consistent and avoid duplicates
-    flatTasks.value = listFromDays(getDays());
+    const newList = listFromDays(getDays());
+    flatTasks.value.splice(0, flatTasks.value.length, ...newList);
   } catch (e) {
     // ignore
   }
@@ -195,10 +201,10 @@ export const updateTask = (
         d.tasks.splice(fi, 1);
         // ensure target day tasks array exists
         if (!Array.isArray(targetDay.tasks)) targetDay.tasks = [];
-        // push existing (merged with updates) into target day
+        // push existing (merged with updates/taskObj) into target day
         const merged = {
           ...existing,
-          ...maybeUpdates,
+          ...taskObj,
           date: date,
           eventDate: date,
           updatedAt: new Date().toISOString(),
@@ -219,7 +225,17 @@ export const updateTask = (
       try {
         // Rebuild the flat tasks list from current days so any moves/field
         // updates (date/type/etc.) are reflected consistently in the UI.
-        flatTasks.value = listFromDays(getDays());
+        const newList = listFromDays(getDays());
+        flatTasks.value.splice(0, flatTasks.value.length, ...newList);
+        // Ensure the updated task object replaces any stale entry in flatTasks
+        try {
+          const fi = flatTasks.value.findIndex((t: any) => String(t.id) === String(taskObj.id));
+          if (fi !== -1) {
+            flatTasks.value[fi] = existing;
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (e) {
         // ignore
       }
@@ -256,7 +272,9 @@ export const deleteTask = (date: string, taskId: string): boolean => {
 
   try {
     if (removed) {
-      flatTasks.value = flatTasks.value.filter((t) => String(t.id) !== String(taskId));
+      for (let i = flatTasks.value.length - 1; i >= 0; i--) {
+        if (String(flatTasks.value[i]?.id) === String(taskId)) flatTasks.value.splice(i, 1);
+      }
     }
   } catch (e) {
     // ignore

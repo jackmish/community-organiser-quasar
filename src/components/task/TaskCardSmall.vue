@@ -95,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, toRef } from "vue";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/modules/day-organiser/_apiRoot";
 import {
@@ -125,7 +125,7 @@ const typeColors: Record<string, string> = {
   Replenish: "#c9a676",
 };
 
-const item = props.item;
+const item = toRef(props, "item") as any;
 
 const getDisplayName = (task: any) => {
   if (!task) return "";
@@ -245,9 +245,9 @@ const handleTaskClick = (evt: Event) => {
   try {
     const el = ((evt.currentTarget as unknown) as HTMLElement) || ((evt.target as unknown) as HTMLElement);
     const rect = el ? el.getBoundingClientRect() : null;
-    emit("task-click", item, rect);
+    emit("task-click", item.value, rect);
   } catch (e) {
-    emit("task-click", item, null);
+    emit("task-click", item.value, null);
   }
 };
 
