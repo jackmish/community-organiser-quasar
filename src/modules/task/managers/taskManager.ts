@@ -166,23 +166,60 @@ export const updateTask = (
   }
 
   const day = getDays()[date];
-  if (!day || !Array.isArray(day.tasks)) throw new Error('Task not found in provided day');
-  let idx = day.tasks.findIndex((t: any) => t === taskObj);
-  if (idx === -1) idx = day.tasks.findIndex((t: any) => String(t.id) === String(taskObj.id));
-  if (idx === -1) throw new Error('Task not found in provided day');
+  // Ensure the task object reflects the target date so date/eventDate updates persist
+  try {
+    (taskObj as any).date = date;
+    (taskObj as any).eventDate = date;
+  } catch (e) {
+    // ignore
+  }
+  // ensure target day exists
+  if (!getDays()[date]) getDays()[date] = { date, tasks: [], notes: '' } as any;
+  const targetDay = getDays()[date];
 
-  const existing = day.tasks[idx];
+  let idx = (targetDay.tasks || []).findIndex((t: any) => t === taskObj);
+  if (idx === -1)
+    idx = (targetDay.tasks || []).findIndex((t: any) => String(t.id) === String(taskObj.id));
+
+  // If task not present in the target day, try to find it in other days
+  // and move it into the target day (handles date changes).
+  if (idx === -1) {
+    let found = false;
+    for (const key of Object.keys(getDays())) {
+      const d = getDays()[key];
+      if (!d || !Array.isArray(d.tasks)) continue;
+      const fi = d.tasks.findIndex((t: any) => String(t.id) === String(taskObj.id));
+      if (fi !== -1) {
+        const existing = d.tasks[fi];
+        // remove from old day
+        d.tasks.splice(fi, 1);
+        // ensure target day tasks array exists
+        if (!Array.isArray(targetDay.tasks)) targetDay.tasks = [];
+        // push existing (merged with updates) into target day
+        const merged = {
+          ...existing,
+          ...maybeUpdates,
+          date: date,
+          eventDate: date,
+          updatedAt: new Date().toISOString(),
+        } as Task;
+        targetDay.tasks.push(merged);
+        taskObj = merged;
+        idx = targetDay.tasks.length - 1;
+        found = true;
+        break;
+      }
+    }
+    if (!found) throw new Error('Task not found in provided day');
+  }
+  const existing = targetDay.tasks[idx];
   try {
     if (existing) {
       Object.assign(existing, taskObj, { updatedAt: new Date().toISOString() });
       try {
-        const fi = flatTasks.value.findIndex((t: any) => String(t.id) === String(existing.id));
-        if (fi !== -1) {
-          flatTasks.value[fi] = existing;
-          flatTasks.value.sort(
-            (a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority),
-          );
-        }
+        // Rebuild the flat tasks list from current days so any moves/field
+        // updates (date/type/etc.) are reflected consistently in the UI.
+        flatTasks.value = listFromDays(getDays());
       } catch (e) {
         // ignore
       }
