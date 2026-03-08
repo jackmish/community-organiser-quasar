@@ -160,7 +160,10 @@ const mergedTasks = computed(() => {
 
   if (tasks.length === 0) return out;
 
-  // sort tasks by group ancestry path then by name (re-use replenish logic)
+  // Group tasks by resolved group id, sort items within each group, then
+  // flatten groups in group-path order. This ensures tasks inside a group
+  // are ordered by time/priority/name while keeping groups ordered by their
+  // ancestry path.
   const getGroupPath = (groupId: any) => {
     if (!groupId) return [] as string[];
     const path: string[] = [];
@@ -174,9 +177,44 @@ const mergedTasks = computed(() => {
     return path.reverse();
   };
 
-  tasks.sort((a: any, b: any) => {
-    const pa = getGroupPath(a.groupId ?? a.group_id);
-    const pb = getGroupPath(b.groupId ?? b.group_id);
+  // bucket tasks by group id
+  const buckets: Record<string, any[]> = {};
+  for (const t of tasks) {
+    const gid = t.groupId ?? t.group_id ?? "__ungrouped__";
+    if (!buckets[gid]) buckets[gid] = [];
+    buckets[gid].push(t);
+  }
+
+  // comparator used to sort tasks inside a group
+  const taskComparator = (a: any, b: any) => {
+    const hasTimeA = !!a.eventTime;
+    const hasTimeB = !!b.eventTime;
+    if (hasTimeA && !hasTimeB) return -1;
+    if (!hasTimeA && hasTimeB) return 1;
+    if (hasTimeA && hasTimeB) {
+      const ra = String(a.eventTime || "");
+      const rb = String(b.eventTime || "");
+      if (ra < rb) return -1;
+      if (ra > rb) return 1;
+    }
+    const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    const pA = priorityOrder[a.priority] ?? 99;
+    const pB = priorityOrder[b.priority] ?? 99;
+    if (pA !== pB) return pA - pB;
+    const na = (a.name || "").toLowerCase();
+    const nb = (b.name || "").toLowerCase();
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+    return 0;
+  };
+
+  // determine group ordering keys and sort them by their path
+  const groupKeys = Object.keys(buckets);
+  groupKeys.sort((a, b) => {
+    if (a === "__ungrouped__" && b !== "__ungrouped__") return 1; // put ungrouped last
+    if (b === "__ungrouped__" && a !== "__ungrouped__") return -1;
+    const pa = getGroupPath(a === "__ungrouped__" ? null : a);
+    const pb = getGroupPath(b === "__ungrouped__" ? null : b);
     const max = Math.max(pa.length, pb.length);
     for (let i = 0; i < max; i++) {
       if (i >= pa.length) return -1;
@@ -186,22 +224,17 @@ const mergedTasks = computed(() => {
       if (na < nb) return -1;
       if (na > nb) return 1;
     }
-    const na = (a.name || "").toLowerCase();
-    const nb = (b.name || "").toLowerCase();
-    if (na < nb) return -1;
-    if (na > nb) return 1;
     return 0;
   });
 
-  // flatten sorted tasks into output and attach resolved group reference for label rendering
-  for (const t of tasks) {
-    const gid = t.groupId ?? t.group_id ?? "__ungrouped__";
-    const grpObj =
-      gid === "__ungrouped__"
-        ? null
-        : groups.value.find((g: any) => String(g.id) === String(gid));
-    // attach _group for use in template label resolution
-    out.push({ ...t, _group: grpObj });
+  // flatten each bucket in order, sorting items within bucket
+  for (const gid of groupKeys) {
+    const items = buckets[gid] || [];
+    items.sort(taskComparator);
+    const grpObj = gid === "__ungrouped__" ? null : groups.value.find((g: any) => String(g.id) === String(gid));
+    for (const t of items) {
+      out.push({ ...t, _group: grpObj });
+    }
   }
 
   return out;
