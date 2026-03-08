@@ -314,14 +314,17 @@
 
       <!-- Second line: checkboxes and action buttons -->
       <div class="row q-gutter-sm items-center" style="margin-top: 8px; width: 100%">
-        <div style="min-width: 180px; display: flex; align-items: center">
+        <div
+          style="min-width: 180px; display: flex; align-items: center; position: relative"
+          ref="parentBtnWrapper"
+        >
           <q-btn
             flat
             dense
             round
             unelevated
             style="flex: 1; justify-content: flex-start"
-            @click.stop.prevent="parentMenuOpen = !parentMenuOpen"
+            @click.stop.prevent="openParentMenu"
           >
             <div style="display: flex; align-items: center; gap: 8px">
               <q-icon
@@ -335,6 +338,7 @@
             </div>
           </q-btn>
         </div>
+        <!-- QMENU with parent selection -->
         <q-menu
           v-model="parentMenuOpen"
           anchor="bottom left"
@@ -379,6 +383,44 @@
             </div>
           </div>
         </q-menu>
+        <!-- fallback inline parent selector if QMenu doesn't mount -->
+        <div v-if="parentMenuOpen" class="gm-parent-fallback" :style="parentMenuStyle">
+          <q-list padding>
+            <q-item clickable v-ripple @click="clearParent">
+              <q-item-section avatar style="min-width: 36px"
+                ><q-icon name="folder_open"
+              /></q-item-section>
+              <q-item-section>None (no parent)</q-item-section>
+            </q-item>
+          </q-list>
+          <q-separator />
+          <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
+            <q-tree
+              :nodes="groupTree || []"
+              node-key="id"
+              default-expand-all
+              :selected="localParent ? [String(localParent)] : []"
+              @update:selected="onParentTreeSelect"
+            >
+              <template #default-header="prop">
+                <div class="row items-center full-width">
+                  <q-icon
+                    :name="getIconName(prop.node.icon)"
+                    class="q-mr-sm"
+                    :style="{ color: prop.node.color }"
+                  />
+                  <span>{{ prop.node.label }}</span>
+                </div>
+              </template>
+            </q-tree>
+          </div>
+          <q-separator />
+          <div
+            style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
+          >
+            <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+          </div>
+        </div>
         <div style="display: flex; align-items: center; gap: 8px">
           <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
         </div>
@@ -467,6 +509,56 @@ const iconMenuStyle = ref<Record<string, string>>({
   left: "0px",
   top: "0px",
 });
+const parentBtnWrapper = ref<HTMLElement | null>(null);
+const parentMenuStyle = ref<Record<string, string>>({
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  left: "0px",
+  minWidth: "300px",
+  maxHeight: "60vh",
+  overflow: "auto",
+  padding: "8px",
+  background: "var(--q-popup-bg, #fff)",
+  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
+  borderRadius: "6px",
+  zIndex: "12000",
+});
+
+function openParentMenu() {
+  try {
+    const wrapper = parentBtnWrapper.value;
+    if (!wrapper) {
+      parentMenuOpen.value = true;
+      return;
+    }
+    const rect = wrapper.getBoundingClientRect();
+    const menuDesiredWidth = 320;
+    let leftPx = 0;
+    if (rect.left + menuDesiredWidth > window.innerWidth - 8) {
+      // align to the right edge of the wrapper if it would overflow
+      leftPx = Math.max(0, rect.width - menuDesiredWidth);
+    } else {
+      leftPx = 0;
+    }
+    parentMenuStyle.value = {
+      position: "absolute",
+      top: `${Math.round(rect.height + 6)}px`,
+      left: `${Math.round(leftPx)}px`,
+      minWidth: "300px",
+      maxHeight: "60vh",
+      overflow: "auto",
+      padding: "8px",
+      background: "var(--q-popup-bg, #fff)",
+      boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
+      borderRadius: "6px",
+      zIndex: "12000",
+    };
+    parentMenuOpen.value = true;
+  } catch (e) {
+    void e;
+    parentMenuOpen.value = true;
+  }
+}
 const iconOptions = (() => {
   const set = new Set<string>();
   [
@@ -960,5 +1052,10 @@ function onCancel() {
 }
 ::v-deep .gm-color-field .q-field__append {
   margin-left: 6px !important;
+}
+
+/* content-class for parent menu to ensure it stacks above overlays */
+.gm-parent-menu-content {
+  z-index: 12000 !important;
 }
 </style>
