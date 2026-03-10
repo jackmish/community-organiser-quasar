@@ -5,7 +5,9 @@
 $task-blue: #0d47a1;
 // Match Quasar runtime primary so inactive items derive from the same base
 $inactive-blue: #1976d2; // matches :root --q-primary
-$menu-bg: $inactive-blue;
+
+$menu-bg: #4af;
+$menu-bg-opacity: #4afc;
 
 /* Set main element background to app theme main color */
 main {
@@ -17,17 +19,20 @@ main {
   background-attachment: fixed;
 }
 
-.fullscreen {
-  z-index: 9999999000;
-}
 /* Global background and text for menus, popovers and dialog inners */
 .q-menu,
 .q-menu__content,
 .q-popover,
-.q-select__popup,
+.q-select__popup {
+  background-color: #adf !important;
+  color: #000 !important;
+}
+//Background around popups/menus/dialogs (e.g. dimmed backdrop)
 .q-dialog__inner {
-  background-color: var(--q-primary) !important;
-  color: #ffffff !important;
+  background-color: $menu-bg-opacity !important;
+}
+.fullscreen {
+  z-index: 9999999000;
 }
 
 /* Menu items & overlays: use a pseudo-element overlay so text/icons remain readable */
@@ -50,99 +55,12 @@ main {
   filter: none !important;
   will-change: background-color;
 }
-.q-menu,
-.q-select__popup,
-.q-dialog {
-  .q-item {
-    &:not(.use-default),
-    &:not(.use-default):hover,
-    &:not(.use-default):focus,
-    &:not(.use-default).q-item--active,
-    &:not(.use-default).q-item--active:hover,
-    &:not(.use-default) * {
-      mix-blend-mode: normal !important;
-      background-blend-mode: normal !important;
-      filter: none !important;
-      will-change: background-color;
-    }
-  }
-}
-.q-select__popup .q-item:not(.use-default),
-.q-select__popup .q-item:not(.use-default) *,
-.q-dialog .q-item:not(.use-default),
-.q-dialog .q-item:not(.use-default) * {
-  mix-blend-mode: normal !important;
-  background-blend-mode: normal !important;
-  filter: none !important;
-  will-change: background-color;
-}
-.q-menu .q-item > *,
-.q-menu .q-item .q-item__section,
-.q-menu .q-item .q-item__label,
-.q-menu .q-item .q-icon {
-  position: relative;
-  z-index: 1;
-}
-
-/* Ensure no direct backgrounds/filters are applied to items or their children
-   so the ::before overlay is the only visual change on hover. This prevents
-   any Quasar hover rules from making items brighter. */
-.q-menu,
-.q-select__popup,
-.q-dialog {
-  .q-item {
-    &:not(.use-default),
-    &:not(.use-default):hover,
-    &:not(.use-default):focus,
-    &:not(.use-default).q-item--active,
-    &:not(.use-default).q-item--active:hover,
-    &:not(.use-default) * {
-      background: transparent !important;
-      background-image: none !important;
-      box-shadow: none !important;
-      filter: none !important;
-      mix-blend-mode: normal !important;
-    }
-  }
-}
-.q-menu,
-.q-select__popup,
-.q-dialog {
-  .q-item {
-    &:not(.use-default) {
-      background: transparent !important;
-      background-image: none !important;
-      box-shadow: none !important;
-      filter: none !important;
-      mix-blend-mode: normal !important;
-    }
-  }
-}
-
-// Use SCSS colors so hover darkens the base color instead of applying a black overlay.
-// `var(--q-primary)` can't be used with `darken()` at compile time, so we set
-// a known task-list blue and derive hover colors from it.
-
-.q-menu :not(.use-default).q-item.q-item--active::before,
-.q-menu :not(.use-default).q-item--active::before {
-  background-color: $task-blue !important; /* active: task-list blue */
-}
-.q-menu :not(.use-default).q-item:not(.q-item--active):hover::before {
-  background-color: darken(
-    $inactive-blue,
-    6%
-  ) !important; /* non-active hover: darken inactive base */
-}
-.q-menu :not(.use-default).q-item.q-item--active:hover::before,
-.q-menu :not(.use-default).q-item--active:hover::before {
-  background-color: darken($task-blue, 8%) !important; /* active+hover: darker active */
-}
 
 /* Dialog/card areas use primary + white text */
 .q-dialog .q-card,
 .q-dialog .q-card-section,
 .q-dialog .q-card-actions {
-  background-color: var(--q-primary) !important;
+  background-color: $menu-bg !important;
   color: #ffffff !important;
 }
 
