@@ -1,0 +1,445 @@
+{
+  "generatedAt": "2026-03-09T00:00:00Z",
+  "summary": "Machine-readable function / export map — initial pass for key modules, services, composables, utils and task components.",
+  "entries": [
+    {
+      "file": "src/services/appService.ts",
+      "exports": ["registerAppService", "getAppService", "app", "default"],
+      "type": "service-registry",
+      "description": "Global registry for cross-cutting services. Use `registerAppService(name, svc)` and `app(name)` to access services via a safe proxy.",
+      "notes": [
+        "Proxy wraps async functions and returns undefined on throw",
+        "Used to register 'storage' in day-organiser root"
+      ]
+    },
+    {
+      "file": "src/modules/day-organiser/_apiRoot.ts",
+      "exports": ["group", "task", "storage"],
+      "type": "module-root",
+      "description": "Constructs and exposes domain APIs for day-organiser. Registers `storage` into `appService`.",
+      "notes": [
+        "Constructors call construct() functions from modules/task and modules/group",
+        "Important import target for UI components"
+      ]
+    },
+    {
+      "file": "src/modules/group/_apiGroup.ts",
+      "exports": ["construct"],
+      "type": "domain-api",
+      "description": "Group domain API factory. Returns a small API object (add/update/delete/list/active).",
+      "notes": [
+        "Uses `app('storage')` implicitly via helpers",
+        "Recommended refactor target: extract persistence adapter"
+      ]
+    },
+    {
+      "generatedAt": "2026-03-09T00:00:00Z",
+      "summary": "Machine-readable function / export map — expanded with members for exported objects (services, domain APIs, composables, utils, electron, and Vue components placeholders).",
+      "entries": [
+        {
+          "file": "src/services/appService.ts",
+          "exports": [
+            "registerAppService",
+            "getAppService",
+            "app",
+            "default"
+          ],
+          "type": "service-registry",
+          "description": "Global registry for cross-cutting services. Use `registerAppService(name, svc)` and `app(name)` to access services via a safe proxy.",
+          "members": {
+            "registerAppService(name, svc)": "store service under name",
+            "getAppService(name)": "return raw service or null",
+            "app(name)": "return Proxy around service: methods are wrapped to catch errors and return undefined",
+            "default": "object with the three helpers"
+          },
+          "notes": [
+            "Proxy wraps async functions and returns undefined on throw",
+            "Used to register 'storage' in day-organiser root"
+          ]
+        },
+        {
+          "file": "src/modules/day-organiser/_apiRoot.ts",
+          "exports": ["group","task","storage"],
+          "type": "module-root",
+          "description": "Constructs and exposes domain APIs for day-organiser. Registers `storage` into `appService`.",
+          "members": {
+            "group": "constructed group API object (see src/modules/group/_apiGroup.ts)",
+            "task": "constructed task API object (see src/modules/task/_apiTask.ts)",
+            "storage": "constructed storage API object (see src/modules/storage/_apiStorage.ts)"
+          },
+          "notes": [
+            "Constructors call construct() functions from modules/task and modules/group",
+            "Important import target for UI components"
+          ]
+        },
+        {
+          "file": "src/modules/group/_apiGroup.ts",
+          "exports": ["construct"],
+          "type": "domain-api",
+          "description": "Group domain API factory. Returns a small API object with add/update/delete, list helpers and active controls.",
+          "members": {
+            "construct() -> object": {
+              "add(payload)": "add group, persists via saveData()",
+              "update(groupId, updates)": "update group, persists via saveData()",
+              "delete(groupId)": "delete group, persists via saveData()",
+              "list": {
+                "all": "computed ref of groups",
+                "getGroupsByParent(parentId?)": "returns groups by parent",
+                "setGroups(arr)": "set groups ref",
+                "isVisibleForActive(candidateId)": "utility wrapper using current activeGroup",
+                "tree": "computed tree of groups"
+              },
+              "active": {
+                "activeGroup": "ref active group",
+                "parent": "computed parent",
+                "goToParent()": "navigate to parent",
+                "selectAll()": "clear active selection"
+              }
+            }
+          },
+          "notes": [
+            "Persistence uses `saveData()` helper which calls `app('storage')`",
+            "API shape is intentionally small to simplify component usage"
+          ]
+        },
+        {
+          "file": "src/modules/task/_apiTask.ts",
+          "exports": ["ApiTask","construct","PreviewPayload"],
+          "type": "domain-api",
+          "description": "Task domain API: `ApiTask` class and `construct(groupApi)` factory. Exposes time API, task list helpers, active selection and mutation methods.",
+          "members": {
+            "class ApiTask": {
+              "constructor(groupApi?)": "initialize state, time manager and TaskManager",
+              "properties": {
+                "groupApi": "reference to group API",
+                "time": "time manager returned by timeManager.construct()",
+                "state": "refs: activeTask, activeMode, parsedLines",
+                "mgr": "TaskManager instance"
+              },
+              "get active() -> object": {
+                "task": "ref activeTask",
+                "mode": "ref activeMode",
+                "setTask(payload)": "apply active selection via manager",
+                "setMode(m)": "set mode and clear activeTask when switching to 'add'"
+              },
+              "get list() -> object": {
+                "all()": "return shallow copy of all tasks",
+                "inRange(s,e)": "tasks between two dates",
+                "byCategory(c)": "tasks by category",
+                "byPriority(p)": "tasks by priority",
+                "incomplete()": "incomplete tasks",
+                "filter(fn)": "filter helper",
+                "sort(compare?)": "sorted copy of getAll()",
+                "forDay(d)": "tasks for a single day",
+                "aggregate(fn, init)": "reduce over tasks"
+              },
+              "get subtaskLine() -> object": {
+                "parsedLines": "ref to parsed lines",
+                "add(text)": "add subtask line; persists via saveData() on success",
+                "toggleStatus(task, lineIndex)": "toggle status; persists on change"
+              },
+              "async add(date, taskData)": "add task and saveData()",
+              "async update(date, taskOrId, maybeUpdates)": "update and saveData()",
+              "async delete(date, id)": "delete and saveData()",
+              "get status() -> object": {
+                "toggleComplete(date, id)": "toggles completion and saveData()",
+                "undoCycleDone(date, id)": "undo cycle done and saveData() if changed"
+              }
+            },
+            "function construct(groupApi?)": "returns new ApiTask(groupApi)"
+          },
+          "notes": ["TaskManager handles heavy-lifting; ApiTask exposes a safe surface for components","Mutations call `saveData()` via `src/utils/storageUtils`"]
+        },
+        {
+          "file": "src/modules/storage/_apiStorage.ts",
+          "exports": ["construct","ApiStorage"],
+          "type": "persistence",
+          "description": "Storage API: loadData / saveData / import/export helpers. Bridges backend storage adapter (index.ts) and refactored API refs.",
+          "members": {
+            "construct(groupApi?, timeApi?) -> object": {
+              "isLoading": "ref boolean",
+              "loadData()": "async: load from backendStorage or sample data, populate groupApi and timeApi refs",
+              "saveData(data?)": "async: build payload from timeApi.days and groupApi then call backendStorage.saveData",
+              "exportToFile(data)": "call backendStorage.exportToFile if available",
+              "importFromFile(file)": "calls backendStorage.importFromFile if available",
+              "loadSettings": "re-exported from backend storage module",
+              "saveSettings": "re-exported from backend storage module",
+              "initApp()": "returns { loadData, saveData } convenience surface"
+            }
+          },
+          "notes": ["While loading, watchers suppress persistence writes","Transforms groups/tasks shape for backward compatibility"]
+        },
+        {
+          "file": "src/utils/storageUtils.ts",
+          "exports": ["saveData","default"],
+          "type": "utility",
+          "description": "Thin helper that calls `app('storage')?.saveData()`; used across modules to persist changes.",
+          "members": {
+            "saveData()": "async helper: calls app('storage')?.saveData()",
+            "default": "{ saveData }"
+          }
+        },
+        {
+          "file": "src/utils/logger.ts",
+          "exports": ["default"],
+          "type": "utility",
+          "description": "Project logger; only `error` forwards to console in production-friendly wrapper.",
+          "members": {
+            "log": "noop",
+            "debug": "noop",
+            "info": "noop",
+            "warn": "noop",
+            "error(...args)": "forwards to console.error"
+          }
+        },
+        {
+          "file": "src/composables/useLongPress.ts",
+          "exports": ["useLongPress"],
+          "type": "composable",
+          "description": "UI composable for long-press behaviour (start/cancel/set handler).",
+          "members": {
+            "useLongPress() -> object": {
+              "startLongPress(task, ev?)": "start timer and call handler after LONG_PRESS_MS",
+              "cancelLongPress()": "cancel timer",
+              "longPressTriggered": "ref boolean",
+              "setLongPressHandler(fn)": "set handler function"
+            }
+          }
+        },
+        {
+          "file": "src/composables/useClock.ts",
+          "exports": ["useClock"],
+          "type": "composable",
+          "description": "Clock composable exposing `now`, `start`, `stop`.",
+          "members": {
+            "useClock(intervalMs?) -> object": {
+              "now": "ref Date",
+              "start()": "start internal interval",
+              "stop()": "stop interval"
+            }
+          }
+        },
+        {
+          "file": "src/composables/useDayOrganiserView.ts",
+          "exports": ["useDayOrganiserView","UseDayOrganiserView"],
+          "type": "composable",
+          "description": "View helper combining `useClock` and `useTimeDiff` for UI date displays.",
+          "members": {
+            "useDayOrganiserView() -> object": {
+              "now": "ref Date from useClock",
+              "getTimeDifferenceDisplay(dayDate?)": "string",
+              "getTimeDiffClass(dayDate?)": "string"
+            }
+          }
+        },
+        {
+          "file": "src/composables/useFloatingPreview.ts",
+          "exports": ["useFloatingPreview"],
+          "type": "composable",
+          "description": "Floating preview placement and focus handling helper used by preview components.",
+          "members": {
+            "useFloatingPreview(opts?) -> object": {
+              "previewFloating": "ref boolean",
+              "previewRect": "ref DOMRect|null",
+              "setFloating(rect?, options?)": "set preview position and open/close",
+              "closeFloatingPreview()": "close preview",
+              "computePreviewStyle(rect)": "returns placement style object"
+            }
+          }
+        },
+        {
+          "file": "src/composables/useTimeDiff.ts",
+          "exports": ["useTimeDiff"],
+          "type": "composable",
+          "description": "Provides `getTimeDifferenceDisplay` and `getTimeDiffClass` for relative date text and styling.",
+          "members": {
+            "useTimeDiff() -> object": {
+              "getTimeDifferenceDisplay(dayDate?)": "string",
+              "getTimeDiffClass(dayDate?)": "string (class name via theme helper)"
+            }
+          }
+        },
+        {
+          "file": "src/components/task",
+          "exports": [
+            "AddTaskForm.vue",
+            "DoneReplenishmentList.vue",
+            "DoneTasksList.vue",
+            "HiddenGroupItem.vue",
+            "NextEventNotification.vue",
+            "ReplenishmentList.vue",
+            "TaskCardSmall.vue",
+            "TaskPreview.vue",
+            "TasksListMedium.vue",
+            "TasksListSmall.vue"
+          ],
+          "type": "components-directory",
+          "description": "Task-related Vue components (default export = Vue component). Large components are candidates for extracting composables/services.",
+          "notes": [
+            "Prefer moving non-template logic into `src/composables/` or `src/modules/task` when refactoring"
+          ]
+        },
+        {
+          "file": "src/components/task/TasksListMedium.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Medium-size task list grid (uses ReplenishmentList and inline task cards).",
+          "members": {
+            "props": ["tasksWithTime","tasksWithoutTime","selectedTaskId","hiddenGroups?","replenishTasks?"],
+            "emits": ["toggle-status","edit-task","task-click","delete-task"],
+            "uses": ["useLongPress","src/modules/day-organiser/_apiRoot","src/components/task/ReplenishmentList.vue","src/theme","src/modules/task/utlils/occursOnDay","src/modules/task/utlils/todo"],
+            "computed/refs": ["mergedTasks","openItemMenuId","pendingDeleteId","openDeleteMenu","longPressTriggered"],
+            "functions": {
+              "onItemMenuToggle(val, id)": "toggle openItemMenuId",
+              "requestDelete(id)": "mark pendingDeleteId",
+              "performDelete(id)": "emit delete-task and clear menus",
+              "cancelDelete()": "clear pendingDeleteId",
+              "priorityColor(priority)": "map via themePriorityColors",
+              "priorityTextColor(priority)": "map via themePriorityTextColor",
+              "getGroupName(groupId)": "lookup from groups.value",
+              "getGroupColor(groupId)": "lookup from groups.value",
+              "getGroupIcon(groupId)": "lookup from groups.value",
+              "selectHiddenGroup(g)": "set activeGroup.value to group",
+              "isTodoType(task)": "check task.type / type_id for todo",
+              "getEventHoursDisplay(task)": "format event date/time using parseYmdLocal and formatDisplayDate",
+              "getDisplayName(task)": "return name with prepare marker when appropriate",
+              "hasDate(task)": "determine if task has date/time",
+              "getDisplayDescription(task)": "trim and strip repeated title from description",
+              "itemStyle(task)": "compute inline style for card (priority + type color)",
+              "handleTaskClick(task)": "emit task-click unless longPressTriggered",
+              "toggleStatus(task)": "call api.task.status.toggleComplete and swallow errors",
+              "editTask(task)": "emit edit-task",
+              "confirmDelete(id)": "emit delete-task (legacy alias)"
+            }
+          },
+          "notes": ["Uses long-press composable to detect press vs click","Imports task/group APIs directly from day-organiser root"]
+        },
+        {
+          "file": "src/components/task/TasksListSmall.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Compact task list optimized for small cards (groups collapsed into sections).",
+          "members": {
+            "props": ["tasksWithTime","tasksWithoutTime","selectedTaskId","hiddenGroups?","replenishTasks?"],
+            "emits": ["toggle-status","edit-task","task-click","delete-task"],
+            "uses": ["src/modules/day-organiser/_apiRoot","ReplenishmentList.vue","HiddenGroupItem.vue","TaskCardSmall.vue"],
+            "computed/refs": ["mergedTasks","groups","activeGroup"],
+            "functions": {
+              "getGroupName(groupId)": "lookup from groups.value",
+              "getGroupColor(groupId)": "lookup from groups.value",
+              "getGroupIcon(groupId)": "lookup from groups.value",
+              "mergedTasks() [computed]": "builds sentinel entries for hiddenGroups and replenishTasks; filters via api.group.list.isVisibleForActive; groups tasks into buckets and sorts groups and tasks; returns flattened list with _group references",
+              "isNewGroup(idx, task)": "detect boundary between group buckets for rendering labels",
+              "getGroupContainerStyle(n)": "compute gridColumn span based on item count",
+              "selectHiddenGroup(g)": "set activeGroup.value to group"
+            }
+          },
+          "notes": ["Contains task grouping and sorting logic — good candidate to move grouping/sorting helpers to a shared util/composable"]
+        },
+        {
+          "file": "src/components/group/GroupForm.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Group form component (default export).",
+          "members": {
+            "props": "(see file)",
+            "emits": "(see file)",
+            "methods/refs": "file contains local form handlers and validation; run extractor to enumerate"
+          },
+          "notes": ["Often contains inline form logic — candidate for composable extraction"]
+        },
+        {
+          "file": "src/components/group/GroupManagementDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Dialog for managing groups.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["Likely uses `group` module methods directly in template logic"]
+        },
+        {
+          "file": "src/components/group/GroupSelectHeader.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Header UI for group selection.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/AboutDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "About dialog component.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/AppConfigDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Application configuration dialog.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["May interact with `app('storage')` for settings"]
+        },
+        {
+          "file": "src/components/settings/BluetoothScanModal.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Bluetooth scan UI (mobile/desktop integration).",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/ConnectionsDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Manage external connections dialog.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/FirstRunDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "First-run configuration dialog shown on app startup.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["May seed storage with sample data via `storage.initApp()`"]
+        },
+        {
+          "file": "src/components/time/CalendarView.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Calendar view for day organiser.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local rendering helpers; run extractor"},
+          "notes": ["Uses `useDayOrganiserView` and time composables in many cases"]
+        },
+        {
+          "file": "src/components/ui/Watermark.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Simple watermark overlay component.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"small local helpers"},
+          "notes": []
+        },
+        {
+          "file": "src-electron/electron-main.ts",
+          "exports": [],
+          "type": "electron-main",
+          "description": "Electron main process entry: window creation, IPC handlers and lifecycle.",
+          "members": {
+            "createWindow()": "create BrowserWindow, set preload, inject APP_VERSION and APP_NAME",
+            "ipc handlers": [
+              "get-app-data-path: returns app.getPath('userData')",
+              "dialog:select-folder: shows folder chooser and returns selected path or null",
+              "export:zip(folder, filename, jsonString): creates zip with JSON and returns zip path"
+            ],
+            "app.whenReady()": "createWindow",
+            "app.on('window-all-closed')": "quit on non-darwin",
+            "app.on('activate')": "recreate window if undefined"
+          },
+          "notes": [
+            "IPC handlers are used by renderer via preload; see src-electron/electron-preload.js"
+          ]
+        }
+      ]
+    }
+    }
