@@ -131,12 +131,17 @@
           :title="`Go to ${g.name}`"
           @click.stop.prevent="onShortcutClick(g)"
           :style="`background-color: ${g.color || 'transparent'} !important; color: ${
-            g.color ? '#ffffff' : 'inherit'
+            g.textColor || g.text_color || (g.color ? '#ffffff' : 'inherit')
           }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; border-color: transparent !important; box-shadow: none !important;`"
         >
           <q-icon
             :name="g.icon || 'folder_open'"
-            :style="{ color: g.color ? '#ffffff' : g.color || 'inherit' }"
+            :style="{
+              color:
+                g.textColor ||
+                g.text_color ||
+                (g.color ? '#ffffff' : g.color || 'inherit'),
+            }"
           />
           <span
             style="

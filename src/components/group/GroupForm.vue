@@ -323,7 +323,7 @@
             dense
             round
             unelevated
-            style="flex: 1; justify-content: flex-start"
+            style="justify-content: flex-start"
             @click.stop.prevent="openParentMenu"
           >
             <div style="display: flex; align-items: center; gap: 8px">
@@ -455,6 +455,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
+import * as api from "src/modules/day-organiser/_apiRoot";
 import type { QTreeNode } from "quasar";
 
 const props = defineProps<{
@@ -756,8 +757,8 @@ const parentLabel = computed(() => {
 });
 
 watch(
-  () => props.editingGroupId,
-  (id) => {
+  [() => props.editingGroupId, () => props.groupOptions],
+  ([id]) => {
     if (!id) {
       localName.value = "";
       localParent.value = null;
@@ -768,21 +769,46 @@ watch(
       localShortcut.value = false;
       localTextColor.value = "#ffffff";
       return;
-    } // try populate from props.groupOptions
+    }
     try {
+      // Prefer a full group record from the provided groupTree (nodes include
+      // the original `group` object). This ensures we populate all fields
+      // (color, shortcut, textColor, etc.) rather than relying on the
+      // lightweight `groupOptions` entries which only contain label/value.
+      let full: any = null;
+      try {
+        const node = findNodeInTree(props.groupTree || [], String(id));
+        if (node && node.group) full = node.group;
+      } catch (err) {
+        void err;
+      }
+
+      // Fallback: query the shared group list API for the full record.
+      if (!full) {
+        try {
+          const listAny: any = api.group.list.all;
+          const arr = Array.isArray(listAny) ? listAny : (listAny && listAny.value) || [];
+          full = (arr || []).find((g: any) => String(g.id) === String(id));
+        } catch (err) {
+          void err;
+        }
+      }
+
+      // Finally, fall back to groupOptions (label/value) if nothing else found
       const found = (props.groupOptions || []).find(
         (g: any) => String(g.id) === String(id) || String(g.value) === String(id)
       );
-      if (found) {
-        localName.value = found.name || found.label || "";
-        localParent.value = found.parentId || found.parent_id || null;
-        localColor.value = found.color || "#1976d2";
-        localTextColor.value =
-          found.textColor || found.text_color || localTextColor.value;
-        localIcon.value = found.icon || "folder";
-        localShareSubgroups.value = Boolean(found.shareSubgroups);
-        localHideTasksInParent.value = Boolean(found.hideTasksFromParent);
-        localShortcut.value = Boolean(found.shortcut);
+
+      const src = full || found || null;
+      if (src) {
+        localName.value = src.name || src.label || "";
+        localParent.value = src.parentId || src.parent_id || null;
+        localColor.value = src.color || "#1976d2";
+        localTextColor.value = src.textColor || src.text_color || localTextColor.value;
+        localIcon.value = src.icon || "folder";
+        localShareSubgroups.value = Boolean(src.shareSubgroups);
+        localHideTasksInParent.value = Boolean(src.hideTasksFromParent);
+        localShortcut.value = Boolean(src.shortcut);
       }
     } catch (e) {
       void e;

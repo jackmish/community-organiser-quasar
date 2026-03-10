@@ -406,12 +406,13 @@ async function handleGroupFormSubmit(payload: any) {
   const icon = payload.icon || undefined;
   const parent = payload.parent || undefined;
   try {
-    if (editingGroupId.value) {
+      if (editingGroupId.value) {
       await api.group.update(editingGroupId.value, {
         name,
         ...(parent ? { parentId: parent } : {}),
         ...(color ? { color } : {}),
         ...(icon ? { icon } : {}),
+        ...(typeof payload.textColor === "string" ? { textColor: payload.textColor } : {}),
         ...(typeof payload.shareSubgroups === "boolean"
           ? { shareSubgroups: payload.shareSubgroups }
           : {}),
@@ -426,6 +427,7 @@ async function handleGroupFormSubmit(payload: any) {
         parentId: parent,
         color,
         icon: icon,
+        textColor: payload.textColor,
         shareSubgroups: payload.shareSubgroups,
         hideTasksFromParent: payload.hideTasksFromParent,
         shortcut: payload.shortcut,
