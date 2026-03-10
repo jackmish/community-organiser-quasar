@@ -808,6 +808,11 @@ body .q-menu.priority-menu .q-item:hover::after {
 body .q-menu.priority-menu .q-item.q-item--active:hover::after {
   background: rgba(255, 255, 255, 0.08) !important;
 }
+
+/* Ensure teleported priority menu appears above floating task preview */
+.q-menu {
+  z-index: 9999992200 !important;
+}
 </style>
 
 <style>
