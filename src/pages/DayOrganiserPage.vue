@@ -300,6 +300,7 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
 
 async function handleTaskContext(task: any, rect?: DOMRect | null) {
     try {
+      console.debug('[DayOrganiser] handleTaskContext start', { task, rect });
       // Try selecting by id first so ApiTask resolves the canonical object
       const id = task && (task.id ?? task);
       try {
@@ -313,9 +314,68 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
         } catch (e) {
           // ignore lookup failures
         }
-        api.task.active.setTask(candidate ?? id);
-        api.task.active.setMode("edit");
-        panelHidden.value = false;
+
+        // If the emitted payload was undefined but we have a bounding rect,
+        // try to resolve the task id from the DOM element at the rect center
+        // (useful when the emitter lost the item reference).
+        if ((candidate === undefined || candidate === null) && rect) {
+          try {
+            const cx = rect.left + (rect.width || 0) / 2;
+            const cy = rect.top + (rect.height || 0) / 2;
+            const el = document.elementFromPoint(cx, cy);
+            let cur: Element | null = el;
+            while (cur && !cur.hasAttribute?.('data-task-id')) cur = cur.parentElement;
+            const dataId = cur?.getAttribute?.('data-task-id') || null;
+            if (dataId) {
+              try {
+                const all = api.task.list.all();
+                const found2 = (all || []).find((t: any) => String(t.id) === String(dataId));
+                if (found2) candidate = found2;
+                else {
+                  // fallback to using dataId as id
+                  // leave candidate null so we can try id-based setTask below
+                }
+                console.debug('[DayOrganiser] handleTaskContext: resolved id from DOM', dataId, { found: !!found2 });
+              } catch (e) {
+                // ignore
+              }
+            }
+          } catch (e) {
+            // ignore DOM lookup errors
+          }
+        }
+
+        console.debug('[DayOrganiser] handleTaskContext: setting task candidate', candidate, 'id', id);
+        let setSucceeded = false;
+        try {
+          if (candidate != null) {
+            api.task.active.setTask(candidate);
+            setSucceeded = true;
+          } else if (id != null) {
+            api.task.active.setTask(id);
+            setSucceeded = true;
+          } else {
+            console.warn('[DayOrganiser] handleTaskContext: no candidate or id to set');
+          }
+        } catch (e) {
+          console.warn('[DayOrganiser] handleTaskContext: setTask failed', e);
+          setSucceeded = false;
+        }
+
+        if (setSucceeded) {
+          try {
+            api.task.active.setMode('edit');
+            panelHidden.value = false;
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        console.debug('[DayOrganiser] handleTaskContext: after setTask', {
+          activeTask: api.task.active.task.value,
+          activeMode: api.task.active.mode.value,
+          setSucceeded,
+        });
       } catch (e) {
         void e;
       }

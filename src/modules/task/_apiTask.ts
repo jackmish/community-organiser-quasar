@@ -39,8 +39,12 @@ export class ApiTask {
     return {
       task: state.activeTask,
       mode: state.activeMode,
-      setTask: (payload: PreviewPayload) =>
-        mgr.applyActiveSelection(state.activeTask, state.activeMode, payload as any),
+      setTask: (payload: PreviewPayload) => {
+        // Ignore `undefined` payloads (avoid accidental clears when callers
+        // emit without a task). `null` is still treated as explicit clear.
+        if (payload === undefined) return;
+        mgr.applyActiveSelection(state.activeTask, state.activeMode, payload as any);
+      },
       setMode: (m: 'add' | 'edit' | 'preview') => {
         state.activeMode.value = m;
         if (m === 'add') state.activeTask.value = null;
