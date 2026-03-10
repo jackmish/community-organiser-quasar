@@ -338,51 +338,7 @@
             </div>
           </q-btn>
         </div>
-        <!-- QMENU with parent selection -->
-        <q-menu
-          v-model="parentMenuOpen"
-          anchor="bottom left"
-          self="top left"
-          :offset="[0, 6]"
-        >
-          <div style="min-width: 300px; max-height: 60vh; overflow: auto; padding: 8px">
-            <q-list padding>
-              <q-item clickable v-ripple @click="clearParent">
-                <q-item-section avatar style="min-width: 36px"
-                  ><q-icon name="folder_open"
-                /></q-item-section>
-                <q-item-section>None (no parent)</q-item-section>
-              </q-item>
-            </q-list>
-            <q-separator />
-            <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
-              <q-tree
-                :nodes="groupTree || []"
-                node-key="id"
-                default-expand-all
-                :selected="localParent ? [String(localParent)] : []"
-                @update:selected="onParentTreeSelect"
-              >
-                <template #default-header="prop">
-                  <div class="row items-center full-width">
-                    <q-icon
-                      :name="getIconName(prop.node.icon)"
-                      class="q-mr-sm"
-                      :style="{ color: prop.node.color }"
-                    />
-                    <span>{{ prop.node.label }}</span>
-                  </div>
-                </template>
-              </q-tree>
-            </div>
-            <q-separator />
-            <div
-              style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
-            >
-              <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
-            </div>
-          </div>
-        </q-menu>
+
         <!-- fallback inline parent selector if QMenu doesn't mount -->
         <div v-if="parentMenuOpen" class="gm-parent-fallback" :style="parentMenuStyle">
           <q-list padding>
