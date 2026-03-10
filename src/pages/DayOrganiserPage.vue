@@ -300,23 +300,46 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
 
 async function handleTaskContext(task: any, rect?: DOMRect | null) {
   try {
-    // Open editor (edit mode) for the task
+    // Try selecting by id first so ApiTask resolves the canonical object
+    const id = task && (task.id ?? task);
     try {
-      editTask(task);
+      api.task.active.setTask(id);
+      api.task.active.setMode('edit');
+      panelHidden.value = false;
     } catch (e) {
-      try {
-        api.task.active.setTask(task);
-        api.task.active.setMode('edit');
-      } catch (err) {
-        void err;
-      }
+      void e;
     }
+
+    // Wait for reactivity to settle; if active task wasn't resolved (ApiTask
+    // may not have found it in `flatTasks`), try to find the canonical
+    // object in the task list and set that instead.
+    await nextTick();
+    await new Promise((r) => requestAnimationFrame(r));
+    try {
+      const activeId = api.task.active.task.value?.id;
+      if (!activeId || String(activeId) !== String(id) || api.task.active.mode.value !== 'edit') {
+        try {
+          const all = api.task.list.all();
+          const found = (all || []).find((t: any) => String(t.id) === String(id));
+          if (found) {
+            api.task.active.setTask(found);
+            api.task.active.setMode('edit');
+            panelHidden.value = false;
+          }
+        } catch (e) {
+          void e;
+        }
+      }
+    } catch (e) {
+      void e;
+    }
+
     // If we received a bounding rect, show floating editor near it
     if (rect) {
       await nextTick();
       await new Promise((r) => requestAnimationFrame(r));
       try {
-        const selector = `[data-task-id="${task?.id}"]`;
+        const selector = `[data-task-id="${id}"]`;
         const el = document.querySelector(selector);
         let newRect: DOMRect | null = null;
         if (el instanceof Element) newRect = el.getBoundingClientRect();
