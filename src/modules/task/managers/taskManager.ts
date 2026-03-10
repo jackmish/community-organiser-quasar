@@ -446,31 +446,82 @@ export const applyActiveSelection = (
   activeModeRef: Ref<'add' | 'edit' | 'preview'>,
   payload: string | number | Task | null,
 ) => {
+  console.debug('[taskManager] applyActiveSelection: called with active Task', activeTaskRef);
   if (!activeTaskRef || !activeModeRef) return;
   try {
-    if (!payload) {
+    // Treat only `null` or `undefined` as request to clear selection.
+    // Avoid treating other falsy values (0, '') as clear requests so
+    // callers that accidentally pass empty strings/numeric IDs aren't
+    // interpreted as a reset.
+    if (payload === null || payload === undefined) {
+      // Log stack to help trace callers passing `null`/`undefined`
+
       activeTaskRef.value = null;
       activeModeRef.value = 'add';
       return;
     }
     if (typeof payload === 'string' || typeof payload === 'number') {
       const id = String(payload);
-      const found = flatTasks.value.find((t) => String(t.id) === id);
+      // Prefer fast lookup in `flatTasks`, but fall back to full task lists
+      // (derived from days/time API) when `flatTasks` is empty or doesn't
+      // contain the requested item. This ensures callers that pass an id
+      // (e.g. right-click handlers) will resolve the canonical task object
+      // even when `flatTasks` wasn't populated yet.
+      let found: Task | null = null;
+      console.log('[taskManager] applyActiveSelection: looking for task id', id);
+      try {
+        found = flatTasks.value.find((t) => String(t.id) === id) || null;
+        if (found) console.debug('[taskManager] applyActiveSelection: found in flatTasks', id);
+      } catch (e) {
+        found = null;
+      }
+      if (!found) {
+        try {
+          const all = getAll(currentTimeApi) || [];
+          found = (all || []).find((t) => String(t.id) === id) || null;
+          if (found) console.debug('[taskManager] applyActiveSelection: found in getAll()', id);
+        } catch (e) {
+          found = null;
+        }
+      }
+      // As a final fallback, scan the raw days map to find the canonical
+      // task object. This covers cases where neither `flatTasks` nor the
+      // derived `getAll()` list contains the item (e.g. timing/order issues
+      // during initial load).
+      if (!found) {
+        try {
+          const days = getDays() || {};
+          for (const dKey of Object.keys(days)) {
+            const d = days[dKey];
+            if (!d || !Array.isArray(d.tasks)) continue;
+            const f = d.tasks.find((t: any) => String(t.id) === id);
+            if (f) {
+              found = f || null;
+              console.debug('[taskManager] applyActiveSelection: found in days map', id, dKey);
+              break;
+            }
+          }
+        } catch (e) {
+          found = null;
+        }
+      }
       if (found) {
         activeTaskRef.value = found;
         activeModeRef.value = 'edit';
+        console.debug('[taskManager] applyActiveSelection: set active task', String(found.id));
       } else {
         activeTaskRef.value = null;
         activeModeRef.value = 'add';
+        console.debug('[taskManager] applyActiveSelection: task not found, set to add', id);
       }
       return;
     }
-    // payload is a Task
-    const task = payload;
-    if (!task.id) {
-      task.id = generateId();
+    // payload is a Task — clone instead of mutating the caller's object
+    let taskObj = payload;
+    if (!taskObj.id) {
+      taskObj = { ...taskObj, id: generateId() } as Task;
     }
-    activeTaskRef.value = task;
+    activeTaskRef.value = taskObj;
     activeModeRef.value = 'edit';
   } catch (e) {
     // ignore

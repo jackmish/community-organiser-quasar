@@ -299,16 +299,26 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
 }
 
 async function handleTaskContext(task: any, rect?: DOMRect | null) {
-  try {
-    // Try selecting by id first so ApiTask resolves the canonical object
-    const id = task && (task.id ?? task);
     try {
-      api.task.active.setTask(id);
-      api.task.active.setMode("edit");
-      panelHidden.value = false;
-    } catch (e) {
-      void e;
-    }
+      // Try selecting by id first so ApiTask resolves the canonical object
+      const id = task && (task.id ?? task);
+      try {
+        // If we can resolve the canonical object from the task list, use
+        // that immediately so form bindings point to the same instance.
+        let candidate: any = task;
+        try {
+          const all = api.task.list.all();
+          const found = (all || []).find((t: any) => String(t.id) === String(id));
+          if (found) candidate = found;
+        } catch (e) {
+          // ignore lookup failures
+        }
+        api.task.active.setTask(candidate ?? id);
+        api.task.active.setMode("edit");
+        panelHidden.value = false;
+      } catch (e) {
+        void e;
+      }
 
     // Wait for reactivity to settle; if active task wasn't resolved (ApiTask
     // may not have found it in `flatTasks`), try to find the canonical
