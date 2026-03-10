@@ -340,7 +340,7 @@
         </div>
 
         <!-- fallback inline parent selector if QMenu doesn't mount -->
-        <div v-if="parentMenuOpen" class="gm-parent-fallback" :style="parentMenuStyle">
+        <div v-if="parentMenuOpen" class="gm-parent-fallback">
           <q-list padding>
             <q-item clickable v-ripple @click="clearParent">
               <q-item-section avatar style="min-width: 36px"
@@ -467,19 +467,19 @@ const iconMenuStyle = ref<Record<string, string>>({
   top: "0px",
 });
 const parentBtnWrapper = ref<HTMLElement | null>(null);
-const parentMenuStyle = ref<Record<string, string>>({
-  position: "absolute",
-  top: "calc(100% + 6px)",
-  left: "0px",
-  minWidth: "300px",
-  maxHeight: "60vh",
-  overflow: "auto",
-  padding: "8px",
-  background: "var(--q-popup-bg, #fff)",
-  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
-  borderRadius: "6px",
-  zIndex: "12000",
-});
+// const parentMenuStyle = ref<Record<string, string>>({
+//   position: "absolute",
+//   top: "calc(100% + 6px)",
+//   left: "0px",
+//   minWidth: "300px",
+//   maxHeight: "60vh",
+//   overflow: "auto",
+//   padding: "8px",
+//   background: "var(--q-popup-bg, #fff)",
+//   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
+//   borderRadius: "6px",
+//   zIndex: "12000",
+// });
 
 function openParentMenu() {
   try {
@@ -488,28 +488,28 @@ function openParentMenu() {
       parentMenuOpen.value = true;
       return;
     }
-    const rect = wrapper.getBoundingClientRect();
-    const menuDesiredWidth = 320;
-    let leftPx = 0;
-    if (rect.left + menuDesiredWidth > window.innerWidth - 8) {
-      // align to the right edge of the wrapper if it would overflow
-      leftPx = Math.max(0, rect.width - menuDesiredWidth);
-    } else {
-      leftPx = 0;
-    }
-    parentMenuStyle.value = {
-      position: "absolute",
-      top: `${Math.round(rect.height + 6)}px`,
-      left: `${Math.round(leftPx)}px`,
-      minWidth: "300px",
-      maxHeight: "60vh",
-      overflow: "auto",
-      padding: "8px",
-      background: "var(--q-popup-bg, #fff)",
-      boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
-      borderRadius: "6px",
-      zIndex: "12000",
-    };
+    // const rect = wrapper.getBoundingClientRect();
+    // const menuDesiredWidth = 320;
+    // let leftPx = 0;
+    // if (rect.left + menuDesiredWidth > window.innerWidth - 8) {
+    //   // align to the right edge of the wrapper if it would overflow
+    //   leftPx = Math.max(0, rect.width - menuDesiredWidth);
+    // } else {
+    //   leftPx = 0;
+    // }
+    // parentMenuStyle.value = {
+    //   position: "absolute",
+    //   top: `${Math.round(rect.height + 6)}px`,
+    //   left: `${Math.round(leftPx)}px`,
+    //   minWidth: "300px",
+    //   maxHeight: "60vh",
+    //   overflow: "auto",
+    //   padding: "8px",
+    //   background: "var(--q-popup-bg, #fff)",
+    //   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
+    //   borderRadius: "6px",
+    //   zIndex: "12000",
+    // };
     parentMenuOpen.value = true;
   } catch (e) {
     void e;
