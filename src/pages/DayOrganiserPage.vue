@@ -304,7 +304,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
     const id = task && (task.id ?? task);
     try {
       api.task.active.setTask(id);
-      api.task.active.setMode('edit');
+      api.task.active.setMode("edit");
       panelHidden.value = false;
     } catch (e) {
       void e;
@@ -317,13 +317,17 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
     await new Promise((r) => requestAnimationFrame(r));
     try {
       const activeId = api.task.active.task.value?.id;
-      if (!activeId || String(activeId) !== String(id) || api.task.active.mode.value !== 'edit') {
+      if (
+        !activeId ||
+        String(activeId) !== String(id) ||
+        api.task.active.mode.value !== "edit"
+      ) {
         try {
           const all = api.task.list.all();
           const found = (all || []).find((t: any) => String(t.id) === String(id));
           if (found) {
             api.task.active.setTask(found);
-            api.task.active.setMode('edit');
+            api.task.active.setMode("edit");
             panelHidden.value = false;
           }
         } catch (e) {
