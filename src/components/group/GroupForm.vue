@@ -314,69 +314,72 @@
 
       <!-- Second line: checkboxes and action buttons -->
       <div class="row q-gutter-sm items-center" style="margin-top: 8px; width: 100%">
-        <div
-          style="min-width: 180px; display: flex; align-items: center; position: relative"
-          ref="parentBtnWrapper"
+        <q-btn
+          flat
+          round
+          dense
+          unelevated
+          class="gm-parent-activator"
+          style="min-width: 180px; justify-content: flex-start"
+          @click.stop.prevent="parentMenuOpen = !parentMenuOpen"
         >
-          <q-btn
-            flat
-            dense
-            round
-            unelevated
-            style="justify-content: flex-start"
-            @click.stop.prevent="openParentMenu"
-          >
-            <div style="display: flex; align-items: center; gap: 8px">
-              <q-icon
-                :name="getIconName(localParentIcon)"
-                :style="{ color: localParentColor || 'inherit' }"
-              />
-              <span
-                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
-                >{{ parentLabel }}</span
-              >
-            </div>
-          </q-btn>
-        </div>
-
-        <!-- fallback inline parent selector if QMenu doesn't mount -->
-        <div v-if="parentMenuOpen" class="gm-parent-fallback">
-          <q-list padding>
-            <q-item clickable v-ripple @click="clearParent">
-              <q-item-section avatar style="min-width: 36px"
-                ><q-icon name="folder_open"
-              /></q-item-section>
-              <q-item-section>None (no parent)</q-item-section>
-            </q-item>
-          </q-list>
-          <q-separator />
-          <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
-            <q-tree
-              :nodes="groupTree || []"
-              node-key="id"
-              default-expand-all
-              :selected="localParent ? [String(localParent)] : []"
-              @update:selected="onParentTreeSelect"
+          <div style="display: flex; align-items: center; gap: 8px">
+            <q-icon
+              :name="getIconName(localParentIcon)"
+              :style="{ color: localParentColor || 'inherit' }"
+            />
+            <span
+              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+              >{{ parentLabel }}</span
             >
-              <template #default-header="prop">
-                <div class="row items-center full-width">
-                  <q-icon
-                    :name="getIconName(prop.node.icon)"
-                    class="q-mr-sm"
-                    :style="{ color: prop.node.color }"
-                  />
-                  <span>{{ prop.node.label }}</span>
-                </div>
-              </template>
-            </q-tree>
           </div>
-          <q-separator />
-          <div
-            style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
-          >
-            <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+        </q-btn>
+
+        <q-menu
+          v-model="parentMenuOpen"
+          anchor="bottom left"
+          self="top left"
+          :offset="[0, 6]"
+        >
+          <div style="min-width: 300px; max-height: 60vh; overflow: auto; padding: 8px">
+            <q-list padding>
+              <q-item clickable v-ripple @click="clearParent">
+                <q-item-section avatar style="min-width: 36px"
+                  ><q-icon name="folder_open"
+                /></q-item-section>
+                <q-item-section>None (no parent)</q-item-section>
+              </q-item>
+            </q-list>
+            <q-separator />
+            <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
+              <q-tree
+                :nodes="groupTree || []"
+                node-key="id"
+                default-expand-all
+                :selected="localParent ? [String(localParent)] : []"
+                @update:selected="onParentTreeSelect"
+              >
+                <template #default-header="prop">
+                  <div class="row items-center full-width">
+                    <q-icon
+                      :name="getIconName(prop.node.icon)"
+                      class="q-mr-sm"
+                      :style="{ color: prop.node.color }"
+                    />
+                    <span>{{ prop.node.label }}</span>
+                  </div>
+                </template>
+              </q-tree>
+            </div>
+            <q-separator />
+            <div
+              style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
+            >
+              <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+            </div>
           </div>
-        </div>
+        </q-menu>
+
         <div style="display: flex; align-items: center; gap: 8px">
           <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
         </div>
@@ -459,85 +462,21 @@ const textPalette = computed(() => {
   return [...front, ...rest];
 });
 
-const iconMenuVisible = ref(false);
-const gmIconPreview = ref<HTMLElement | null>(null);
-const iconMenuStyle = ref<Record<string, string>>({
-  position: "fixed",
-  left: "0px",
-  top: "0px",
-});
-const parentBtnWrapper = ref<HTMLElement | null>(null);
-// const parentMenuStyle = ref<Record<string, string>>({
-//   position: "absolute",
-//   top: "calc(100% + 6px)",
-//   left: "0px",
-//   minWidth: "300px",
-//   maxHeight: "60vh",
-//   overflow: "auto",
-//   padding: "8px",
-//   background: "var(--q-popup-bg, #fff)",
-//   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
-//   borderRadius: "6px",
-//   zIndex: "12000",
-// });
-
-function openParentMenu() {
-  try {
-    const wrapper = parentBtnWrapper.value;
-    if (!wrapper) {
-      parentMenuOpen.value = true;
-      return;
-    }
-    // const rect = wrapper.getBoundingClientRect();
-    // const menuDesiredWidth = 320;
-    // let leftPx = 0;
-    // if (rect.left + menuDesiredWidth > window.innerWidth - 8) {
-    //   // align to the right edge of the wrapper if it would overflow
-    //   leftPx = Math.max(0, rect.width - menuDesiredWidth);
-    // } else {
-    //   leftPx = 0;
-    // }
-    // parentMenuStyle.value = {
-    //   position: "absolute",
-    //   top: `${Math.round(rect.height + 6)}px`,
-    //   left: `${Math.round(leftPx)}px`,
-    //   minWidth: "300px",
-    //   maxHeight: "60vh",
-    //   overflow: "auto",
-    //   padding: "8px",
-    //   background: "var(--q-popup-bg, #fff)",
-    //   boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
-    //   borderRadius: "6px",
-    //   zIndex: "12000",
-    // };
-    parentMenuOpen.value = true;
-  } catch (e) {
-    void e;
-    parentMenuOpen.value = true;
-  }
-}
 const iconOptions = (() => {
   const set = new Set<string>();
   [
-    // basic/folders
     "folder",
     "label",
     "bookmarks",
     "inbox",
-
-    // people / groups
     "group",
     "group_add",
     "account_circle",
     "people",
-
-    // places / home
     "home",
     "location_city",
     "place",
     "public",
-
-    // transport / travel
     "directions_car",
     "local_shipping",
     "alt_route",
@@ -547,60 +486,41 @@ const iconOptions = (() => {
     "directions_bike",
     "directions_boat",
     "local_taxi",
-
-    // food / coffee
     "restaurant",
     "local_dining",
     "local_cafe",
     "fastfood",
-
-    // shopping / finance
     "shopping_cart",
     "local_grocery_store",
     "payment",
     "account_balance_wallet",
     "attach_money",
     "monetization_on",
-
-    // media / camera
     "music_note",
     "movie",
     "videocam",
     "camera_alt",
     "photo_camera",
-
-    // work / code / tools
     "work",
     "business",
     "code",
     "bug_report",
     "build",
     "settings",
-
-    // calendar / time
     "schedule",
     "calendar_today",
     "alarm",
     "watch",
-
-    // ideas / notes
     "lightbulb",
     "emoji_objects",
     "description",
     "note",
-
-    // health / fitness
     "fitness_center",
     "sports_soccer",
-    "sports_basketball",
-
-    // nature / leisure
     "park",
     "local_florist",
     "spa",
     "beach_access",
-
-    // misc
     "favorite",
     "star",
     "visibility",
@@ -632,10 +552,32 @@ const iconAlias: Record<string, string> = {
   truck: "local_shipping",
   road: "alt_route",
 };
-function getIconName(key?: string | null) {
+
+const getIconName = (key?: string | null) => {
   if (!key) return "folder";
   return (iconAlias as any)[key] || key;
-}
+};
+
+const iconMenuVisible = ref(false);
+const gmIconPreview = ref<HTMLElement | null>(null);
+const iconMenuStyle = ref<Record<string, string>>({
+  position: "fixed",
+  left: "0px",
+  top: "0px",
+});
+const parentMenuStyle = ref<Record<string, string>>({
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  left: "0px",
+  minWidth: "300px",
+  maxHeight: "60vh",
+  overflow: "auto",
+  padding: "8px",
+  background: "var(--q-popup-bg, #fff)",
+  boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
+  borderRadius: "6px",
+  zIndex: "12000",
+});
 
 function toggleIconMenu() {
   try {
