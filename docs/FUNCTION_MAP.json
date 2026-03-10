@@ -34,7 +34,7 @@
     },
     {
       "generatedAt": "2026-03-09T00:00:00Z",
-      "summary": "Machine-readable function / export map — expanded with members for exported objects (services, domain APIs, composables, utils, electron).",
+      "summary": "Machine-readable function / export map — expanded with members for exported objects (services, domain APIs, composables, utils, electron, and Vue components placeholders).",
       "entries": [
         {
           "file": "src/services/appService.ts",
@@ -280,6 +280,147 @@
           ]
         },
         {
+          "file": "src/components/task/TasksListMedium.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Medium-size task list grid (uses ReplenishmentList and inline task cards).",
+          "members": {
+            "props": ["tasksWithTime","tasksWithoutTime","selectedTaskId","hiddenGroups?","replenishTasks?"],
+            "emits": ["toggle-status","edit-task","task-click","delete-task"],
+            "uses": ["useLongPress","src/modules/day-organiser/_apiRoot","src/components/task/ReplenishmentList.vue","src/theme","src/modules/task/utlils/occursOnDay","src/modules/task/utlils/todo"],
+            "computed/refs": ["mergedTasks","openItemMenuId","pendingDeleteId","openDeleteMenu","longPressTriggered"],
+            "functions": {
+              "onItemMenuToggle(val, id)": "toggle openItemMenuId",
+              "requestDelete(id)": "mark pendingDeleteId",
+              "performDelete(id)": "emit delete-task and clear menus",
+              "cancelDelete()": "clear pendingDeleteId",
+              "priorityColor(priority)": "map via themePriorityColors",
+              "priorityTextColor(priority)": "map via themePriorityTextColor",
+              "getGroupName(groupId)": "lookup from groups.value",
+              "getGroupColor(groupId)": "lookup from groups.value",
+              "getGroupIcon(groupId)": "lookup from groups.value",
+              "selectHiddenGroup(g)": "set activeGroup.value to group",
+              "isTodoType(task)": "check task.type / type_id for todo",
+              "getEventHoursDisplay(task)": "format event date/time using parseYmdLocal and formatDisplayDate",
+              "getDisplayName(task)": "return name with prepare marker when appropriate",
+              "hasDate(task)": "determine if task has date/time",
+              "getDisplayDescription(task)": "trim and strip repeated title from description",
+              "itemStyle(task)": "compute inline style for card (priority + type color)",
+              "handleTaskClick(task)": "emit task-click unless longPressTriggered",
+              "toggleStatus(task)": "call api.task.status.toggleComplete and swallow errors",
+              "editTask(task)": "emit edit-task",
+              "confirmDelete(id)": "emit delete-task (legacy alias)"
+            }
+          },
+          "notes": ["Uses long-press composable to detect press vs click","Imports task/group APIs directly from day-organiser root"]
+        },
+        {
+          "file": "src/components/task/TasksListSmall.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Compact task list optimized for small cards (groups collapsed into sections).",
+          "members": {
+            "props": ["tasksWithTime","tasksWithoutTime","selectedTaskId","hiddenGroups?","replenishTasks?"],
+            "emits": ["toggle-status","edit-task","task-click","delete-task"],
+            "uses": ["src/modules/day-organiser/_apiRoot","ReplenishmentList.vue","HiddenGroupItem.vue","TaskCardSmall.vue"],
+            "computed/refs": ["mergedTasks","groups","activeGroup"],
+            "functions": {
+              "getGroupName(groupId)": "lookup from groups.value",
+              "getGroupColor(groupId)": "lookup from groups.value",
+              "getGroupIcon(groupId)": "lookup from groups.value",
+              "mergedTasks() [computed]": "builds sentinel entries for hiddenGroups and replenishTasks; filters via api.group.list.isVisibleForActive; groups tasks into buckets and sorts groups and tasks; returns flattened list with _group references",
+              "isNewGroup(idx, task)": "detect boundary between group buckets for rendering labels",
+              "getGroupContainerStyle(n)": "compute gridColumn span based on item count",
+              "selectHiddenGroup(g)": "set activeGroup.value to group"
+            }
+          },
+          "notes": ["Contains task grouping and sorting logic — good candidate to move grouping/sorting helpers to a shared util/composable"]
+        },
+        {
+          "file": "src/components/group/GroupForm.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Group form component (default export).",
+          "members": {
+            "props": "(see file)",
+            "emits": "(see file)",
+            "methods/refs": "file contains local form handlers and validation; run extractor to enumerate"
+          },
+          "notes": ["Often contains inline form logic — candidate for composable extraction"]
+        },
+        {
+          "file": "src/components/group/GroupManagementDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Dialog for managing groups.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["Likely uses `group` module methods directly in template logic"]
+        },
+        {
+          "file": "src/components/group/GroupSelectHeader.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Header UI for group selection.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/AboutDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "About dialog component.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/AppConfigDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Application configuration dialog.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["May interact with `app('storage')` for settings"]
+        },
+        {
+          "file": "src/components/settings/BluetoothScanModal.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Bluetooth scan UI (mobile/desktop integration).",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/ConnectionsDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Manage external connections dialog.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": []
+        },
+        {
+          "file": "src/components/settings/FirstRunDialog.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "First-run configuration dialog shown on app startup.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local handlers; run extractor"},
+          "notes": ["May seed storage with sample data via `storage.initApp()`"]
+        },
+        {
+          "file": "src/components/time/CalendarView.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Calendar view for day organiser.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"local rendering helpers; run extractor"},
+          "notes": ["Uses `useDayOrganiserView` and time composables in many cases"]
+        },
+        {
+          "file": "src/components/ui/Watermark.vue",
+          "exports": ["default"],
+          "type": "vue-component",
+          "description": "Simple watermark overlay component.",
+          "members": {"props":"(see file)","emits":"(see file)","methods/refs":"small local helpers"},
+          "notes": []
+        },
+        {
           "file": "src-electron/electron-main.ts",
           "exports": [],
           "type": "electron-main",
@@ -300,4 +441,5 @@
           ]
         }
       ]
+    }
     }
