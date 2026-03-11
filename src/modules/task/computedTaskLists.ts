@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { format } from 'date-fns';
 import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
@@ -70,7 +71,7 @@ export function createTaskComputed(args: {
     let tasksToSort = currentDayData.value.tasks.slice();
 
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
       if (currentDate.value === todayStr && typeof getTasksInRange === 'function') {
         const all = getTasksInRange('1970-01-01', '9999-12-31');
         const todoExtras = all.filter((t) => t.type_id === 'Todo');
@@ -157,7 +158,12 @@ export function createTaskComputed(args: {
       if (hasTimeA && !hasTimeB) return -1;
       if (!hasTimeA && hasTimeB) return 1;
       if (hasTimeA && hasTimeB) return String(a.eventTime).localeCompare(String(b.eventTime));
-      const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+      const priorityOrder: Record<string, number> = {
+        critical: 0,
+        high: 1,
+        medium: 2,
+        low: 3,
+      };
       const priorityCompare = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
       if (priorityCompare !== 0) return priorityCompare;
       return 0;
@@ -353,7 +359,10 @@ export function createTaskComputed(args: {
       const list = byParent[parentKey] || [];
       list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
       list.forEach((g) => {
-        flat.push({ label: `${'\u00A0'.repeat(depth * 2)}${g.name}`, value: String(g.id) });
+        flat.push({
+          label: `${'\u00A0'.repeat(depth * 2)}${g.name}`,
+          value: String(g.id),
+        });
         walk(g.id, depth + 1);
       });
     };

@@ -54,7 +54,7 @@
                 :key="'header-' + day"
                 class="text-center text-weight-bold text-caption"
               >
-                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][new Date(day).getDay()] }}
+                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][parseDay(day).getDay()] }}
               </th>
             </tr>
           </thead>
@@ -71,7 +71,7 @@
                 :key="day"
                 class="calendar-cell"
                 :data-day="day"
-                :data-month="String(new Date(day).getMonth() + 1).padStart(2, '0')"
+                :data-month="String(parseDay(day).getMonth() + 1).padStart(2, '0')"
               >
                 <div
                   :class="{
@@ -112,11 +112,9 @@
                   @pointerleave="cancelLongPressDay"
                   @click="onDayClick($event, day)"
                   @contextmenu="handleDateSelect($event, day, true)"
-                  :title="
-                    new Date(day).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                    })
-                  "
+                  :title="parseDay(day).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                  })"
                   :class="[
                     'calendar-day-btn',
                     { 'first-day-of-month': isFirstDayOfMonth(day) },
@@ -137,7 +135,7 @@
                     <div class="calendar-top">
                       <div class="calendar-day-row">
                         <div class="calendar-day-number">
-                          {{ new Date(day).getDate() }}
+                          {{ parseDay(day).getDate() }}
                         </div>
                         <div v-if="getWeekLabel(day)" class="calendar-week-inline">
                           {{ getWeekLabel(day) }}
@@ -259,7 +257,7 @@ import {
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/modules/day-organiser/_apiRoot";
-import { occursOnDay } from "src/modules/task/utlils/occursOnDay";
+import { occursOnDay, parseYmdLocal } from "src/modules/task/utlils/occursOnDay";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
   priorityColors as themePriorityColors,
@@ -275,6 +273,11 @@ const props = defineProps<{
   // Optional list of tasks so the calendar can render events
   tasks?: Array<any>;
 }>();
+
+// Parse a YYYY-MM-DD day string into a local Date (avoid UTC parsing pitfalls)
+function parseDay(s: string) {
+  return parseYmdLocal(s) || new Date(s);
+}
 
 const emit = defineEmits<{
   (e: "update:selectedDate", value: string): void;
@@ -847,7 +850,7 @@ class CalendarDisplayManager {
   }
 
   shouldShowMonth(day: string, index: number, week: string[], isFirstWeek: boolean) {
-    const date = new Date(day);
+    const date = parseDay(day);
     const monthYear = format(date, "yyyy-MM");
 
     if (isFirstWeek && index === 0) {
@@ -866,8 +869,8 @@ class CalendarDisplayManager {
 
     const currentMonth = date.getMonth();
     const currentYear = date.getFullYear();
-    const previousMonth = new Date(previousDay).getMonth();
-    const previousYear = new Date(previousDay).getFullYear();
+    const previousMonth = parseDay(previousDay).getMonth();
+    const previousYear = parseDay(previousDay).getFullYear();
 
     if (currentMonth !== previousMonth || currentYear !== previousYear) {
       this.shownMonths.add(monthYear);
@@ -878,7 +881,7 @@ class CalendarDisplayManager {
   }
 
   shouldShowYear(day: string, index: number, week: string[], isFirstWeek: boolean) {
-    const date = new Date(day);
+    const date = parseDay(day);
     const year = format(date, "yyyy");
     const todayYear = format(new Date(), "yyyy");
 
@@ -1284,7 +1287,7 @@ function getWeekLabel(dayDate: string) {
 
 function shouldWeekHaveMargin(week: string[], weekIndex: number, allWeeks: string[][]) {
   if (weekIndex === 0) return false;
-  const firstDayOfWeek = new Date(week[0]!);
+  const firstDayOfWeek = parseDay(week[0]!);
   const prevWeek = allWeeks[weekIndex - 1]!;
   const lastDayOfPrevWeek = new Date(prevWeek[prevWeek.length - 1]!);
   return firstDayOfWeek.getMonth() !== lastDayOfPrevWeek.getMonth();
@@ -1296,7 +1299,7 @@ function isNewMonthStart(
   weekIndex: number,
   allWeeks: string[][]
 ) {
-  const dayDate = new Date(day);
+  const dayDate = parseDay(day);
   const dayOfMonth = dayDate.getDate();
 
   // Must be day 1-7 of the month
@@ -1347,7 +1350,7 @@ function shouldShowYear(
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {
-  const monthName = format(new Date(day), "MMMM");
+  const monthName = format(parseDay(day), "MMMM");
 
   // !!! Removed prefix in comment - it's visually clearer with watermark component, but i can change my mind later if needed
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
@@ -1377,29 +1380,29 @@ function getMonthAbbr(day: string, index: number, week: string[]) {
 }
 
 function weekHasMonthStart(week: string[]) {
-  return week.some((d) => new Date(d).getDate() === 1);
+  return week.some((d) => parseDay(d).getDate() === 1);
 }
 
 function getWeekWatermarkLabel(week: string[]) {
-  const first = week.find((d) => new Date(d).getDate() === 1);
+  const first = week.find((d) => parseDay(d).getDate() === 1);
   if (!first) return "";
-  return format(new Date(first), "MMMM");
+  return format(parseDay(first), "MMMM");
 }
 
 function isFirstDayOfMonth(day: string) {
-  return new Date(day).getDate() === 1;
+  return parseDay(day).getDate() === 1;
 }
 
 function isAfterFirstInRow(day: string, week: string[]) {
-  const date = new Date(day);
+  const date = parseDay(day);
   const index = week.indexOf(day);
   if (index === 0) return false;
-  const prevDay = new Date(week[index - 1]!);
+  const prevDay = parseDay(week[index - 1]!);
   return date.getMonth() !== prevDay.getMonth();
 }
 
 function isWeekend(day: string) {
-  const date = new Date(day);
+  const date = parseDay(day);
   const dayOfWeek = date.getDay();
   return dayOfWeek === 0 || dayOfWeek === 6; // Sunday (0) or Saturday (6)
 }
@@ -1413,7 +1416,8 @@ function getEventsForDay(day: string) {
   // callers (preview/edit) receive the specific instance date for cyclic events.
   return props.tasks
     .filter((t: any) => {
-      if (t.type_id === "Replenish" || t.type_id === "Todo") return false;
+      // Exclude plain todos from calendar events, but include Replenish and other event types
+      if (t.type_id === "Todo") return false;
       return occursOnDay(t, day);
     })
     .map((t: any) => ({ ...t, date: day }));

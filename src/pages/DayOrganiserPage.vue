@@ -1089,6 +1089,20 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
 onMounted(async () => {
   try {
     await api.storage.loadData();
+    // Ensure the app starts on today's date if stored date is older or missing
+    try {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const curStr = String(api.task.time.currentDate?.value || "");
+      if (!curStr || curStr < todayStr) {
+        try {
+          api.task.time.setCurrentDate(todayStr);
+        } catch (e) {
+          void e;
+        }
+      }
+    } catch (e) {
+      void e;
+    }
   } catch (error) {
     logger.error("Failed to load data on mount:", error);
   }
@@ -1106,20 +1120,9 @@ onMounted(async () => {
       // If current active date is before today, move active day to today when refreshing
       const todayStr = format(new Date(), "yyyy-MM-dd");
       if (api.task.time.currentDate && api.task.time.currentDate.value) {
-        const cur = new Date(api.task.time.currentDate.value);
-        const today = new Date(todayStr);
-        // normalize to midnight for comparison
-        const curNorm = new Date(
-          cur.getFullYear(),
-          cur.getMonth(),
-          cur.getDate()
-        ).getTime();
-        const todayNorm = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        ).getTime();
-        if (curNorm < todayNorm) {
+        // Compare YYYY-MM-DD strings to avoid Date parsing/timezone issues.
+        const curStr = String(api.task.time.currentDate.value || "");
+        if (curStr < todayStr) {
           try {
             api.task.time.setCurrentDate(todayStr);
           } catch (e) {
@@ -1153,11 +1156,8 @@ onMounted(async () => {
       try {
         const todayStr = format(new Date(), "yyyy-MM-dd");
         if (api.task.time.currentDate && api.task.time.currentDate.value) {
-          const cur = new Date(api.task.time.currentDate.value);
-          const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
-          const today = new Date(todayStr);
-          const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-          if (curNorm < todayNorm) {
+          const curStr = String(api.task.time.currentDate.value || "");
+          if (curStr < todayStr) {
             try {
               api.task.time.setCurrentDate(todayStr);
             } catch (e) {

@@ -125,7 +125,11 @@ export function occursOnDay(task: any, day: string): boolean {
       const evDate =
         task?.repeat?.eventDate ?? task?.repeat?.date ?? task.eventDate ?? task.date ?? null;
       if (!evDate) return false;
-      const seed = parseYmdLocal(evDate) || new Date(evDate);
+      const evPart =
+        typeof evDate === 'string' && evDate.indexOf('T') !== -1 ? evDate.split('T')[0] : evDate;
+      const seed =
+        (typeof evPart === 'string' ? parseYmdLocal(evPart) : null) ||
+        (evPart instanceof Date ? evPart : new Date(String(evPart)));
       // If the seed specifies a day that doesn't exist in the target month
       // (e.g. 31st) treat the occurrence as the last day of the target month.
       const desiredDay = seed.getDate();
@@ -140,7 +144,11 @@ export function occursOnDay(task: any, day: string): boolean {
       const evDate =
         task?.repeat?.eventDate ?? task?.repeat?.date ?? task.eventDate ?? task.date ?? null;
       if (!evDate) return false;
-      const seed = parseYmdLocal(evDate) || new Date(evDate);
+      const evPart =
+        typeof evDate === 'string' && evDate.indexOf('T') !== -1 ? evDate.split('T')[0] : evDate;
+      const seed =
+        (typeof evPart === 'string' ? parseYmdLocal(evPart) : null) ||
+        (evPart instanceof Date ? evPart : new Date(String(evPart)));
       return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
     }
 
@@ -149,7 +157,11 @@ export function occursOnDay(task: any, day: string): boolean {
       const evDate =
         task?.repeat?.eventDate ?? task?.repeat?.date ?? task.eventDate ?? task.date ?? null;
       if (!evDate) return false;
-      const seed = parseYmdLocal(evDate) || new Date(evDate);
+      const evPart =
+        typeof evDate === 'string' && evDate.indexOf('T') !== -1 ? evDate.split('T')[0] : evDate;
+      const seed =
+        (typeof evPart === 'string' ? parseYmdLocal(evPart) : null) ||
+        (evPart instanceof Date ? evPart : new Date(String(evPart)));
       const rawInterval =
         Number(
           task?.repeat?.intervalDays ??
