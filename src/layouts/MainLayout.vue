@@ -66,6 +66,19 @@
                       <q-item-section>Settings</q-item-section>
                     </q-item>
 
+                    <q-item
+                      clickable
+                      v-ripple
+                      @click="
+                        () => {
+                          showDebugDialog = true;
+                          menuOpen = false;
+                        }
+                      "
+                    >
+                      <q-item-section>Debug tools</q-item-section>
+                    </q-item>
+
                     <q-item clickable v-ripple @click="reloadWithTestData">
                       <q-item-section>Explain CO21 features</q-item-section>
                     </q-item>
@@ -82,6 +95,7 @@
         <AppConfigDialog v-model="showConfigDialog" />
         <ConnectionsDialog v-model="showConnectionsDialog" />
         <AboutDialog v-model="showAboutDialog" />
+        <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
     </q-header>
 
@@ -103,6 +117,7 @@ import * as api from "src/modules/day-organiser/_apiRoot";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
+import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationManager";
 
@@ -111,6 +126,7 @@ let checkInterval: number | undefined;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
+const showDebugDialog = ref(false);
 const menuOpen = ref(false);
 const testMode = computed(() =>
   presentation && presentation.mode ? presentation.mode.value === "test" : false
