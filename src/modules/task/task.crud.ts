@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Task } from './types';
+import { Task } from './types';
 
 // In-memory task storage using canonical Task type
 const tasks: Task[] = [];
@@ -7,29 +7,21 @@ const tasks: Task[] = [];
 // Create
 export function createTask(data: Omit<Task, 'id'>): Task {
   const now = new Date().toISOString();
-  const task = {
-    id: uuidv4(),
-    name: data.name,
-    description: data.description,
+  const payload: Partial<Task> = {
+    ...data,
     date: (data as any).date ?? data.eventDate ?? '',
     category: (data as any).category ?? 'other',
     priority: (data as any).priority ?? 'medium',
-    status_id: data.status_id,
-    type_id: data.type_id,
-    eventDate: data.eventDate,
-    groupId: data.groupId,
-    tags: data.tags,
-    eventTime: data.eventTime,
     repeat: data.repeat ?? null,
     history: data.history ?? [],
-    timeMode: data.timeMode,
     timeOffsetDays: data.timeOffsetDays ?? null,
     color_set: data.color_set ?? null,
     createdAt: data.createdAt ?? now,
     updatedAt: data.updatedAt ?? now,
   };
-  tasks.push(task as Task);
-  return task as Task;
+  const task = new Task({ ...(payload as any), id: uuidv4() });
+  tasks.push(task);
+  return task;
 }
 
 // Read (get by id)

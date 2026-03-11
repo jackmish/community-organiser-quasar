@@ -3,13 +3,13 @@ export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 import type { TaskGroup } from '../group/TaskGroup';
 export type { TaskGroup };
 
-export interface Task {
-  id: string;
-  name: string;
-  description: string;
-  date: string; // YYYY-MM-DD format
-  category: 'work' | 'personal' | 'meeting' | 'other';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+export class Task {
+  id!: string;
+  name!: string;
+  description!: string;
+  date!: string; // YYYY-MM-DD format
+  category!: 'work' | 'personal' | 'meeting' | 'other';
+  priority!: 'low' | 'medium' | 'high' | 'critical';
   // Numeric status code for the task lifecycle (e.g. 0 = done, 1 = just created)
   status_id?: number | string | undefined;
   // Type of task, e.g. 'TimeEvent' or 'Todo'
@@ -34,8 +34,12 @@ export interface Task {
   timeOffsetDays?: number | null;
   // Optional per-task chosen color set id (e.g. 'set-1'..'set-12')
   color_set?: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt!: string;
+  updatedAt!: string;
+
+  constructor(init?: Partial<Task>) {
+    if (init) Object.assign(this, init);
+  }
 }
 
 // DayData and OrganiserData moved to `src/modules/day-organiser/types.ts`

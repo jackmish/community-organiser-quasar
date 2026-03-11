@@ -13,12 +13,6 @@
             />
           </template>
 
-          <HiddenGroupItem
-            v-else-if="item.__isHiddenGroup"
-            :group="item._group"
-            @select="selectHiddenGroup"
-          />
-
           <template v-else-if="item.__isGroup">
             <q-card
               flat
@@ -61,10 +55,10 @@
             </q-card>
           </template>
 
-          <template v-else>
+          <template v-else-if="item instanceof Task">
             <div class="grouped-item card" :style="{ position: 'relative' }">
               <div v-if="isNewGroup(index, item)" class="group-label">
-                {{ getGroupName(item.groupId || item.group_id) }}
+                {{ getGroupName(groupIdOf(item)) }}
               </div>
               <div
                 v-if="isNewGroup(index, item)"
@@ -79,6 +73,13 @@
               />
             </div>
           </template>
+
+          <HiddenGroupItem
+            v-else-if="item.__isHiddenGroup"
+            :group="item._group"
+            @select="selectHiddenGroup"
+          />
+          <div v-else class="unrecognized-item">Error: Unrecognized item type (check console)</div>
         </template>
       </template>
     </div>
@@ -97,15 +98,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
+import { Task } from "src/modules/task/types";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
 import * as api from "src/modules/day-organiser/_apiRoot";
 
 const props = defineProps<{
-  tasksWithTime: any[];
-  tasksWithoutTime: any[];
+  tasksWithTime: Task[];
+  tasksWithoutTime: Task[];
   selectedTaskId: string | null;
   hiddenGroups?: any[];
   replenishTasks?: any[];
@@ -127,6 +129,12 @@ function getGroupName(groupId: any) {
   if (!groupId) return "";
   const g = groups.value.find((x: any) => String(x.id) === String(groupId));
   return g ? g.name : "";
+}
+
+// Normalize group id access to support legacy `group_id` fields on raw objects
+function groupIdOf(item: any) {
+  if (!item) return null;
+  return item.groupId ?? item.group_id ?? null;
 }
 
 function getGroupColor(groupId: any) {
@@ -160,7 +168,7 @@ const mergedTasks = computed(() => {
   const filterTask = (t: any) => {
     if (!t) return false;
     try {
-      const taskGroupId = t.groupId ?? t.group_id ?? null;
+      const taskGroupId = groupIdOf(t);
       if (!taskGroupId) return true;
       try {
         return api.group.list.isVisibleForActive(taskGroupId);
@@ -200,7 +208,7 @@ const mergedTasks = computed(() => {
   // bucket tasks by group id
   const buckets: Record<string, any[]> = {};
   for (const t of tasks) {
-    const gid = t.groupId ?? t.group_id ?? "__ungrouped__";
+    const gid = groupIdOf(t) ?? "__ungrouped__";
     if (!buckets[gid]) buckets[gid] = [];
     buckets[gid].push(t);
   }
@@ -261,11 +269,23 @@ const mergedTasks = computed(() => {
         ? null
         : groups.value.find((g: any) => String(g.id) === String(gid));
     for (const t of items) {
-      out.push({ ...t, _group: grpObj });
+      let taskItem: Task;
+      if (t instanceof Task) taskItem = t;
+      else taskItem = new Task({ ...t });
+      (taskItem as any)._group = grpObj;
+      out.push(taskItem);
     }
   }
 
   return out;
+});
+
+watch(mergedTasks, (list) => {
+  try {
+    (list || []).forEach((it: any) => logIfUnrecognized(it));
+  } catch (e) {
+    void e;
+  }
 });
 
 // helper to detect start of a new group in the rendered flat list
@@ -273,10 +293,8 @@ function isNewGroup(idx: number, task: any) {
   try {
     if (idx === 0) return true;
     const prev = mergedTasks.value[idx - 1];
-    const curId = String(task.groupId ?? task.group_id ?? "__ungrouped__");
-    const prevId = String(
-      prev.groupId ?? prev.group_id ?? (prev._group ? prev._group.id : "__ungrouped__")
-    );
+    const curId = String(groupIdOf(task) ?? "__ungrouped__");
+    const prevId = String(groupIdOf(prev) ?? (prev._group ? prev._group.id : "__ungrouped__"));
     return curId !== prevId;
   } catch (e) {
     return true;
@@ -291,6 +309,18 @@ function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
     activeGroup.value = { label: g.name || String(g.id), value: g.id };
+  } catch (e) {
+    void e;
+  }
+}
+
+// Log unexpected items for debugging (avoid printing raw objects into the UI)
+function logIfUnrecognized(item: any) {
+  try {
+    if (!item || typeof item !== 'object') return;
+    if (item.__isReplenish || item.__isGroup || item.__isHiddenGroup) return;
+    if (typeof item.id !== 'undefined') return;
+    console.warn('TasksListSmall: unrecognized merged item', item);
   } catch (e) {
     void e;
   }

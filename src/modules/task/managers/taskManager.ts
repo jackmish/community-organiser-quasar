@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
 import type { ApiTask } from '../_apiTask';
-import type { Task } from '../types';
+import { Task } from '../types';
 
 export class TaskManager {
   apiTask: ApiTask | undefined;
@@ -124,12 +124,12 @@ export const addTask = (
   taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
 ): Task => {
   const now = new Date().toISOString();
-  const task: Task = {
+  const payload: Partial<Task> = {
     ...taskData,
-    id: generateId(),
     createdAt: now,
     updatedAt: now,
-  } as Task;
+  };
+  const task: Task = new Task({ ...(payload as any), id: generateId() });
 
   try {
     const isCyclic = Boolean(getCycleType(task));
@@ -143,7 +143,7 @@ export const addTask = (
   if (!getDays()[date]) {
     getDays()[date] = { date, tasks: [], notes: '' } as any;
   }
-  getDays()[date].tasks.push(task);
+  getDays()[date].tasks.push(task as any);
   try {
     // Rebuild flatTasks from days to keep list consistent and avoid duplicates
     const newList = listFromDays(getDays());
@@ -202,13 +202,14 @@ export const updateTask = (
         // ensure target day tasks array exists
         if (!Array.isArray(targetDay.tasks)) targetDay.tasks = [];
         // push existing (merged with updates/taskObj) into target day
-        const merged = {
+        const mergedPayload: Partial<Task> = {
           ...existing,
           ...taskObj,
           date: date,
           eventDate: date,
           updatedAt: new Date().toISOString(),
-        } as Task;
+        };
+        const merged = new Task(mergedPayload);
         targetDay.tasks.push(merged);
         taskObj = merged;
         idx = targetDay.tasks.length - 1;
