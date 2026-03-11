@@ -99,6 +99,8 @@ $sep-color: $primary;
   &.calendar-past {
     background-color: rgba(205, 205, 205, 0.8);
     border: none !important;
+    // filter: sepia(100%) hue-rotate(180deg) brightness(50%);
+    filter: grayscale(100%) brightness(70%);
   }
   &.calendar-past .calendar-day-number {
     color: #444 !important;
