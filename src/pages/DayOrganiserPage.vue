@@ -85,6 +85,7 @@
 
           <!-- Parent-level add button to sit above list without z-index hacks -->
           <q-btn
+            v-show="!isAddButtonAnchored"
             class="list-add-btn"
             color="positive"
             unelevated
@@ -298,24 +299,26 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
         else newRect = rect ?? null;
         setPreviewFloating(newRect, { forceBelow: true });
       } catch (e) {
-          // Prefer below placement for add-button anchored floating form by passing { forceBelow: true } to setPreviewFloating.
-          // Use universal anchor helper when available.
-          try {
-            // If composable exported `anchorTo`, prefer it; fall back to setPreviewFloating
-            const maybeAnchor = (useFloatingPreview as any).__anchorTo;
-            if (typeof maybeAnchor === 'function') {
-              // not used: maintain compatibility
-            }
-          } catch (e) {
-            void e;
+        // Prefer below placement for add-button anchored floating form by passing { forceBelow: true } to setPreviewFloating.
+        // Use universal anchor helper when available.
+        try {
+          // If composable exported `anchorTo`, prefer it; fall back to setPreviewFloating
+          const maybeAnchor = (useFloatingPreview as any).__anchorTo;
+          if (typeof maybeAnchor === "function") {
+            // not used: maintain compatibility
           }
-          setPreviewFloating(rect, { forceBelow: true });
+        } catch (e) {
+          void e;
+        }
+        setPreviewFloating(rect, { forceBelow: true });
       }
     } else {
       // clear floating placement
       try {
-        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-          console.debug('[DayOrganiser] clearing floating in onTaskClicked (no rect)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
+        if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug("[DayOrganiser] clearing floating in onTaskClicked (no rect)", {
+            stack: new Error().stack?.split("\n").slice(1, 6),
+          });
         }
       } catch (e) {
         void e;
@@ -701,8 +704,11 @@ watch(
         } else {
           // reset floating preview to default
           try {
-            if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-              console.debug('[DayOrganiser] clearing floating in mode watcher (mode=add)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
+            if (typeof console !== "undefined" && typeof console.debug === "function") {
+              console.debug(
+                "[DayOrganiser] clearing floating in mode watcher (mode=add)",
+                { stack: new Error().stack?.split("\n").slice(1, 6) }
+              );
             }
           } catch (e) {
             void e;
@@ -862,10 +868,10 @@ watch(
   previewFloating,
   (val) => {
     try {
-      const el = document.querySelector('.fixed-right-panel .fixed-content');
+      const el = document.querySelector(".fixed-right-panel .fixed-content");
       if (!el) return;
-      if (val) el.classList.add('floating');
-      else el.classList.remove('floating');
+      if (val) el.classList.add("floating");
+      else el.classList.remove("floating");
     } catch (e) {
       void e;
     }
@@ -875,6 +881,25 @@ watch(
 
 const lastAddFromCalendar = ref(false);
 const lastAddAnchored = ref(false);
+
+const isAddButtonAnchored = computed(() => {
+  try {
+    if (!previewFloating.value || !previewRect.value) return false;
+    const el = document.querySelector(".list-add-btn");
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const pr = previewRect.value;
+    const tol = 4; // allow minor layout rounding
+    return (
+      Math.abs(r.x - pr.x) <= tol &&
+      Math.abs(r.y - pr.y) <= tol &&
+      Math.abs(r.width - pr.width) <= tol &&
+      Math.abs(r.height - pr.height) <= tol
+    );
+  } catch (e) {
+    return false;
+  }
+});
 
 async function onListAdd(evt?: Event, go?: any) {
   try {
@@ -901,15 +926,15 @@ async function onListAdd(evt?: Event, go?: any) {
     let el: Element | null = null;
     try {
       if (evt && (evt.currentTarget as Element)) el = evt.currentTarget as Element;
-      if (!el) el = document.querySelector('.list-add-btn');
+      if (!el) el = document.querySelector(".list-add-btn");
     } catch (e) {
       void e;
     }
 
     panelHidden.value = false;
-      try {
+    try {
       if (anchorTo) {
-        anchorTo(el || '.list-add-btn', { forceBelow: true });
+        anchorTo(el || ".list-add-btn", { forceBelow: true });
       } else {
         // fallback
         let rect: DOMRect | null = null;
@@ -918,8 +943,13 @@ async function onListAdd(evt?: Event, go?: any) {
       }
       // debug: log current preview state
       try {
-        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-          console.debug('[DayOrganiser] previewFloating', previewFloating?.value, 'previewRect', previewRect?.value);
+        if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug(
+            "[DayOrganiser] previewFloating",
+            previewFloating?.value,
+            "previewRect",
+            previewRect?.value
+          );
         }
       } catch (e) {
         void e;
@@ -987,18 +1017,21 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
         setPreviewFloating(payload.rect);
         panelHidden.value = false;
       }
-      } else {
-        // No rect provided => ensure default placement
-        try {
-          if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-            console.debug('[DayOrganiser] clearing floating in onCalendarDayClick (no rect)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
-          }
-        } catch (e) {
-          void e;
+    } else {
+      // No rect provided => ensure default placement
+      try {
+        if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug(
+            "[DayOrganiser] clearing floating in onCalendarDayClick (no rect)",
+            { stack: new Error().stack?.split("\n").slice(1, 6) }
+          );
         }
-        setPreviewFloating(null);
-        panelHidden.value = false;
+      } catch (e) {
+        void e;
       }
+      setPreviewFloating(null);
+      panelHidden.value = false;
+    }
   } catch (e) {
     void e;
   }
@@ -1116,6 +1149,7 @@ onMounted(async () => {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   border-radius: 30px 0 0 0;
   border-bottom-right-radius: 8px;
+  z-index: 2400;
 }
 .list-add-btn .q-icon {
   color: #fff !important;

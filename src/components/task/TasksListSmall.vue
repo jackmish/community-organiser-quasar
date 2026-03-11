@@ -84,6 +84,15 @@
     </div>
 
     <!-- Add button removed from here; parent should render the add button at a higher DOM level -->
+    <!-- <q-btn
+      class="add-task-btn"
+      color="positive"
+      unelevated
+      aria-label="Add task"
+      @click="$emit('add-task')"
+    >
+      <q-icon name="add" />
+    </q-btn> -->
   </div>
 </template>
 
