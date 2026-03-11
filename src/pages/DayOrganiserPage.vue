@@ -1134,6 +1134,44 @@ onMounted(async () => {
     reloadKey.value += 1;
   };
   window.addEventListener("organiser:reloaded", organiserReloadHandler as EventListener);
+  onBeforeUnmount(() => {
+    try {
+      if (_dayRolloverTimer) clearInterval(_dayRolloverTimer);
+    } catch (e) {
+      void e;
+    }
+    try {
+      window.removeEventListener("organiser:reloaded", organiserReloadHandler as EventListener);
+    } catch (e) {
+      void e;
+    }
+  });
+  // Periodic check to detect system date rollover (midnight) and switch to today
+  let _dayRolloverTimer: number | null = null;
+  try {
+    _dayRolloverTimer = window.setInterval(() => {
+      try {
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        if (api.task.time.currentDate && api.task.time.currentDate.value) {
+          const cur = new Date(api.task.time.currentDate.value);
+          const curNorm = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()).getTime();
+          const today = new Date(todayStr);
+          const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          if (curNorm < todayNorm) {
+            try {
+              api.task.time.setCurrentDate(todayStr);
+            } catch (e) {
+              void e;
+            }
+          }
+        }
+      } catch (e) {
+        void e;
+      }
+    }, 60 * 1000);
+  } catch (e) {
+    void e;
+  }
   // allow header group 'manage' button to open the group dialog
   organiserGroupManageHandler = () => {
     showGroupDialog.value = true;
