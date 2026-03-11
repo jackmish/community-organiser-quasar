@@ -812,7 +812,7 @@ const {
   closeFloatingPreview,
   computePreviewStyle,
 } = useFloatingPreview({
-  width: 360,
+  width: 640,
   shouldIgnoreClick: (target) => {
     try {
       const activeId = api.task.active.task.value?.id;
