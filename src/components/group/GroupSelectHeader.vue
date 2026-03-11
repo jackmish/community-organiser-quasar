@@ -130,28 +130,26 @@
           :tabindex="isShortcutActive(g) ? -1 : 0"
           :title="`Go to ${g.name}`"
           @click.stop.prevent="onShortcutClick(g)"
-          :style="`background-color: ${g.color || 'transparent'} !important; color: ${
-            g.textColor || g.text_color || (g.color ? '#ffffff' : 'inherit')
-          }; border:1px solid ${
-            g.textColor
+          :text-color="g.textColor || g.text_color || (g.color ? '#ffffff' : 'inherit')"
+          :style="`background-color: ${g.color || 'transparent'} !important; border:1px solid ${
+            g.textColor || 'transparent'
           }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important;  box-shadow: none !important;`"
         >
           <q-icon
             :name="g.icon || 'folder_open'"
-            :style="{
-              color:
-                g.textColor ||
-                g.text_color ||
-                (g.color ? '#ffffff' : g.color || 'inherit'),
-            }"
+            :style="`color: ${
+              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
+            } !important; fill: ${
+              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
+            } !important; stroke: ${
+              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
+            } !important;`"
           />
           <span
-            style="
-              max-width: 140px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            "
+            :style="{
+              color: g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
+            }"
+            style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >{{ g.name }}</span
           >
         </q-btn>
