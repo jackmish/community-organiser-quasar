@@ -117,6 +117,8 @@ const emit = defineEmits<{
 
 const { startLongPress, cancelLongPress, longPressTriggered } = useLongPress();
 
+// Use shared long-press handler so global edit behavior and floating preview both work
+
 const priorityColor = (p: any) => themePriorityColors[p] || "transparent";
 const priorityTextColor = (p: any) => themePriorityTextColor(p);
 
@@ -245,8 +247,26 @@ const handleTaskClick = (evt: Event) => {
     return;
   }
   try {
-    const el = ((evt.currentTarget as unknown) as HTMLElement) || ((evt.target as unknown) as HTMLElement);
-    const rect = el ? el.getBoundingClientRect() : null;
+    // Prefer resolving rect from the DOM using the data attribute to avoid
+    // cases where evt.currentTarget isn't a DOM element (framework wrappers).
+    let rect: DOMRect | null = null;
+    try {
+      const el =
+        ((evt.currentTarget as unknown) as HTMLElement) ||
+        ((evt.target as unknown) as HTMLElement);
+      if (el && typeof (el as any).getBoundingClientRect === "function") {
+        try {
+          rect = el.getBoundingClientRect();
+        } catch (e) {
+          rect = null;
+        }
+      }
+    } catch (e) {
+      rect = null;
+    }
+
+    // fallback to robust selector-based lookup
+    if (!rect) rect = getBoundingRect();
     emit("task-click", item.value, rect);
   } catch (e) {
     emit("task-click", item.value, null);
@@ -446,7 +466,7 @@ const getBoundingRect = (): DOMRect | null => {
   font-size: 13px;
 }
 .task-card strong {
-  font-size: 13px;
+  font-size: 17px;
   line-height: 1;
 }
 .task-list .title-text q-item-label,

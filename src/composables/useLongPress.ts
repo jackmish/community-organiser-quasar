@@ -11,12 +11,15 @@ export function useLongPress() {
     handler = fn;
   };
 
-  function startLongPress(task: any, ev?: Event) {
+  // startLongPress now accepts an optional local handler which will be used
+  // for this specific press instead of the globally-registered handler.
+  function startLongPress(task: any, ev?: Event, localHandler?: (task: any) => void) {
     cancelLongPress();
     longPressTriggered.value = false;
     longPressTimer.value = window.setTimeout(() => {
       longPressTriggered.value = true;
-      if (handler) handler(task);
+      const h = localHandler ?? handler;
+      if (h) h(task);
     }, LONG_PRESS_MS) as unknown as number;
   }
 

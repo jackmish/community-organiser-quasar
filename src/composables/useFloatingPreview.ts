@@ -10,8 +10,9 @@ export function useFloatingPreview(opts?: {
   const preferBelow = ref(false);
   const lastMouseDownTarget = ref<Node | null>(null);
   const lastClosedAt = ref<number | null>(null);
-  const CLOSE_IGNORE_MS = 200; // ignore re-open attempts within this ms after close
+  const CLOSE_IGNORE_MS = 200;
   const focusInsideWrapper = ref(false);
+
   const handleMouseDown = (e: MouseEvent) => {
     try {
       lastMouseDownTarget.value = e.target as Node | null;
@@ -22,7 +23,6 @@ export function useFloatingPreview(opts?: {
 
   function eventInsideWrapper(e: Event) {
     try {
-      // Prefer composedPath for shadow/portal-safe detection
       const path = (e as any).composedPath ? (e as any).composedPath() : [];
       if (Array.isArray(path) && path.length > 0) {
         for (const n of path) {
@@ -35,7 +35,7 @@ export function useFloatingPreview(opts?: {
             )
               return true;
           } catch (err) {
-            // ignore per-node errors
+            // ignore
           }
         }
       }
@@ -50,8 +50,6 @@ export function useFloatingPreview(opts?: {
     return false;
   }
 
-  // simplified: rely on mousedown origin and activeElement checks
-
   function computePreviewStyle(rect: DOMRect | null) {
     if (!rect) return {};
     const vw = window.innerWidth || document.documentElement.clientWidth;
@@ -59,11 +57,7 @@ export function useFloatingPreview(opts?: {
     const preferredWidth = PREVIEW_WIDTH;
     const estimatedHeight = Math.min(600, vh - 64);
 
-    // Two placement modes:
-    // - preferBelow: used for task-list items — place below the item first
-    // - default: prefer right of the cell (calendar) with the upward offset hack
     if (preferBelow.value) {
-      // Below-first: below -> right -> left -> above
       let left = rect.left;
       let top = rect.bottom + 8;
       if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
@@ -77,7 +71,6 @@ export function useFloatingPreview(opts?: {
         } as any;
       }
 
-      // Try right
       left = rect.right + 8;
       top = rect.top;
       if (left + preferredWidth + 16 <= vw) {
@@ -91,7 +84,6 @@ export function useFloatingPreview(opts?: {
         } as any;
       }
 
-      // Try left
       left = rect.left - preferredWidth - 8;
       top = rect.top;
       if (left >= 8) {
@@ -105,7 +97,6 @@ export function useFloatingPreview(opts?: {
         } as any;
       }
 
-      // Above fallback
       left = rect.left;
       if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
       top = Math.max(8, rect.top - estimatedHeight - 8);
@@ -118,17 +109,11 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // Default: Prefer placing to the right of the cell so the description appears beside it.
-    // Fallback order: right -> below -> left -> above.
-    // 1) Right
     let left = rect.right + 8;
     let top = rect.top;
     if (left + preferredWidth + 16 <= vw) {
-      // start from full upward offset, then clamp using viewport rules so the
-      // effective offset decreases automatically when there isn't space below.
       const fullDesiredTop = rect.top - 230;
       let desiredTop = fullDesiredTop;
-      // clamp into viewport if needed (same rules used elsewhere)
       if (desiredTop + estimatedHeight + 16 > vh)
         desiredTop = Math.max(8, vh - estimatedHeight - 16);
       if (desiredTop < 8) desiredTop = 8;
@@ -141,7 +126,6 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // 2) Below
     left = rect.left;
     top = rect.bottom + 8;
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
@@ -155,7 +139,6 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // 3) Left
     left = rect.left - preferredWidth - 8;
     top = rect.top;
     if (left >= 8) {
@@ -169,7 +152,6 @@ export function useFloatingPreview(opts?: {
       } as any;
     }
 
-    // 4) Above (fallback)
     left = rect.left;
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     top = Math.max(8, rect.top - estimatedHeight - 8);
@@ -183,7 +165,6 @@ export function useFloatingPreview(opts?: {
   }
 
   function setFloating(rect?: DOMRect | null, options?: { forceBelow?: boolean }) {
-    // Ignore re-open attempts immediately after a close to avoid click-bounce re-anchoring
     try {
       if (lastClosedAt.value && Date.now() - lastClosedAt.value < CLOSE_IGNORE_MS) {
         return;
@@ -194,19 +175,12 @@ export function useFloatingPreview(opts?: {
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
     preferBelow.value = !!options?.forceBelow;
-    // setFloating updated
-    // No timing protections — rely on mousedown-origin and focus checks
-    if (!previewFloating.value) {
-      preferBelow.value = false;
-    }
+    if (!previewFloating.value) preferBelow.value = false;
   }
 
-  // Resolve a DOMRect from a variety of target shapes: Event, Element, selector, DOMRect, or simple coords.
   function resolveRect(target?: any): DOMRect | null {
     try {
-      // resolveRect called
       if (!target) return null;
-      // Already a DOMRect-like object
       if (
         typeof target.left === 'number' &&
         typeof target.top === 'number' &&
@@ -214,13 +188,11 @@ export function useFloatingPreview(opts?: {
       ) {
         return new DOMRect(target.left, target.top, target.width, target.height || 0);
       }
-      // If a selector string, query the DOM
       if (typeof target === 'string') {
         const el = document.querySelector(target);
         if (el instanceof Element) return el.getBoundingClientRect();
         return null;
       }
-      // If an Event, prefer currentTarget then target
       if (target instanceof Event) {
         const ct = (target as any).currentTarget as Element | null;
         if (ct && ct.getBoundingClientRect) return ct.getBoundingClientRect();
@@ -228,34 +200,29 @@ export function useFloatingPreview(opts?: {
         if (t && t.getBoundingClientRect) return t.getBoundingClientRect();
         return null;
       }
-      // If an Element
       if (target instanceof Element) {
         if (target.getBoundingClientRect) return target.getBoundingClientRect();
         return null;
       }
-      // If plain coordinates {x,y,width,height} or {left,top}
       if (typeof target.x === 'number' && typeof target.y === 'number') {
         return new DOMRect(target.x, target.y, target.width || 0, target.height || 0);
       }
       if (typeof target.clientX === 'number' && typeof target.clientY === 'number') {
-        // MouseEvent-like
         return new DOMRect(target.clientX, target.clientY, 0, 0);
       }
     } catch (e) {
-      // ignore and return null
+      // ignore
     }
     return null;
   }
 
   function anchorTo(target?: any, options?: { forceBelow?: boolean }) {
     const rect = resolveRect(target);
-    // anchorTo called
     setFloating(rect, options);
     return rect;
   }
 
   function closeFloatingPreview() {
-    // closeFloatingPreview called
     previewFloating.value = false;
     previewRect.value = null;
     preferBelow.value = false;
@@ -295,13 +262,11 @@ export function useFloatingPreview(opts?: {
 
   function onDocClick(e: MouseEvent) {
     try {
-      // If an element inside the floating wrapper currently has focus (e.g. input via Tab), do not close.
       try {
         if (focusInsideWrapper.value) return;
       } catch (err) {
         // ignore
       }
-      // If the click (or its composed event path) is inside the wrapper, ignore.
       if (eventInsideWrapper(e)) return;
       const getWrapper = () =>
         document.querySelector('.floating-preview-wrapper') ||
@@ -316,23 +281,21 @@ export function useFloatingPreview(opts?: {
         closeFloatingPreview();
         return;
       }
-      // If the most recent mousedown originated from the same node (or a child),
-      // treat this click as the opener and ignore it so the opener's click
-      // handler can anchor the floating preview without the document click
-      // immediately closing it.
       try {
         const lm = lastMouseDownTarget.value;
-        // If mousedown started inside the floating wrapper, treat as an internal interaction and ignore.
         if (lm && lm instanceof Node && wrapper && wrapper.contains(lm)) {
           lastMouseDownTarget.value = null;
           return;
         }
-        // Only treat the opener buttons as special cases to ignore the immediate click
-        // (so clicking the add button that anchors the preview doesn't immediately close it).
         try {
           if (lm && lm instanceof Element) {
             const opener = lm.closest('.list-add-btn, .add-task-btn, .floating-add-btn');
             if (opener) {
+              lastMouseDownTarget.value = null;
+              return;
+            }
+            const taskOpener = lm.closest && lm.closest('[data-task-id]');
+            if (taskOpener) {
               lastMouseDownTarget.value = null;
               return;
             }
@@ -343,9 +306,7 @@ export function useFloatingPreview(opts?: {
       } catch (err) {
         // ignore
       }
-      // If the event target is inside the floating wrapper, ignore.
       if (target instanceof Node && wrapper.contains(target)) return;
-      // If an input inside the wrapper currently has focus (typing), do not close.
       try {
         const active = document.activeElement;
         if (active instanceof Node && wrapper.contains(active)) return;
@@ -354,7 +315,6 @@ export function useFloatingPreview(opts?: {
       }
       if (opts?.shouldIgnoreClick && target instanceof Node && opts.shouldIgnoreClick(target))
         return;
-      // Close and clear any leftover state
       lastMouseDownTarget.value = null;
       closeFloatingPreview();
     } catch (err) {
