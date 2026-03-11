@@ -9,6 +9,8 @@ export function useFloatingPreview(opts?: {
   const previewRect = ref<DOMRect | null>(null);
   const preferBelow = ref(false);
   const lastMouseDownTarget = ref<Node | null>(null);
+  const lastClosedAt = ref<number | null>(null);
+  const CLOSE_IGNORE_MS = 200; // ignore re-open attempts within this ms after close
   const focusInsideWrapper = ref(false);
   const handleMouseDown = (e: MouseEvent) => {
     try {
@@ -181,6 +183,14 @@ export function useFloatingPreview(opts?: {
   }
 
   function setFloating(rect?: DOMRect | null, options?: { forceBelow?: boolean }) {
+    // Ignore re-open attempts immediately after a close to avoid click-bounce re-anchoring
+    try {
+      if (lastClosedAt.value && Date.now() - lastClosedAt.value < CLOSE_IGNORE_MS) {
+        return;
+      }
+    } catch (e) {
+      void e;
+    }
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
     preferBelow.value = !!options?.forceBelow;
@@ -285,6 +295,11 @@ export function useFloatingPreview(opts?: {
     previewFloating.value = false;
     previewRect.value = null;
     preferBelow.value = false;
+    try {
+      lastClosedAt.value = Date.now();
+    } catch (e) {
+      void e;
+    }
   }
 
   function onFocusIn(e: FocusEvent) {
@@ -343,15 +358,23 @@ export function useFloatingPreview(opts?: {
       // immediately closing it.
       try {
         const lm = lastMouseDownTarget.value;
-        if (lm) {
-          if (lm === target) {
-            lastMouseDownTarget.value = null;
-            return;
+        // If mousedown started inside the floating wrapper, treat as an internal interaction and ignore.
+        if (lm && lm instanceof Node && wrapper && wrapper.contains(lm)) {
+          lastMouseDownTarget.value = null;
+          return;
+        }
+        // Only treat the opener buttons as special cases to ignore the immediate click
+        // (so clicking the add button that anchors the preview doesn't immediately close it).
+        try {
+          if (lm && lm instanceof Element) {
+            const opener = lm.closest('.list-add-btn, .add-task-btn, .floating-add-btn');
+            if (opener) {
+              lastMouseDownTarget.value = null;
+              return;
+            }
           }
-          if (lm instanceof Node && target instanceof Node && lm.contains(target)) {
-            lastMouseDownTarget.value = null;
-            return;
-          }
+        } catch (err) {
+          // ignore
         }
       } catch (err) {
         // ignore
@@ -376,12 +399,12 @@ export function useFloatingPreview(opts?: {
   }
 
   onMounted(() => {
-    document.addEventListener('click', onDocClick);
-    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('click', onDocClick, true);
+    document.addEventListener('mousedown', handleMouseDown, true);
   });
   onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocClick);
-    document.removeEventListener('mousedown', handleMouseDown);
+    document.removeEventListener('click', onDocClick, true);
+    document.removeEventListener('mousedown', handleMouseDown, true);
   });
 
   return {

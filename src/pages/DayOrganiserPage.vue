@@ -75,17 +75,18 @@
               :hidden-groups="hiddenGroupSummary.groups"
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
-              @task-click="onTaskClicked"
-              @task-context="handleTaskContext"
+                @task-click="onTaskClicked"
+                @task-context="handleTaskContext"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
               @toggle-status="handleToggleStatus"
+                @add-task="onInlineAdd"
             />
           </q-card>
 
           <!-- Parent-level add button to sit above list without z-index hacks -->
           <q-btn
-            v-show="!isAddButtonAnchored"
+            v-show="panelHidden || !previewFloating"
             class="list-add-btn"
             color="positive"
             unelevated
@@ -199,7 +200,7 @@
       fab
       icon="add"
       dense
-      @click="clearTaskToEdit"
+      @click="onFloatingAddClick"
       title="Add new task"
     />
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
@@ -1031,6 +1032,74 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
       }
       setPreviewFloating(null);
       panelHidden.value = false;
+    }
+  } catch (e) {
+    void e;
+  }
+}
+
+// Inline list add button — open add form in fixed panel without anchoring/floating
+async function onInlineAdd() {
+  try {
+    try {
+      api.task.active.setTask(null);
+    } catch (e) {
+      void e;
+    }
+    // ensure anchored flags are not set so mode watcher won't preserve floating
+    lastAddAnchored.value = false;
+    lastAddFromCalendar.value = false;
+
+    try {
+      api.task.active.mode.value = "add";
+    } catch (e) {
+      try {
+        if (api.task.active.setMode) api.task.active.setMode("add");
+      } catch (_err) {
+        void _err;
+      }
+    }
+
+    panelHidden.value = false;
+    // explicitly clear any floating placement so the fixed panel is used
+    try {
+      setPreviewFloating(null);
+    } catch (e) {
+      void e;
+    }
+  } catch (e) {
+    void e;
+  }
+}
+
+// Bottom-right floating button: open fixed add form (no floating)
+async function onFloatingAddClick() {
+  try {
+    try {
+      api.task.active.setTask(null);
+    } catch (e) {
+      void e;
+    }
+    // Ensure we don't preserve an anchored floating placement
+    lastAddAnchored.value = false;
+    lastAddFromCalendar.value = false;
+
+    try {
+      api.task.active.mode.value = "add";
+    } catch (e) {
+      try {
+        if (api.task.active.setMode) api.task.active.setMode("add");
+      } catch (_err) {
+        void _err;
+      }
+    }
+
+    // show the panel and explicitly clear floating placement
+    panelHidden.value = false;
+    try {
+      setPreviewFloating(null);
+    } catch (e) {
+      void e;
     }
   } catch (e) {
     void e;
