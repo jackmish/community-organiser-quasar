@@ -1,6 +1,8 @@
 <template>
-  <div class="task-list">
-    <template v-if="mergedTasks.length > 0">
+  <div class="tasks-list-wrapper">
+    <slot name="header" />
+    <div :class="['task-list', { 'with-preview': !!selectedTaskId }]">
+      <template v-if="mergedTasks.length > 0">
       <template v-for="(item, index) in mergedTasks" :key="item.id">
         <template v-if="item.__isReplenish">
           <ReplenishmentList
@@ -77,6 +79,9 @@
         </template>
       </template>
     </template>
+    </div>
+
+    <!-- Add button removed from here; parent should render the add button at a higher DOM level -->
   </div>
 </template>
 
@@ -101,6 +106,7 @@ const emit = defineEmits<{
   (e: "task-click", task: any, rect?: DOMRect | null): void;
   (e: "task-context", task: any, rect?: DOMRect | null): void;
   (e: "delete-task", id: string): void;
+  (e: "add-task"): void;
 }>();
 
 const groups = api.group.list.all;
@@ -281,6 +287,36 @@ function selectHiddenGroup(g: any) {
   padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;
+}
+
+.tasks-list-wrapper {
+  position: relative;
+}
+
+/* When a task is selected (preview/edit open) allow wider cards */
+.task-list.with-preview {
+  /* remove the fixed min width so a selected/preview card can grow wider */
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) !important;
+}
+
+/* bottom-right add button */
+.add-task-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-radius: 12px 0 0 0; /* rounded top-left only */
+  z-index: 12050;
+}
+
+/* make icon white for contrast */
+.add-task-btn .q-icon {
+  color: #fff !important;
 }
 
 /* Group label/divider styles copied from ReplenishmentList for inline grouping */

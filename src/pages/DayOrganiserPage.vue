@@ -14,7 +14,7 @@
          stays inside the fixed-right-panel as before. This avoids rendering two copies. -->
     <div v-else>
       <div class="row q-col-gutter-md tasks-row">
-        <div class="col-12 left-panel tasks-column">
+        <div class="col-12 left-panel tasks-column" style="position: relative">
           <q-card class="task-list-card">
             <q-card-section>
               <div class="text-h6 task-list-header">
@@ -82,6 +82,17 @@
               @toggle-status="handleToggleStatus"
             />
           </q-card>
+
+          <!-- Parent-level add button to sit above list without z-index hacks -->
+          <q-btn
+            class="list-add-btn"
+            color="positive"
+            unelevated
+            aria-label="Add task"
+            @click="clearTaskToEdit"
+          >
+            <q-icon name="add" />
+          </q-btn>
         </div>
       </div>
 
@@ -299,86 +310,97 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
 }
 
 async function handleTaskContext(task: any, rect?: DOMRect | null) {
+  try {
+    console.debug("[DayOrganiser] handleTaskContext start", { task, rect });
+    // Try selecting by id first so ApiTask resolves the canonical object
+    const id = task && (task.id ?? task);
     try {
-      console.debug('[DayOrganiser] handleTaskContext start', { task, rect });
-      // Try selecting by id first so ApiTask resolves the canonical object
-      const id = task && (task.id ?? task);
+      // If we can resolve the canonical object from the task list, use
+      // that immediately so form bindings point to the same instance.
+      let candidate: any = task;
       try {
-        // If we can resolve the canonical object from the task list, use
-        // that immediately so form bindings point to the same instance.
-        let candidate: any = task;
-        try {
-          const all = api.task.list.all();
-          const found = (all || []).find((t: any) => String(t.id) === String(id));
-          if (found) candidate = found;
-        } catch (e) {
-          // ignore lookup failures
-        }
-
-        // If the emitted payload was undefined but we have a bounding rect,
-        // try to resolve the task id from the DOM element at the rect center
-        // (useful when the emitter lost the item reference).
-        if ((candidate === undefined || candidate === null) && rect) {
-          try {
-            const cx = rect.left + (rect.width || 0) / 2;
-            const cy = rect.top + (rect.height || 0) / 2;
-            const el = document.elementFromPoint(cx, cy);
-            let cur: Element | null = el;
-            while (cur && !cur.hasAttribute?.('data-task-id')) cur = cur.parentElement;
-            const dataId = cur?.getAttribute?.('data-task-id') || null;
-            if (dataId) {
-              try {
-                const all = api.task.list.all();
-                const found2 = (all || []).find((t: any) => String(t.id) === String(dataId));
-                if (found2) candidate = found2;
-                else {
-                  // fallback to using dataId as id
-                  // leave candidate null so we can try id-based setTask below
-                }
-                console.debug('[DayOrganiser] handleTaskContext: resolved id from DOM', dataId, { found: !!found2 });
-              } catch (e) {
-                // ignore
-              }
-            }
-          } catch (e) {
-            // ignore DOM lookup errors
-          }
-        }
-
-        console.debug('[DayOrganiser] handleTaskContext: setting task candidate', candidate, 'id', id);
-        let setSucceeded = false;
-        try {
-          if (candidate != null) {
-            api.task.active.setTask(candidate);
-            setSucceeded = true;
-          } else if (id != null) {
-            api.task.active.setTask(id);
-            setSucceeded = true;
-          } else {
-            console.warn('[DayOrganiser] handleTaskContext: no candidate or id to set');
-          }
-        } catch (e) {
-          console.warn('[DayOrganiser] handleTaskContext: setTask failed', e);
-          setSucceeded = false;
-        }
-
-        if (setSucceeded) {
-          try {
-            api.task.active.setMode('edit');
-            panelHidden.value = false;
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        console.debug('[DayOrganiser] handleTaskContext: after setTask', {
-          activeTask: api.task.active.task.value,
-          activeMode: api.task.active.mode.value,
-          setSucceeded,
-        });
+        const all = api.task.list.all();
+        const found = (all || []).find((t: any) => String(t.id) === String(id));
+        if (found) candidate = found;
       } catch (e) {
-        void e;
+        // ignore lookup failures
       }
+
+      // If the emitted payload was undefined but we have a bounding rect,
+      // try to resolve the task id from the DOM element at the rect center
+      // (useful when the emitter lost the item reference).
+      if ((candidate === undefined || candidate === null) && rect) {
+        try {
+          const cx = rect.left + (rect.width || 0) / 2;
+          const cy = rect.top + (rect.height || 0) / 2;
+          const el = document.elementFromPoint(cx, cy);
+          let cur: Element | null = el;
+          while (cur && !cur.hasAttribute?.("data-task-id")) cur = cur.parentElement;
+          const dataId = cur?.getAttribute?.("data-task-id") || null;
+          if (dataId) {
+            try {
+              const all = api.task.list.all();
+              const found2 = (all || []).find(
+                (t: any) => String(t.id) === String(dataId)
+              );
+              if (found2) candidate = found2;
+              else {
+                // fallback to using dataId as id
+                // leave candidate null so we can try id-based setTask below
+              }
+              console.debug(
+                "[DayOrganiser] handleTaskContext: resolved id from DOM",
+                dataId,
+                { found: !!found2 }
+              );
+            } catch (e) {
+              // ignore
+            }
+          }
+        } catch (e) {
+          // ignore DOM lookup errors
+        }
+      }
+
+      console.debug(
+        "[DayOrganiser] handleTaskContext: setting task candidate",
+        candidate,
+        "id",
+        id
+      );
+      let setSucceeded = false;
+      try {
+        if (candidate != null) {
+          api.task.active.setTask(candidate);
+          setSucceeded = true;
+        } else if (id != null) {
+          api.task.active.setTask(id);
+          setSucceeded = true;
+        } else {
+          console.warn("[DayOrganiser] handleTaskContext: no candidate or id to set");
+        }
+      } catch (e) {
+        console.warn("[DayOrganiser] handleTaskContext: setTask failed", e);
+        setSucceeded = false;
+      }
+
+      if (setSucceeded) {
+        try {
+          api.task.active.setMode("edit");
+          panelHidden.value = false;
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      console.debug("[DayOrganiser] handleTaskContext: after setTask", {
+        activeTask: api.task.active.task.value,
+        activeMode: api.task.active.mode.value,
+        setSucceeded,
+      });
+    } catch (e) {
+      void e;
+    }
 
     // Wait for reactivity to settle; if active task wasn't resolved (ApiTask
     // may not have found it in `flatTasks`), try to find the canonical
@@ -969,5 +991,24 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.list-add-btn {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-radius: 30px 0 0 0;
+  border-bottom-right-radius: 8px;
+}
+.list-add-btn .q-icon {
+  color: #fff !important;
+}
+</style>
 
 <style lang="scss" src="../css/day-organiser-page.scss"></style>
