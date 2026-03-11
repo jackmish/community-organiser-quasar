@@ -65,22 +65,7 @@
                     <q-item clickable v-ripple @click="openSettings">
                       <q-item-section>Settings</q-item-section>
                     </q-item>
-                    <q-item clickable v-ripple @click="toggleTestMode">
-                      <q-item-section>{{
-                        testMode ? "Default mode" : "Test mode"
-                      }}</q-item-section>
-                    </q-item>
-                    <q-item
-                      clickable
-                      v-ripple
-                      @click="
-                        presentationActive ? stopPresentation() : startPresentation()
-                      "
-                    >
-                      <q-item-section>{{
-                        presentationActive ? "Stop presentation" : "Start presentation"
-                      }}</q-item-section>
-                    </q-item>
+
                     <q-item clickable v-ripple @click="reloadWithTestData">
                       <q-item-section>Explain CO21 features</q-item-section>
                     </q-item>
