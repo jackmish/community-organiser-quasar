@@ -60,7 +60,7 @@
                     />
                     <span>{{ prop.node.label }}</span>
                     <q-space />
-                    <q-btn
+                    <span
                       v-if="isNodeShortcut(prop.node)"
                       flat
                       dense
@@ -77,17 +77,9 @@
                         :name="prop.node.icon || 'folder'"
                         :style="{ color: prop.node.color }"
                       />
-                      <span
-                        style="
-                          max-width: 120px;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                          white-space: nowrap;
-                        "
-                        >{{ prop.node.label }}</span
-                      >
+
                       <q-tooltip>Shortcut</q-tooltip>
-                    </q-btn>
+                    </span>
                   </div>
                 </template>
               </q-tree>
@@ -131,7 +123,9 @@
           :title="`Go to ${g.name}`"
           @click.stop.prevent="onShortcutClick(g)"
           :text-color="g.textColor || g.text_color || (g.color ? '#ffffff' : 'inherit')"
-          :style="`background-color: ${g.color || 'transparent'} !important; border:1px solid ${
+          :style="`background-color: ${
+            g.color || 'transparent'
+          } !important; border:1px solid ${
             g.textColor || 'transparent'
           }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important;  box-shadow: none !important;`"
         >
@@ -147,9 +141,17 @@
           />
           <span
             :style="{
-              color: g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
+              color:
+                g.textColor ||
+                g.text_color ||
+                (g.color ? '#ffffff' : g.color || 'inherit'),
             }"
-            style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+            style="
+              max-width: 140px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            "
             >{{ g.name }}</span
           >
         </q-btn>
