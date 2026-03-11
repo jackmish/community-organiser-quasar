@@ -1,4 +1,4 @@
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 export function useFloatingPreview(opts?: {
   width?: number;
@@ -25,7 +25,13 @@ export function useFloatingPreview(opts?: {
       if (Array.isArray(path) && path.length > 0) {
         for (const n of path) {
           try {
-            if (n && n instanceof Element && n.matches && n.matches('.floating-preview-wrapper, .fixed-content.floating')) return true;
+            if (
+              n &&
+              n instanceof Element &&
+              n.matches &&
+              n.matches('.floating-preview-wrapper, .fixed-content.floating')
+            )
+              return true;
           } catch (err) {
             // ignore per-node errors
           }
@@ -33,7 +39,8 @@ export function useFloatingPreview(opts?: {
       }
       const target = (e as any).target as Node | null;
       if (target instanceof Element) {
-        if (target.closest && target.closest('.floating-preview-wrapper, .fixed-content.floating')) return true;
+        if (target.closest && target.closest('.floating-preview-wrapper, .fixed-content.floating'))
+          return true;
       }
     } catch (err) {
       // ignore
@@ -60,7 +67,7 @@ export function useFloatingPreview(opts?: {
       if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
       if (top + estimatedHeight + 16 <= vh) {
         return {
-          position: "fixed",
+          position: 'fixed',
           left: `${Math.round(left)}px`,
           top: `${Math.round(top)}px`,
           width: `${preferredWidth}px`,
@@ -74,7 +81,7 @@ export function useFloatingPreview(opts?: {
       if (left + preferredWidth + 16 <= vw) {
         if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
         return {
-          position: "fixed",
+          position: 'fixed',
           left: `${Math.round(left)}px`,
           top: `${Math.round(top)}px`,
           width: `${preferredWidth}px`,
@@ -88,7 +95,7 @@ export function useFloatingPreview(opts?: {
       if (left >= 8) {
         if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
         return {
-          position: "fixed",
+          position: 'fixed',
           left: `${Math.round(left)}px`,
           top: `${Math.round(top)}px`,
           width: `${preferredWidth}px`,
@@ -101,7 +108,7 @@ export function useFloatingPreview(opts?: {
       if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
       top = Math.max(8, rect.top - estimatedHeight - 8);
       return {
-        position: "fixed",
+        position: 'fixed',
         left: `${Math.round(left)}px`,
         top: `${Math.round(top)}px`,
         width: `${preferredWidth}px`,
@@ -124,7 +131,7 @@ export function useFloatingPreview(opts?: {
         desiredTop = Math.max(8, vh - estimatedHeight - 16);
       if (desiredTop < 8) desiredTop = 8;
       return {
-        position: "fixed",
+        position: 'fixed',
         left: `${Math.round(left)}px`,
         top: `${Math.round(desiredTop)}px`,
         width: `${preferredWidth}px`,
@@ -138,7 +145,7 @@ export function useFloatingPreview(opts?: {
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     if (top + estimatedHeight + 16 <= vh) {
       return {
-        position: "fixed",
+        position: 'fixed',
         left: `${Math.round(left)}px`,
         top: `${Math.round(top)}px`,
         width: `${preferredWidth}px`,
@@ -152,7 +159,7 @@ export function useFloatingPreview(opts?: {
     if (left >= 8) {
       if (top + estimatedHeight + 16 > vh) top = Math.max(8, vh - estimatedHeight - 16);
       return {
-        position: "fixed",
+        position: 'fixed',
         left: `${Math.round(left)}px`,
         top: `${Math.round(top)}px`,
         width: `${preferredWidth}px`,
@@ -165,7 +172,7 @@ export function useFloatingPreview(opts?: {
     if (left + preferredWidth + 16 > vw) left = Math.max(8, vw - preferredWidth - 16);
     top = Math.max(8, rect.top - estimatedHeight - 8);
     return {
-      position: "fixed",
+      position: 'fixed',
       left: `${Math.round(left)}px`,
       top: `${Math.round(top)}px`,
       width: `${preferredWidth}px`,
@@ -177,13 +184,104 @@ export function useFloatingPreview(opts?: {
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
     preferBelow.value = !!options?.forceBelow;
+    try {
+      if (!rect) {
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug('[useFloatingPreview] setFloating: clearing floating', {
+            stack: new Error().stack?.split('\n').slice(1, 6),
+          });
+        }
+      } else {
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug('[useFloatingPreview] setFloating: anchoring to rect', rect);
+        }
+      }
+    } catch (e) {
+      void e;
+    }
     // No timing protections — rely on mousedown-origin and focus checks
     if (!previewFloating.value) {
       preferBelow.value = false;
     }
   }
 
+  // Resolve a DOMRect from a variety of target shapes: Event, Element, selector, DOMRect, or simple coords.
+  function resolveRect(target?: any): DOMRect | null {
+    try {
+      // Debugging: helpful when anchoring unexpectedly fails
+      // Keep lightweight in production: only log when console.debug is available
+      try {
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug('[useFloatingPreview] resolveRect called with', target);
+        }
+      } catch (e) {
+        void e;
+      }
+      if (!target) return null;
+      // Already a DOMRect-like object
+      if (
+        typeof target.left === 'number' &&
+        typeof target.top === 'number' &&
+        typeof target.width === 'number'
+      ) {
+        return new DOMRect(target.left, target.top, target.width, target.height || 0);
+      }
+      // If a selector string, query the DOM
+      if (typeof target === 'string') {
+        const el = document.querySelector(target);
+        if (el instanceof Element) return el.getBoundingClientRect();
+        return null;
+      }
+      // If an Event, prefer currentTarget then target
+      if (target instanceof Event) {
+        const ct = (target as any).currentTarget as Element | null;
+        if (ct && ct.getBoundingClientRect) return ct.getBoundingClientRect();
+        const t = (target as any).target as Element | null;
+        if (t && t.getBoundingClientRect) return t.getBoundingClientRect();
+        return null;
+      }
+      // If an Element
+      if (target instanceof Element) {
+        if (target.getBoundingClientRect) return target.getBoundingClientRect();
+        return null;
+      }
+      // If plain coordinates {x,y,width,height} or {left,top}
+      if (typeof target.x === 'number' && typeof target.y === 'number') {
+        return new DOMRect(target.x, target.y, target.width || 0, target.height || 0);
+      }
+      if (typeof target.clientX === 'number' && typeof target.clientY === 'number') {
+        // MouseEvent-like
+        return new DOMRect(target.clientX, target.clientY, 0, 0);
+      }
+    } catch (e) {
+      // ignore and return null
+    }
+    return null;
+  }
+
+  function anchorTo(target?: any, options?: { forceBelow?: boolean }) {
+    const rect = resolveRect(target);
+    try {
+      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+        console.debug('[useFloatingPreview] anchorTo', { target, rect, options });
+      }
+    } catch (e) {
+      void e;
+    }
+    setFloating(rect, options);
+    return rect;
+  }
+
   function closeFloatingPreview() {
+    try {
+      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+        console.debug('[useFloatingPreview] closeFloatingPreview called', {
+          stack: new Error().stack?.split('\n').slice(1, 6),
+        });
+      }
+    } catch (e) {
+      void e;
+    }
     previewFloating.value = false;
     previewRect.value = null;
     preferBelow.value = false;
@@ -192,7 +290,8 @@ export function useFloatingPreview(opts?: {
   function onFocusIn(e: FocusEvent) {
     try {
       const wrapper =
-        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+        document.querySelector('.floating-preview-wrapper') ||
+        document.querySelector('.fixed-content.floating');
       const target = e.target as Node | null;
       if (wrapper && target && target instanceof Node && wrapper.contains(target)) {
         focusInsideWrapper.value = true;
@@ -205,7 +304,8 @@ export function useFloatingPreview(opts?: {
   function onFocusOut(e: FocusEvent) {
     try {
       const wrapper =
-        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+        document.querySelector('.floating-preview-wrapper') ||
+        document.querySelector('.fixed-content.floating');
       const related = (e as any).relatedTarget as Node | null;
       if (wrapper && related && related instanceof Node && wrapper.contains(related)) return;
       focusInsideWrapper.value = false;
@@ -225,7 +325,8 @@ export function useFloatingPreview(opts?: {
       // If the click (or its composed event path) is inside the wrapper, ignore.
       if (eventInsideWrapper(e)) return;
       const getWrapper = () =>
-        document.querySelector('.floating-preview-wrapper') || document.querySelector('.fixed-content.floating');
+        document.querySelector('.floating-preview-wrapper') ||
+        document.querySelector('.fixed-content.floating');
       const wrapper = getWrapper();
       if (!wrapper) {
         closeFloatingPreview();
@@ -236,6 +337,25 @@ export function useFloatingPreview(opts?: {
         closeFloatingPreview();
         return;
       }
+      // If the most recent mousedown originated from the same node (or a child),
+      // treat this click as the opener and ignore it so the opener's click
+      // handler can anchor the floating preview without the document click
+      // immediately closing it.
+      try {
+        const lm = lastMouseDownTarget.value;
+        if (lm) {
+          if (lm === target) {
+            lastMouseDownTarget.value = null;
+            return;
+          }
+          if (lm instanceof Node && target instanceof Node && lm.contains(target)) {
+            lastMouseDownTarget.value = null;
+            return;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
       // If the event target is inside the floating wrapper, ignore.
       if (target instanceof Node && wrapper.contains(target)) return;
       // If an input inside the wrapper currently has focus (typing), do not close.
@@ -245,7 +365,8 @@ export function useFloatingPreview(opts?: {
       } catch (err) {
         // ignore
       }
-      if (opts?.shouldIgnoreClick && (target instanceof Node) && opts.shouldIgnoreClick(target)) return;
+      if (opts?.shouldIgnoreClick && target instanceof Node && opts.shouldIgnoreClick(target))
+        return;
       // Close and clear any leftover state
       lastMouseDownTarget.value = null;
       closeFloatingPreview();
@@ -255,12 +376,12 @@ export function useFloatingPreview(opts?: {
   }
 
   onMounted(() => {
-    document.addEventListener("click", onDocClick);
-    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('mousedown', handleMouseDown);
   });
   onBeforeUnmount(() => {
-    document.removeEventListener("click", onDocClick);
-    document.removeEventListener("mousedown", handleMouseDown);
+    document.removeEventListener('click', onDocClick);
+    document.removeEventListener('mousedown', handleMouseDown);
   });
 
   return {
@@ -269,6 +390,6 @@ export function useFloatingPreview(opts?: {
     setFloating,
     closeFloatingPreview,
     computePreviewStyle,
+    anchorTo,
   } as const;
-
 }

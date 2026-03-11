@@ -89,7 +89,7 @@
             color="positive"
             unelevated
             aria-label="Add task"
-            @click="clearTaskToEdit"
+            @click="onListAdd"
           >
             <q-icon name="add" />
           </q-btn>
@@ -298,10 +298,28 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
         else newRect = rect ?? null;
         setPreviewFloating(newRect, { forceBelow: true });
       } catch (e) {
-        setPreviewFloating(rect, { forceBelow: true });
+          // Prefer below placement for add-button anchored floating form by passing { forceBelow: true } to setPreviewFloating.
+          // Use universal anchor helper when available.
+          try {
+            // If composable exported `anchorTo`, prefer it; fall back to setPreviewFloating
+            const maybeAnchor = (useFloatingPreview as any).__anchorTo;
+            if (typeof maybeAnchor === 'function') {
+              // not used: maintain compatibility
+            }
+          } catch (e) {
+            void e;
+          }
+          setPreviewFloating(rect, { forceBelow: true });
       }
     } else {
       // clear floating placement
+      try {
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug('[DayOrganiser] clearing floating in onTaskClicked (no rect)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
+        }
+      } catch (e) {
+        void e;
+      }
       setPreviewFloating(null);
     }
   } catch (e) {
@@ -677,8 +695,18 @@ watch(
         if (lastAddFromCalendar.value) {
           // allow calendar-initiated add to keep its floating placement, then reset flag
           lastAddFromCalendar.value = false;
+        } else if (lastAddAnchored.value) {
+          // anchored add (button/list) — consume the flag and keep placement
+          lastAddAnchored.value = false;
         } else {
           // reset floating preview to default
+          try {
+            if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+              console.debug('[DayOrganiser] clearing floating in mode watcher (mode=add)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
+            }
+          } catch (e) {
+            void e;
+          }
           try {
             setPreviewFloating(null);
           } catch (e) {
@@ -809,6 +837,7 @@ const {
   previewFloating,
   previewRect,
   setFloating: setPreviewFloating,
+  anchorTo: anchorTo,
   closeFloatingPreview,
   computePreviewStyle,
 } = useFloatingPreview({
@@ -826,7 +855,82 @@ const {
   },
 });
 
+// Ensure `.fixed-content` receives the `floating` class when previewFloating changes.
+// This is a defensive fallback for cases where template reactivity or scoped styles
+// prevent the class from being applied as expected in the DOM inspector.
+watch(
+  previewFloating,
+  (val) => {
+    try {
+      const el = document.querySelector('.fixed-right-panel .fixed-content');
+      if (!el) return;
+      if (val) el.classList.add('floating');
+      else el.classList.remove('floating');
+    } catch (e) {
+      void e;
+    }
+  },
+  { immediate: false }
+);
+
 const lastAddFromCalendar = ref(false);
+const lastAddAnchored = ref(false);
+
+async function onListAdd(evt?: Event, go?: any) {
+  try {
+    // clear any active task so the form opens in 'add' mode
+    try {
+      api.task.active.setTask(null);
+    } catch (e) {
+      void e;
+    }
+    // Indicate this 'add' was initiated from the anchored button so the
+    // mode watcher does not clear the floating placement immediately.
+    lastAddAnchored.value = true;
+    try {
+      api.task.active.mode.value = "add";
+    } catch (e) {
+      try {
+        if (api.task.active.setMode) api.task.active.setMode("add");
+      } catch (_err) {
+        void _err;
+      }
+    }
+
+    // compute anchor element from event or fallback selector, then anchor
+    let el: Element | null = null;
+    try {
+      if (evt && (evt.currentTarget as Element)) el = evt.currentTarget as Element;
+      if (!el) el = document.querySelector('.list-add-btn');
+    } catch (e) {
+      void e;
+    }
+
+    panelHidden.value = false;
+      try {
+      if (anchorTo) {
+        anchorTo(el || '.list-add-btn', { forceBelow: true });
+      } else {
+        // fallback
+        let rect: DOMRect | null = null;
+        if (el && el.getBoundingClientRect) rect = el.getBoundingClientRect();
+        setPreviewFloating(rect, { forceBelow: true });
+      }
+      // debug: log current preview state
+      try {
+        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+          console.debug('[DayOrganiser] previewFloating', previewFloating?.value, 'previewRect', previewRect?.value);
+        }
+      } catch (e) {
+        void e;
+      }
+    } catch (e) {
+      void e;
+    }
+  } catch (e) {
+    void e;
+  }
+}
 
 async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
   try {
@@ -883,11 +987,18 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
         setPreviewFloating(payload.rect);
         panelHidden.value = false;
       }
-    } else {
-      // No rect provided => ensure default placement
-      setPreviewFloating(null);
-      panelHidden.value = false;
-    }
+      } else {
+        // No rect provided => ensure default placement
+        try {
+          if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+            console.debug('[DayOrganiser] clearing floating in onCalendarDayClick (no rect)', { stack: (new Error()).stack?.split('\n').slice(1,6) });
+          }
+        } catch (e) {
+          void e;
+        }
+        setPreviewFloating(null);
+        panelHidden.value = false;
+      }
   } catch (e) {
     void e;
   }
