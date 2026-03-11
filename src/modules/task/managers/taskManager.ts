@@ -446,7 +446,7 @@ export const applyActiveSelection = (
   activeModeRef: Ref<'add' | 'edit' | 'preview'>,
   payload: string | number | Task | null,
 ) => {
-  console.debug('[taskManager] applyActiveSelection: called with active Task', activeTaskRef);
+  // applyActiveSelection called
   if (!activeTaskRef || !activeModeRef) return;
   try {
     // Treat only `null` or `undefined` as request to clear selection.
@@ -468,10 +468,10 @@ export const applyActiveSelection = (
       // (e.g. right-click handlers) will resolve the canonical task object
       // even when `flatTasks` wasn't populated yet.
       let found: Task | null = null;
-      console.log('[taskManager] applyActiveSelection: looking for task id', id);
+      // looking for task id
       try {
         found = flatTasks.value.find((t) => String(t.id) === id) || null;
-        if (found) console.debug('[taskManager] applyActiveSelection: found in flatTasks', id);
+        // found in flatTasks
       } catch (e) {
         found = null;
       }
@@ -479,7 +479,7 @@ export const applyActiveSelection = (
         try {
           const all = getAll(currentTimeApi) || [];
           found = (all || []).find((t) => String(t.id) === id) || null;
-          if (found) console.debug('[taskManager] applyActiveSelection: found in getAll()', id);
+          // found in getAll()
         } catch (e) {
           found = null;
         }
@@ -497,7 +497,7 @@ export const applyActiveSelection = (
             const f = d.tasks.find((t: any) => String(t.id) === id);
             if (f) {
               found = f || null;
-              console.debug('[taskManager] applyActiveSelection: found in days map', id, dKey);
+              // found in days map
               break;
             }
           }
@@ -508,11 +508,11 @@ export const applyActiveSelection = (
       if (found) {
         activeTaskRef.value = found;
         activeModeRef.value = 'edit';
-        console.debug('[taskManager] applyActiveSelection: set active task', String(found.id));
+        // set active task
       } else {
         activeTaskRef.value = null;
         activeModeRef.value = 'add';
-        console.debug('[taskManager] applyActiveSelection: task not found, set to add', id);
+        // task not found, set to add
       }
       return;
     }

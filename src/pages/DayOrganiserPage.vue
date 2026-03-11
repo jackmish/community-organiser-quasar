@@ -315,15 +315,7 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
       }
     } else {
       // clear floating placement
-      try {
-        if (typeof console !== "undefined" && typeof console.debug === "function") {
-          console.debug("[DayOrganiser] clearing floating in onTaskClicked (no rect)", {
-            stack: new Error().stack?.split("\n").slice(1, 6),
-          });
-        }
-      } catch (e) {
-        void e;
-      }
+      // clear floating placement
       setPreviewFloating(null);
     }
   } catch (e) {
@@ -333,7 +325,7 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
 
 async function handleTaskContext(task: any, rect?: DOMRect | null) {
   try {
-    console.debug("[DayOrganiser] handleTaskContext start", { task, rect });
+    // handleTaskContext start
     // Try selecting by id first so ApiTask resolves the canonical object
     const id = task && (task.id ?? task);
     try {
@@ -370,11 +362,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
                 // fallback to using dataId as id
                 // leave candidate null so we can try id-based setTask below
               }
-              console.debug(
-                "[DayOrganiser] handleTaskContext: resolved id from DOM",
-                dataId,
-                { found: !!found2 }
-              );
+              // resolved id from DOM: dataId
             } catch (e) {
               // ignore
             }
@@ -384,12 +372,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
         }
       }
 
-      console.debug(
-        "[DayOrganiser] handleTaskContext: setting task candidate",
-        candidate,
-        "id",
-        id
-      );
+      // setting task candidate
       let setSucceeded = false;
       try {
         if (candidate != null) {
@@ -399,10 +382,9 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
           api.task.active.setTask(id);
           setSucceeded = true;
         } else {
-          console.warn("[DayOrganiser] handleTaskContext: no candidate or id to set");
+          // no candidate or id to set
         }
       } catch (e) {
-        console.warn("[DayOrganiser] handleTaskContext: setTask failed", e);
         setSucceeded = false;
       }
 
@@ -415,11 +397,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
         }
       }
 
-      console.debug("[DayOrganiser] handleTaskContext: after setTask", {
-        activeTask: api.task.active.task.value,
-        activeMode: api.task.active.mode.value,
-        setSucceeded,
-      });
+      // after setTask
     } catch (e) {
       void e;
     }
@@ -705,12 +683,7 @@ watch(
         } else {
           // reset floating preview to default
           try {
-            if (typeof console !== "undefined" && typeof console.debug === "function") {
-              console.debug(
-                "[DayOrganiser] clearing floating in mode watcher (mode=add)",
-                { stack: new Error().stack?.split("\n").slice(1, 6) }
-              );
-            }
+            // clearing floating in mode watcher (mode=add)
           } catch (e) {
             void e;
           }
@@ -942,19 +915,7 @@ async function onListAdd(evt?: Event, go?: any) {
         if (el && el.getBoundingClientRect) rect = el.getBoundingClientRect();
         setPreviewFloating(rect, { forceBelow: true });
       }
-      // debug: log current preview state
-      try {
-        if (typeof console !== "undefined" && typeof console.debug === "function") {
-          console.debug(
-            "[DayOrganiser] previewFloating",
-            previewFloating?.value,
-            "previewRect",
-            previewRect?.value
-          );
-        }
-      } catch (e) {
-        void e;
-      }
+      // preview state updated
     } catch (e) {
       void e;
     }
@@ -1020,16 +981,7 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
       }
     } else {
       // No rect provided => ensure default placement
-      try {
-        if (typeof console !== "undefined" && typeof console.debug === "function") {
-          console.debug(
-            "[DayOrganiser] clearing floating in onCalendarDayClick (no rect)",
-            { stack: new Error().stack?.split("\n").slice(1, 6) }
-          );
-        }
-      } catch (e) {
-        void e;
-      }
+      // No rect provided => clear floating
       setPreviewFloating(null);
       panelHidden.value = false;
     }

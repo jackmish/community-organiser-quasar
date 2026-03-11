@@ -464,7 +464,7 @@ const tableWrapper = ref<HTMLElement | null>(null);
 const monthEdges = ref<Array<[HTMLElement, HTMLElement]>>([]);
 
 function collectMonthEdges() {
-  console.log("collectMonthEdges -> start");
+  // collectMonthEdges start
   monthEdges.value = [];
   const rootNode: ParentNode = tableWrapper.value ?? document;
   const nodeList = rootNode.querySelectorAll<HTMLTableCellElement>("td.calendar-cell");
@@ -484,18 +484,7 @@ function collectMonthEdges() {
   for (const [, arr] of map.entries()) {
     if (arr.length) monthEdges.value.push([arr[0]!, arr[arr.length - 1]!]);
   }
-  try {
-    console.log(
-      "collectMonthEdges ->",
-      monthEdges.value.map(([b, e]) => [b.dataset?.day, e.dataset?.day])
-    );
-  } catch (e) {
-    // ignore
-  }
-  console.log("collectMonthEdges -> done", {
-    cells: cells.length,
-    months: monthEdges.value.length,
-  });
+  // collectMonthEdges result available in monthEdges.value
 }
 
 onMounted(() => {

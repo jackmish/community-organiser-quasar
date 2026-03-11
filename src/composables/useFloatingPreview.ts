@@ -194,21 +194,7 @@ export function useFloatingPreview(opts?: {
     previewRect.value = rect ?? null;
     previewFloating.value = !!rect;
     preferBelow.value = !!options?.forceBelow;
-    try {
-      if (!rect) {
-        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-          console.debug('[useFloatingPreview] setFloating: clearing floating', {
-            stack: new Error().stack?.split('\n').slice(1, 6),
-          });
-        }
-      } else {
-        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-          console.debug('[useFloatingPreview] setFloating: anchoring to rect', rect);
-        }
-      }
-    } catch (e) {
-      void e;
-    }
+    // setFloating updated
     // No timing protections — rely on mousedown-origin and focus checks
     if (!previewFloating.value) {
       preferBelow.value = false;
@@ -218,15 +204,7 @@ export function useFloatingPreview(opts?: {
   // Resolve a DOMRect from a variety of target shapes: Event, Element, selector, DOMRect, or simple coords.
   function resolveRect(target?: any): DOMRect | null {
     try {
-      // Debugging: helpful when anchoring unexpectedly fails
-      // Keep lightweight in production: only log when console.debug is available
-      try {
-        if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-          console.debug('[useFloatingPreview] resolveRect called with', target);
-        }
-      } catch (e) {
-        void e;
-      }
+      // resolveRect called
       if (!target) return null;
       // Already a DOMRect-like object
       if (
@@ -271,27 +249,13 @@ export function useFloatingPreview(opts?: {
 
   function anchorTo(target?: any, options?: { forceBelow?: boolean }) {
     const rect = resolveRect(target);
-    try {
-      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-        console.debug('[useFloatingPreview] anchorTo', { target, rect, options });
-      }
-    } catch (e) {
-      void e;
-    }
+    // anchorTo called
     setFloating(rect, options);
     return rect;
   }
 
   function closeFloatingPreview() {
-    try {
-      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-        console.debug('[useFloatingPreview] closeFloatingPreview called', {
-          stack: new Error().stack?.split('\n').slice(1, 6),
-        });
-      }
-    } catch (e) {
-      void e;
-    }
+    // closeFloatingPreview called
     previewFloating.value = false;
     previewRect.value = null;
     preferBelow.value = false;
