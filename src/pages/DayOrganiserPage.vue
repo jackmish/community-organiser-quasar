@@ -64,6 +64,7 @@
               <Watermark
                 :active-group="api.group.active.activeGroup"
                 :color="watermarkTextColor"
+                size="large"
               />
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
@@ -866,11 +867,18 @@ const cardStyle = computed(() => ({
 
 const watermarkTextColor = computed(() => {
   try {
-    // derive from the header/text contrast color and apply transparency
-    const textHex = getContrastColor(activeGroupColor.value || "#1976d2");
+    // Use explicit group text color when available, otherwise fall back to contrast color
+    const ag = api.group.active.activeGroup?.value;
+    const gid = ag && typeof ag === "object" ? ag.value : ag;
+    let textHex = getContrastColor(activeGroupColor.value || "#1976d2");
+    if (gid) {
+      const g = api.group.list.all.value.find((x: any) => String(x.id) === String(gid));
+      const explicit = g?.textColor ?? g?.text_color ?? null;
+      if (explicit) textHex = explicit;
+    }
     const rgb = hexToRgb(String(textHex));
     if (!rgb) return "rgba(0,0,0,0.1)";
-    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`;
   } catch (e) {
     return "rgba(0,0,0,0.1)";
   }
