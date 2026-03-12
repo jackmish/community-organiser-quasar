@@ -285,3 +285,11 @@ $sep-color: $primary;
 .pagination-range-options {
   z-index: 2;
 }
+.pagination-range-options .row > * {
+  background: rgba(25, 118, 210, 1);
+  color: white;
+  padding: 15px 15px;
+}
+.pagination-range-options .visible-days-bg .q-option-group {
+  margin: 0;
+}

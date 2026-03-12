@@ -112,9 +112,11 @@
                   @pointerleave="cancelLongPressDay"
                   @click="onDayClick($event, day)"
                   @contextmenu="handleDateSelect($event, day, true)"
-                  :title="parseDay(day).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                  })"
+                  :title="
+                    parseDay(day).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                    })
+                  "
                   :class="[
                     'calendar-day-btn',
                     { 'first-day-of-month': isFirstDayOfMonth(day) },
@@ -212,21 +214,23 @@
   </div>
   <!-- Prev button and visible days per page option (moved to bottom) -->
   <div class="bottom-row row q-mb-md items-center">
-    <div class="col pagination-range-options">
+    <div class="col pagination-range-options visible-days-bg">
       <div class="row items-center q-gutter-md">
         <div class="text-subtitle2">Visible days</div>
-        <q-option-group
-          v-model="calendarViewDays"
-          :options="[
-            { label: '14 days', value: 14 },
-            { label: '42 days', value: 42 },
-            { label: '3 months', value: 84 },
-          ]"
-          color="primary"
-          inline
-          dense
-          size="xs"
-        />
+        <div class="">
+          <q-option-group
+            v-model="calendarViewDays"
+            :options="[
+              { label: '14 days', value: 14 },
+              { label: '42 days', value: 42 },
+              { label: '3 months', value: 84 },
+            ]"
+            color="primary"
+            inline
+            dense
+            size="xs"
+          />
+        </div>
       </div>
     </div>
     <div class="col text-right">
