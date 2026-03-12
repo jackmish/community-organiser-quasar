@@ -96,7 +96,7 @@ describe('deleteGroup', () => {
     expect(task.groupId).toBeUndefined();
   });
 
-  it('promotes child groups to the deleted group\'s parent (or root)', () => {
+  it("promotes child groups to the deleted group's parent (or root)", () => {
     const data: any = { groups: [], days: {} };
     const parent = addGroup(data, { name: 'Parent' });
     const mid = addGroup(data, { name: 'Mid', parentId: parent.id });
