@@ -15,9 +15,9 @@
     <div v-else>
       <div class="row q-col-gutter-md tasks-row">
         <div class="col-12 left-panel tasks-column" style="position: relative">
-          <q-card class="task-list-card">
+          <q-card class="task-list-card" :style="cardStyle">
             <q-card-section>
-              <div class="text-h6 task-list-header">
+              <div class="text-h6 task-list-header" :style="headerStyle">
                 <div
                   class="row items-center justify-between"
                   style="align-items: center; margin-top: 6px; justify-content: center"
@@ -61,7 +61,10 @@
                   </div>
                 </div>
               </div>
-              <Watermark :active-group="api.group.active.activeGroup" />
+              <Watermark
+                :active-group="api.group.active.activeGroup"
+                :color="watermarkTextColor"
+              />
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
               <p class="text-grey-6">No tasks for this day</p>
@@ -75,12 +78,12 @@
               :hidden-groups="hiddenGroupSummary.groups"
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
-                @task-click="onTaskClicked"
-                @task-context="handleTaskContext"
+              @task-click="onTaskClicked"
+              @task-context="handleTaskContext"
               @edit-task="editTask"
               @delete-task="handleDeleteTask"
               @toggle-status="handleToggleStatus"
-                @add-task="onInlineAdd"
+              @add-task="onInlineAdd"
             />
           </q-card>
 
@@ -779,6 +782,100 @@ const getGroupName = (groupId?: string): string => {
   return group ? group.name : "Unknown";
 };
 
+// Color helpers: derive active group color and darker variant for card background
+function hexToRgb(hex: string) {
+  if (!hex) return null;
+  const h = hex.replace(/^#/, "");
+  const bigint = parseInt(
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h,
+    16
+  );
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return { r, g, b };
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  return (
+    "#" +
+    [r, g, b]
+      .map((v) => {
+        const s = Math.max(0, Math.min(255, Math.round(v))).toString(16);
+        return s.length === 1 ? "0" + s : s;
+      })
+      .join("")
+  );
+}
+
+function darkenHex(hex: string, amount = 0.12) {
+  try {
+    const rgb = hexToRgb(String(hex || "#1976d2"));
+    if (!rgb) return hex;
+    const r = Math.round(rgb.r * (1 - amount));
+    const g = Math.round(rgb.g * (1 - amount));
+    const b = Math.round(rgb.b * (1 - amount));
+    return rgbToHex(r, g, b);
+  } catch (e) {
+    return hex;
+  }
+}
+
+function getContrastColor(hex: string) {
+  try {
+    const rgb = hexToRgb(String(hex || "#1976d2"));
+    if (!rgb) return "#000";
+    // relative luminance
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return lum > 0.6 ? "#000" : "#fff";
+  } catch (e) {
+    return "#000";
+  }
+}
+
+const activeGroupColor = computed(() => {
+  try {
+    const ag = api.group.active.activeGroup?.value;
+    const gid = ag && typeof ag === "object" ? ag.value : ag;
+    if (!gid) return "#1976d2";
+    const g = api.group.list.all.value.find((x: any) => String(x.id) === String(gid));
+    return (g && g.color) || "#1976d2";
+  } catch (e) {
+    return "#1976d2";
+  }
+});
+
+const headerStyle = computed(() => ({
+  background: activeGroupColor.value,
+  color: getContrastColor(activeGroupColor.value),
+  padding: "6px 10px",
+  borderRadius: "6px",
+}));
+
+const cardStyle = computed(() => ({
+  background: darkenHex(activeGroupColor.value, 0.12),
+}));
+
+const watermarkTextColor = computed(() => {
+  try {
+    // derive from the header/text contrast color and apply transparency
+    const textHex = getContrastColor(activeGroupColor.value || "#1976d2");
+    const rgb = hexToRgb(String(textHex));
+    if (!rgb) return "rgba(0,0,0,0.1)";
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
+  } catch (e) {
+    return "rgba(0,0,0,0.1)";
+  }
+});
+
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   setCurrentDate: api.task.time.setCurrentDate,
@@ -1144,7 +1241,10 @@ onMounted(async () => {
       void e;
     }
     try {
-      window.removeEventListener("organiser:reloaded", organiserReloadHandler as EventListener);
+      window.removeEventListener(
+        "organiser:reloaded",
+        organiserReloadHandler as EventListener
+      );
     } catch (e) {
       void e;
     }
