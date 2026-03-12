@@ -1418,8 +1418,8 @@ function getEventsForDay(day: string) {
   // callers (preview/edit) receive the specific instance date for cyclic events.
   return props.tasks
     .filter((t: any) => {
-      // Exclude plain todos from calendar events, but include Replenish and other event types
-      if (t.type_id === "Todo") return false;
+      if (t.type_id === 'Todo') return false;
+      if (t.type_id === 'Replenish') return false;
       return occursOnDay(t, day);
     })
     .map((t: any) => ({ ...t, date: day }));
