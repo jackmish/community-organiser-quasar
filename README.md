@@ -194,6 +194,8 @@ Rewriting unit tests from 0 is sometimes best option, and it could be not time s
 
 I'm going to use some external non AI tool to make some maps automaticly, or just maybe just Swagger Docs, somewhere around API's.
 
+When i was asked about apiTask name it answered it mostly looks like Pinia. I wasn't sure it was good to install it with GPT5.1 (never used Pinia before), but this time message with advantages was clear. I knew earlier just that it was popular.
+
 ### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Cloude at beginning.
 
 I am used to VS Code, so I naturally used Copilot, though I know there are other tools. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better.
