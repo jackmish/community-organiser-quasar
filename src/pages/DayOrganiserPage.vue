@@ -721,8 +721,6 @@ const {
   filteredParentOptions,
   handleTaskClick,
   filterParentTasks,
-  parseYmdLocal,
-  getTimeOffsetDaysForTask,
 } = createTaskViewHelpers({
   currentDate: api.task.time.currentDate,
   setCurrentDate: api.task.time.setCurrentDate,

@@ -264,7 +264,6 @@ import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
   priorityColors as themePriorityColors,
-  priorityDefinitions as themePriorityDefinitions,
   priorityTextColor as themePriorityTextColor,
   monthColors,
   getOverlayColorForMonth,

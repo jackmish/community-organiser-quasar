@@ -73,7 +73,6 @@ async function onDoneClick(task: any) {
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
-  priorityDefinitions as themePriorityDefinitions,
   findReplenishSet,
   getReplenishBg,
   getReplenishText,

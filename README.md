@@ -170,6 +170,22 @@ The development process can be broken into stages:
 
 ## Conclusions after using AI prompts:
 
+### Cloude Refactor
+
+One of the most important target of this project is to check if I can +- vibe code some project, just make some few suggestions to AI with 0x credits models and than use some better AI model to make code more acceptable after refactor. Im usually using Claude Sonnet 4.6 - and I'm not going to change IDE to something AI first. But maybe it would be interesting git branch.
+
+My method for this project is to use cheap GPT5.1 or other better cheap model, and refactor it after some stage of developement - last 2 times - just i've lost my patience, last time with unit tests problems.
+
+Only GPT5.1 mini was able to be good enough with VueJS emit's logic. I agree with AI its one of the most confusing thing around Vue Framework, but its a problem when you are maybe backend developer and need to fix something ASAP.
+
+Its not very bad tool for vibe code but 1 condition - patience, or alternatively compromise.
+
+Using primarely Claude does not guarantee quality. It good tool for refactor, but structure/pattern decision really matters. Its not simple choice when AI is producing code, how make more clarity for AI engine? Thats also the question but probably project map is same good for AI engines as sitemap for Google old browsing engine.
+
+I'm going to use some external non AI tool to make some maps automaticly, or just maybe just Swagger Docs, somewhere around API's.
+
+### EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Cloude at beginning.
+
 I am used to VS Code, so I naturally used Copilot, though I know there are other tools. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better.
 
 Some paid AI services performed better for code, but they also contributed to code mess in similar ways. A poor start with ChatGPT4 and attempts to adapt other AIs to that style may have caused problems.

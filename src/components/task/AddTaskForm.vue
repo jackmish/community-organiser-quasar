@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from "vue";
 import type { TaskGroup } from "src/modules/day-organiser";
-import { useQuasar, Dialog } from "quasar";
+import { useQuasar } from "quasar";
 import * as api from "src/modules/day-organiser/_apiRoot";
 import logger from "src/utils/logger";
 import { useTimeDiff } from "src/composables/useTimeDiff";
@@ -10,7 +10,6 @@ import ReplenishmentList from "./ReplenishmentList.vue";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
-  priorityDefinitions as themePriorityDefinitions,
   replenishColorSets as themeReplenishColorSets,
   getReplenishBg as themeGetReplenishBg,
   getReplenishText as themeGetReplenishText,
