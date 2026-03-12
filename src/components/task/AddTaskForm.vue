@@ -2416,4 +2416,18 @@ function onSubmit(event: Event) {
   color: inherit;
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
+
+/* Restore outline button ::before borders inside the task form.
+   app.scss globally sets .q-btn--outline::before { border-color: transparent }
+   to prevent color bleed on the group-select header buttons. Re-enable the
+   border here so type-selector, weekday and interval preset buttons show
+   their outlines when unselected. */
+::v-deep .q-btn--outline::before {
+  border-color: currentColor !important;
+}
+/* Priority buttons (.priority-btn) are kept borderless — they use a transparent
+   border placeholder to prevent layout shifts between selected/unselected. */
+::v-deep .priority-btn.q-btn--outline::before {
+  border-color: transparent !important;
+}
 </style>

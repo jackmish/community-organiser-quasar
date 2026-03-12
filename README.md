@@ -192,7 +192,7 @@ Claude Sonnet also would'nt fix unit tests after refactor, it still wants to cre
 
 Rewriting unit tests from 0 is sometimes best option, and it could be not time saving option, when GPT5.1 is primary AI model, doing "vibe code". Solution is to write unit tests after Claude Refactor not earlier.
 
-I'm going to use some external non AI tool to make some maps automaticly, or just maybe just Swagger Docs, somewhere around API's.
+I'm going to use some external non AI tool to make some maps automatically, or just maybe just Swagger Docs, somewhere around API's.
 
 When i was asked about apiTask name it answered it mostly looks like Pinia. I wasn't sure it was good to install it with GPT5.1 (never used Pinia before), but this time message with advantages was clear. I knew earlier just that it was popular.
 
