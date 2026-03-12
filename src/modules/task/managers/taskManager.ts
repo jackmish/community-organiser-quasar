@@ -1,4 +1,4 @@
-import { getCycleType, occursOnDay } from '../utlils/occursOnDay';
+import { getCycleType, occursOnDay } from '../utils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';

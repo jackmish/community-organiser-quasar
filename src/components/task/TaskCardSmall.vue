@@ -106,8 +106,8 @@ import {
   typeIcons,
   highlightIcon,
 } from "../theme";
-import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utlils/todo";
-import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utlils/occursOnDay";
+import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
+import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 
 const props = defineProps<{ item: any; selectedTaskId: string | null }>();
 const emit = defineEmits<{

@@ -17,7 +17,9 @@ import {
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
 } from "../theme";
-import { formatEventHoursDiff } from "src/modules/task/utlils/occursOnDay";
+import { formatEventHoursDiff } from "src/modules/task/utils/occursOnDay";
+import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
+import { hexToRgba } from "src/utils/colorUtils";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -150,49 +152,23 @@ const autoIncrementYear = ref(true);
 // Time type radio (Whole Day / Exact Hour)
 const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
 
-// Repeat mode for events: one-time or cyclic
-const repeatMode = ref<"oneTime" | "cyclic">("oneTime");
-const repeatOptions = [
-  { label: "One time", value: "oneTime", icon: "event" },
-  { label: "Cyclic", value: "cyclic", icon: "repeat" },
-];
-
-// When cyclic, choose period
-const repeatCycleType = ref<"dayWeek" | "interval" | "nth">("dayWeek");
-const repeatCycleOptions = [
-  { label: "Day/Week", value: "dayWeek", icon: "today" },
-  { label: "Interval", value: "interval", icon: "repeat" },
-  { label: "Nth", value: "nth", icon: "looks_one" },
-];
-
-// Weekday multi-select for day/week repeat
-const weekDayOptions = [
-  { label: "Mon", value: "mon" },
-  { label: "Tue", value: "tue" },
-  { label: "Wed", value: "wed" },
-  { label: "Thu", value: "thu" },
-  { label: "Fri", value: "fri" },
-  { label: "Sat", value: "sat" },
-  { label: "Sun", value: "sun" },
-];
-const repeatDays = ref<string[]>([]);
-// Option to quickly set an exact day-of-month (e.g. 10)
-const everyNDayOfMonth = ref<number | null>(null);
-// Interval in days for month/year cycle types (optional)
-const repeatIntervalDays = ref<number | null>(null);
-
-function checkAllDays() {
-  repeatDays.value = weekDayOptions.map((o) => o.value);
-}
-function clearDays() {
-  repeatDays.value = [];
-}
-
-function toggleDay(day: string) {
-  const idx = repeatDays.value.indexOf(day);
-  if (idx === -1) repeatDays.value = [...repeatDays.value, day];
-  else repeatDays.value = repeatDays.value.filter((d) => d !== day);
-}
+// Repeat schedule — state, payload building, and cycle-type defaults managed by composable.
+const {
+  repeatMode,
+  repeatOptions,
+  repeatCycleType,
+  repeatCycleOptions,
+  weekDayOptions,
+  repeatDays,
+  everyNDayOfMonth,
+  repeatIntervalDays,
+  checkAllDays,
+  clearDays,
+  toggleDay,
+  buildRepeatPayload,
+  loadFromTask: loadRepeatFromTask,
+  reset: resetRepeat,
+} = useRepeatSchedule({ currentEventDate: toRef(props, 'selectedDate') as any });
 
 // Local newTask state, default to today
 const today = new Date();
@@ -275,24 +251,6 @@ const modeLabel = computed(() => {
     ? "Edit thing"
     : "Preview";
 });
-
-// Convert hex like '#aabbcc' to rgba string with given alpha
-function hexToRgba(hex: string, alpha = 1) {
-  const h = hex.replace("#", "");
-  const bigint = parseInt(
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h,
-    16
-  );
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 // Mode-based accent color (creation/edit)
 const modeAccentColor = computed(() => {
@@ -737,91 +695,29 @@ watch(
         timeOffsetDays: val.timeOffsetDays == null ? 7 : val.timeOffsetDays,
         id: val.id,
       };
-      // Populate repeat-related form fields from canonical `repeat` object if present
-      try {
-        if (val.repeat && typeof val.repeat === "object") {
-          repeatMode.value = "cyclic";
-          const incomingCycle = val.repeat.cycleType || "dayWeek";
-          // Map legacy cycle names to new UI choices
-          if (incomingCycle === "month") {
-            repeatCycleType.value = "nth";
-            // If seed eventDate has a day, set it
-            try {
-              const ev = val.repeat.eventDate || val.eventDate || val.date || null;
-              if (ev) {
-                const d = new Date(ev);
-                if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
-              }
-            } catch (e) {
-              // ignore
-            }
-          } else if (incomingCycle === "other" || incomingCycle === "year") {
-            repeatCycleType.value = "interval";
-            if (typeof val.repeat.intervalDays === "number")
-              repeatIntervalDays.value = val.repeat.intervalDays;
-          } else {
-            repeatCycleType.value = incomingCycle;
-          }
-          repeatDays.value = Array.isArray(val.repeat.days) ? [...val.repeat.days] : [];
-          // load seed if present (used for interval calculations)
-          try {
-            if (val.repeat && val.repeat.eventDate) {
-              // nothing special to do here
-            }
-          } catch (e) {
-            // ignore
-          }
-          // load interval days if present
-          try {
-            if (typeof val.repeat.intervalDays === "number")
-              repeatIntervalDays.value = val.repeat.intervalDays;
-            else repeatIntervalDays.value = null;
-          } catch (e) {
-            repeatIntervalDays.value = null;
-          }
-          // Prefer eventDate from repeat seed if not set on task
-          if (!localNewTask.value.eventDate && val.repeat.eventDate) {
-            localNewTask.value.eventDate = val.repeat.eventDate;
-          }
-        } else {
-          repeatMode.value = "oneTime";
-          repeatCycleType.value = "dayWeek";
-          repeatDays.value = [];
-          everyNDayOfMonth.value = null;
-        }
-      } catch (e) {
-        repeatMode.value = "oneTime";
-        repeatCycleType.value = "dayWeek";
-        repeatDays.value = [];
-        repeatIntervalDays.value = null;
-        everyNDayOfMonth.value = null;
-      }
-      // If the incoming task has a seeded repeat/event date, prefer that saved day
+      // Load repeat state from the composable helper
+      loadRepeatFromTask(val);
+      // Fall back to saved event date for everyNDayOfMonth (covers all cycle types)
       try {
         const savedEv =
-          (val && val.repeat && (val.repeat.eventDate || val.repeat.date)) ||
+          (val.repeat && (val.repeat.eventDate || val.repeat.date)) ||
           val.eventDate ||
           val.date ||
           null;
         if (savedEv) {
-          const ds = new Date(savedEv);
-          if (!isNaN(ds.getTime())) {
-            everyNDayOfMonth.value = ds.getDate();
-          }
+          const ds = new Date(savedEv as string);
+          if (!isNaN(ds.getTime())) everyNDayOfMonth.value = ds.getDate();
         }
       } catch (e) {
         // ignore
       }
-
-      // Ensure nth/day seed is restored for edit mode if applicable (fallback)
+      // Ensure nth-day seed is set even when repeat object is absent
       try {
         if (repeatCycleType.value === "nth" && !everyNDayOfMonth.value) {
           const ev = localNewTask.value.eventDate || props.selectedDate || null;
           if (ev) {
             const d = new Date(ev);
-            if (!isNaN(d.getTime())) {
-              everyNDayOfMonth.value = d.getDate();
-            }
+            if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
           }
         }
       } catch (e) {
@@ -865,9 +761,7 @@ watch(
         timeOffsetDays: 7,
       };
       // Reset repeat inputs when clearing the form
-      repeatMode.value = "oneTime";
-      repeatCycleType.value = "dayWeek";
-      repeatDays.value = [];
+      resetRepeat();
     }
   },
   { immediate: true }
@@ -1308,35 +1202,15 @@ watch(
   }
 );
 
-// When user switches the repeat cycle type, set sensible defaults for month/year
+// Supplement composable's nth-mode handling with the actual current event day
 watch(repeatCycleType, (val) => {
-  try {
-    if (val === "interval") {
-      if (
-        !everyNDayOfMonth.value &&
-        (repeatIntervalDays.value == null || repeatIntervalDays.value === 0)
-      ) {
-        repeatIntervalDays.value = 30;
-      }
+  if (val === 'nth' && !everyNDayOfMonth.value) {
+    try {
+      const dayNum = Number(eventDateDay.value) || null;
+      if (dayNum && !isNaN(dayNum)) everyNDayOfMonth.value = dayNum;
+    } catch (e) {
+      // ignore — composable handles selectedDate fallback
     }
-    if (val === "nth") {
-      try {
-        if (!everyNDayOfMonth.value) {
-          // Prefer the current event date day, otherwise fall back to selectedDate prop
-          const dayNum = Number(eventDateDay.value) || null;
-          if (dayNum && !isNaN(dayNum)) {
-            everyNDayOfMonth.value = dayNum;
-          } else if (props.selectedDate) {
-            const parts = String(props.selectedDate).split("-");
-            if (parts.length === 3) everyNDayOfMonth.value = Number(parts[2]);
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  } catch (e) {
-    // ignore
   }
 });
 
@@ -1377,59 +1251,7 @@ function onSubmit(event: Event) {
   if (props.mode === "add") {
     const payload: any = { ...localNewTask.value };
     // Canonical repeat object
-    if (repeatMode.value === "cyclic") {
-      let outCycle = repeatCycleType.value as string;
-      const repeatObj: any = {
-        days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
-      };
-
-      if (repeatCycleType.value === "interval") {
-        if (everyNDayOfMonth.value) {
-          outCycle = "month";
-          try {
-            const base = localNewTask.value.eventDate || "";
-            const parts = base.split("-");
-            if (parts.length === 3) {
-              parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
-              repeatObj.eventDate = parts.join("-");
-            } else {
-              repeatObj.eventDate = localNewTask.value.eventDate || null;
-            }
-          } catch (e) {
-            repeatObj.eventDate = localNewTask.value.eventDate || null;
-          }
-        } else {
-          outCycle = "other";
-          if (typeof repeatIntervalDays.value === "number")
-            repeatObj.intervalDays = repeatIntervalDays.value;
-          repeatObj.eventDate = localNewTask.value.eventDate || null;
-        }
-      } else if (repeatCycleType.value === "nth") {
-        outCycle = "month";
-        try {
-          const base = localNewTask.value.eventDate || "";
-          const parts = base.split("-");
-          if (parts.length === 3 && everyNDayOfMonth.value) {
-            parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
-            repeatObj.eventDate = parts.join("-");
-          } else {
-            repeatObj.eventDate = localNewTask.value.eventDate || null;
-          }
-        } catch (e) {
-          repeatObj.eventDate = localNewTask.value.eventDate || null;
-        }
-      } else {
-        outCycle = repeatCycleType.value as string;
-        repeatObj.eventDate = localNewTask.value.eventDate || null;
-      }
-
-      payload.repeat = {
-        cycleType: outCycle,
-        ...repeatObj,
-      };
-    } else {
-      payload.repeat = null;
-    }
+    payload.repeat = buildRepeatPayload(localNewTask.value.eventDate);
     emit("add-task", payload, { preview: !stayAfterSave.value });
     // Clear the description textarea after adding the task
     localNewTask.value.description = "";
@@ -1440,61 +1262,9 @@ function onSubmit(event: Event) {
       localNewTask.value.status_id = 1;
     }
   } else {
-    // Edit mode: convert repeat form fields into canonical object before update
+    // Edit mode: build repeat payload and emit update
     const updated = { ...localNewTask.value } as any;
-    if (repeatMode.value === "cyclic") {
-      let outCycle = repeatCycleType.value as string;
-      const repeatObj: any = {
-        days: Array.isArray(repeatDays.value) ? [...repeatDays.value] : [],
-      };
-
-      if (repeatCycleType.value === "interval") {
-        if (everyNDayOfMonth.value) {
-          outCycle = "month";
-          try {
-            const base = localNewTask.value.eventDate || "";
-            const parts = base.split("-");
-            if (parts.length === 3) {
-              parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
-              repeatObj.eventDate = parts.join("-");
-            } else {
-              repeatObj.eventDate = localNewTask.value.eventDate || null;
-            }
-          } catch (e) {
-            repeatObj.eventDate = localNewTask.value.eventDate || null;
-          }
-        } else {
-          outCycle = "other";
-          if (typeof repeatIntervalDays.value === "number")
-            repeatObj.intervalDays = repeatIntervalDays.value;
-          repeatObj.eventDate = localNewTask.value.eventDate || null;
-        }
-      } else if (repeatCycleType.value === "nth") {
-        outCycle = "month";
-        try {
-          const base = localNewTask.value.eventDate || "";
-          const parts = base.split("-");
-          if (parts.length === 3 && everyNDayOfMonth.value) {
-            parts[2] = String(everyNDayOfMonth.value).padStart(2, "0");
-            repeatObj.eventDate = parts.join("-");
-          } else {
-            repeatObj.eventDate = localNewTask.value.eventDate || null;
-          }
-        } catch (e) {
-          repeatObj.eventDate = localNewTask.value.eventDate || null;
-        }
-      } else {
-        outCycle = repeatCycleType.value as string;
-        repeatObj.eventDate = localNewTask.value.eventDate || null;
-      }
-
-      updated.repeat = {
-        cycleType: outCycle,
-        ...repeatObj,
-      };
-    } else {
-      updated.repeat = null;
-    }
+    updated.repeat = buildRepeatPayload(localNewTask.value.eventDate);
     // Emit update; parent will switch to preview and clear edit selection
     emit("update-task", updated);
   }

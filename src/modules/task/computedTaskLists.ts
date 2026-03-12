@@ -4,7 +4,7 @@ import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
-} from './utlils/occursOnDay';
+} from './utils/occursOnDay';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
 

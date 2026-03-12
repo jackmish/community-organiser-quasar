@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { format } from 'date-fns';
 import { useLongPress } from 'src/composables/useLongPress';
 import type { Task } from '../day-organiser';
-import { getCycleType } from 'src/modules/task/utlils/occursOnDay';
+import { getCycleType } from 'src/modules/task/utils/occursOnDay';
 
 export function createTaskUiHandlers(args: {
   activeTask: Ref<Task | null>;

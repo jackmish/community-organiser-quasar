@@ -2,7 +2,7 @@ import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../../types';
 import type { TaskManager } from '../taskManager';
-import { getCycleType } from '../../utlils/occursOnDay';
+import { getCycleType } from '../../utils/occursOnDay';
 
 export class SubtaskLineManager {
   parsedLines: Ref<

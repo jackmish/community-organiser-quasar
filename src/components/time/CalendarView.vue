@@ -260,7 +260,7 @@ import {
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/modules/day-organiser/_apiRoot";
-import { occursOnDay, parseYmdLocal } from "src/modules/task/utlils/occursOnDay";
+import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
   priorityColors as themePriorityColors,

@@ -346,7 +346,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
   parseYmdLocal,
-} from 'src/modules/task/utlils/occursOnDay';
+} from 'src/modules/task/utils/occursOnDay';
 
 const openItemMenuId = ref<string | null>(null);
 const pendingDeleteId = ref<string | null>(null);
@@ -583,7 +583,7 @@ const getDisplayDescription = (task: any) => {
   return desc;
 };
 
-import { countTodoSubtasks, countStarredUndone } from 'src/modules/task/utlils/todo';
+import { countTodoSubtasks, countStarredUndone } from 'src/modules/task/utils/todo';
 
 const itemStyle = (task: any) => {
   if (!task) return {};

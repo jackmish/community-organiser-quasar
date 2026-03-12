@@ -245,7 +245,7 @@ import {
 import {
   formatDisplayDate,
   formatEventHoursDiff,
-} from "src/modules/task/utlils/occursOnDay";
+} from "src/modules/task/utils/occursOnDay";
 import * as api from "src/modules/day-organiser/_apiRoot";
 import type { Task } from "src/modules/task/types";
 

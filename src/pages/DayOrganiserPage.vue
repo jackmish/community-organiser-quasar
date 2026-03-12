@@ -226,11 +226,12 @@ import Watermark from "src/components/ui/Watermark.vue";
 import DoneTasksList from "../components/task/DoneTasksList.vue";
 import GroupManagementDialog from "../components/group/GroupManagementDialog.vue";
 
-import { formatDisplayDate } from "src/modules/task/utlils/occursOnDay";
+import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import TaskPreview from "../components/task/TaskPreview.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "../components/group/GroupSelectHeader.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
+import { useGroupColor } from "src/composables/useGroupColor";
 import { createLineEventHandlers } from "src/modules/task/lineEventHandlers";
 import { createTaskUiHandlers, createTaskViewHelpers } from "src/modules/task/uiHandlers";
 import { createCalendarHandlers } from "src/modules/task/calendarHandlers";
@@ -249,7 +250,7 @@ import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import * as api from "src/modules/day-organiser/_apiRoot";
 
-import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummaryFixed";
+import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 
@@ -780,106 +781,11 @@ const getGroupName = (groupId?: string): string => {
   return group ? group.name : "Unknown";
 };
 
-// Color helpers: derive active group color and darker variant for card background
-function hexToRgb(hex: string) {
-  if (!hex) return null;
-  const h = hex.replace(/^#/, "");
-  const bigint = parseInt(
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h,
-    16
-  );
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return { r, g, b };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  return (
-    "#" +
-    [r, g, b]
-      .map((v) => {
-        const s = Math.max(0, Math.min(255, Math.round(v))).toString(16);
-        return s.length === 1 ? "0" + s : s;
-      })
-      .join("")
-  );
-}
-
-function darkenHex(hex: string, amount = 0.12) {
-  try {
-    const rgb = hexToRgb(String(hex || "#1976d2"));
-    if (!rgb) return hex;
-    const r = Math.round(rgb.r * (1 - amount));
-    const g = Math.round(rgb.g * (1 - amount));
-    const b = Math.round(rgb.b * (1 - amount));
-    return rgbToHex(r, g, b);
-  } catch (e) {
-    return hex;
-  }
-}
-
-function getContrastColor(hex: string) {
-  try {
-    const rgb = hexToRgb(String(hex || "#1976d2"));
-    if (!rgb) return "#000";
-    // relative luminance
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.6 ? "#000" : "#fff";
-  } catch (e) {
-    return "#000";
-  }
-}
-
-const activeGroupColor = computed(() => {
-  try {
-    const ag = api.group.active.activeGroup?.value;
-    const gid = ag && typeof ag === "object" ? ag.value : ag;
-    if (!gid) return "#1976d2";
-    const g = api.group.list.all.value.find((x: any) => String(x.id) === String(gid));
-    return (g && g.color) || "#1976d2";
-  } catch (e) {
-    return "#1976d2";
-  }
-});
-
-const headerStyle = computed(() => ({
-  background: activeGroupColor.value,
-  color: getContrastColor(activeGroupColor.value),
-  padding: "6px 10px",
-  borderRadius: "6px",
-}));
-
-const cardStyle = computed(() => ({
-  background: darkenHex(activeGroupColor.value, 0.12),
-}));
-
-const watermarkTextColor = computed(() => {
-  try {
-    // Use explicit group text color when available, otherwise fall back to contrast color
-    const ag = api.group.active.activeGroup?.value;
-    const gid = ag && typeof ag === "object" ? ag.value : ag;
-    let textHex = getContrastColor(activeGroupColor.value || "#1976d2");
-    if (gid) {
-      const g = api.group.list.all.value.find((x: any) => String(x.id) === String(gid));
-      const explicit = g?.textColor ?? g?.text_color ?? null;
-      if (explicit) textHex = explicit;
-    }
-    const rgb = hexToRgb(String(textHex));
-    if (!rgb) return "rgba(0,0,0,0.1)";
-    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`;
-  } catch (e) {
-    return "rgba(0,0,0,0.1)";
-  }
-});
+// Color/style computeds derived from the active group
+const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(
+  api.group.list.all,
+  api.group.active.activeGroup,
+);
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({

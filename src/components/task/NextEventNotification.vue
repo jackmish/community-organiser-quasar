@@ -41,7 +41,7 @@
 import { computed, ref, onBeforeUnmount, watch, nextTick } from 'vue';
 import * as api from 'src/modules/day-organiser/_apiRoot';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
-import { occursOnDay, getCycleType } from 'src/modules/task/utlils/occursOnDay';
+import { occursOnDay, getCycleType } from 'src/modules/task/utils/occursOnDay';
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
 const timeApi = api.task.time;
