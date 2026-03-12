@@ -14,90 +14,104 @@
             justifyContent: 'space-between',
             width: '100%',
             color: getBtnTextColor(selectedOption) || 'inherit',
-            border: '1px solid ' + (getBtnTextColor(selectedOption) || 'transparent'),
-            outline: '2px solid ' + (getBtnTextColor(selectedOption) || 'transparent') + ' !important',
-            boxShadow: 'none !important'
+
+            boxShadow: 'none !important',
           }"
         >
-          <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 8px; flex: 1">
             <q-icon
               :name="selectedOption?.icon || 'folder_open'"
-              :style="'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important; fill: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important; stroke: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'"
+              :style="
+                'color: ' +
+                (getBtnTextColor(selectedOption) || 'inherit') +
+                ' !important; fill: ' +
+                (getBtnTextColor(selectedOption) || 'inherit') +
+                ' !important; stroke: ' +
+                (getBtnTextColor(selectedOption) || 'inherit') +
+                ' !important;'
+              "
             />
             <span
               :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
-              style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+              style="
+                max-width: 140px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              "
             >
-              {{ selectedOption?.label ?? 'All Groups' }}
+              {{ selectedOption?.label ?? "All Groups" }}
             </span>
           </div>
           <q-icon
             name="arrow_drop_down"
-            :style="'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'"
+            :style="
+              'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'
+            "
           />
         </q-btn>
 
-          <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
-            <q-list padding>
-              <q-item clickable v-ripple @click="onSelectAll">
-                <q-item-section>
-                  <q-icon name="folder_open" />
-                </q-item-section>
-                <q-item-section>All Groups</q-item-section>
-              </q-item>
-            </q-list>
+        <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
+          <q-list padding>
+            <q-item clickable v-ripple @click="onSelectAll">
+              <q-item-section>
+                <q-icon name="folder_open" />
+              </q-item-section>
+              <q-item-section>All Groups</q-item-section>
+            </q-item>
+          </q-list>
 
-            <q-separator />
+          <q-separator />
 
-            <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
-              <q-tree
-                :nodes="treeNodes"
-                node-key="id"
-                default-expand-all
-                :selected="selectedKeyArray"
-                @update:selected="onTreeSelect"
-              >
-                <template #default-header="prop">
-                  <div class="row items-center full-width">
+          <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
+            <q-tree
+              :nodes="treeNodes"
+              node-key="id"
+              default-expand-all
+              :selected="selectedKeyArray"
+              @update:selected="onTreeSelect"
+            >
+              <template #default-header="prop">
+                <div class="row items-center full-width">
+                  <q-icon
+                    :name="prop.node.icon || 'folder'"
+                    class="q-mr-sm"
+                    :style="{ color: prop.node.color }"
+                  />
+                  <span>{{ prop.node.label }}</span>
+                  <q-space />
+                  <span
+                    v-if="isNodeShortcut(prop.node)"
+                    flat
+                    dense
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      text-transform: none;
+                    "
+                    class="q-ml-sm"
+                    @click.stop.prevent="activateTreeShortcut(prop.node)"
+                  >
                     <q-icon
                       :name="prop.node.icon || 'folder'"
-                      class="q-mr-sm"
                       :style="{ color: prop.node.color }"
                     />
-                    <span>{{ prop.node.label }}</span>
-                    <q-space />
-                    <span
-                      v-if="isNodeShortcut(prop.node)"
-                      flat
-                      dense
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        text-transform: none;
-                      "
-                      class="q-ml-sm"
-                      @click.stop.prevent="activateTreeShortcut(prop.node)"
-                    >
-                      <q-icon
-                        :name="prop.node.icon || 'folder'"
-                        :style="{ color: prop.node.color }"
-                      />
 
-                      <q-tooltip>Shortcut</q-tooltip>
-                    </span>
-                  </div>
-                </template>
-              </q-tree>
-            </div>
+                    <q-tooltip>Shortcut</q-tooltip>
+                  </span>
+                </div>
+              </template>
+            </q-tree>
+          </div>
 
-            <q-separator />
+          <q-separator />
 
-            <q-list padding>
-              <q-item clickable v-ripple @click="openManage">
-                <q-item-section>Manage Groups...</q-item-section>
-              </q-item>
-            </q-list>
+          <q-list padding>
+            <q-item clickable v-ripple @click="openManage">
+              <q-item-section>Manage Groups...</q-item-section>
+            </q-item>
+          </q-list>
         </q-menu>
       </div>
       <q-btn
@@ -107,11 +121,18 @@
         round
         title="Go to parent group"
         @click.stop.prevent="api.group.active.goToParent"
-        :style="{ border: '1px solid ' + (getBtnTextColor(parentGroup?.value) || 'transparent'), background: 'transparent' }"
+        :style="{
+          border: '1px solid ' + (getBtnTextColor(parentGroup?.value) || 'transparent'),
+          background: 'transparent',
+        }"
       >
         <q-icon
           name="arrow_upward"
-          :style="'color: ' + (getBtnTextColor(parentGroup?.value) || 'inherit') + ' !important;'"
+          :style="
+            'color: ' +
+            (getBtnTextColor(parentGroup?.value) || 'inherit') +
+            ' !important;'
+          "
         />
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
@@ -136,7 +157,9 @@
         >
           <q-icon
             :name="g.icon || 'folder_open'"
-            :style="`color: ${getBtnTextColor(g)} !important; fill: ${getBtnTextColor(g)} !important; stroke: ${getBtnTextColor(g)} !important;`"
+            :style="`color: ${getBtnTextColor(g)} !important; fill: ${getBtnTextColor(
+              g
+            )} !important; stroke: ${getBtnTextColor(g)} !important;`"
           />
           <span
             :style="{ color: getBtnTextColor(g) }"
@@ -167,7 +190,13 @@ import * as api from "src/modules/day-organiser/_apiRoot";
 function hexToRgb(hex: string) {
   if (!hex) return null;
   const h = String(hex).replace(/^#/, "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   const bigint = parseInt(full, 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
