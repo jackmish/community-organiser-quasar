@@ -1,58 +1,9 @@
-import * as groupManager from './groupManager';
-import { getGroupsByParent as getGroupsByParentUtil, isVisibleForActive } from './groupUtils';
-import { computed, markRaw, ref } from 'vue';
-import type { ComputedRef, Ref } from 'vue';
-import { saveData } from 'src/utils/storageUtils';
+import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
-
-// ── Namespace classes ─────────────────────────────────────────────────────────
-
-class GroupList {
-  readonly all: ComputedRef<any[]>;
-  readonly tree: ComputedRef<any>;
-
-  constructor(
-    private readonly groups: Ref<any[]>,
-    private readonly activeGroup: Ref<{ label: string; value: string | null } | null>,
-  ) {
-    this.all = computed(() => groups.value || []);
-    this.tree = groupManager.createTreeComputed(groups);
-  }
-
-  getGroupsByParent(parentId?: string) {
-    return getGroupsByParentUtil(this.groups.value || [], parentId);
-  }
-
-  setGroups(arr: any[]) {
-    groupManager.setGroups(this.groups, arr);
-  }
-
-  isVisibleForActive(candidateId: any) {
-    return isVisibleForActive(this.groups.value || [], this.activeGroup.value, candidateId);
-  }
-}
-
-class GroupActive {
-  readonly activeGroup: Ref<{ label: string; value: string | null } | null>;
-  readonly parent: ComputedRef<any>;
-
-  constructor(
-    private readonly groups: Ref<any[]>,
-    activeGroupRef: Ref<{ label: string; value: string | null } | null>,
-  ) {
-    this.activeGroup = activeGroupRef;
-    this.parent = groupManager.createParentComputed(groups, activeGroupRef);
-  }
-
-  goToParent() {
-    return groupManager.goToParent(this.groups, this.activeGroup);
-  }
-
-  selectAll() {
-    this.activeGroup.value = null;
-    return null;
-  }
-}
+import { saveData } from 'src/utils/storageUtils';
+import * as groupManager from './groupManager';
+import { GroupList } from './GroupList';
+import { GroupActive } from './GroupActive';
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useGroupStore = defineStore('group', () => {

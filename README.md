@@ -200,8 +200,6 @@ Claude makes many similar mistakes - long list of errors but not so long as GPT5
 
 After refactor of some content once again task list was empty - without TODO task type, missing css button borders, and still I don't think refactor was good enough, I need to schedule some AI instructions to create important tests. Still code requires some improvements, a specially i cant love this chaos of exports, but at least files are smaller now. Singletons are ok but AI definition of everything is mostly plain object without type. It usually recommends interfaces for things which would be not redefined with some replacement/other case of usage. It made short API files so much longer and inconvenient to read.
 
-After browsing files there was recreated class - removed by my with GPT5.1. Both models are really liking time manager, but its mostly part of Task module, selection/collection methods for tasks. I'll be doing same things once again many times more.
-
 ### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Claude at beginning.
 
 I am used to VS Code, so I naturally used Copilot, though I know there are other tools. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better.
