@@ -14,7 +14,7 @@
             justifyContent: 'space-between',
             width: '100%',
             color: getBtnTextColor(selectedOption) || 'inherit',
-
+            border: '1px solid ' + (getBtnBorderColor(selectedOption) || 'transparent'),
             boxShadow: 'none !important',
           }"
         >
@@ -122,7 +122,7 @@
         title="Go to parent group"
         @click.stop.prevent="api.group.active.goToParent"
         :style="{
-          border: '1px solid ' + (getBtnTextColor(parentGroup?.value) || 'transparent'),
+          border: '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
           background: 'transparent',
         }"
       >
@@ -223,6 +223,32 @@ function getBtnTextColor(g: any) {
   return g.textColor || g.text_color || (g.color ? getContrastColor(g.color) : "inherit");
 }
 
+function rgbToHex(r: number, g: number, b: number) {
+  const toHex = (n: number) =>
+    Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function darkenHex(hex: string, amount: number) {
+  try {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    const r = Math.round(rgb.r * (1 - amount));
+    const g = Math.round(rgb.g * (1 - amount));
+    const b = Math.round(rgb.b * (1 - amount));
+    return rgbToHex(r, g, b);
+  } catch (e) {
+    return hex;
+  }
+}
+
+function getBtnBorderColor(g: any) {
+  if (!g) return "transparent";
+  const base = g.color || null;
+  if (base) return darkenHex(base, 0.35);
+  return getBtnTextColor(g) || "transparent";
+}
+
 const groups = api.group.list.all;
 const activeGroup = api.group.active.activeGroup;
 const parentGroup = api.group.active.parent;
@@ -316,8 +342,9 @@ function getShortcutStyle(g: any) {
   try {
     const baseColor = g?.color || "transparent";
     const text = getBtnTextColor(g) || "transparent";
+    const borderColor = getBtnBorderColor(g) || text;
     const isActive = isShortcutActive(g);
-    let s = `background-color: ${baseColor} !important; border:1px solid ${text}; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
+    let s = `background-color: ${baseColor} !important; border:1px solid ${borderColor}; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
     if (isActive) {
       s += ` outline: 2px dashed ${text} !important; outline-offset: 2px; pointer-events: none; cursor: default;`;
     }

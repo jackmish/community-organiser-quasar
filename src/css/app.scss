@@ -213,3 +213,23 @@ html body .q-dialog .q-card textarea::placeholder {
 
 /* Responsive overrides imported separately */
 @import 'responsive-overrides.scss';
+
+/* Override Quasar outlined button pseudo-element so it doesn't inherit
+   `currentColor` (which picks up group button text color). Make it
+   neutral by default and provide an opt-in utility class
+   `.outline-pseudo-visible` to re-enable the pseudo border when needed. */
+.q-btn--outline::before {
+  border-color: transparent !important;
+}
+
+/* Opt-in: show pseudo-element border using currentColor for buttons that
+   explicitly want it (useful for other UI elements). */
+.outline-pseudo-visible.q-btn--outline::before {
+  border: 1px solid currentColor !important;
+}
+
+/* Ensure group select header uses the explicit inline border on the element
+   rather than the pseudo-element, preventing double borders. */
+.group-select--header.q-btn--outline::before {
+  border-color: transparent !important;
+}
