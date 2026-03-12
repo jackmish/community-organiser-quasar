@@ -7,34 +7,40 @@
           dense
           outline
           class="group-select--header"
-          color="white"
-          text-color="white"
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-          "
           @click.stop.prevent="menuOpen = !menuOpen"
+          :style="{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            color: getBtnTextColor(selectedOption) || 'inherit',
+            border: '1px solid ' + (getBtnTextColor(selectedOption) || 'transparent'),
+            outline: '2px solid ' + (getBtnTextColor(selectedOption) || 'transparent') + ' !important',
+            boxShadow: 'none !important'
+          }"
         >
-          <div style="display: flex; align-items: center; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
             <q-icon
               :name="selectedOption?.icon || 'folder_open'"
-              :style="{ color: selectedOption?.color || 'inherit' }"
+              :style="'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important; fill: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important; stroke: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'"
             />
             <span
-              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
-              >{{ selectedOption?.label }}</span
+              :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
+              style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
+              {{ selectedOption?.label ?? 'All Groups' }}
+            </span>
           </div>
-          <q-icon name="arrow_drop_down" />
+          <q-icon
+            name="arrow_drop_down"
+            :style="'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'"
+          />
         </q-btn>
 
-        <q-menu v-model="menuOpen" anchor="bottom left" self="top left" :offset="[0, 6]">
-          <div style="min-width: 260px; max-height: 60vh; overflow: auto; padding: 8px">
+          <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
             <q-list padding>
               <q-item clickable v-ripple @click="onSelectAll">
-                <q-item-section avatar style="min-width: 36px">
+                <q-item-section>
                   <q-icon name="folder_open" />
                 </q-item-section>
                 <q-item-section>All Groups</q-item-section>
@@ -92,7 +98,6 @@
                 <q-item-section>Manage Groups...</q-item-section>
               </q-item>
             </q-list>
-          </div>
         </q-menu>
       </div>
       <q-btn
@@ -100,10 +105,14 @@
         flat
         dense
         round
-        icon="arrow_upward"
         title="Go to parent group"
         @click.stop.prevent="api.group.active.goToParent"
+        :style="{ border: '1px solid ' + (getBtnTextColor(parentGroup?.value) || 'transparent'), background: 'transparent' }"
       >
+        <q-icon
+          name="arrow_upward"
+          :style="'color: ' + (getBtnTextColor(parentGroup?.value) || 'inherit') + ' !important;'"
+        />
         <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
       </q-btn>
       <div
@@ -122,30 +131,15 @@
           :tabindex="isShortcutActive(g) ? -1 : 0"
           :title="`Go to ${g.name}`"
           @click.stop.prevent="onShortcutClick(g)"
-          :text-color="g.textColor || g.text_color || (g.color ? '#ffffff' : 'inherit')"
-          :style="`background-color: ${
-            g.color || 'transparent'
-          } !important; border:1px solid ${
-            g.textColor || 'transparent'
-          }; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important;  box-shadow: none !important;`"
+          :text-color="getBtnTextColor(g)"
+          :style="getShortcutStyle(g)"
         >
           <q-icon
             :name="g.icon || 'folder_open'"
-            :style="`color: ${
-              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
-            } !important; fill: ${
-              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
-            } !important; stroke: ${
-              g.textColor || g.text_color || (g.color ? '#ffffff' : g.color || 'inherit')
-            } !important;`"
+            :style="`color: ${getBtnTextColor(g)} !important; fill: ${getBtnTextColor(g)} !important; stroke: ${getBtnTextColor(g)} !important;`"
           />
           <span
-            :style="{
-              color:
-                g.textColor ||
-                g.text_color ||
-                (g.color ? '#ffffff' : g.color || 'inherit'),
-            }"
+            :style="{ color: getBtnTextColor(g) }"
             style="
               max-width: 140px;
               overflow: hidden;
@@ -168,6 +162,37 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import * as api from "src/modules/day-organiser/_apiRoot";
+
+// color helpers for button contrast
+function hexToRgb(hex: string) {
+  if (!hex) return null;
+  const h = String(hex).replace(/^#/, "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const bigint = parseInt(full, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return { r, g, b };
+}
+
+function getContrastColor(hex: string) {
+  try {
+    const rgb = hexToRgb(hex || "#1976d2");
+    if (!rgb) return "#000";
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return lum > 0.6 ? "#000" : "#fff";
+  } catch (e) {
+    return "#000";
+  }
+}
+
+function getBtnTextColor(g: any) {
+  if (!g) return "inherit";
+  return g.textColor || g.text_color || (g.color ? getContrastColor(g.color) : "inherit");
+}
 
 const groups = api.group.list.all;
 const activeGroup = api.group.active.activeGroup;
@@ -257,6 +282,21 @@ const selectedOption = computed(() => {
     return null;
   }
 });
+
+function getShortcutStyle(g: any) {
+  try {
+    const baseColor = g?.color || "transparent";
+    const text = getBtnTextColor(g) || "transparent";
+    const isActive = isShortcutActive(g);
+    let s = `background-color: ${baseColor} !important; border:1px solid ${text}; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
+    if (isActive) {
+      s += ` outline: 2px dashed ${text} !important; outline-offset: 2px; pointer-events: none; cursor: default;`;
+    }
+    return s;
+  } catch (e) {
+    return ``;
+  }
+}
 
 //converting api tree into q-tree
 const convertNode = (n: any): any => ({
@@ -470,7 +510,7 @@ function onShortcutClick(g: any) {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   outline-offset: 2px;
-  outline: 2px dashed rgb(255, 255, 255) !important;
+  outline: none;
   pointer-events: none;
   cursor: default;
 }

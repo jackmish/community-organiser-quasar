@@ -23,30 +23,27 @@
                   style="align-items: center; margin-top: 6px; justify-content: center"
                 >
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="chevron_left"
-                      @click="api.task.time.prevDay"
-                      color="primary"
-                    />
+                    <q-btn flat dense round @click="api.task.time.prevDay">
+                      <q-icon
+                        name="chevron_left"
+                        :style="'color: ' + headerStyle.color + ' !important;'"
+                      />
+                    </q-btn>
 
                     <span
                       :class="[
                         'text-weight-bold',
                         getTimeDiffClass(api.task.time.currentDate),
                       ]"
+                      :style="'color: ' + headerStyle.color + ' !important;'"
                       >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
                     >
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="chevron_right"
-                      @click="api.task.time.nextDay"
-                      color="primary"
-                    />
+                    <q-btn flat dense round @click="api.task.time.nextDay">
+                      <q-icon
+                        name="chevron_right"
+                        :style="'color: ' + headerStyle.color + ' !important;'"
+                      />
+                    </q-btn>
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div
