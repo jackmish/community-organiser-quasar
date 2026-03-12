@@ -248,7 +248,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 
 import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";

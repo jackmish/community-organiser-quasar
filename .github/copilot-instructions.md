@@ -69,7 +69,7 @@ const storage = app('storage');
 await storage?.save('groups', groupsData);
 ```
 
-- Register long-lived services in a module root (see `src/modules/day-organiser/_apiRoot.ts`):
+- Register long-lived services in a module root (see `src/modules/day-organiser/apiRoot.ts`):
 
 ```ts
 import { registerAppService } from 'src/services/appService';
@@ -80,7 +80,7 @@ registerAppService('storage', storageApi);
   Example: `useLongPress.ts` provides the press behavior used by several components.
 
 - Component → module pattern: components call public module APIs exported from `src/modules/*` rather than reaching into deep module internals.
-  Example: `import { task } from 'src/modules/day-organiser/_apiRoot';`
+  Example: `import { task } from 'src/modules/day-organiser/apiRoot';`
 
 - Tests: put unit tests under `tests/unit/` and use `tests/setup.ts` for common mocks. For Electron/Capacitor logic mock platform APIs.
 
@@ -96,7 +96,7 @@ registerAppService('storage', storageApi);
 
 - Keep this file short. Add longer examples, linting rules, and component style in `CONTRIBUTING.md` or `docs/CODING.md` and link from this file.
 
-If you want, I can now add 6–10 concrete code examples to `docs/CODING.md` and add links to specific lines in `src/services/appService.ts` and `src/modules/day-organiser/_apiRoot.ts`.
+If you want, I can now add 6–10 concrete code examples to `docs/CODING.md` and add links to specific lines in `src/services/appService.ts` and `src/modules/day-organiser/apiRoot.ts`.
 
 11. Avoid monoliths & deduplication guidance
 
@@ -114,10 +114,10 @@ rg "app\('storage'\)|useLongPress|save\(" src || true
 
 12. Quick functionality map (where things live)
 
-- Day organiser / domain root: `src/modules/day-organiser/_apiRoot.ts` — exposes `task`, `group`, `storage` APIs for components to import.
+- Day organiser / domain root: `src/modules/day-organiser/apiRoot.ts` — exposes `task`, `group`, `storage` APIs for components to import.
 - Task domain: `src/modules/task/` — task business logic and public API used by UI components.
 - Group domain: `src/modules/group/` — group hierarchy, persistence calls typically via `app('storage')`.
-- Storage: `src/modules/storage/` and `src/services/appService.ts` (storage is registered as `storage` service in `_apiRoot.ts`).
+- Storage: `src/modules/storage/` and `src/services/appService.ts` (storage is registered as `storage` service in `apiRoot.ts`).
 - UI components: `src/components/*` grouped by domain (`task/`, `group/`, `settings/`, `time/`).
 - Composables: `src/composables/` — reusable UI and behavior code (e.g., `useClock.ts`, `useLongPress.ts`).
 - Services: `src/services/` — cross-cutting services (notably `appService.ts`).

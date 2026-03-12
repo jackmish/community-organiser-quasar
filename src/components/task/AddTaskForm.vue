@@ -2,7 +2,7 @@
 import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from "vue";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 import logger from "src/utils/logger";
 import { useTimeDiff } from "src/composables/useTimeDiff";
 import CalendarView from "src/components/time/CalendarView.vue";

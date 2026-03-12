@@ -119,7 +119,7 @@ import { ref, watch, computed } from "vue";
 import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "../theme";
 
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 import GroupForm from "./GroupForm.vue";
 
 const props = defineProps<{

@@ -332,7 +332,7 @@ const openDeleteMenu = ref<string | null>(null);
 const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import * as api from 'src/modules/day-organiser/_apiRoot';
+import * as api from 'src/modules/day-organiser/apiRoot';
 const groups = api.group.list.all;
 const activeGroup = api.group.active.activeGroup;
 import {

@@ -50,7 +50,7 @@ const props = defineProps<{
   doneTasks: any[];
 }>();
 
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 
 async function onDoneClick(task: any) {
   try {

@@ -2,7 +2,7 @@ import { getCycleType, occursOnDay } from '../utils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
-import type { ApiTask } from '../_apiTask';
+import type { ApiTask } from '../apiTask';
 import { Task } from '../types';
 
 export class TaskManager {

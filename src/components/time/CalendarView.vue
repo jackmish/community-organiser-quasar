@@ -259,7 +259,7 @@ import {
 } from "vue";
 import logger from "src/utils/logger";
 import { useLongPress } from "src/composables/useLongPress";
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {

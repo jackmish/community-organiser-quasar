@@ -1,8 +1,8 @@
-import * as apiStorage from '../storage/_apiStorage';
+import * as apiStorage from '../storage/apiStorage';
 import { registerAppService } from 'src/services/appService';
 
-import * as apiTask from '../task/_apiTask';
-import * as apiGroup from '../group/_apiGroup';
+import * as apiTask from '../task/apiTask';
+import * as apiGroup from '../group/apiGroup';
 // Available APIs for external use (e.g. by components or other modules)
 export const group = apiGroup.construct() as any;
 export const task = apiTask.construct(group) as any;

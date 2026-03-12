@@ -103,7 +103,7 @@ import { Task } from "src/modules/task/types";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 
 const props = defineProps<{
   tasksWithTime: Task[];

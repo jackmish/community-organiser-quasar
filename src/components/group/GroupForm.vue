@@ -414,7 +414,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
-import * as api from "src/modules/day-organiser/_apiRoot";
+import * as api from "src/modules/day-organiser/apiRoot";
 import type { QTreeNode } from "quasar";
 
 const props = defineProps<{
