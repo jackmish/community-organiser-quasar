@@ -151,13 +151,7 @@ function getGroupIcon(groupId: any) {
 
 const mergedTasks = computed(() => {
   const out: any[] = [];
-  // preserve hidden groups sentinel
-  if (props.hiddenGroups && props.hiddenGroups.length > 0) {
-    props.hiddenGroups.forEach((g: any) => {
-      out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
-    });
-  }
-  // preserve replenish sentinel
+  // preserve replenish sentinel (keep replenish at the top)
   if (props.replenishTasks && props.replenishTasks.length > 0) {
     out.push({ __isReplenish: true, id: "replenish-card", _items: props.replenishTasks });
   }
@@ -186,7 +180,15 @@ const mergedTasks = computed(() => {
   tasks.push(...(props.tasksWithTime || []).filter(filterTask));
   tasks.push(...(props.tasksWithoutTime || []).filter(filterTask));
 
-  if (tasks.length === 0) return out;
+  // if there are no tasks, still show hidden groups and replenish card
+  if (tasks.length === 0) {
+    if (props.hiddenGroups && props.hiddenGroups.length > 0) {
+      props.hiddenGroups.forEach((g: any) => {
+        out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
+      });
+    }
+    return out;
+  }
 
   // Group tasks by resolved group id, sort items within each group, then
   // flatten groups in group-path order. This ensures tasks inside a group
@@ -275,6 +277,13 @@ const mergedTasks = computed(() => {
       (taskItem as any)._group = grpObj;
       out.push(taskItem);
     }
+  }
+
+  // append hidden groups sentinel at the end of the list
+  if (props.hiddenGroups && props.hiddenGroups.length > 0) {
+    props.hiddenGroups.forEach((g: any) => {
+      out.push({ __isHiddenGroup: true, id: `hg-${g.id}`, _group: g });
+    });
   }
 
   return out;
