@@ -387,7 +387,7 @@
         <div style="display: flex; align-items: center; gap: 8px">
           <q-checkbox
             v-model="localHideTasksInParent"
-            label="Hide tasks from parent"
+            label="In parent show only summary of tasks"
             dense
           />
         </div>
