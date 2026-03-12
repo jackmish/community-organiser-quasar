@@ -2,18 +2,6 @@
   <div>
     <!-- Quick Date Buttons and Next button (moved to top) -->
     <div class="top-row row items-center">
-      <div class="col-auto">
-        <q-btn
-          unelevated
-          icon="chevron_left"
-          label="Prev"
-          color="primary"
-          text-color="white"
-          @click="previousCalendarWeeks"
-          size="md"
-          class="calendar-nav-btn"
-        />
-      </div>
       <div class="col text-right">
         <q-btn
           unelevated
@@ -234,6 +222,17 @@
       </div>
     </div>
     <div class="col text-right">
+      <q-btn
+        unelevated
+        icon="chevron_left"
+        label="Prev"
+        color="primary"
+        text-color="white"
+        @click="previousCalendarWeeks"
+        size="md"
+        class="calendar-nav-btn"
+        style="margin-right: 8px"
+      />
       <q-btn
         unelevated
         icon-right="chevron_right"
