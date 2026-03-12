@@ -1,0 +1,178 @@
+import { describe, it, expect } from 'vitest';
+import {
+  addGroup,
+  updateGroup,
+  deleteGroup,
+  getParentForActive,
+  prepareGroupsForSave,
+} from '../../src/modules/group/groupManager';
+
+// ─── addGroup ─────────────────────────────────────────────────────────────────
+describe('addGroup', () => {
+  it('creates a group with the given name and returns it', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'Work' });
+    expect(g.name).toBe('Work');
+    expect(g.id).toBeTruthy();
+    expect(g.createdAt).toBeTruthy();
+  });
+
+  it('pushes the new group into data.groups', () => {
+    const data: any = { groups: [], days: {} };
+    addGroup(data, { name: 'Home' });
+    expect(data.groups).toHaveLength(1);
+    expect(data.groups[0].name).toBe('Home');
+  });
+
+  it('stores optional fields when provided', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'G', color: '#ff0000', icon: 'star', parentId: 'p1' });
+    expect(g.color).toBe('#ff0000');
+    expect(g.icon).toBe('star');
+    expect(g.parentId).toBe('p1');
+  });
+
+  it('also works when an array is passed instead of an organiserData object', () => {
+    const arr: any[] = [];
+    const g = addGroup(arr, { name: 'Direct' });
+    expect(arr).toHaveLength(1);
+    expect(arr[0]).toBe(g);
+  });
+
+  it('initialises data.groups when it is absent', () => {
+    const data: any = { days: {} };
+    addGroup(data, { name: 'Init' });
+    expect(Array.isArray(data.groups)).toBe(true);
+    expect(data.groups).toHaveLength(1);
+  });
+});
+
+// ─── updateGroup ─────────────────────────────────────────────────────────────
+describe('updateGroup', () => {
+  it('updates mutable fields of an existing group', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'Old Name', color: '#aaaaaa' });
+    updateGroup(data, g.id, { name: 'New Name', color: '#bbbbbb' });
+    expect(data.groups[0].name).toBe('New Name');
+    expect(data.groups[0].color).toBe('#bbbbbb');
+  });
+
+  it('throws when the group does not exist', () => {
+    const data: any = { groups: [], days: {} };
+    expect(() => updateGroup(data, 'nonexistent', { name: 'X' })).toThrow();
+  });
+});
+
+// ─── deleteGroup ─────────────────────────────────────────────────────────────
+describe('deleteGroup', () => {
+  it('removes the group from data.groups', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'ToDelete' });
+    deleteGroup(data, g.id);
+    expect(data.groups.find((x: any) => x.id === g.id)).toBeUndefined();
+  });
+
+  it('reports groupHasTasks = true when tasks reference the group', () => {
+    const data: any = { groups: [], days: { '2026-03-12': { tasks: [] } } };
+    const g = addGroup(data, { name: 'WithTask' });
+    data.days['2026-03-12'].tasks.push({ id: 't1', groupId: g.id });
+    const { groupHasTasks } = deleteGroup(data, g.id);
+    expect(groupHasTasks).toBe(true);
+  });
+
+  it('reports groupHasTasks = false when no tasks reference the group', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'Empty' });
+    const { groupHasTasks } = deleteGroup(data, g.id);
+    expect(groupHasTasks).toBe(false);
+  });
+
+  it('removes groupId from tasks that referenced the deleted group', () => {
+    const data: any = { groups: [], days: { '2026-03-12': { tasks: [] } } };
+    const g = addGroup(data, { name: 'G' });
+    const task = { id: 't1', groupId: g.id };
+    data.days['2026-03-12'].tasks.push(task);
+    deleteGroup(data, g.id);
+    expect(task.groupId).toBeUndefined();
+  });
+
+  it('promotes child groups to the deleted group\'s parent (or root)', () => {
+    const data: any = { groups: [], days: {} };
+    const parent = addGroup(data, { name: 'Parent' });
+    const mid = addGroup(data, { name: 'Mid', parentId: parent.id });
+    const child = addGroup(data, { name: 'Child', parentId: mid.id });
+
+    deleteGroup(data, mid.id);
+
+    const childInData = data.groups.find((g: any) => g.id === child.id);
+    expect(childInData).toBeTruthy();
+    // child should now point to parent (mid's parent)
+    expect(childInData.parentId).toBe(parent.id);
+  });
+});
+
+// ─── getParentForActive ───────────────────────────────────────────────────────
+describe('getParentForActive', () => {
+  it('returns the parent group for a child active id', () => {
+    const data: any = { groups: [], days: {} };
+    const parent = addGroup(data, { name: 'Parent' });
+    const child = addGroup(data, { name: 'Child', parentId: parent.id });
+
+    const result = getParentForActive(data, child.id);
+    expect(result).not.toBeNull();
+    expect(result.id).toBe(parent.id);
+  });
+
+  it('returns null when the active group has no parent (root level)', () => {
+    const data: any = { groups: [], days: {} };
+    const root = addGroup(data, { name: 'Root' });
+    expect(getParentForActive(data, root.id)).toBeNull();
+  });
+
+  it('returns null for a null active value', () => {
+    const data: any = { groups: [], days: {} };
+    expect(getParentForActive(data, null)).toBeNull();
+  });
+
+  it('accepts an active object with a value property', () => {
+    const data: any = { groups: [], days: {} };
+    const parent = addGroup(data, { name: 'P' });
+    const child = addGroup(data, { name: 'C', parentId: parent.id });
+    const result = getParentForActive(data, { label: child.name, value: child.id });
+    expect(result!.id).toBe(parent.id);
+  });
+});
+
+// ─── prepareGroupsForSave ─────────────────────────────────────────────────────
+describe('prepareGroupsForSave', () => {
+  it('attaches task arrays to each group', () => {
+    const data: any = {
+      groups: [],
+      days: { '2026-03-12': { tasks: [] } },
+    };
+    const g = addGroup(data, { name: 'G' });
+    data.days['2026-03-12'].tasks.push({ id: 't1', groupId: g.id });
+
+    const saved = prepareGroupsForSave(data);
+    const savedGroup = saved.groups.find((x: any) => x.id === g.id);
+    expect(savedGroup).toBeTruthy();
+    expect(savedGroup.tasks).toHaveLength(1);
+    expect(savedGroup.tasks[0].id).toBe('t1');
+  });
+
+  it('leaves tasks array empty for groups without any tasks', () => {
+    const data: any = { groups: [], days: {} };
+    const g = addGroup(data, { name: 'Empty' });
+    const saved = prepareGroupsForSave(data);
+    expect(saved.groups.find((x: any) => x.id === g.id).tasks).toEqual([]);
+  });
+
+  it('does not mutate the original groups array', () => {
+    const data: any = { groups: [], days: {} };
+    addGroup(data, { name: 'G' });
+    const originalRef = data.groups[0];
+    prepareGroupsForSave(data);
+    // original should not have grown a tasks field
+    expect(originalRef.tasks).toBeUndefined();
+  });
+});

@@ -6,9 +6,15 @@ The main goal of this application is to simplify organization for families and c
 
 The application is designed to work primarily offline—even in environments with no internet access—and is not constrained by the storage limits common to some PWAs that rely on servers to continue operating.
 
-The chosen name, CO21, stands for Community Organiser with the number chosen as a distinguishing element. The logo is an initial design created in Inkscape.
+I'll make some final Readme.md closer to version 0.9 of app. Now i cant even name it Early Access, a specially when im looking at "vibe code".
 
 Second reason was to check what AI/Copilot would generate without any engineering tips and refactor it later. UX development and app features were 1st, now as usual opinion "vibe code" like attempt do many mess,... but it works fine. It was hard to not show AI that for example whole app is initiating 7 times, solution also wasn't best. AI does'nt like DRY - it likes very much to repeat itself, whatever AI model it was.
+
+## Name and ideology
+
+The ideology is to make easier organisation lifes, and connect some internal devices inside house, meeting room or star-ship - without required payments / advertisments, but it could make some money for itself other ways.
+
+The chosen name, CO21, stands for Community Organiser with the number chosen as a distinguishing element. Human communities are emitting CO2 so its maybe not so bad name, but probably chemically CO21 would be toxic or neutral or just impossible atomic structure. The logo is an initial design created in Inkscape.
 
 ## Main features
 
@@ -170,7 +176,7 @@ The development process can be broken into stages:
 
 ## Conclusions after using AI prompts:
 
-### Cloude Refactor
+### NEW | Cloude Refactor
 
 One of the most important target of this project is to check if I can +- vibe code some project, just make some few suggestions to AI with 0x credits models and than use some better AI model to make code more acceptable after refactor. Im usually using Claude Sonnet 4.6 - and I'm not going to change IDE to something AI first. But maybe it would be interesting git branch.
 
@@ -182,9 +188,11 @@ Its not very bad tool for vibe code but 1 condition - patience, or alternatively
 
 Using primarely Claude does not guarantee quality. It good tool for refactor, but structure/pattern decision really matters. Its not simple choice when AI is producing code, how make more clarity for AI engine? Thats also the question but probably project map is same good for AI engines as sitemap for Google old browsing engine.
 
+Claude Sonnet also would'nt fix unit tests after refactor, it still wants to create missing files. Rewriting unit tests from 0 is sometimes best option, and it could be not time saving option, when GPT5.1 is primary AI model, doing "vibe code". Solution is to write unit tests after Cloude Refactor not earlier.
+
 I'm going to use some external non AI tool to make some maps automaticly, or just maybe just Swagger Docs, somewhere around API's.
 
-### EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Cloude at beginning.
+### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Cloude at beginning.
 
 I am used to VS Code, so I naturally used Copilot, though I know there are other tools. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better.
 
