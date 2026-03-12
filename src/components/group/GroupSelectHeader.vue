@@ -120,7 +120,7 @@
         dense
         round
         title="Go to parent group"
-        @click.stop.prevent="api.group.active.goToParent"
+        @click.stop.prevent="() => api.group.active.goToParent()"
         :style="{
           border: '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
           background: 'transparent',

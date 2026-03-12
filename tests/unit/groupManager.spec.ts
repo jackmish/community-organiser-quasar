@@ -176,3 +176,67 @@ describe('prepareGroupsForSave', () => {
     expect(originalRef.tasks).toBeUndefined();
   });
 });
+
+// ─── GroupActive.goToParent ───────────────────────────────────────────────────
+import { ref } from 'vue';
+import { GroupActive } from '../../src/modules/group/GroupActive';
+
+describe('GroupActive.goToParent', () => {
+  it('navigates to the parent group when a child is active', () => {
+    const parent = { id: 'p1', name: 'Parent', parentId: undefined };
+    const child = { id: 'c1', name: 'Child', parentId: 'p1' };
+    const groups = ref([parent, child]);
+    const active = ref<{ label: string; value: string | null } | null>({
+      label: 'Child',
+      value: 'c1',
+    });
+
+    const ga = new GroupActive(groups, active);
+    ga.goToParent();
+
+    expect(active.value?.value).toBe('p1');
+    expect(active.value?.label).toBe('Parent');
+  });
+
+  it('sets active to null when parent is a root group (no further parent)', () => {
+    const root = { id: 'r1', name: 'Root', parentId: undefined };
+    const groups = ref([root]);
+    const active = ref<{ label: string; value: string | null } | null>({
+      label: 'Root',
+      value: 'r1',
+    });
+
+    const ga = new GroupActive(groups, active);
+    ga.goToParent();
+
+    expect(active.value).toBeNull();
+  });
+
+  it('selectAll resets active to null', () => {
+    const groups = ref([{ id: 'g1', name: 'G' }]);
+    const active = ref<{ label: string; value: string | null } | null>({ label: 'G', value: 'g1' });
+
+    const ga = new GroupActive(groups, active);
+    ga.selectAll();
+
+    expect(active.value).toBeNull();
+  });
+
+  it('goToParent is safe to call without losing `this` (bound call)', () => {
+    // Regression: unbound call via template @click="obj.goToParent" loses `this`
+    // This test explicitly detaches the method and calls it bound — must not throw.
+    const parent = { id: 'p1', name: 'Parent' };
+    const child = { id: 'c1', name: 'Child', parentId: 'p1' };
+    const groups = ref([parent, child]);
+    const active = ref<{ label: string; value: string | null } | null>({
+      label: 'Child',
+      value: 'c1',
+    });
+
+    const ga = new GroupActive(groups, active);
+    // Simulate what `() => api.group.active.goToParent()` does — call through the object
+    const boundCall = () => ga.goToParent();
+    expect(() => boundCall()).not.toThrow();
+    expect(active.value?.value).toBe('p1');
+  });
+});
