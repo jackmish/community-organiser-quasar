@@ -277,26 +277,91 @@ describe('computedTaskLists — task list visibility', () => {
     expect(sortedTasks.value.some((t) => t.name === 'Hidden')).toBe(false);
   });
 
-  it('Todos from getTasksInRange are injected into today sortedTasks', () => {
+  it('Todos from getTasksInRange are injected into sortedTasks even when NOT in currentDayData (today)', () => {
+    // The old bug: Todo task stored under a different date was invisible
+    // because it never appeared in currentDayData.tasks for today.
     const oldTodo = makeTask({
       type_id: 'Todo',
-      name: 'Old Todo',
-      date: '2025-01-01',
+      name: 'Old Todo injected today',
+      date: '2025-01-01', // stored on a past date
       status_id: 1,
     });
     const apiTask = {
-      list: {
-        inRange: (_from: string, _to: string) => [oldTodo],
-      },
+      list: { inRange: (_from: string, _to: string) => [oldTodo] },
       helpers: {},
     };
     const { sortedTasks } = createTaskComputed({
-      currentDayData: ref({ tasks: [] }), // NOT in today's day data
+      currentDayData: ref({ tasks: [] }), // NOT in current day
       currentDate: ref(TODAY),
       allTasks: ref([oldTodo]),
       apiTask,
     });
-    expect(sortedTasks.value.some((t) => t.name === 'Old Todo')).toBe(true);
+    expect(sortedTasks.value.some((t) => t.name === 'Old Todo injected today')).toBe(true);
+  });
+
+  it('Todos from getTasksInRange are injected into sortedTasks when viewing a NON-today date', () => {
+    // Regression test: before the fix, injection was gated behind currentDate === todayStr,
+    // so Todos were invisible when navigating away from today.
+    const PAST_DATE = '2026-01-15';
+    const todo = makeTask({
+      type_id: 'Todo',
+      name: 'Todo on past date view',
+      date: '2025-06-01',
+      status_id: 1,
+    });
+    const apiTask = {
+      list: { inRange: (_from: string, _to: string) => [todo] },
+      helpers: {},
+    };
+    const { sortedTasks } = createTaskComputed({
+      currentDayData: ref({ tasks: [] }), // empty — Todo must come via injection
+      currentDate: ref(PAST_DATE), // viewing a non-today date
+      allTasks: ref([todo]),
+      apiTask,
+    });
+    expect(sortedTasks.value.some((t) => t.name === 'Todo on past date view')).toBe(true);
+  });
+
+  it('non-Todo tasks from getTasksInRange are NOT injected into non-today views', () => {
+    // Only Todos should be injected across dates; TimeEvents should not bleed into other days
+    const PAST_DATE = '2026-01-15';
+    const otherDayEvent = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Event on another day',
+      date: '2025-06-01',
+      status_id: 1,
+    });
+    const apiTask = {
+      list: { inRange: (_from: string, _to: string) => [otherDayEvent] },
+      helpers: {},
+    };
+    const { sortedTasks } = createTaskComputed({
+      currentDayData: ref({ tasks: [] }),
+      currentDate: ref(PAST_DATE),
+      allTasks: ref([otherDayEvent]),
+      apiTask,
+    });
+    expect(sortedTasks.value.some((t) => t.name === 'Event on another day')).toBe(false);
+  });
+
+  it('completed Todos (status_id=0) injected via getTasksInRange do NOT appear in tasksWithoutTime', () => {
+    const doneTodo = makeTask({
+      type_id: 'Todo',
+      name: 'Done injected Todo',
+      date: '2025-01-01',
+      status_id: 0,
+    });
+    const apiTask = {
+      list: { inRange: (_from: string, _to: string) => [doneTodo] },
+      helpers: {},
+    };
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([doneTodo]),
+      apiTask,
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Done injected Todo')).toBe(false);
   });
 });
 

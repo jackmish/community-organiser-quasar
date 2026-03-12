@@ -690,10 +690,10 @@ function close() {
 </script>
 
 <style scoped>
-::v-deep .gm-controls .q-icon,
-::v-deep .gm-controls .q-icon *,
-::v-deep .gm-icon-item .q-icon,
-::v-deep .gm-icon-item .q-icon * {
+:deep(.gm-controls .q-icon),
+:deep(.gm-controls .q-icon *),
+:deep(.gm-icon-item .q-icon),
+:deep(.gm-icon-item .q-icon *) {
   color: rgba(0, 0, 0, 0.87) !important;
   fill: rgba(0, 0, 0, 0.87) !important;
   -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;

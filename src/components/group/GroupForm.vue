@@ -932,18 +932,18 @@ function onCancel() {
 </script>
 
 <style scoped>
-::v-deep .gm-controls .q-icon,
-::v-deep .gm-controls .q-icon *,
-::v-deep .gm-icon-item .q-icon,
-::v-deep .gm-icon-item .q-icon * {
+:deep(.gm-controls .q-icon),
+:deep(.gm-controls .q-icon *),
+:deep(.gm-icon-item .q-icon),
+:deep(.gm-icon-item .q-icon *) {
   color: rgba(0, 0, 0, 0.87) !important;
   fill: rgba(0, 0, 0, 0.87) !important;
   -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
 }
 
 /* Ensure icons inside the larger selector tiles scale up */
-::v-deep .gm-icon-item .q-icon,
-::v-deep .gm-icon-item .q-icon * {
+:deep(.gm-icon-item .q-icon),
+:deep(.gm-icon-item .q-icon *) {
   font-size: 22px !important;
   width: 22px !important;
   height: 22px !important;
@@ -951,8 +951,8 @@ function onCancel() {
 }
 
 /* Preview icon slightly smaller than tiles */
-::v-deep .gm-icon-preview .q-icon,
-::v-deep .gm-icon-preview .q-icon * {
+:deep(.gm-icon-preview .q-icon),
+:deep(.gm-icon-preview .q-icon *) {
   font-size: 24px !important;
   width: 24px !important;
   height: 24px !important;
@@ -963,18 +963,18 @@ function onCancel() {
 .gm-icon-preview {
   --gm-text-color: #ffffff;
 }
-::v-deep .gm-icon-preview .q-icon,
-::v-deep .gm-icon-preview .q-icon * {
+:deep(.gm-icon-preview .q-icon),
+:deep(.gm-icon-preview .q-icon *) {
   color: var(--gm-text-color) !important;
   fill: var(--gm-text-color) !important;
   -webkit-text-fill-color: var(--gm-text-color) !important;
 }
 
 /* Reduce right padding inside the color/text-color inputs */
-::v-deep .gm-color-field .q-field__control {
+:deep(.gm-color-field .q-field__control) {
   padding-right: 6px !important;
 }
-::v-deep .gm-color-field .q-field__append {
+:deep(.gm-color-field .q-field__append) {
   margin-left: 6px !important;
 }
 

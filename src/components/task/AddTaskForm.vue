@@ -2155,20 +2155,20 @@ function onSubmit(event: Event) {
 }
 
 /* Ensure the inner content of type buttons is centered and stacked like before */
-::v-deep .type-btn .q-btn__content {
+:deep(.type-btn .q-btn__content) {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 2px !important;
 }
-::v-deep .type-btn .q-btn__content .q-icon {
+:deep(.type-btn .q-btn__content .q-icon) {
   margin-right: 0 !important;
   margin-top: 6px !important;
   margin-bottom: 2px !important;
   font-size: 22px !important;
 }
-::v-deep .type-btn .q-btn__label {
+:deep(.type-btn .q-btn__label) {
   font-size: 13px !important;
   line-height: 1 !important;
 }
@@ -2247,13 +2247,13 @@ function onSubmit(event: Event) {
 }
 
 /* Stack icon above label for priority buttons on md+ and center them */
-::v-deep .priority-btn .q-btn__content {
+:deep(.priority-btn .q-btn__content) {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 4px !important;
 }
-::v-deep .priority-btn .q-btn__content .q-icon {
+:deep(.priority-btn .q-btn__content .q-icon) {
   margin-right: 0 !important;
   margin-bottom: 2px !important;
 }
@@ -2322,15 +2322,15 @@ function onSubmit(event: Event) {
 }
 
 /* Use deep selectors to override Quasar internals if needed */
-::v-deep .time-toggle .q-btn__content,
-::v-deep .time-toggle .q-btn__content .q-btn__label {
+:deep(.time-toggle .q-btn__content),
+:deep(.time-toggle .q-btn__content .q-btn__label) {
   font-size: 12px !important;
   line-height: 1 !important;
   padding: 0 !important;
   text-transform: none !important;
 }
-::v-deep .time-toggle .q-btn__content .q-icon,
-::v-deep .time-toggle .q-icon {
+:deep(.time-toggle .q-btn__content .q-icon),
+:deep(.time-toggle .q-icon) {
   font-size: 18px !important;
   width: auto !important;
   height: auto !important;
@@ -2339,7 +2339,7 @@ function onSubmit(event: Event) {
 }
 
 /* Extra override: ensure no inherited margin on q-icon inside time-toggle buttons */
-::v-deep .time-toggle .q-btn__content .q-icon:not([style]) {
+:deep(.time-toggle .q-btn__content .q-icon:not([style])) {
   margin: 0 !important;
 }
 /* repeat toggle uses the same styles as .time-toggle */
@@ -2365,53 +2365,53 @@ function onSubmit(event: Event) {
 }
 
 /* Make only first and last weekday buttons rounded */
-::v-deep .weekday-row .q-btn {
+:deep(.weekday-row .q-btn) {
   border-radius: 0 !important;
 }
-::v-deep .weekday-row .q-btn:first-child {
+:deep(.weekday-row .q-btn:first-child) {
   border-top-left-radius: 6px !important;
   border-bottom-left-radius: 6px !important;
 }
-::v-deep .weekday-row .q-btn:last-child {
+:deep(.weekday-row .q-btn:last-child) {
   border-top-right-radius: 6px !important;
   border-bottom-right-radius: 6px !important;
 }
 
-::v-deep .q-btn.weekday-btn-selected,
-::v-deep button.q-btn.weekday-btn-selected,
-::v-deep .q-btn.weekday-btn-selected.q-btn--unelevated {
+:deep(.q-btn.weekday-btn-selected),
+:deep(button.q-btn.weekday-btn-selected),
+:deep(.q-btn.weekday-btn-selected.q-btn--unelevated) {
   background-color: var(--q-color-primary, #1976d2) !important;
   color: #ffffff !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
-::v-deep .q-btn.weekday-btn-selected .q-btn__content,
-::v-deep button.q-btn.weekday-btn-selected .q-btn__content {
+:deep(.q-btn.weekday-btn-selected .q-btn__content),
+:deep(button.q-btn.weekday-btn-selected .q-btn__content) {
   background-color: transparent !important;
   color: inherit !important;
 }
-::v-deep .q-btn.weekday-btn-selected .q-icon,
-::v-deep button.q-btn.weekday-btn-selected .q-icon {
+:deep(.q-btn.weekday-btn-selected .q-icon),
+:deep(button.q-btn.weekday-btn-selected .q-icon) {
   color: inherit !important;
 }
 
 /* Ensure form inputs have a white background within this component */
-::v-deep .q-field__control {
+:deep(.q-field__control) {
   background: #ffffff !important;
   border-radius: 6px !important;
 }
 
 /* Ensure textarea/input elements inherit white background for readability */
-::v-deep textarea,
-::v-deep input {
+:deep(textarea),
+:deep(input) {
   background: transparent !important;
 }
 
 /* Make radio-like buttons (btn-toggles and priority/type buttons) use white background by default when NOT active.
    Do not use !important so active/selected rules can override this default. */
-::v-deep .q-btn-toggle .q-btn:not(.q-btn--active),
-::v-deep .time-toggle .q-btn:not(.q-btn--active),
-::v-deep .priority-btn.q-btn:not(.q-btn--active) {
+:deep(.q-btn-toggle .q-btn:not(.q-btn--active)),
+:deep(.time-toggle .q-btn:not(.q-btn--active)),
+:deep(.priority-btn.q-btn:not(.q-btn--active)) {
   background: #ffffff;
   color: inherit;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -2422,12 +2422,12 @@ function onSubmit(event: Event) {
    to prevent color bleed on the group-select header buttons. Re-enable the
    border here so type-selector, weekday and interval preset buttons show
    their outlines when unselected. */
-::v-deep .q-btn--outline::before {
+:deep(.q-btn--outline::before) {
   border-color: currentColor !important;
 }
 /* Priority buttons (.priority-btn) are kept borderless — they use a transparent
    border placeholder to prevent layout shifts between selected/unselected. */
-::v-deep .priority-btn.q-btn--outline::before {
+:deep(.priority-btn.q-btn--outline::before) {
   border-color: transparent !important;
 }
 </style>

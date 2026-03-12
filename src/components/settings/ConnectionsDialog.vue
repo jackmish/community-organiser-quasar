@@ -674,21 +674,21 @@ async function connectDevice(d: any) {
 <style scoped></style>
 
 <style scoped>
-::v-deep .connections-menu {
+:deep(.connections-menu) {
   z-index: 20020 !important;
 }
-::v-deep .connections-menu .q-menu__content {
+:deep(.connections-menu .q-menu__content) {
   z-index: 20020 !important;
 }
 
 /* Force readable popup background and text color in case global theme overrides them */
-::v-deep .connections-menu > div {
+:deep(.connections-menu > div) {
   background: var(--q-popup-bg, #ffffff) !important;
   color: var(--q-default-text, #000000) !important;
   -webkit-font-smoothing: antialiased;
 }
-::v-deep .connections-menu .q-item,
-::v-deep .connections-menu .q-item-type {
+:deep(.connections-menu .q-item),
+:deep(.connections-menu .q-item-type) {
   color: var(--q-default-text, #000000) !important;
 }
 

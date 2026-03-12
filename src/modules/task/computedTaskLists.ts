@@ -19,8 +19,9 @@ export function createTaskComputed(args: {
 
   // Derive helpers from provided APIs (prefer apiTask/apiGroup). Provide
   // minimal safe fallbacks so this module remains usable in tests.
-  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined =
-    apiTask?.list?.inRange ?? undefined;
+  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined = apiTask?.list
+    ? (from: string, to: string) => apiTask.list.inRange(from, to)
+    : undefined;
 
   const parseYmdLocal =
     apiTask?.helpers?.parseYmdLocal ??
@@ -49,30 +50,28 @@ export function createTaskComputed(args: {
 
   const groups: Ref<any[]> = (apiGroup?.list?.all as Ref<any[]>) ?? ref([] as any[]);
   const activeGroup: Ref<any> = (apiGroup?.active?.activeGroup as Ref<any>) ?? ref(null as any);
-  const getGroupsByParent = apiGroup?.list?.getGroupsByParent ?? ((p?: string) => [] as any[]);
-  const rawGroupIsVisible = apiGroup?.list?.isVisibleForActive;
-  const groupIsVisibleFallback = (groupsArg: any, activeGroupArg: any, candidateId: any) => true;
-  const groupIsVisible = rawGroupIsVisible ?? groupIsVisibleFallback;
+  const getGroupsByParent = apiGroup?.list
+    ? (p?: string) => apiGroup.list.getGroupsByParent(p)
+    : (p?: string) => [] as any[];
+  const rawGroupIsVisible = apiGroup?.list
+    ? (candidateId: any) => apiGroup.list.isVisibleForActive(candidateId)
+    : undefined;
 
   // Normalize the group visibility helper so callers can always use a single-arg
   // function `isVisibleForActive(candidateId)` that returns boolean. This adapts
   // both bound 1-arg helpers and 3-arg helpers from older APIs.
   const isVisibleForActive: (candidateId: any) => boolean = (() => {
     if (typeof rawGroupIsVisible === 'function') {
-      if (rawGroupIsVisible.length <= 1) {
-        return (candidateId: any) => rawGroupIsVisible(candidateId);
-      }
-      return (candidateId: any) => rawGroupIsVisible(groups.value, activeGroup.value, candidateId);
+      return (candidateId: any) => rawGroupIsVisible(candidateId);
     }
-    return (candidateId: any) => groupIsVisible(groups.value, activeGroup.value, candidateId);
+    return (candidateId: any) => true;
   })();
 
   const sortedTasks = computed(() => {
     let tasksToSort = currentDayData.value.tasks.slice();
 
     try {
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
-      if (currentDate.value === todayStr && typeof getTasksInRange === 'function') {
+      if (typeof getTasksInRange === 'function') {
         const all = getTasksInRange('1970-01-01', '9999-12-31');
         const todoExtras = all.filter((t) => t.type_id === 'Todo');
         for (const t of todoExtras) {
@@ -81,26 +80,29 @@ export function createTaskComputed(args: {
           }
         }
         try {
-          const prepExtras = all.filter((t) => {
-            if (t.type_id === 'Replenish') return false;
-            const mode = (t as any).timeMode || 'event';
-            if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
-            if (mode !== 'prepare' && mode !== 'expiration') return false;
-            const ev = (t.date || t.eventDate) as string | undefined | null;
-            if (!ev) return false;
-            const evDate = parseYmdLocal(ev);
-            const todayDate = parseYmdLocal(todayStr);
-            if (!evDate || !todayDate) return false;
-            const msPerDay = 1000 * 60 * 60 * 24;
-            const diffDays = Math.floor((evDate.getTime() - todayDate.getTime()) / msPerDay);
-            const offset = getTimeOffsetDaysForTask(t);
-            if (mode === 'prepare') {
-              return diffDays >= 0 && diffDays <= offset;
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          if (currentDate.value === todayStr) {
+            const prepExtras = all.filter((t) => {
+              if (t.type_id === 'Replenish') return false;
+              const mode = (t as any).timeMode || 'event';
+              if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
+              if (mode !== 'prepare' && mode !== 'expiration') return false;
+              const ev = (t.date || t.eventDate) as string | undefined | null;
+              if (!ev) return false;
+              const evDate = parseYmdLocal(ev);
+              const todayDate = parseYmdLocal(todayStr);
+              if (!evDate || !todayDate) return false;
+              const msPerDay = 1000 * 60 * 60 * 24;
+              const diffDays = Math.floor((evDate.getTime() - todayDate.getTime()) / msPerDay);
+              const offset = getTimeOffsetDaysForTask(t);
+              if (mode === 'prepare') {
+                return diffDays >= 0 && diffDays <= offset;
+              }
+              return diffDays <= offset;
+            });
+            for (const t of prepExtras) {
+              if (!tasksToSort.some((existing) => existing.id === t.id)) tasksToSort.push(t);
             }
-            return diffDays <= offset;
-          });
-          for (const t of prepExtras) {
-            if (!tasksToSort.some((existing) => existing.id === t.id)) tasksToSort.push(t);
           }
         } catch (e) {
           // ignore

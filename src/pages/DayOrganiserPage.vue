@@ -490,10 +490,10 @@ const { onLineCollapsed, onLineExpanded } = createLineEventHandlers();
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
   activeTask: api.task.active.task,
   activeMode: api.task.active.mode,
-  setActiveTask: api.task.active.setTask,
+  setActiveTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
   panelHidden,
   currentDate: api.task.time.currentDate,
-  setCurrentDate: api.task.time.setCurrentDate,
+  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
@@ -723,12 +723,12 @@ const {
   filterParentTasks,
 } = createTaskViewHelpers({
   currentDate: api.task.time.currentDate,
-  setCurrentDate: api.task.time.setCurrentDate,
+  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
   currentDayData,
   allTasks,
   groups: api.group.list.all,
   activeGroup: api.group.active.activeGroup,
-  getGroupsByParent: api.group.list.getGroupsByParent,
+  getGroupsByParent: (id?: string) => api.group.list.getGroupsByParent(id),
   setTaskToEdit,
   editTask,
 });
@@ -741,12 +741,12 @@ const {
 } = createCalendarHandlers({
   isClickBlocked,
   newTask,
-  setCurrentDate: api.task.time.setCurrentDate,
+  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
   allTasks,
   editTask,
-  setTask: api.task.active.setTask,
+  setTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
   activeMode: api.task.active.mode,
-  setPreviewTask: api.task.active.setTask,
+  setPreviewTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
   notify: (opts: any) => $q.notify(opts),
 });
 

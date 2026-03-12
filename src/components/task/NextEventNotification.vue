@@ -46,9 +46,9 @@ import { occursOnDay, getCycleType } from 'src/modules/task/utils/occursOnDay';
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
 const timeApi = api.task.time;
 const groupApi = api.group;
-const setCurrentDate = api.task.time.setCurrentDate;
-const setPreviewTask = api.task.active.setTask;
-const getTasksInRange = api.task.list.inRange;
+const setCurrentDate = (d: string | null) => api.task.time.setCurrentDate(d);
+const setPreviewTask = (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p);
+const getTasksInRange = (s: string, e: string) => api.task.list.inRange(s, e);
 // data load is handled centrally by DayOrganiserPage; do not call loadData here
 
 const containerRef = ref<HTMLElement | null>(null);
