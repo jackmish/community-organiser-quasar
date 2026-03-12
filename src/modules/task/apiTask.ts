@@ -1,4 +1,4 @@
-import { markRaw } from 'vue';
+import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { TaskManager } from './managers/taskManager';
 import * as timeManager from './managers/timeManager/timeManager';
@@ -14,8 +14,12 @@ export type { PreviewPayload } from './TaskActive';
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useTaskStore = defineStore('task', () => {
   const time = markRaw(timeManager.construct());
-  const mgr = markRaw(new TaskManager({ time }));
-  const active = markRaw(new TaskActive(mgr));
+  // Pre-create the shared active-task ref so SubtaskLineManager's watcher
+  // (which looks for taskManager.apiTask.state.activeTask) is connected to
+  // the same ref that TaskActive exposes to the UI.
+  const taskRef = ref<Task | null>(null);
+  const mgr = markRaw(new TaskManager({ time, state: { activeTask: taskRef } }));
+  const active = markRaw(new TaskActive(mgr, taskRef));
   const list = markRaw(new TaskList(mgr));
   const subtaskLine = markRaw(new TaskSubtaskLine(mgr, active));
   const status = markRaw(new TaskStatus(mgr));

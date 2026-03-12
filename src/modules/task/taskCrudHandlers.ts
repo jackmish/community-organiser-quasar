@@ -16,7 +16,12 @@ export function createTaskCrudHandlers(args: {
   };
 }) {
   const { setCurrentDate, activeGroup, currentDate, allTasks, quasar, active } = args;
-  const { task: taskToEdit, mode, setTask } = active;
+  const { task: taskToEdit, mode } = active;
+  // Wrap to preserve `this` when active is a class instance (e.g. TaskActive)
+  const setTask = active.setTask ? (t: Task | null) => active.setTask!(t) : undefined;
+  const setMode = active.setMode
+    ? (m: 'add' | 'edit' | 'preview') => active.setMode!(m)
+    : undefined;
 
   const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
     const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;

@@ -1,10 +1,13 @@
-import { ref } from 'vue';
 import { saveData } from 'src/utils/storageUtils';
 import type { TaskManager } from './managers/taskManager';
 import type { TaskActive } from './TaskActive';
 
 export class TaskSubtaskLine {
-  readonly parsedLines = ref<any[]>([]);
+  // Delegate to the manager's parsedLines — it is watcher-backed and updates
+  // automatically whenever the active task's description changes.
+  get parsedLines() {
+    return this.mgr.managers.subtaskLine.parsedLines;
+  }
 
   constructor(
     private readonly mgr: TaskManager,

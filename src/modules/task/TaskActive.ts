@@ -1,14 +1,20 @@
 import { ref } from 'vue';
+import type { Ref } from 'vue';
 import type { Task } from './types';
 import type { TaskManager } from './managers/taskManager';
 
 export type PreviewPayload = string | number | Task | null;
 
 export class TaskActive {
-  readonly task = ref<Task | null>(null);
+  readonly task: Ref<Task | null>;
   readonly mode = ref<'add' | 'edit' | 'preview'>('add');
 
-  constructor(private readonly mgr: TaskManager) {}
+  constructor(
+    private readonly mgr: TaskManager,
+    taskRef?: Ref<Task | null>,
+  ) {
+    this.task = taskRef ?? ref<Task | null>(null);
+  }
 
   setTask(payload: PreviewPayload): void {
     if (payload === undefined) return;
