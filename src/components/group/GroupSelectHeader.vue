@@ -304,7 +304,7 @@ const options = computed(() => {
     const curVal =
       typeof cur === "string" || typeof cur === "number"
         ? String(cur)
-        : String((cur && (cur.value ?? cur.id)) ?? "");
+        : String(cur.value ?? "");
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label =
@@ -529,7 +529,7 @@ function isShortcutActive(g: any) {
     if (!g) return false;
     const gid = String(g.id ?? g.value ?? "");
     const cur =
-      localValue.value ?? activeGroup?.value?.value ?? activeGroup?.value ?? null;
+      localValue.value ?? activeGroup?.value?.value ?? null;
     return gid && String(gid) === String(cur ?? "");
   } catch (e) {
     return false;

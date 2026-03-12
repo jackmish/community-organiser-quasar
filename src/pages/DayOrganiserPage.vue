@@ -33,7 +33,7 @@
                     <span
                       :class="[
                         'text-weight-bold',
-                        getTimeDiffClass(api.task.time.currentDate),
+                        getTimeDiffClass(api.task.time.currentDate.value),
                       ]"
                       :style="'color: ' + headerStyle.color + ' !important;'"
                       >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
@@ -173,7 +173,7 @@
         >
           <AddTaskForm
             :filtered-parent-options="filteredParentOptions"
-            :active-group="api.group.active.activeGroup"
+            :active-group="api.group.active.activeGroup.value"
             :show-calendar="false"
             :selected-date="newTask.eventDate"
             :all-tasks="allTasks"

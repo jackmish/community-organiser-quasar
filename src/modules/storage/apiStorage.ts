@@ -60,7 +60,15 @@ export function construct(groupApi?: any, timeApi?: any) {
 
       // Populate the refactored API refs: time.days and group list
       try {
-        const finalDays = Object.keys(daysFromGroups).length ? daysFromGroups : data.days || {};
+        // Prefer data.days (authoritative — contains ALL tasks including those without a groupId,
+        // e.g. Todo tasks). Only fall back to the group-reconstructed map for legacy files that
+        // were saved without a top-level `days` key.
+        const finalDays =
+          data.days && Object.keys(data.days).length > 0
+            ? data.days
+            : Object.keys(daysFromGroups).length
+              ? daysFromGroups
+              : {};
 
         // populate groupApi internal ref if available (use setter)
         try {

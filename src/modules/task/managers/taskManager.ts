@@ -2,14 +2,20 @@ import { getCycleType, occursOnDay } from '../utils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
-import type { ApiTask } from '../apiTask';
 import { Task } from '../types';
 
+/** Minimal shape that TaskManager needs from the task store/API. */
+export interface TaskTimeProvider {
+  time?: any;
+  /** Legacy: old ApiTask class exposed a `state` bag; kept optional for sub-managers. */
+  state?: any;
+}
+
 export class TaskManager {
-  apiTask: ApiTask | undefined;
+  apiTask: TaskTimeProvider | undefined;
   managers: { subtaskLine: ReturnType<typeof SubtaskLineManager.construct> };
 
-  constructor(apiTask?: ApiTask) {
+  constructor(apiTask?: TaskTimeProvider) {
     try {
       this.apiTask = apiTask;
       setTimeApi(apiTask?.time);
