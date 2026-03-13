@@ -5,32 +5,29 @@ import * as groupManager from './groupManager';
 import { GroupList } from './GroupList';
 import { GroupActive } from './GroupActive';
 
-// ── Store ─────────────────────────────────────────────────────────────────────
-export const useGroupStore = defineStore('group', {
-  state: () => {
-    const groups = ref<any[]>([]);
-    const activeGroupRef = ref<{ label: string; value: string | null } | null>(null);
-    const list = markRaw(new GroupList(groups, activeGroupRef));
-    const active = markRaw(new GroupActive(groups, activeGroupRef));
-    return { list, active, groups, activeGroupRef };
-  },
+// ── Store class ───────────────────────────────────────────────────────────────
+class GroupStore {
+  readonly groups = ref<any[]>([]);
+  readonly activeGroupRef = ref<{ label: string; value: string | null } | null>(null);
+  readonly list = markRaw(new GroupList(this.groups, this.activeGroupRef));
+  readonly active = markRaw(new GroupActive(this.groups, this.activeGroupRef));
 
-  actions: {
-    async add(payload: any) {
-      const group = groupManager.addGroup(this.groups, payload);
-      await saveData();
-      return group;
-    },
+  async add(payload: any) {
+    const group = groupManager.addGroup(this.groups.value, payload);
+    await saveData();
+    return group;
+  }
 
-    async update(groupId: string, updates: Partial<any>) {
-      groupManager.updateGroup(this.groups, groupId, updates);
-      await saveData();
-    },
+  async update(groupId: string, updates: Partial<any>) {
+    groupManager.updateGroup(this.groups.value, groupId, updates);
+    await saveData();
+  }
 
-    async delete(groupId: string) {
-      const res = groupManager.deleteGroup(this.groups, groupId);
-      await saveData();
-      return res;
-    },
-  },
-});
+  async delete(groupId: string) {
+    const res = groupManager.deleteGroup(this.groups.value, groupId);
+    await saveData();
+    return res;
+  }
+}
+
+export const useGroupStore = defineStore('group', () => new GroupStore());
