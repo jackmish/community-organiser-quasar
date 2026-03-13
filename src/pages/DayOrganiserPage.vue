@@ -219,7 +219,9 @@
 </template>
 
 <script setup lang="ts">
-import { format } from "date-fns";
+import { todayString } from "src/utils/dateUtils";
+import { createImportHandler } from "src/modules/storage/importHandlers";
+import { useDayRollover } from "src/composables/useDayRollover";
 
 import AddTaskForm from "../components/task/AddTaskForm.vue";
 import Watermark from "src/components/ui/Watermark.vue";
@@ -495,81 +497,17 @@ const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
   setActiveTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
   panelHidden,
   currentDate: api.task.time.currentDate,
-  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
 
-const handleImportFile = async (file: File) => {
-  // Safely use Quasar Loading plugin if present
-  const safeShow = () => {
-    try {
-      if ($q && $q.loading && typeof $q.loading.show === "function") {
-        $q.loading.show({ message: "Importing data..." } as any);
-      }
-    } catch (e) {
-      // ignore
-    }
-  };
-  const safeHide = () => {
-    try {
-      if ($q && $q.loading && typeof $q.loading.hide === "function") {
-        $q.loading.hide();
-      }
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  try {
-    safeShow();
-    // Use storage.importFromFile to accept .zip or .json File and return OrganiserData
-    const data = await api.storage.importFromFile(file);
-    if (data) {
-      await api.storage.saveData(data);
-      await api.storage.loadData();
-    }
-    safeHide();
-    showFirstRunDialog.value = false;
-    // reload view
-    reloadKey.value = reloadKey.value + 1;
-    const safeNotify = (opts: any) => {
-      try {
-        if ($q && $q.notify && typeof $q.notify === "function") return $q.notify(opts);
-      } catch (e) {
-        void e;
-      }
-      try {
-        // fallback
-        if (opts && opts.message) alert(opts.message);
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    safeNotify({ type: "positive", message: "Import successful" });
-  } catch (err) {
-    safeHide();
-    console.error("Import failed", err);
-    const safeNotify = (opts: any) => {
-      try {
-        if ($q && $q.notify && typeof $q.notify === "function") return $q.notify(opts);
-      } catch (e) {
-        void e;
-      }
-      try {
-        if (opts && opts.message) alert(opts.message);
-      } catch (e) {
-        // ignore
-      }
-    };
-    safeNotify({
-      type: "negative",
-      message: "Import failed: " + String((err as any)?.message || err),
-    });
-  }
-};
+const { handleImportFile } = createImportHandler({
+  storage: api.storage,
+  quasar: $q,
+  reloadKey,
+  showFirstRunDialog,
+});
 let organiserGroupManageHandler: any = null;
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
@@ -725,12 +663,7 @@ const {
   filterParentTasks,
 } = createTaskViewHelpers({
   currentDate: api.task.time.currentDate,
-  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
   currentDayData,
-  allTasks,
-  groups: api.group.list.all,
-  activeGroup: api.group.active.activeGroup,
-  getGroupsByParent: (id?: string) => api.group.list.getGroupsByParent(id),
   setTaskToEdit,
   editTask,
 });
@@ -749,7 +682,6 @@ const {
   setTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
   activeMode: api.task.active.mode,
   setPreviewTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
-  notify: (opts: any) => $q.notify(opts),
 });
 
 // compute task lists in a separate module for reuse and testability
@@ -1094,12 +1026,18 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
   showFirstRunDialog.value = false;
 };
 
+// Advance to today if behind the clock; also starts a periodic 60-second check
+useDayRollover({
+  currentDate: api.task.time.currentDate,
+  setCurrentDate: (d) => api.task.time.setCurrentDate(d),
+});
+
 onMounted(async () => {
   try {
     await api.storage.loadData();
     // Ensure the app starts on today's date if stored date is older or missing
     try {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = todayString();
       const curStr = String(api.task.time.currentDate?.value || "");
       if (!curStr || curStr < todayStr) {
         try {
@@ -1126,7 +1064,7 @@ onMounted(async () => {
     }
     try {
       // If current active date is before today, move active day to today when refreshing
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = todayString();
       if (api.task.time.currentDate && api.task.time.currentDate.value) {
         // Compare YYYY-MM-DD strings to avoid Date parsing/timezone issues.
         const curStr = String(api.task.time.currentDate.value || "");
@@ -1145,44 +1083,6 @@ onMounted(async () => {
     reloadKey.value += 1;
   };
   window.addEventListener("organiser:reloaded", organiserReloadHandler as EventListener);
-  onBeforeUnmount(() => {
-    try {
-      if (_dayRolloverTimer) clearInterval(_dayRolloverTimer);
-    } catch (e) {
-      void e;
-    }
-    try {
-      window.removeEventListener(
-        "organiser:reloaded",
-        organiserReloadHandler as EventListener
-      );
-    } catch (e) {
-      void e;
-    }
-  });
-  // Periodic check to detect system date rollover (midnight) and switch to today
-  let _dayRolloverTimer: number | null = null;
-  try {
-    _dayRolloverTimer = window.setInterval(() => {
-      try {
-        const todayStr = format(new Date(), "yyyy-MM-dd");
-        if (api.task.time.currentDate && api.task.time.currentDate.value) {
-          const curStr = String(api.task.time.currentDate.value || "");
-          if (curStr < todayStr) {
-            try {
-              api.task.time.setCurrentDate(todayStr);
-            } catch (e) {
-              void e;
-            }
-          }
-        }
-      } catch (e) {
-        void e;
-      }
-    }, 60 * 1000);
-  } catch (e) {
-    void e;
-  }
   // allow header group 'manage' button to open the group dialog
   organiserGroupManageHandler = () => {
     showGroupDialog.value = true;

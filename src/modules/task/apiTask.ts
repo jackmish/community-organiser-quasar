@@ -23,8 +23,8 @@ class TaskStore {
   readonly mgr = markRaw(new TaskManager({ time: this.time, state: { activeTask: this.taskRef } }));
   readonly active = markRaw(new TaskActive(this.mgr, this.taskRef));
   readonly list = markRaw(new TaskList(this.mgr));
-  readonly subtaskLine = markRaw(new TaskSubtaskLine(this.mgr, this.active));
-  readonly status = markRaw(new TaskStatus(this.mgr));
+  readonly subtaskLine = markRaw(new TaskSubtaskLine(this.mgr, this.active, saveData));
+  readonly status = markRaw(new TaskStatus(this.mgr, saveData));
 
   async add(date: string, taskData: any) {
     const t = this.mgr.addTask(date, taskData);

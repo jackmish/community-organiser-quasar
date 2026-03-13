@@ -234,104 +234,65 @@ export function createTaskComputed(args: {
     });
   });
 
+  /**
+   * Shared predicate for both tasksWithTime and tasksWithoutTime.
+   * Returns false if the task should be hidden from the active day's lists
+   * (completed, cycled-done, or outside its prepare/expiration window).
+   */
+  function isActiveForDay(t: Task, day: string): boolean {
+    if (t.type_id === 'Replenish') return false;
+    try {
+      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
+      if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
+    } catch (e) {
+      // ignore
+    }
+    try {
+      const cycle = getCycleType(t);
+      if (cycle) {
+        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+        const hist = (base as any).history || [];
+        if (
+          Array.isArray(hist) &&
+          hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day)
+        )
+          return false;
+      }
+    } catch (e) {
+      // ignore
+    }
+    try {
+      const mode = (t as any).timeMode || 'event';
+      if (mode === 'prepare' || mode === 'expiration') {
+        const ev = (t.date || t.eventDate) as string | undefined | null;
+        if (!ev) return false;
+        const offset = getTimeOffsetDaysForTask(t);
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const evDate = parseYmdLocal(ev);
+        const thisDate = parseYmdLocal(day);
+        if (!evDate || !thisDate) return false;
+        const diffDays = Math.floor((evDate.getTime() - thisDate.getTime()) / msPerDay);
+        if (mode === 'prepare') {
+          if (!(diffDays >= 0 && diffDays <= offset)) return false;
+        } else if (mode === 'expiration') {
+          if (!(diffDays <= offset)) return false;
+        }
+      }
+    } catch (e) {
+      // ignore and fall back
+    }
+    return true;
+  }
+
   const tasksWithTime = computed(() => {
     const day = currentDate.value;
-    const val = sortedTasks.value.filter((t) => {
-      if (t.type_id === 'Replenish') return false;
-      try {
-        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
-        const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
-        if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
-      } catch (e) {
-        // ignore
-      }
-      try {
-        const cycle = getCycleType(t);
-        if (cycle) {
-          const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
-          const hist = (base as any).history || [];
-          if (
-            Array.isArray(hist) &&
-            hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day)
-          )
-            return false;
-        }
-      } catch (e) {
-        // ignore
-      }
-      try {
-        const mode = t.timeMode || 'event';
-        if (mode === 'prepare' || mode === 'expiration') {
-          const ev = (t.date || t.eventDate) as string | undefined | null;
-          if (!ev) return false;
-          const offset = getTimeOffsetDaysForTask(t);
-          const msPerDay = 1000 * 60 * 60 * 24;
-          const evDate = parseYmdLocal(ev);
-          const thisDate = parseYmdLocal(day);
-          if (!evDate || !thisDate) return false;
-          const diffDays = Math.floor((evDate.getTime() - thisDate.getTime()) / msPerDay);
-          if (mode === 'prepare') {
-            if (!(diffDays >= 0 && diffDays <= offset)) return false;
-          } else if (mode === 'expiration') {
-            if (!(diffDays <= offset)) return false;
-          }
-        }
-      } catch (e) {
-        // ignore and fall back
-      }
-      return !!t.eventTime;
-    });
-    return val;
+    return sortedTasks.value.filter((t) => isActiveForDay(t, day) && !!t.eventTime);
   });
 
   const tasksWithoutTime = computed(() => {
     const day = currentDate.value;
-    const val = sortedTasks.value.filter((t) => {
-      if (t.type_id === 'Replenish') return false;
-      try {
-        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
-        const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
-        if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
-      } catch (e) {
-        // ignore
-      }
-      try {
-        const cycle = getCycleType(t);
-        if (cycle) {
-          const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
-          const hist = (base as any).history || [];
-          if (
-            Array.isArray(hist) &&
-            hist.some((h: any) => h && h.type === 'cycleDone' && h.date === day)
-          )
-            return false;
-        }
-      } catch (e) {
-        // ignore
-      }
-      try {
-        const mode = t.timeMode || 'event';
-        if (mode === 'prepare' || mode === 'expiration') {
-          const ev = (t.date || t.eventDate) as string | undefined | null;
-          if (!ev) return false;
-          const offset = getTimeOffsetDaysForTask(t);
-          const msPerDay = 1000 * 60 * 60 * 24;
-          const evDate = parseYmdLocal(ev);
-          const thisDate = parseYmdLocal(day);
-          if (!evDate || !thisDate) return false;
-          const diffDays = Math.floor((evDate.getTime() - thisDate.getTime()) / msPerDay);
-          if (mode === 'prepare') {
-            if (!(diffDays >= 0 && diffDays <= offset)) return false;
-          } else if (mode === 'expiration') {
-            if (!(diffDays <= offset)) return false;
-          }
-        }
-      } catch (e) {
-        // ignore and fall back
-      }
-      return !t.eventTime;
-    });
-    return val;
+    return sortedTasks.value.filter((t) => isActiveForDay(t, day) && !t.eventTime);
   });
 
   const groupOptions = computed(() => {

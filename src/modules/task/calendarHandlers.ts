@@ -11,7 +11,6 @@ export function createCalendarHandlers(args: {
   setTask?: (t: Task | null) => void;
   activeMode?: Ref<'add' | 'edit' | 'preview'>;
   setPreviewTask?: (v: any) => void;
-  notify?: (opts: any) => void;
 }) {
   const {
     isClickBlocked,
@@ -22,10 +21,9 @@ export function createCalendarHandlers(args: {
     setTask,
     activeMode,
     setPreviewTask,
-    notify,
   } = args;
 
-  function selectCalendarDate(dateString: string) {
+  function handleCalendarDateSelect(dateString: string) {
     if (isClickBlocked?.value) return;
     if (newTask && newTask.value && newTask.value.eventDate !== dateString) {
       if (isClickBlocked) isClickBlocked.value = true;
@@ -39,10 +37,6 @@ export function createCalendarHandlers(args: {
         if (isClickBlocked) isClickBlocked.value = false;
       }, 100);
     }
-  }
-
-  function handleCalendarDateSelect(dateString: string) {
-    selectCalendarDate(dateString);
   }
 
   function handleCalendarEdit(taskId: string | null) {
@@ -76,7 +70,6 @@ export function createCalendarHandlers(args: {
   }
 
   return {
-    selectCalendarDate,
     handleCalendarDateSelect,
     handleCalendarEdit,
     handleCalendarPreview,
