@@ -4,7 +4,11 @@ import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
 } from './utils/occursOnDay';
-import { parseYmdLocal as parseYmdLocalDefault, todayString, getTimeOffsetDaysForTask as getTimeOffsetDaysDefault } from 'src/utils/dateUtils';
+import {
+  parseYmdLocal as parseYmdLocalDefault,
+  todayString,
+  getTimeOffsetDaysForTask as getTimeOffsetDaysDefault,
+} from 'src/utils/dateUtils';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
 
@@ -24,7 +28,8 @@ export function createTaskComputed(args: {
     : undefined;
 
   const parseYmdLocal = apiTask?.helpers?.parseYmdLocal ?? parseYmdLocalDefault;
-  const getTimeOffsetDaysForTask = apiTask?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
+  const getTimeOffsetDaysForTask =
+    apiTask?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
 
   const getCycleType = apiTask?.helpers?.getCycleType ?? utilGetCycleType;
   const occursOnDay = apiTask?.helpers?.occursOnDay ?? utilOccursOnDay;
