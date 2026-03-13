@@ -1,10 +1,10 @@
 import { computed, ref } from 'vue';
-import { format } from 'date-fns';
 import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
 } from './utils/occursOnDay';
+import { parseYmdLocal as parseYmdLocalDefault, todayString, getTimeOffsetDaysForTask as getTimeOffsetDaysDefault } from 'src/utils/dateUtils';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
 
@@ -23,27 +23,8 @@ export function createTaskComputed(args: {
     ? (from: string, to: string) => apiTask.list.inRange(from, to)
     : undefined;
 
-  const parseYmdLocal =
-    apiTask?.helpers?.parseYmdLocal ??
-    ((s: string | undefined | null): Date | null => {
-      if (!s || typeof s !== 'string') return null;
-      const parts = s.split('-');
-      if (parts.length < 3) return null;
-      const y = Number(parts[0]);
-      const m = Number(parts[1]);
-      const d = Number(parts[2]);
-      if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
-      return new Date(y, m - 1, d);
-    });
-
-  const getTimeOffsetDaysForTask =
-    apiTask?.helpers?.getTimeOffsetDaysForTask ??
-    ((t: any): number => {
-      const raw = t && (t.timeOffsetDays ?? t.time_offset_days ?? t.timeOffset ?? t.time_offset);
-      if (raw === null || raw === undefined || raw === '') return 0;
-      const n = Number(raw);
-      return isNaN(n) ? 0 : Math.max(0, Math.floor(n));
-    });
+  const parseYmdLocal = apiTask?.helpers?.parseYmdLocal ?? parseYmdLocalDefault;
+  const getTimeOffsetDaysForTask = apiTask?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
 
   const getCycleType = apiTask?.helpers?.getCycleType ?? utilGetCycleType;
   const occursOnDay = apiTask?.helpers?.occursOnDay ?? utilOccursOnDay;
@@ -80,7 +61,7 @@ export function createTaskComputed(args: {
           }
         }
         try {
-          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          const todayStr = todayString();
           if (currentDate.value === todayStr) {
             const prepExtras = all.filter((t) => {
               if (t.type_id === 'Replenish') return false;

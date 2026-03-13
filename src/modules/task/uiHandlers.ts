@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useLongPress } from 'src/composables/useLongPress';
 import type { Task } from '../day-organiser';
 import { getCycleType } from 'src/modules/task/utils/occursOnDay';
+import { parseYmdLocal, getTimeOffsetDaysForTask } from 'src/utils/dateUtils';
 
 export function createTaskUiHandlers(args: {
   activeTask: Ref<Task | null>;
@@ -137,24 +138,6 @@ export function createTaskViewHelpers(args: {
       }
     }
   });
-
-  const parseYmdLocal = (s: string | undefined | null): Date | null => {
-    if (!s || typeof s !== 'string') return null;
-    const parts = s.split('-');
-    if (parts.length < 3) return null;
-    const y = Number(parts[0]);
-    const m = Number(parts[1]);
-    const d = Number(parts[2]);
-    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
-    return new Date(y, m - 1, d);
-  };
-
-  const getTimeOffsetDaysForTask = (t: any): number => {
-    const raw = t && t.timeOffsetDays;
-    if (raw === null || raw === undefined || raw === '') return 0;
-    const n = Number(raw);
-    return isNaN(n) ? 0 : Math.max(0, Math.floor(n));
-  };
 
   const filterParentTasks = (val: string, update: (fn: () => void) => void) => {
     update(() => {
