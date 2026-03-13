@@ -112,6 +112,7 @@
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
             <DoneTasksList :done-tasks="doneTasks" />
+            <PluginSlot name="below-done-list" />
           </div>
         </div>
       </div>
@@ -224,6 +225,7 @@ import AddTaskForm from "../components/task/AddTaskForm.vue";
 import Watermark from "src/components/ui/Watermark.vue";
 
 import DoneTasksList from "../components/task/DoneTasksList.vue";
+import PluginSlot from "../components/ui/PluginSlot.vue";
 import GroupManagementDialog from "../components/group/GroupManagementDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";

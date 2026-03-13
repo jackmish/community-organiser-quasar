@@ -63,6 +63,8 @@ async function onDoneClick(task: any) {
       await api.task.status.undoCycleDone(date, id);
     } else {
       await api.task.status.toggleComplete(date, id);
+
+
     }
   } catch (e) {
     // ignore

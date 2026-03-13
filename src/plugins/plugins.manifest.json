@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "comment": "Bundled plugin manifest. Each entry controls where/whether a plugin mounts. Functional code lives in src/plugins/<id>/index.ts — only mounting config goes here.",
+  "plugins": [
+    {
+      "id": "taskStats",
+      "enabled": true,
+      "priority": 10,
+      "slot": "below-done-list"
+    }
+  ]
+}
