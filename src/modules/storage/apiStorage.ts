@@ -119,7 +119,8 @@ export function construct(groupApi?: any, timeApi?: any) {
               timeApi.lastModified.value = data.lastModified || new Date().toISOString();
             // Populate taskService flat list immediately so callers can use it
             try {
-              taskService.buildFlatTasksList(finalDays || {});
+              const loaded = taskService.buildFlatTasksList(finalDays || {});
+              taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
               try {
                 logger.debug(
                   'apiStorage.loadData: time.days populated, days=',

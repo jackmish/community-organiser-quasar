@@ -96,6 +96,72 @@ describe('createTaskCrudHandlers — class-based active (unbound-this regression
     expect(active.task.value).toBeNull();
   });
 
+  it('handleUpdateTask: calls api.task.update with the task date and full payload', async () => {
+    const { handlers, task } = makeHandlers(active);
+    const { task: apiMock } = await import('src/modules/day-organiser/apiRoot');
+    await handlers.handleUpdateTask(task);
+    expect(apiMock.update).toHaveBeenCalledWith('2026-03-12', expect.objectContaining({ id: '1' }));
+  });
+
+  it('handleUpdateTask: uses eventDate when date field is absent', async () => {
+    const active2 = new FakeActive();
+    const taskNoDate = { id: '2', name: 'No date field', eventDate: '2026-05-01' };
+    const allTasks = ref([taskNoDate]);
+    const { handlers } = {
+      handlers: createTaskCrudHandlers({
+        setCurrentDate: vi.fn(),
+        activeGroup: ref({ value: 'g1' }),
+        currentDate: ref('2026-03-12'),
+        allTasks,
+        quasar: { notify: vi.fn() },
+        active: active2,
+      }),
+    };
+    const { task: apiMock } = await import('src/modules/day-organiser/apiRoot');
+    await handlers.handleUpdateTask(taskNoDate);
+    expect(apiMock.update).toHaveBeenCalledWith('2026-05-01', expect.objectContaining({ id: '2' }));
+  });
+
+  it('handleUpdateTask: falls back to currentDate when neither date nor eventDate present', async () => {
+    const active3 = new FakeActive();
+    const taskBare = { id: '3', name: 'Bare' };
+    const allTasks = ref([taskBare]);
+    const { handlers } = {
+      handlers: createTaskCrudHandlers({
+        setCurrentDate: vi.fn(),
+        activeGroup: ref({ value: 'g1' }),
+        currentDate: ref('2026-01-01'),
+        allTasks,
+        quasar: { notify: vi.fn() },
+        active: active3,
+      }),
+    };
+    const { task: apiMock } = await import('src/modules/day-organiser/apiRoot');
+    await handlers.handleUpdateTask(taskBare);
+    expect(apiMock.update).toHaveBeenCalledWith('2026-01-01', expect.objectContaining({ id: '3' }));
+  });
+
+  it('handleUpdateTask: setTask receives the allTasks reference, not the argument object', async () => {
+    // allTasks entry is a different object to the argument — setTask should receive the allTasks copy
+    const active4 = new FakeActive();
+    const storedTask = { id: '1', name: 'Stored version', date: '2026-03-12', extra: 'yes' };
+    const allTasks = ref([storedTask]);
+    const { handlers } = {
+      handlers: createTaskCrudHandlers({
+        setCurrentDate: vi.fn(),
+        activeGroup: ref({ value: 'g1' }),
+        currentDate: ref('2026-03-12'),
+        allTasks,
+        quasar: { notify: vi.fn() },
+        active: active4,
+      }),
+    };
+    await handlers.handleUpdateTask({ id: '1', name: 'Incoming version', date: '2026-03-12' });
+    // active4.task should have `extra: 'yes'` from allTasks, not from the incoming payload
+    // (proves handleUpdateTask looks up the allTasks entry, not just echoes the argument)
+    expect(active4.task.value).toMatchObject({ id: '1', name: 'Stored version', extra: 'yes' });
+  });
+
   it('regression: the OLD code (direct destructure) WOULD lose this', () => {
     // Demonstrate the bug the fix addresses:
     // Destructuring a method from a class instance loses `this`.

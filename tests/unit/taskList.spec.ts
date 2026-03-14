@@ -165,7 +165,7 @@ describe('computedTaskLists — task list visibility', () => {
       currentDate: ref(TODAY),
       allTasks: ref([]),
     });
-    expect(sortedTasks.value.length).toBe(2);
+    expect(sortedTasks.value.length).toBe(2);``
   });
 
   it('tasksWithoutTime includes a Todo with no eventTime', () => {
@@ -471,5 +471,450 @@ describe('apiStorage.loadData — task preservation', () => {
 
     const loadedTasks = Object.values(daysRef.value).flatMap((d: any) => d.tasks || []);
     expect(loadedTasks.length).toBe(1);
+  });
+});
+
+// ============================================================================
+// 4. TimeEvent visibility — end-to-end scenarios
+// ============================================================================
+describe('TimeEvent visibility — computedTaskLists scenarios', () => {
+  const GROUP_ID = 'grp-1';
+  const makeGroupApi = (activeGroupId: string | null = null) => ({
+    list: {
+      all: ref([{ id: GROUP_ID, name: 'Test Group' }]),
+      isVisibleForActive: (id: any) => {
+        if (!activeGroupId) return true; // all groups: show everything
+        return String(id) === activeGroupId;
+      },
+      getGroupsByParent: () => [],
+    },
+    active: {
+      activeGroup: ref(
+        activeGroupId ? { label: 'Test Group', value: activeGroupId } : null,
+      ),
+    },
+  });
+
+  it('TimeEvent in currentDayData appears in tasksWithTime when it has eventTime', () => {
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      eventTime: '10:00',
+      name: 'Morning meeting',
+      groupId: GROUP_ID,
+    });
+    const { tasksWithTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithTime.value.some((t) => t.name === 'Morning meeting')).toBe(true);
+  });
+
+  it('TimeEvent in currentDayData appears in tasksWithoutTime when no eventTime', () => {
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      eventTime: '',
+      name: 'All-day event',
+      groupId: GROUP_ID,
+    });
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'All-day event')).toBe(true);
+  });
+
+  it('TimeEvent with matching groupId appears when active group is set', () => {
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Group event',
+      groupId: GROUP_ID,
+    });
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Group event')).toBe(true);
+  });
+
+  it('TimeEvent with wrong groupId is hidden when different active group is set', () => {
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Other group event',
+      groupId: 'other-group',
+    });
+    const { tasksWithoutTime, tasksWithTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Other group event')).toBe(false);
+    expect(tasksWithTime.value.some((t) => t.name === 'Other group event')).toBe(false);
+  });
+
+  it('TimeEvent from allTasks (not in currentDayData) for the currentDate is injected via cyclic loop', () => {
+    // A TimeEvent that is in allTasks but NOT in currentDayData should still appear
+    // via the occursOnDay injection loop (non-cyclic tasks match by date)
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Injected event',
+      date: TODAY,
+      eventDate: TODAY,
+      groupId: GROUP_ID,
+    });
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [] }), // NOT in current day data
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Injected event')).toBe(true);
+  });
+
+  it('TimeEvent from allTasks for a DIFFERENT date does NOT appear on currentDate', () => {
+    const FUTURE_DATE = '2099-01-15';
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Future event',
+      date: FUTURE_DATE,
+      eventDate: FUTURE_DATE,
+      groupId: GROUP_ID,
+    });
+    const { tasksWithoutTime, tasksWithTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Future event')).toBe(false);
+    expect(tasksWithTime.value.some((t) => t.name === 'Future event')).toBe(false);
+  });
+
+  it('TimeEvent with eventTime appears on its own date when added via addTask flow', () => {
+    // Simulate the full addTask → currentDayData → tasksWithTime flow
+    const { daysRef, timeApi } = freshTimeApi([], TODAY);
+    // Simulate adding a task to the days map (as addTask would do)
+    if (!daysRef.value[TODAY]) daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Timed event',
+      date: TODAY,
+      eventDate: TODAY,
+      eventTime: '14:30',
+      groupId: GROUP_ID,
+    });
+    daysRef.value[TODAY].tasks.push(event);
+    flatTasks.value.splice(0, flatTasks.value.length, ...listFromDays(daysRef.value));
+
+    const currentDayData = ref({ tasks: daysRef.value[TODAY]?.tasks || [] });
+    const allTasksRef = ref(flatTasks.value.slice());
+
+    const { tasksWithTime } = createTaskComputed({
+      currentDayData,
+      currentDate: ref(TODAY),
+      allTasks: allTasksRef,
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithTime.value.some((t) => t.name === 'Timed event')).toBe(true);
+  });
+
+  it('TimeEvent with null groupId is hidden when active group is set', () => {
+    // This documents the expected behavior: ungrouped tasks are hidden when filtering by group
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Ungrouped event',
+      groupId: undefined,
+    });
+    const { tasksWithoutTime, tasksWithTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Ungrouped event')).toBe(false);
+    expect(tasksWithTime.value.some((t) => t.name === 'Ungrouped event')).toBe(false);
+  });
+
+  it('TimeEvent with null groupId is VISIBLE when All Groups (no active group)', () => {
+    // Ungrouped events should show in "All Groups" mode
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Ungrouped visible event',
+      groupId: undefined,
+    });
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: makeGroupApi(null), // null = "All Groups"
+    });
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Ungrouped visible event')).toBe(true);
+  });
+
+  it('done TimeEvent (status_id=0) does NOT appear in tasksWithTime or tasksWithoutTime', () => {
+    const doneEvent = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Done event',
+      status_id: 0,
+      eventTime: '09:00',
+      groupId: GROUP_ID,
+    });
+    const { tasksWithTime, tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [doneEvent] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([doneEvent]),
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+    expect(tasksWithTime.value.some((t) => t.name === 'Done event')).toBe(false);
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Done event')).toBe(false);
+  });
+});
+
+// ============================================================================
+// 5. TimeEvent reactivity — addTask mutates days, computed updates correctly
+// ============================================================================
+describe('TimeEvent reactivity — addTask + computed updates', () => {
+  const GROUP_ID = 'grp-1';
+  const makeGroupApi = (activeGroupId: string | null = null) => ({
+    list: {
+      all: ref([{ id: GROUP_ID, name: 'Test Group' }]),
+      isVisibleForActive: (id: any) => {
+        if (!activeGroupId) return true;
+        return String(id) === activeGroupId;
+      },
+      getGroupsByParent: () => [],
+    },
+    active: {
+      activeGroup: ref(
+        activeGroupId ? { label: 'Test Group', value: activeGroupId } : null,
+      ),
+    },
+  });
+
+  beforeEach(() => {
+    freshTimeApi();
+  });
+
+  it('tasksWithoutTime updates reactively after addTask on empty days', () => {
+    // Start with no tasks – currentDayData starts as empty
+    const { daysRef } = freshTimeApi([], TODAY);
+    const currentDate = ref(TODAY);
+
+    // currentDayData is a real computed that reads from the same daysRef
+    const { computed } = require('vue');
+    const currentDayData = computed(() => {
+      const d = daysRef.value[currentDate.value];
+      return d || { date: currentDate.value, tasks: [], notes: '' };
+    });
+
+    const allTasksRef = computed(() => listFromDays(daysRef.value));
+
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData,
+      currentDate,
+      allTasks: allTasksRef,
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+
+    // Before adding: no tasks
+    expect(tasksWithoutTime.value.length).toBe(0);
+
+    // Simulate addTask: add new day entry and push task (same as taskManager.addTask)
+    daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Reactive event',
+      date: TODAY,
+      eventDate: TODAY,
+      groupId: GROUP_ID,
+      eventTime: '',
+    });
+    daysRef.value[TODAY].tasks.push(event);
+
+    // After adding: task should appear
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Reactive event')).toBe(true);
+  });
+
+  it('tasksWithTime updates reactively after adding a timed event via daysRef mutation', () => {
+    const { daysRef } = freshTimeApi([], TODAY);
+    const currentDate = ref(TODAY);
+    const { computed } = require('vue');
+    const currentDayData = computed(() => {
+      const d = daysRef.value[currentDate.value];
+      return d || { date: currentDate.value, tasks: [], notes: '' };
+    });
+    const allTasksRef = computed(() => listFromDays(daysRef.value));
+
+    const { tasksWithTime } = createTaskComputed({
+      currentDayData,
+      currentDate,
+      allTasks: allTasksRef,
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+
+    expect(tasksWithTime.value.length).toBe(0);
+
+    daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Timed reactive event',
+      date: TODAY,
+      eventDate: TODAY,
+      eventTime: '09:30',
+      groupId: GROUP_ID,
+    });
+    daysRef.value[TODAY].tasks.push(event);
+
+    expect(tasksWithTime.value.some((t) => t.name === 'Timed reactive event')).toBe(true);
+  });
+
+  it('currentDate change shows tasks for the new date instantly', () => {
+    const DATE2 = '2099-12-25';
+    const { daysRef } = freshTimeApi([], TODAY);
+    const currentDate = ref(TODAY);
+    const { computed } = require('vue');
+    const currentDayData = computed(() => {
+      const d = daysRef.value[currentDate.value];
+      return d || { date: currentDate.value, tasks: [], notes: '' };
+    });
+    const allTasksRef = computed(() => listFromDays(daysRef.value));
+
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData,
+      currentDate,
+      allTasks: allTasksRef,
+      apiGroup: makeGroupApi(GROUP_ID),
+    });
+
+    // Add a task for DATE2
+    daysRef.value[DATE2] = { date: DATE2, tasks: [], notes: '' };
+    const event = makeTask({
+      type_id: 'TimeEvent', name: 'Christmas event',
+      date: DATE2, eventDate: DATE2, groupId: GROUP_ID,
+    });
+    daysRef.value[DATE2].tasks.push(event);
+
+    // On TODAY: should not see Christmas event
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Christmas event')).toBe(false);
+
+    // Navigate to DATE2
+    currentDate.value = DATE2;
+
+    // Now should see the Christmas event
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Christmas event')).toBe(true);
+  });
+
+  it('task with wrong groupId does not appear when specific group is active', () => {
+    const { daysRef } = freshTimeApi([], TODAY);
+    const currentDate = ref(TODAY);
+    const { computed } = require('vue');
+    const currentDayData = computed(() => {
+      const d = daysRef.value[currentDate.value];
+      return d || { date: currentDate.value, tasks: [], notes: '' };
+    });
+    const allTasksRef = computed(() => listFromDays(daysRef.value));
+
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData,
+      currentDate,
+      allTasks: allTasksRef,
+      apiGroup: makeGroupApi(GROUP_ID),  // active group = GROUP_ID
+    });
+
+    daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
+    const event = makeTask({
+      type_id: 'TimeEvent', name: 'Wrong group event',
+      date: TODAY, eventDate: TODAY, groupId: 'other-grp',
+    });
+    daysRef.value[TODAY].tasks.push(event);
+
+    // Should NOT be visible because groupId doesn't match active group
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Wrong group event')).toBe(false);
+  });
+});
+
+// ============================================================================
+// 6. Regression: getCycleType + buildFlatTasksList fixes
+// ============================================================================
+import { getCycleType } from '../../src/modules/task/utils/occursOnDay';
+
+describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
+  it('returns null for repeat: null', () => {
+    expect(getCycleType({ repeat: null })).toBeNull();
+  });
+
+  it('returns null for task with no repeat property', () => {
+    expect(getCycleType({ name: 'No repeat' })).toBeNull();
+  });
+
+  it('returns null for repeat: {} (empty object — the bug fix)', () => {
+    // Previously returned 'dayWeek', causing tasks to be permanently filtered out
+    expect(getCycleType({ repeat: {} })).toBeNull();
+  });
+
+  it('returns the cycleType string when repeat.cycleType is set', () => {
+    expect(getCycleType({ repeat: { cycleType: 'dayWeek' } })).toBe('dayWeek');
+    expect(getCycleType({ repeat: { cycleType: 'other' } })).toBe('other');
+  });
+
+  it('falls back to cycle_type (snake_case) when cycleType is absent', () => {
+    expect(getCycleType({ repeat: { cycle_type: 'dayWeek' } })).toBe('dayWeek');
+  });
+
+  it('task with repeat:{} is VISIBLE in tasksWithoutTime (the actual bug scenario)', () => {
+    // This was the core bug: repeat:{} caused getCycleType to return 'dayWeek',
+    // making isCyclicNotOccurring return true → task removed from all lists.
+    const GROUP_ID = 'grp-x';
+    const event = makeTask({
+      type_id: 'TimeEvent',
+      name: 'Empty repeat event',
+      date: TODAY,
+      eventDate: TODAY,
+      groupId: GROUP_ID,
+      repeat: {} as any,  // ← the problematic data shape
+    });
+    const { tasksWithoutTime } = createTaskComputed({
+      currentDayData: ref({ tasks: [event] }),
+      currentDate: ref(TODAY),
+      allTasks: ref([event]),
+      apiGroup: {
+        list: {
+          all: ref([{ id: GROUP_ID, name: 'Test' }]),
+          isVisibleForActive: () => true,
+          getGroupsByParent: () => [],
+        },
+        active: { activeGroup: ref({ label: 'Test', value: GROUP_ID }) },
+      },
+    });
+    // With the fix, task with repeat:{} is treated as non-cyclic → should be visible
+    expect(tasksWithoutTime.value.some((t) => t.name === 'Empty repeat event')).toBe(true);
+  });
+});
+
+describe('buildFlatTasksList regression — flatTasks populated after loadData', () => {
+  it('flatTasks is populated after buildFlatTasksList result is applied', () => {
+    const t1 = makeTask({ name: 'Loaded event', type_id: 'TimeEvent' });
+    const t2 = makeTask({ name: 'Loaded todo', type_id: 'Todo' });
+    const days = { [TODAY]: { date: TODAY, tasks: [t1, t2], notes: '' } };
+
+    // Simulate what apiStorage.loadData now does: apply the return value
+    const loaded = listFromDays(days);
+    flatTasks.value.splice(0, flatTasks.value.length, ...loaded);
+
+    expect(flatTasks.value.length).toBe(2);
+    expect(flatTasks.value.some((t) => t.name === 'Loaded event')).toBe(true);
+    expect(flatTasks.value.some((t) => t.name === 'Loaded todo')).toBe(true);
+  });
+
+  it('flatTasks is empty after loading empty days', () => {
+    const loaded = listFromDays({});
+    flatTasks.value.splice(0, flatTasks.value.length, ...loaded);
+    expect(flatTasks.value.length).toBe(0);
   });
 });

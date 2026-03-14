@@ -63,9 +63,11 @@ export function getCycleType(task: any): string | null {
   if (!task) return null;
   if (task.repeat == null) return null;
 
-  // Prefer canonical `repeat` object when present (non-null)
-
-  return (task.repeat.cycleType ?? task.repeat.cycle_type ?? 'dayWeek') as string;
+  // An empty repeat object {} has no cycleType → treat as non-cyclic (null).
+  // Previously this fell back to 'dayWeek' which caused tasks with repeat:{}
+  // to be permanently filtered out (cyclic with no days = never occurs).
+  const cycleType = task.repeat.cycleType ?? task.repeat.cycle_type ?? null;
+  return cycleType as string | null;
 }
 
 export function getRepeatDays(task: any) {

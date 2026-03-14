@@ -2,13 +2,26 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 # Community Organiser 21 - CO21
 
+Don't recommend it yet. Too early development progress, however it its very useful a specially calendar, and making project notes inside project groups. I'll make some final Readme.md closer to version 0.9 of app.
+
+---
+
 The main goal of this application is to simplify organization for families and communities; in its current state it serves as a personal organizer for events and tasks.
 
 The application is designed to work primarily offline—even in environments with no internet access—and is not constrained by the storage limits common to some PWAs that rely on servers to continue operating.
 
-I'll make some final Readme.md closer to version 0.9 of app. Now i cant even name it Early Access, a specially when im looking at "vibe code".
+I said myself that there is a lot of this type of software, but when I wanted to find a convenient one, one that I would even pay for, I couldn't find it - either for my own organization or for maintaining communities/groups/circles/school classes/bus trips (sending resources, maps, guides, around peer too peer networks, maybe some navigation helper, tracking tool for schools - with small optimal not hidden process).
 
-Second reason was to check what AI/Copilot would generate without any engineering tips and refactor it later. UX development and app features were 1st, now as usual opinion "vibe code" like attempt do many mess,... but it works fine. It was hard to not show AI that for example whole app is initiating 7 times, solution also wasn't best. AI does'nt like DRY - it likes very much to repeat itself, whatever AI model it was.
+Visually, I focus on readability. Of course, the layout is not finished, especially the margins and the backgrounds here and there, but instead of giving one or two matching colors, I prefer to use distinctive colors to immediately know where to look, what group is active. Currently the layout is a bit too bright,
+due to muted colors on one of the screens.
+
+Apart from comfort/expression, I will try to implement the so-called immersion so that the appearance is not a patchwork of typical form and list control components.
+
+This will also be the basis for the so-called smart houses, for now only within the information board and tablet/screen with announcements.
+
+---
+
+Second reason to create this app was to check what AI/Copilot would generate without any engineering tips and refactor it later. UX development and app features were 1st, now as usual opinion "vibe code" like attempt do many mess,... but it works fine. It was hard to not show AI that for example whole app is initiating 7 times, solution also wasn't best. AI does'nt like DRY - it likes very much to repeat itself, whatever AI model it was.
 
 ## Name and ideology
 
@@ -175,6 +188,18 @@ The development process can be broken into stages:
 3. Stage three consisted mostly of "lazy" prompt input, concentrating on project thinking, design, appearance and user-facing features (with an intuition about where that would lead).
 4. After the main features were implemented I stopped adding features and focused on tidying the app. In short, this stage could be called an Augean stable, though I do not entirely blame AI—many factors led to this state. Working on the architecture after AI-generated code can be interesting and also a logical puzzle or challenge.
 
+## General talking about AI:
+
+I know from many sources that AI is used for rather smaller things, smaller projects, smaller graphics, short videos, etc.
+
+As for the code, there are a lot more uncertainties as there are newer and newer integrations within the code that are no longer just a "language" generator.
+Apart from the question of what can be achieved with low-cost AI, another question arises. Can't AI be treated as a good tool for "expansion?" As part of technological expansion, I would talk about, for example, replacing horses with combustion cars. With the emergence of opportunities, instead of just replacing the horse, the potential translated into the construction of roads, further journeys, more less tiring journeys - so instead of ultimately slowing down the labor market, he raised the bar of what can be achieved.
+
+I can certainly say from this experience of using AI that in many cases it speeds up work many times over,
+which can be somewhat thought of as speeding up your work by installing an additional library written by someone rather than writing it from scratch.
+
+Next, in the generation of graphics, code, etc., knowledge of the topic, distinguishing quality is often important, and a programmer or graphic designer is needed at least to refine the project.
+
 ## Conclusions after using AI prompts:
 
 ### NEW | Claude Refactor
@@ -191,7 +216,7 @@ Using primarily Claude does not guarantee quality. It good tool for refactor, bu
 
 Claude Sonnet also would'nt fix unit tests after refactor, it still wants to create missing files. It likes to generate unit test but it does'nt think code needs to be refactored first - it's telling refactor was finished. I'll check unit tests later it's not so much important when i'm using this software and could do manual tests. Most frustrating errors are generated by the way of css unconnected things than code errors, which AI usually is fixing after some console typescript check/lint. Code quality could be more welcome, but unit tests are going to make code more "constant/persistent" a specially when automated test was'nt updated after code change, removed file etc.
 
-Rewriting unit tests from 0 is sometimes best option, and it could be not time saving option, when GPT5.1 is primary AI model, doing "vibe code". Solution is to write unit tests after Claude Refactor not earlier.
+Rewriting unit tests from 0 is sometimes best option, and it could be not time saving option, when GPT5.1 is primary AI model, doing "vibe code". Solution is to write unit tests after Claude Refactor not earlier (also i cant say its software at production, im currently the only customer, as it is with many vibe code small apps)
 
 I'm going to use some external non AI tool to make some maps automatically, or just maybe just Swagger Docs, somewhere around API's.
 
@@ -203,7 +228,11 @@ After refactor of some content once again task list was empty - without TODO tas
 
 ### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Claude at beginning.
 
-I am used to VS Code, so I naturally used Copilot, though I know there are other tools. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better.
+I am used to VS Code, so I'm trying Copilot feature. I know there are other tools better a specially for vibe coding. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better. Generally refactor of project is always wanted with this option when its used as vibe code tool. Recommending structure, patterns could work much better, but still AI is used to do what it learned from global resources, and doesn't need to split the files into smaller parts.
+
+For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using GIT. AI files history isn't best option to trust.
+
+Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.
 
 Some paid AI services performed better for code, but they also contributed to code mess in similar ways. A poor start with ChatGPT4 and attempts to adapt other AIs to that style may have caused problems.
 

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, watch, toRef, onMounted, onBeforeUnmount } from "vue";
+import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
 import * as api from "src/modules/day-organiser/apiRoot";
 import logger from "src/utils/logger";
-import { useTimeDiff } from "src/composables/useTimeDiff";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import {
@@ -16,9 +15,10 @@ import {
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
 } from "../theme";
-import { formatEventHoursDiff } from "src/modules/task/utils/occursOnDay";
 import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
 import { hexToRgba } from "src/utils/colorUtils";
+import { useEventDateTime } from "src/composables/useEventDateTime";
+import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -144,12 +144,6 @@ const yearInput = ref<any>(null);
 const hourInput = ref<any>(null);
 const minuteInput = ref<any>(null);
 const offsetInput = ref<any>(null);
-const replenishInput = ref<any>(null);
-// Auto-increment year checkbox state
-const autoIncrementYear = ref(true);
-
-// Time type radio (Whole Day / Exact Hour)
-const timeType = ref<"wholeDay" | "exactHour">("wholeDay");
 
 // Repeat schedule — state, payload building, and cycle-type defaults managed by composable.
 const {
@@ -401,42 +395,27 @@ const typeOptions = [
   { label: "Note", shortLabel: "Note", value: "NoteLater", icon: "description" },
 ];
 
-// Options for the time type toggle (Whole Day / Exact Hour)
-const timeTypeOptions = [
-  { label: "", value: "wholeDay", icon: "calendar_today" },
-  { label: "", value: "exactHour", icon: "schedule" },
-];
-
-// Options for interpreting the time value: event (default), prepare, expiration
-// Labels are shown inside each toggle button so the option describes its mode
-const timeModeOptions = [
-  { label: "Event", value: "event", icon: "event" },
-  { label: "Prepare", value: "prepare", icon: "local_shipping" },
-  { label: "Expiration", value: "expiration", icon: "hourglass_empty" },
-];
-
-const eventTimeMode = computed<"event" | "prepare" | "expiration">({
-  get() {
-    return localNewTask.value.timeMode || "event";
-  },
-  set(v) {
-    localNewTask.value.timeMode = v;
-  },
-});
-
-const eventTimeOffsetDays = computed<number | null>({
-  get() {
-    const v = (localNewTask.value as any).timeOffsetDays;
-    return v == null ? null : Number(v);
-  },
-  set(val: number | null) {
-    (localNewTask.value as any).timeOffsetDays = val == null ? null : Number(val);
-  },
-});
-
-function setOffsetDays(n: number) {
-  (localNewTask.value as any).timeOffsetDays = Number(n);
-}
+// ── Date/time logic (extracted to composable) ─────────────────────────────────
+const {
+  timeType,
+  timeTypeOptions,
+  timeModeOptions,
+  autoIncrementYear,
+  eventTimeHour,
+  eventTimeMinute,
+  eventDateTimeHoursDiff,
+  eventTimeHoursDisplay,
+  getTimeDifferenceDisplay,
+  cachedTime,
+  eventTimeMode,
+  eventTimeOffsetDays,
+  setOffsetDays,
+  eventDate,
+  eventDateParts,
+  eventDateYear,
+  eventDateMonth,
+  eventDateDay,
+} = useEventDateTime(localNewTask);
 
 // Use centralized replenish color sets from theme
 const replenishColorSets = themeReplenishColorSets;
@@ -456,161 +435,38 @@ const replenishColorRows = computed(() => {
   ];
 });
 
-// Replenish helper state
-const replenishQuery = ref("");
-const selectedReplenishId = ref<string | null>(null);
-const showReplenishList = ref(false);
-const replenishListStyle = ref<any>({ display: "none" });
+// When creating new tasks, keep the form open after save by default for Replenish.
+// Initialize based on last selected type or current localNewTask type when in add mode.
+const stayAfterSave = ref(
+  (props.mode === "add" &&
+    (localNewTask.value.type_id === "Replenish" ||
+      lastSelectedType.value === "Replenish")) ||
+    false
+);
 
-const replenishMatches = computed<any[]>(() => {
-  const q = (replenishQuery.value || "").toLowerCase().trim();
-  if (!q) return (props.allTasks || []).filter((t: any) => t.type_id === "Replenish");
-  return (props.allTasks || [])
-    .filter((t: any) => t.type_id === "Replenish")
-    .filter((t: any) => (t.name || "").toLowerCase().indexOf(q) !== -1);
-});
-
-const smallReplenishTasks = computed(() => {
-  // Prefer parent-provided filtered replenish list when available
-  if (
-    props.replenishTasks &&
-    Array.isArray(props.replenishTasks) &&
-    props.replenishTasks.length > 0
-  )
-    return props.replenishTasks;
-  return (props.allTasks || []).filter((t: any) => (t.type_id || t.type) === "Replenish");
-});
-
-// Return true when a replenish match is already present for the current selected date
-function replenishAlreadyAdded(m: any) {
-  try {
-    const name = (m && m.name && String(m.name).trim().toLowerCase()) || "";
-    if (!name) return false;
-    const sel = String(props.selectedDate || "").trim();
-    return (props.allTasks || []).some((t: any) => {
-      if ((t.type_id || t.type) !== "Replenish") return false;
-      // exact id match
-      if (t.id && m.id && String(t.id) === String(m.id)) return true;
-      const tn = (t.name || "").trim().toLowerCase();
-      if (tn !== name) return false;
-      // if selected date provided, check task date matches selected date
-      const taskDate = t.date || t.eventDate || "";
-      if (sel) return String(taskDate || "") === sel;
-      // otherwise treat same-name replenish task as present
-      return true;
-    });
-  } catch (e) {
-    return false;
-  }
-}
-
-async function selectReplenishMatch(t: any) {
-  // Immediately restore selected replenish task to undone
-  selectedReplenishId.value = t.id;
-  replenishQuery.value = t.name || "";
-  try {
-    const targetDate =
-      t.date || t.eventDate || props.selectedDate || localNewTask.value.eventDate;
-    await updateTask(targetDate, t.id, { status_id: 1 });
-    // Ask parent to clear any preview/edit state
-    emit("cancel-edit");
-  } catch (e) {
-    logger.error("Failed to restore replenish task", e);
-  }
-  // clear selection/input after restore
-  selectedReplenishId.value = null;
-  replenishQuery.value = "";
-  showReplenishList.value = false;
-}
-
-function handleReplItemPointer(t: any) {
-  selectReplenishMatch(t);
-}
-
-function createReplenishFromInput() {
-  const name = (replenishQuery.value || "").trim();
-  if (!name) return;
-  // ensure task is Replenish type and undone (status_id = 1)
-  localNewTask.value.name = name;
-  localNewTask.value.type_id = "Replenish";
-  localNewTask.value.status_id = 1;
-  emit("add-task", { ...localNewTask.value }, { preview: !stayAfterSave.value });
-  // reset fields after creating
-  replenishQuery.value = "";
-  selectedReplenishId.value = null;
-  localNewTask.value.description = "";
-  showReplenishList.value = false;
-}
-
-// Auto-capitalize first letter typed into the replenish search box
-watch(replenishQuery, (val) => {
-  if (typeof val !== "string") return;
-  if (!val) return;
-  const corrected = val.charAt(0).toUpperCase() + val.slice(1);
-  if (corrected !== val) replenishQuery.value = corrected;
-});
-
-function onReplenishInput(val: string | number | null) {
-  // coerce to string safely (Quasar may emit number|null)
-  const s = val == null ? "" : String(val);
-  // show list only when there's non-empty input
-  showReplenishList.value = !!(s && s.trim());
-  if (showReplenishList.value) {
-    nextTick(positionReplenishList);
-  } else {
-    replenishListStyle.value = { display: "none" };
-  }
-}
-
-function onReplenishFocus() {
-  // only show list on focus when there's content in the input
-  if (replenishQuery.value && replenishQuery.value.trim()) {
-    showReplenishList.value = true;
-    nextTick(positionReplenishList);
-  } else {
-    showReplenishList.value = false;
-  }
-}
-
-function positionReplenishList() {
-  try {
-    const inputEl = replenishInput.value?.$el || replenishInput.value;
-    const input = inputEl?.querySelector ? inputEl.querySelector("input") : inputEl;
-    if (!input) {
-      replenishListStyle.value = { display: "none" };
-      return;
-    }
-    const rect = input.getBoundingClientRect();
-    const left = rect.left + (window.scrollX || window.pageXOffset || 0);
-    const top = rect.bottom + (window.scrollY || window.pageYOffset || 0) + 6;
-    const width = rect.width || input.offsetWidth || 280;
-    replenishListStyle.value = {
-      position: "fixed",
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${width}px`,
-      background: "#fff",
-      borderRadius: "8px",
-      boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
-      padding: "8px",
-      zIndex: 4000,
-      maxHeight: "260px",
-      overflow: "auto",
-      display: "block",
-    };
-  } catch (e) {
-    replenishListStyle.value = { display: "none" };
-  }
-}
-
-onMounted(() => {
-  window.addEventListener("resize", positionReplenishList);
-  window.addEventListener("scroll", positionReplenishList, true);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", positionReplenishList);
-  window.removeEventListener("scroll", positionReplenishList, true);
+// ── Replenish dropdown (extracted to composable) ──────────────────────────────
+const {
+  replenishInput,
+  replenishQuery,
+  selectedReplenishId,
+  showReplenishList,
+  replenishListStyle,
+  replenishMatches,
+  smallReplenishTasks,
+  replenishAlreadyAdded,
+  selectReplenishMatch,
+  handleReplItemPointer,
+  createReplenishFromInput,
+  onReplenishInput,
+  onReplenishFocus,
+} = useReplenishDropdown({
+  localNewTask,
+  allTasks: toRef(props, "allTasks") as any,
+  replenishTasks: toRef(props, "replenishTasks") as any,
+  selectedDate: toRef(props, "selectedDate") as any,
+  stayAfterSave,
+  emit: emit as (event: string, ...args: any[]) => void,
+  updateTask,
 });
 
 // When user switches type to Replenish while in add mode, focus the search input
@@ -797,102 +653,6 @@ watch(autoGeneratedName, (gen) => {
   localNewTask.value.name = gen;
 });
 
-// Computed for eventTime hour and minute with setters so inputs can `v-model` directly
-const eventTimeHour = computed<number | string>({
-  get() {
-    if (!localNewTask.value.eventTime) return "";
-    const val = Number(localNewTask.value.eventTime.split(":")[0]);
-    return val;
-  },
-  set(v: number | string) {
-    if (v === null || v === "") {
-      // ignore transient empty updates (don't clear stored eventTime)
-      return;
-    }
-    const hour = Number(v);
-    if (isNaN(hour) || hour < 0 || hour > 23) return;
-    timeType.value = "exactHour";
-    const minute = Number(eventTimeMinute.value) || 0;
-    localNewTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(
-      minute
-    ).padStart(2, "0")}`;
-  },
-});
-const eventTimeMinute = computed<number | string>({
-  get() {
-    if (!localNewTask.value.eventTime) return "";
-    const val = Number(localNewTask.value.eventTime.split(":")[1]);
-    return val;
-  },
-  set(v: number | string) {
-    if (v === null || v === "") {
-      // ignore transient empty updates (don't clear stored eventTime)
-      return;
-    }
-    const minute = Number(v);
-    if (isNaN(minute) || minute < 0 || minute > 59) return;
-    timeType.value = "exactHour";
-    const hour = Number(eventTimeHour.value) || 0;
-    localNewTask.value.eventTime = `${String(hour).padStart(2, "0")}:${String(
-      minute
-    ).padStart(2, "0")}`;
-  },
-});
-
-// Compute hour difference between now and the full event datetime when exact hour is set
-const eventDateTimeHoursDiff = computed<number | null>(() => {
-  const dateStr = localNewTask.value.eventDate;
-  const timeStr = localNewTask.value.eventTime; // expected "HH:MM"
-  if (!dateStr || !timeStr) return null;
-  // Construct a local datetime string
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  if (isNaN(dt.getTime())) return null;
-  const now = new Date();
-  const diffHours = (dt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  return diffHours;
-});
-
-const eventTimeHoursDisplay = computed(() => {
-  return formatEventHoursDiff(localNewTask.value.eventDate, localNewTask.value.eventTime);
-});
-
-// Watch timeType to clear/restore time when toggling modes.
-// Cache stores null when there's no value; restore only if the current task
-// has no time (or is explicitly zero) so user-entered values are not overwritten.
-const cachedTime = ref<{ hour: string | number | null; minute: string | number | null }>({
-  hour: null,
-  minute: null,
-});
-watch(timeType, (newValue, oldValue) => {
-  if (newValue === "wholeDay") {
-    // Cache existing hour/minute if present
-    cachedTime.value.hour = eventTimeHour.value === "" ? null : eventTimeHour.value;
-    cachedTime.value.minute = eventTimeMinute.value === "" ? null : eventTimeMinute.value;
-    // Clear displayed time for whole-day view
-    localNewTask.value.eventTime = "";
-  } else if (oldValue === "wholeDay" && newValue === "exactHour") {
-    // Only restore cached time if there is no user-provided time while in wholeDay
-    const current = localNewTask.value.eventTime;
-    const currentIsEmpty = !current || current === "" || current === "00:00";
-    if (!currentIsEmpty) {
-      // user set a time while in wholeDay — do not overwrite
-      return;
-    }
-    const hour = cachedTime.value.hour != null ? cachedTime.value.hour : null;
-    const minute = cachedTime.value.minute != null ? cachedTime.value.minute : null;
-    if (hour == null && minute == null) {
-      // nothing to restore
-      return;
-    }
-    const h = hour == null ? 0 : Number(hour);
-    const m = minute == null ? 0 : Number(minute);
-    localNewTask.value.eventTime = `${String(h).padStart(2, "0")}:${String(m).padStart(
-      2,
-      "0"
-    )}`;
-  }
-});
-
 function updateTaskField(field: string, value: any) {
   if (field === "eventDateDay") eventDateDay.value = value;
   else if (field === "eventDateMonth") eventDateMonth.value = value;
@@ -952,146 +712,6 @@ watch(
 );
 // ...existing code continues...
 
-// Helper: format date as yyyy-MM-dd
-function formatDate(y: number, m: number, d: number) {
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-// Update handlers with auto-advance and auto-increment logic
-const isUpdatingDate = ref(false);
-function updateEventDateDay(val: number | string | null) {
-  if (val === null || val === "" || isUpdatingDate.value) return;
-  isUpdatingDate.value = true;
-  try {
-    const day = Number(val);
-    if (isNaN(day) || day < 1 || day > 31) return;
-    const year = eventDateYear.value;
-    const month = eventDateMonth.value;
-    // Always update full date string
-    eventDateDay.value = day;
-    // Auto-focus to month input after filling day (when day is 2 digits)
-    if (String(val).length >= 2) {
-      setTimeout(() => {
-        monthInput.value?.$el?.querySelector("input")?.focus();
-      }, 0);
-    }
-  } finally {
-    isUpdatingDate.value = false;
-  }
-}
-
-function updateEventDateMonth(val: number | string | null) {
-  if (val === null || val === "" || isUpdatingDate.value) return;
-  isUpdatingDate.value = true;
-  try {
-    const month = Number(val);
-    if (isNaN(month) || month < 1 || month > 12) return;
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    // Use full 4-digit year from eventDateParts to avoid two-digit-year pitfalls
-    let year = Number(eventDateParts.value[0]) || currentYear;
-    const day = eventDateDay.value;
-    // Auto-increment year if enabled and month < current month
-    if (autoIncrementYear.value) {
-      if (month < currentMonth && year === currentYear) {
-        year = currentYear + 1;
-      }
-      // If user corrects to month >= currentMonth and year was incremented, revert year
-      if (month >= currentMonth && year === currentYear + 1) {
-        year = currentYear;
-      }
-    }
-    // Always update full date string using computed setter
-    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
-      2,
-      "0"
-    )}`;
-    localNewTask.value.eventDate = newDate;
-    // Auto-focus to hour input after filling month (when month is 2 digits)
-    if (String(val).length >= 2) {
-      setTimeout(() => {
-        hourInput.value?.$el?.querySelector("input")?.focus();
-      }, 0);
-    }
-  } finally {
-    isUpdatingDate.value = false;
-  }
-}
-
-function updateEventDateYear(val: number | string | null) {
-  if (val === null || val === "") return;
-  eventDateYear.value = Number(val);
-}
-
-// (Handlers replaced by computed setters above)
-
-const { getTimeDifferenceDisplay } = useTimeDiff();
-// Computed for eventDate parts, always in sync with eventDate
-const eventDate = computed(() => {
-  const val = localNewTask.value.eventDate || "";
-  return val;
-});
-const eventDateParts = computed(() => {
-  const val = eventDate.value.split("-");
-  return val;
-});
-const eventDateYear = computed({
-  // Expose only the last two digits in the input, but keep full 4-digit year in storage.
-  get: () => {
-    const full = eventDateParts.value[0]
-      ? Number(eventDateParts.value[0])
-      : new Date().getFullYear();
-    const two = String(full).slice(-2);
-    return Number(two);
-  },
-  set: (val: number) => {
-    if (eventDateParts.value.length === 3) {
-      let yearNum = Number(val);
-      if (!isNaN(yearNum)) {
-        // If user provided a 2-digit year (0-99), map to current century.
-        if (yearNum >= 0 && yearNum <= 99) {
-          const baseCentury = Math.floor(new Date().getFullYear() / 100) * 100;
-          yearNum = baseCentury + yearNum;
-        }
-        localNewTask.value.eventDate = `${String(yearNum).padStart(4, "0")}-${
-          eventDateParts.value[1]
-        }-${eventDateParts.value[2]}`;
-      }
-    }
-  },
-});
-const eventDateMonth = computed({
-  get: () => {
-    const val = eventDateParts.value[1]
-      ? Number(eventDateParts.value[1])
-      : new Date().getMonth() + 1;
-    return val;
-  },
-  set: (val: number) => {
-    if (eventDateParts.value.length === 3) {
-      localNewTask.value.eventDate = `${eventDateParts.value[0]}-${String(val).padStart(
-        2,
-        "0"
-      )}-${eventDateParts.value[2]}`;
-    }
-  },
-});
-const eventDateDay = computed({
-  get: () => {
-    const val = eventDateParts.value[2]
-      ? Number(eventDateParts.value[2])
-      : new Date().getDate();
-    return val;
-  },
-  set: (val: number) => {
-    if (eventDateParts.value.length === 3) {
-      localNewTask.value.eventDate = `${eventDateParts.value[0]}-${
-        eventDateParts.value[1]
-      }-${String(val).padStart(2, "0")}`;
-    }
-  },
-});
 const priorityOptions = [
   {
     label: "Crit",
@@ -1155,15 +775,6 @@ const descriptionRows = computed(() => {
 
 // Auto-resize textarea to fit content
 const descriptionInput = ref<any>(null);
-
-// When creating new tasks, keep the form open after save by default for Replenish
-// Initialize based on last selected type or current localNewTask type when in add mode.
-const stayAfterSave = ref(
-  (props.mode === "add" &&
-    (localNewTask.value.type_id === "Replenish" ||
-      lastSelectedType.value === "Replenish")) ||
-    false
-);
 
 // When user switches type while in add mode, toggle `stayAfterSave`:
 // - enable when switching to Replenish
