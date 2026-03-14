@@ -26,22 +26,27 @@ class TaskStore {
   readonly subtaskLine = markRaw(new TaskSubtaskLine(this.mgr, this.active, saveData));
   readonly status = markRaw(new TaskStatus(this.mgr, saveData));
 
-  async add(date: string, taskData: any) {
+  // Arrow-function fields so they are own-enumerable properties on the instance.
+  // Pinia's setup-store iterates only own-enumerable properties; prototype methods
+  // (regular class methods) are non-enumerable and are NOT exposed by Pinia,
+  // causing "is not a function" errors at runtime for any caller that goes through
+  // the Pinia store (e.g. the lazyStore proxy in apiRoot.ts).
+  readonly add = async (date: string, taskData: any) => {
     const t = this.mgr.addTask(date, taskData);
     await saveData();
     return t;
-  }
+  };
 
-  async update(date: string, taskOrId: Task | string, maybeUpdates?: any) {
+  readonly update = async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
     this.mgr.updateTask(date, taskOrId as any, maybeUpdates);
     await saveData();
-  }
+  };
 
-  async delete(date: string, id: string) {
+  readonly delete = async (date: string, id: string) => {
     const removed = this.mgr.deleteTask(date, id);
     await saveData();
     return removed;
-  }
+  };
 }
 
 export const useTaskStore = defineStore('task', () => new TaskStore());
