@@ -58,11 +58,15 @@ vi.mock('src/modules/task/TaskList', () => ({
 }));
 
 vi.mock('src/modules/task/TaskSubtaskLine', () => ({
-  TaskSubtaskLine: vi.fn(function () { return {}; }),
+  TaskSubtaskLine: vi.fn(function () {
+    return {};
+  }),
 }));
 
 vi.mock('src/modules/task/TaskStatus', () => ({
-  TaskStatus: vi.fn(function () { return {}; }),
+  TaskStatus: vi.fn(function () {
+    return {};
+  }),
 }));
 
 // Import after mocks
