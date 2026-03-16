@@ -1,4 +1,4 @@
-import type { TaskManager } from './managers/taskManager';
+import type { TaskManager } from '../managers/taskManager';
 
 export class TaskStatus {
   constructor(

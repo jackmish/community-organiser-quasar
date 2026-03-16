@@ -5,7 +5,7 @@ import {
   deleteGroup,
   getParentForActive,
   prepareGroupsForSave,
-} from '../../src/modules/group/groupManager';
+} from '../../src/modules/group/managers/groupManager';
 
 // ─── addGroup ─────────────────────────────────────────────────────────────────
 describe('addGroup', () => {
@@ -179,7 +179,7 @@ describe('prepareGroupsForSave', () => {
 
 // ─── GroupActive.goToParent ───────────────────────────────────────────────────
 import { ref } from 'vue';
-import { GroupActive } from '../../src/modules/group/GroupActive';
+import { GroupActive } from '../../src/modules/group/classes/GroupActive';
 
 describe('GroupActive.goToParent', () => {
   it('navigates to the parent group when a child is active', () => {

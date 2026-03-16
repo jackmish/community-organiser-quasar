@@ -42,7 +42,7 @@ import {
   getAllTasks,
   listFromDays,
 } from '../../src/modules/task/managers/taskManager';
-import { createTaskComputed } from '../../src/modules/task/computedTaskLists';
+import { createTaskComputed } from '../../src/modules/task/computed/computedTaskLists';
 import { construct as constructStorage } from '../../src/modules/storage/apiStorage';
 
 // ────────────────────────────────────────────────────────────────────────────

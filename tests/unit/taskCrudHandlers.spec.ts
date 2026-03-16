@@ -22,7 +22,7 @@ vi.mock('src/modules/day-organiser/apiRoot', () => ({
   group: { active: { value: null } },
 }));
 
-import { createTaskCrudHandlers } from '../../src/modules/task/taskCrudHandlers';
+import { createTaskCrudHandlers } from '../../src/modules/task/handlers/taskCrudHandlers';
 
 // ── A minimal class that mimics TaskActive ────────────────────────────────────
 class FakeActive {

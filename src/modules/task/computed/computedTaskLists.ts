@@ -3,7 +3,7 @@ import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
-} from './utils/occursOnDay';
+} from '../utils/occursOnDay';
 import {
   parseYmdLocal as parseYmdLocalDefault,
   todayString,

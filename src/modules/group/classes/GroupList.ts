@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import * as groupManager from './groupManager';
-import { getGroupsByParent as getGroupsByParentUtil, isVisibleForActive } from './groupUtils';
+import * as groupManager from '../managers/groupManager';
+import { getGroupsByParent as getGroupsByParentUtil, isVisibleForActive } from '../utils/groupUtils';
 
 export class GroupList {
   readonly all: ComputedRef<any[]>;

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { TaskGroup } from '../day-organiser/types';
+import type { TaskGroup } from '../../day-organiser/types';
 
 export function createGroupUiHandlers(args: {
   editGroupLocal: Ref<{

@@ -1,10 +1,10 @@
-import type { OrganiserData, TaskGroup } from '../day-organiser/types';
+import type { OrganiserData, TaskGroup } from '../../day-organiser/types';
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 import logger from 'src/utils/logger';
-import { getGroupsByParent as getGroupsByParentUtil } from './groupUtils';
-import { generateGroupId } from './groupId';
-import { normalizeId as normalizeGroupId } from './groupUtils';
+import { getGroupsByParent as getGroupsByParentUtil } from '../utils/groupUtils';
+import { generateGroupId } from '../utils/groupId';
+import { normalizeId as normalizeGroupId } from '../utils/groupUtils';
 
 export type CreateGroupInput = {
   name: string;

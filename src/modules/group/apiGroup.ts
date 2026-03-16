@@ -1,9 +1,9 @@
 import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { saveData } from 'src/utils/storageUtils';
-import * as groupManager from './groupManager';
-import { GroupList } from './GroupList';
-import { GroupActive } from './GroupActive';
+import * as groupManager from './managers/groupManager';
+import { GroupList } from './classes/GroupList';
+import { GroupActive } from './classes/GroupActive';
 
 // ── Store class ───────────────────────────────────────────────────────────────
 class GroupStore {

@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import { ref, computed, watch } from 'vue';
 import { useLongPress } from 'src/composables/useLongPress';
-import type { Task } from '../day-organiser';
+import type { Task } from '../../day-organiser';
 import { todayString } from 'src/utils/dateUtils';
 
 export function createTaskViewHelpers(args: {

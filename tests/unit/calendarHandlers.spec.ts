@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
-import { createCalendarHandlers } from '../../src/modules/task/calendarHandlers';
+import { createCalendarHandlers } from '../../src/modules/task/handlers/calendarHandlers';
 
 function makeArgs(overrides: Record<string, any> = {}) {
   const isClickBlocked = ref(false);

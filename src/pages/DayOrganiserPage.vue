@@ -236,11 +236,12 @@ import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "../components/group/GroupSelectHeader.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
 import { useGroupColor } from "src/composables/useGroupColor";
-import { createLineEventHandlers } from "src/modules/task/lineEventHandlers";
-import { createTaskUiHandlers, createTaskViewHelpers } from "src/modules/task/uiHandlers";
-import { createCalendarHandlers } from "src/modules/task/calendarHandlers";
-import { createTaskComputed } from "src/modules/task/computedTaskLists";
-import { createTaskCrudHandlers } from "src/modules/task/taskCrudHandlers";
+import { createLineEventHandlers } from "src/modules/task/handlers/lineEventHandlers";
+import { createTaskUiHandlers } from "src/modules/task/handlers/taskUiHandlers";
+import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers";
+import { createCalendarHandlers } from "src/modules/task/handlers/calendarHandlers";
+import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
+import { createTaskCrudHandlers } from "src/modules/task/handlers/taskCrudHandlers";
 import TasksListSmall from "src/components/task/TasksListSmall.vue";
 
 // Use shared view composable for clock and time-diff helpers
@@ -254,7 +255,7 @@ import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import * as api from "src/modules/day-organiser/apiRoot";
 
-import { createHiddenGroupSummary } from "src/modules/task/hiddenGroupSummary";
+import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 

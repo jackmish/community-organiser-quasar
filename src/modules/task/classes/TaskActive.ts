@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import type { Task } from './types';
-import type { TaskManager } from './managers/taskManager';
+import type { Task } from '../types';
+import type { TaskManager } from '../managers/taskManager';
 
 export type PreviewPayload = string | number | Task | null;
 

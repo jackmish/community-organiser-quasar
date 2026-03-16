@@ -1,5 +1,5 @@
 import type { Task } from '../task/types';
-import type { TaskGroup } from '../group/TaskGroup';
+import type { TaskGroup } from '../group/classes/TaskGroup';
 
 export interface DayData {
   date: string; // YYYY-MM-DD

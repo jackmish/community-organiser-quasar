@@ -1,6 +1,6 @@
 export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-import type { TaskGroup } from '../group/TaskGroup';
+import type { TaskGroup } from '../group/classes/TaskGroup';
 export type { TaskGroup };
 
 export class Task {

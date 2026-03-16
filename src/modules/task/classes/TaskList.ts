@@ -1,5 +1,5 @@
-import type { Task } from './types';
-import type { TaskManager } from './managers/taskManager';
+import type { Task } from '../types';
+import type { TaskManager } from '../managers/taskManager';
 
 export class TaskList {
   constructor(private readonly mgr: TaskManager) {}

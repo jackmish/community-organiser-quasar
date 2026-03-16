@@ -4,12 +4,12 @@ import { TaskManager } from './managers/taskManager';
 import * as timeManager from './managers/timeManager/timeManager';
 import { saveData } from 'src/utils/storageUtils';
 import type { Task } from './types';
-import { TaskActive } from './TaskActive';
-import { TaskList } from './TaskList';
-import { TaskSubtaskLine } from './TaskSubtaskLine';
-import { TaskStatus } from './TaskStatus';
+import { TaskActive } from './classes/TaskActive';
+import { TaskList } from './classes/TaskList';
+import { TaskSubtaskLine } from './classes/TaskSubtaskLine';
+import { TaskStatus } from './classes/TaskStatus';
 
-export type { PreviewPayload } from './TaskActive';
+export type { PreviewPayload } from './classes/TaskActive';
 
 // ── Store class ───────────────────────────────────────────────────────────────
 class TaskStore {

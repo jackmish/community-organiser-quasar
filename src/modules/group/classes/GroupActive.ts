@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import * as groupManager from './groupManager';
+import * as groupManager from '../managers/groupManager';
 
 export class GroupActive {
   readonly activeGroup: Ref<{ label: string; value: string | null } | null>;

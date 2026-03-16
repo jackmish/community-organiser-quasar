@@ -3,7 +3,7 @@ import type { DayData } from './types';
 import { storage, loadSettings, saveSettings } from '../storage';
 import logger from 'src/utils/logger';
 import * as api from './apiRoot';
-import { createHiddenGroupSummary } from 'src/modules/task/hiddenGroupSummary';
+import { createHiddenGroupSummary } from 'src/modules/task/helpers/hiddenGroupSummary';
 
 export {
   storage,

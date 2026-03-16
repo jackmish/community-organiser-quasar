@@ -44,26 +44,26 @@ vi.mock('src/modules/task/managers/timeManager/timeManager', () => ({
   })),
 }));
 
-vi.mock('src/modules/task/TaskActive', () => ({
+vi.mock('src/modules/task/classes/TaskActive', () => ({
   // Must be a regular function for `new TaskActive(...)` to work
   TaskActive: vi.fn(function () {
     return { task: { value: null }, mode: { value: 'add' }, setTask: vi.fn(), setMode: vi.fn() };
   }),
 }));
 
-vi.mock('src/modules/task/TaskList', () => ({
+vi.mock('src/modules/task/classes/TaskList', () => ({
   TaskList: vi.fn(function () {
     return { all: vi.fn(() => []) };
   }),
 }));
 
-vi.mock('src/modules/task/TaskSubtaskLine', () => ({
+vi.mock('src/modules/task/classes/TaskSubtaskLine', () => ({
   TaskSubtaskLine: vi.fn(function () {
     return {};
   }),
 }));
 
-vi.mock('src/modules/task/TaskStatus', () => ({
+vi.mock('src/modules/task/classes/TaskStatus', () => ({
   TaskStatus: vi.fn(function () {
     return {};
   }),
