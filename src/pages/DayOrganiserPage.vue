@@ -760,6 +760,7 @@ const {
   setFloating: setPreviewFloating,
   anchorTo: anchorTo,
   closeFloatingPreview,
+  hideFloating,
   computePreviewStyle,
 } = useFloatingPreview({
   width: 640,
@@ -773,6 +774,11 @@ const {
       void e;
     }
     return false;
+  },
+  onClickOutside: () => {
+    // Hide the panel (slide it away) without resetting the active task/form.
+    // The "Show" button will appear so the user can restore it.
+    panelHidden.value = true;
   },
 });
 

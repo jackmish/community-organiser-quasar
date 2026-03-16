@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 export function useFloatingPreview(opts?: {
   width?: number;
   shouldIgnoreClick?: (target: Node | null) => boolean;
+  /** Called when an outside click dismisses the floating panel (hide, not close/reset). */
+  onClickOutside?: () => void;
 }) {
   const PREVIEW_WIDTH = opts?.width || 360;
   const previewFloating = ref(false);
@@ -222,6 +224,7 @@ export function useFloatingPreview(opts?: {
     return rect;
   }
 
+  /** Fully closes the floating preview and stamps lastClosedAt (debounce guard). */
   function closeFloatingPreview() {
     previewFloating.value = false;
     previewRect.value = null;
@@ -231,6 +234,17 @@ export function useFloatingPreview(opts?: {
     } catch (e) {
       void e;
     }
+  }
+
+  /**
+   * Hides the floating panel without resetting task state or stamping lastClosedAt.
+   * Used when clicking outside — the panel collapses to its fixed position but the
+   * current task/form is preserved.
+   */
+  function hideFloating() {
+    previewFloating.value = false;
+    previewRect.value = null;
+    preferBelow.value = false;
   }
 
   function onFocusIn(e: FocusEvent) {
@@ -302,12 +316,14 @@ export function useFloatingPreview(opts?: {
         document.querySelector('.fixed-content.floating');
       const wrapper = getWrapper();
       if (!wrapper) {
-        closeFloatingPreview();
+        hideFloating();
+        opts?.onClickOutside?.();
         return;
       }
       const target = e.target;
       if (!target) {
-        closeFloatingPreview();
+        hideFloating();
+        opts?.onClickOutside?.();
         return;
       }
       try {
@@ -329,9 +345,11 @@ export function useFloatingPreview(opts?: {
       if (opts?.shouldIgnoreClick && target instanceof Node && opts.shouldIgnoreClick(target))
         return;
       lastMouseDownTarget.value = null;
-      closeFloatingPreview();
+      hideFloating();
+      opts?.onClickOutside?.();
     } catch (err) {
-      closeFloatingPreview();
+      hideFloating();
+      opts?.onClickOutside?.();
     }
   }
 
@@ -349,6 +367,7 @@ export function useFloatingPreview(opts?: {
     previewRect,
     setFloating,
     closeFloatingPreview,
+    hideFloating,
     computePreviewStyle,
     anchorTo,
   } as const;

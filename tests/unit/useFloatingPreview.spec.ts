@@ -19,7 +19,7 @@
  * "outside" clicks.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createApp, defineComponent, nextTick } from 'vue';
 import { useFloatingPreview } from '../../src/composables/useFloatingPreview';
 
@@ -143,7 +143,7 @@ describe('useFloatingPreview', () => {
 
   // ── outside-click closes logic is preserved ────────────────────────────────
 
-  it('clicking an unrelated element (no wrapper in DOM) closes the preview and blocks setFloating within 200 ms', async () => {
+  it('clicking an unrelated element (no wrapper in DOM) hides the preview WITHOUT blocking subsequent setFloating', async () => {
     const { result, unmount } = withSetup(() => useFloatingPreview());
     try {
       result.setFloating(makeRect(100, 100, 200, 40));
@@ -153,12 +153,12 @@ describe('useFloatingPreview', () => {
       simulateClick(outsideEl);
       await nextTick();
 
-      // Preview should be closed
+      // Preview is hidden (collapsed, not reset)
       expect(result.previewFloating.value).toBe(false);
 
-      // Immediate setFloating is blocked by the CLOSE_IGNORE_MS guard
+      // hideFloating does NOT stamp lastClosedAt, so setFloating succeeds immediately
       result.setFloating(makeRect(100, 100, 200, 40));
-      expect(result.previewFloating.value).toBe(false);
+      expect(result.previewFloating.value).toBe(true);
     } finally {
       unmount();
     }
@@ -247,6 +247,97 @@ describe('useFloatingPreview', () => {
       } finally {
         wrapperEl.remove();
       }
+    } finally {
+      unmount();
+    }
+  });
+
+  // ── hideFloating + onClickOutside (hide-not-reset behaviour) ─────────────────────
+
+  it('hideFloating() collapses the panel WITHOUT stamping lastClosedAt — setFloating succeeds immediately after', () => {
+    const { result, unmount } = withSetup(() => useFloatingPreview());
+    try {
+      result.setFloating(makeRect(100, 100, 200, 40));
+      expect(result.previewFloating.value).toBe(true);
+
+      result.hideFloating();
+      expect(result.previewFloating.value).toBe(false);
+      expect(result.previewRect.value).toBeNull();
+
+      // Unlike closeFloatingPreview(), the 200 ms guard is NOT active
+      const rect = makeRect(50, 50, 100, 30);
+      result.setFloating(rect);
+      expect(result.previewFloating.value).toBe(true);
+      expect(result.previewRect.value).toStrictEqual(rect);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('closeFloatingPreview() stamps lastClosedAt and blocks immediate setFloating', () => {
+    const { result, unmount } = withSetup(() => useFloatingPreview());
+    try {
+      result.setFloating(makeRect(100, 100, 200, 40));
+      result.closeFloatingPreview();
+      expect(result.previewFloating.value).toBe(false);
+
+      // Immediate setFloating is blocked by the 200 ms CLOSE_IGNORE_MS guard
+      result.setFloating(makeRect(50, 50, 100, 30));
+      expect(result.previewFloating.value).toBe(false);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('onClickOutside callback fires when clicking an unrelated element (no floating wrapper in DOM)', async () => {
+    const onClickOutside = vi.fn();
+    const { result, unmount } = withSetup(() => useFloatingPreview({ onClickOutside }));
+    try {
+      result.setFloating(makeRect(100, 100, 200, 40));
+      simulateClick(outsideEl);
+      await nextTick();
+      // callback fired — caller (e.g. page) can set panelHidden=true to slide away
+      expect(onClickOutside).toHaveBeenCalledOnce();
+      // panel hidden (floating gone), no lastClosedAt stamp
+      expect(result.previewFloating.value).toBe(false);
+      result.setFloating(makeRect(10, 10, 50, 50));
+      expect(result.previewFloating.value).toBe(true);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('onClickOutside callback fires when clicking outside a visible wrapper', async () => {
+    const onClickOutside = vi.fn();
+    const { result, unmount } = withSetup(() => useFloatingPreview({ onClickOutside }));
+    try {
+      result.setFloating(makeRect(100, 100, 200, 40));
+      const wrapperEl = document.createElement('div');
+      wrapperEl.className = 'floating-preview-wrapper';
+      document.body.appendChild(wrapperEl);
+      try {
+        simulateClick(outsideEl);
+        await nextTick();
+        expect(onClickOutside).toHaveBeenCalledOnce();
+        expect(result.previewFloating.value).toBe(false);
+        // setFloating succeeds immediately (hideFloating, not closeFloatingPreview)
+        result.setFloating(makeRect(10, 10, 50, 50));
+        expect(result.previewFloating.value).toBe(true);
+      } finally {
+        wrapperEl.remove();
+      }
+    } finally {
+      unmount();
+    }
+  });
+
+  it('onClickOutside callback does NOT fire when clicking a [data-task-id] element', async () => {
+    const onClickOutside = vi.fn();
+    const { result, unmount } = withSetup(() => useFloatingPreview({ onClickOutside }));
+    try {
+      simulateClick(taskEl);
+      await nextTick();
+      expect(onClickOutside).not.toHaveBeenCalled();
     } finally {
       unmount();
     }
