@@ -268,6 +268,35 @@ export function useFloatingPreview(opts?: {
         // ignore
       }
       if (eventInsideWrapper(e)) return;
+
+      // Guard: check mousedown target and click target for task elements / action
+      // buttons BEFORE querying the wrapper. When no floating preview is visible
+      // (wrapper === null), the old code called closeFloatingPreview() immediately,
+      // setting lastClosedAt and causing the subsequent setFloating() call from
+      // onTaskClicked to be silently blocked by the CLOSE_IGNORE_MS window.
+      try {
+        const lm = lastMouseDownTarget.value;
+        if (lm && lm instanceof Element) {
+          const opener = lm.closest('.list-add-btn, .add-task-btn, .floating-add-btn');
+          if (opener) {
+            lastMouseDownTarget.value = null;
+            return;
+          }
+          const taskOpener = lm.closest('[data-task-id]');
+          if (taskOpener) {
+            lastMouseDownTarget.value = null;
+            return;
+          }
+        }
+        // Also guard on the click target itself in case mousedown fired elsewhere
+        const tgt = e.target;
+        if (tgt instanceof Element) {
+          if (tgt.closest?.('[data-task-id]')) return;
+        }
+      } catch (err) {
+        // ignore
+      }
+
       const getWrapper = () =>
         document.querySelector('.floating-preview-wrapper') ||
         document.querySelector('.fixed-content.floating');
@@ -286,22 +315,6 @@ export function useFloatingPreview(opts?: {
         if (lm && lm instanceof Node && wrapper && wrapper.contains(lm)) {
           lastMouseDownTarget.value = null;
           return;
-        }
-        try {
-          if (lm && lm instanceof Element) {
-            const opener = lm.closest('.list-add-btn, .add-task-btn, .floating-add-btn');
-            if (opener) {
-              lastMouseDownTarget.value = null;
-              return;
-            }
-            const taskOpener = lm.closest && lm.closest('[data-task-id]');
-            if (taskOpener) {
-              lastMouseDownTarget.value = null;
-              return;
-            }
-          }
-        } catch (err) {
-          // ignore
         }
       } catch (err) {
         // ignore
