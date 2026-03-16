@@ -165,7 +165,8 @@ describe('computedTaskLists — task list visibility', () => {
       currentDate: ref(TODAY),
       allTasks: ref([]),
     });
-    expect(sortedTasks.value.length).toBe(2);``
+    expect(sortedTasks.value.length).toBe(2);
+    ``;
   });
 
   it('tasksWithoutTime includes a Todo with no eventTime', () => {
@@ -489,9 +490,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       getGroupsByParent: () => [],
     },
     active: {
-      activeGroup: ref(
-        activeGroupId ? { label: 'Test Group', value: activeGroupId } : null,
-      ),
+      activeGroup: ref(activeGroupId ? { label: 'Test Group', value: activeGroupId } : null),
     },
   });
 
@@ -691,9 +690,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       getGroupsByParent: () => [],
     },
     active: {
-      activeGroup: ref(
-        activeGroupId ? { label: 'Test Group', value: activeGroupId } : null,
-      ),
+      activeGroup: ref(activeGroupId ? { label: 'Test Group', value: activeGroupId } : null),
     },
   });
 
@@ -795,8 +792,11 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
     // Add a task for DATE2
     daysRef.value[DATE2] = { date: DATE2, tasks: [], notes: '' };
     const event = makeTask({
-      type_id: 'TimeEvent', name: 'Christmas event',
-      date: DATE2, eventDate: DATE2, groupId: GROUP_ID,
+      type_id: 'TimeEvent',
+      name: 'Christmas event',
+      date: DATE2,
+      eventDate: DATE2,
+      groupId: GROUP_ID,
     });
     daysRef.value[DATE2].tasks.push(event);
 
@@ -824,13 +824,16 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       currentDayData,
       currentDate,
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID),  // active group = GROUP_ID
+      apiGroup: makeGroupApi(GROUP_ID), // active group = GROUP_ID
     });
 
     daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
     const event = makeTask({
-      type_id: 'TimeEvent', name: 'Wrong group event',
-      date: TODAY, eventDate: TODAY, groupId: 'other-grp',
+      type_id: 'TimeEvent',
+      name: 'Wrong group event',
+      date: TODAY,
+      eventDate: TODAY,
+      groupId: 'other-grp',
     });
     daysRef.value[TODAY].tasks.push(event);
 
@@ -877,7 +880,7 @@ describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
       date: TODAY,
       eventDate: TODAY,
       groupId: GROUP_ID,
-      repeat: {} as any,  // ← the problematic data shape
+      repeat: {} as any, // ← the problematic data shape
     });
     const { tasksWithoutTime } = createTaskComputed({
       currentDayData: ref({ tasks: [event] }),
