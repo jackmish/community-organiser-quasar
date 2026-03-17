@@ -239,6 +239,10 @@ Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to c
 
 ---
 
+There is also another problem when code is adjusted, fixed etc. It leaves unused code or incorrect fixes, which are doing nothing in project except making code heavier.
+
+---
+
 For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
 
 Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.

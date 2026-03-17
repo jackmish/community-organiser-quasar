@@ -50,18 +50,28 @@
                     <q-item>
                       <q-item-section>
                         <q-select
+                          use-input
+                          hide-selected
+                          fill-input
+                          ref="langSelect"
                           v-model="selectedLanguage"
-                          :options="langOptions"
+                          :options="filteredLangOptions"
                           option-label="label"
                           option-value="value"
-                          dense
-                          use-input
-                          input-debounce="200"
+                          v-model:input-value="langFilter"
+                          input-debounce="0"
                           emit-value
                           map-options
+                          bg-color="blue"
                           @update:model-value="onLanguageChange"
-                          placeholder="Language"
-                        />
+                          ><template v-slot:no-option>
+                            <q-item>
+                              <q-item-section class="text-grey">
+                                No results
+                              </q-item-section>
+                            </q-item>
+                          </template></q-select
+                        >
                       </q-item-section>
                     </q-item>
                     <q-separator />
@@ -129,10 +139,15 @@
 
 <script setup lang="ts">
 import "src/utils/logger-shim";
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
 import { $text } from "src/modules/lang";
 import { app } from "src/services/appService";
-import { setLocale, detectAndSetLocale, changeLocale, loadSavedLocale } from "src/modules/lang";
+import {
+  setLocale,
+  detectAndSetLocale,
+  changeLocale,
+  loadSavedLocale,
+} from "src/modules/lang";
 import { langOptions } from "src/modules/lang/options";
 import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
@@ -155,6 +170,32 @@ const showConnectionsDialog = ref(false);
 const showDebugDialog = ref(false);
 const menuOpen = ref(false);
 const selectedLanguage = ref("en-US");
+const langSelect = ref<any>(null);
+const filteredLangOptions = ref<any[]>([...langOptions]);
+const langFilter = ref("");
+
+// Ensure filter is cleared when menu opens so filtering starts fresh
+watch(menuOpen, (val) => {
+  if (val) langFilter.value = "";
+});
+
+// Update filtered options when the input value changes
+watch(
+  langFilter,
+  (val) => {
+    const q = String(val || "")
+      .trim()
+      .toLowerCase();
+    if (!q) {
+      filteredLangOptions.value = [...langOptions];
+      return;
+    }
+    filteredLangOptions.value = (langOptions as any[]).filter((o) =>
+      (o.label || "").toLowerCase().includes(q)
+    );
+  },
+  { immediate: true }
+);
 
 // `langOptions` moved to src/modules/lang/options.ts
 
@@ -247,6 +288,23 @@ onMounted(async () => {
   // no-op: `testMode` derived from `presentation.mode` via computed
 });
 
+watch(
+  () => menuOpen.value,
+  (val) => {
+    if (val) {
+      nextTick(() => {
+        try {
+          if (langSelect.value && typeof langSelect.value.focus === "function") {
+            langSelect.value.focus();
+          }
+        } catch (e) {
+          // ignore
+        }
+      });
+    }
+  }
+);
+
 onMounted(async () => {
   try {
     const locale = await loadSavedLocale();
@@ -267,6 +325,9 @@ async function onLanguageChange(lang: string) {
   } catch (e) {
     // ignore
   } finally {
+    // reset filter and close menu after selection
+    filteredLangOptions.value = [...langOptions];
+    langFilter.value = "";
     menuOpen.value = false;
   }
 }
@@ -375,5 +436,3 @@ onUnmounted(() => {
 
 // NextEventNotification component handles computation and display
 </script>
-
-<!-- styles moved to NextEventNotification.vue -->
