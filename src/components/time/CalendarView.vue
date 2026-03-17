@@ -151,7 +151,11 @@
                         TOMORROW
                       </div>
                       <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
-                        {{ getHoliday(day)?.localName }}
+                        {{
+                          holidayDisplayLang && holidayDisplayLang.startsWith("en")
+                            ? getHoliday(day)?.name
+                            : getHoliday(day)?.localName
+                        }}
                       </div>
                     </div>
                     <!-- Render events for this day (including cyclic repeats) -->
@@ -941,6 +945,40 @@ const holidays = ref<Map<string, Holiday>>(new Map());
 // Check if running in Electron
 const isElectron = !!(window as any).electronAPI;
 
+// Detected holiday country code and display language
+const holidayCountryCode = ref<string>("PL");
+const holidayDisplayLang = ref<string>("en");
+
+function detectUserLocale() {
+  try {
+    const nav: any = navigator;
+    const raw = (nav.languages && nav.languages[0]) || nav.language || "en";
+    const parts = String(raw).split(/[-_]/);
+    const langPart = (parts[0] || "en").toLowerCase();
+    const regionPart = (parts[1] || "").toUpperCase();
+    let country = "";
+    if (regionPart && regionPart.length === 2) {
+      country = regionPart;
+    } else {
+      const guess: Record<string, string> = {
+        en: "US",
+        pl: "PL",
+        de: "DE",
+        fr: "FR",
+        es: "ES",
+        it: "IT",
+      };
+      country = guess[langPart] || "US";
+    }
+    holidayCountryCode.value = country;
+    holidayDisplayLang.value = langPart;
+    console.log("Detected locale", raw, "-> country", country, "lang", langPart);
+  } catch (e) {
+    holidayCountryCode.value = "US";
+    holidayDisplayLang.value = "en";
+  }
+}
+
 // Get holidays file path
 async function getHolidaysFilePath(year: number): Promise<string | null> {
   if (!isElectron) return null;
@@ -949,7 +987,7 @@ async function getHolidaysFilePath(year: number): Promise<string | null> {
   return (window as any).electronAPI.joinPath(
     appDataPath,
     "holidays",
-    `holidays_PL_${year}.json`
+    `holidays_${holidayCountryCode.value}_${year}.json`
   );
 }
 
@@ -974,7 +1012,7 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       return true;
     } else {
       // Load from localStorage
-      const cacheKey = `holidays_PL_${year}`;
+      const cacheKey = `holidays_${holidayCountryCode.value}_${year}`;
       const cached = localStorage.getItem(cacheKey);
 
       if (!cached) return false;
@@ -1030,7 +1068,7 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       await (window as any).electronAPI.writeJsonFile(filePath, safe);
     } else {
       // Save to localStorage
-      const cacheKey = `holidays_PL_${year}`;
+      const cacheKey = `holidays_${holidayCountryCode.value}_${year}`;
       localStorage.setItem(cacheKey, JSON.stringify(cache));
     }
   } catch (error) {
@@ -1046,24 +1084,16 @@ async function fetchHolidays(year: number) {
     return;
   }
 
-  // In Electron, don't connect to API - just use fallback
-  if (isElectron) {
-    loadFallbackHolidays(year);
-    // Save fallback to cache for next time
-    const fallbackList = Array.from(holidays.value.values()).filter((h) =>
-      h.date.startsWith(`${year}-`)
-    );
-    await saveHolidaysToCache(year, fallbackList);
-    return;
-  }
-
   // In browser, fetch from API if not in cache
   try {
     // Use XMLHttpRequest instead of fetch to avoid QUIC protocol issues in Electron
     const data: Holiday[] = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.timeout = 5000;
-      xhr.open("GET", `https://date.nager.at/api/v3/PublicHolidays/${year}/PL`);
+      xhr.open(
+        "GET",
+        `https://date.nager.at/api/v3/PublicHolidays/${year}/${holidayCountryCode.value}`
+      );
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
@@ -1088,45 +1118,12 @@ async function fetchHolidays(year: number) {
     // Save to cache
     await saveHolidaysToCache(year, data);
   } catch (error) {
-    logger.warn(`Failed to fetch holidays for ${year}, using fallback:`, error);
+    logger.warn(
+      `Failed to fetch holidays for ${year}. Its not important, but if you need holidays probably there is firewall or network issue:`,
+      error
+    );
     // Load fallback holidays
-    loadFallbackHolidays(year);
   }
-}
-
-// Fallback Polish holidays (major ones that don't change)
-function loadFallbackHolidays(year: number) {
-  const fallbackHolidays: Holiday[] = [
-    { date: `${year}-01-01`, localName: "Nowy Rok", name: "New Year's Day" },
-    { date: `${year}-01-06`, localName: "Trzech Króli", name: "Epiphany" },
-    { date: `${year}-05-01`, localName: "Święto Pracy", name: "Labour Day" },
-    {
-      date: `${year}-05-03`,
-      localName: "Święto Konstytucji 3 Maja",
-      name: "Constitution Day",
-    },
-    {
-      date: `${year}-08-15`,
-      localName: "Wniebowzięcie Najświętszej Maryi Panny",
-      name: "Assumption of Mary",
-    },
-    { date: `${year}-11-01`, localName: "Wszystkich Świętych", name: "All Saints' Day" },
-    {
-      date: `${year}-11-11`,
-      localName: "Narodowe Święto Niepodległości",
-      name: "Independence Day",
-    },
-    { date: `${year}-12-25`, localName: "Boże Narodzenie", name: "Christmas Day" },
-    {
-      date: `${year}-12-26`,
-      localName: "Drugi dzień Bożego Narodzenia",
-      name: "Second Day of Christmas",
-    },
-  ];
-
-  fallbackHolidays.forEach((holiday) => {
-    holidays.value.set(holiday.date, holiday);
-  });
 }
 
 // Check if a date is a holiday
@@ -1136,6 +1133,8 @@ function getHoliday(dateString: string): Holiday | undefined {
 
 // Load holidays on mount
 onMounted(async () => {
+  // detect user's locale first so we know which country code to request
+  detectUserLocale();
   const currentYear = new Date().getFullYear();
   await fetchHolidays(currentYear);
   await fetchHolidays(currentYear + 1); // Also fetch next year's holidays
@@ -1418,8 +1417,8 @@ function getEventsForDay(day: string) {
   // callers (preview/edit) receive the specific instance date for cyclic events.
   return props.tasks
     .filter((t: any) => {
-      if (t.type_id === 'Todo') return false;
-      if (t.type_id === 'Replenish') return false;
+      if (t.type_id === "Todo") return false;
+      if (t.type_id === "Replenish") return false;
       return occursOnDay(t, day);
     })
     .map((t: any) => ({ ...t, date: day }));
