@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
+import { $text } from "src/modules/lang";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
 import * as api from "src/modules/day-organiser/apiRoot";
@@ -912,7 +913,7 @@ function onSubmit(event: Event) {
             @click.stop="groupMenu = true"
           >
             {{
-              getGroupName(localNewTask.groupId) || activeGroupLabelShort || "No group"
+              getGroupName(localNewTask.groupId) || activeGroupLabelShort || $text('group.none')
             }}
           </q-chip>
           <q-menu
@@ -935,7 +936,7 @@ function onSubmit(event: Event) {
                   <q-icon name="clear" />
                 </q-item-section>
                 <q-item-section>
-                  <div style="font-weight: 600">No group</div>
+                  <div style="font-weight: 600">{{$text('group.none')}}</div>
                 </q-item-section>
               </q-item>
               <q-separator />
@@ -1548,13 +1549,7 @@ function onSubmit(event: Event) {
                           type="submit"
                           unelevated
                           :icon="submitIcon || undefined"
-                          :label="
-                            mode === 'add'
-                              ? 'Create'
-                              : mode === 'edit'
-                              ? 'Update'
-                              : 'Preview'
-                          "
+                          :label="mode === 'add' ? $text('action.create') : mode === 'edit' ? $text('action.update') : $text('action.preview')"
                           :disable="mode === 'preview'"
                           :style="`background: ${submitColor} !important; background-color: ${submitColor} !important; border-color: ${submitColor} !important; color: ${submitTextColor} !important;`"
                         />
@@ -1562,7 +1557,7 @@ function onSubmit(event: Event) {
                         <q-btn
                           v-if="mode === 'edit'"
                           flat
-                          label="Cancel"
+                          :label="$text('action.cancel')"
                           class="q-ml-sm"
                           @click="() => emit('cancel-edit')"
                         />
@@ -1571,7 +1566,7 @@ function onSubmit(event: Event) {
                           :true-value="0"
                           :false-value="1"
                           dense
-                          label="Done"
+                          :label="$text('action.done')"
                           class="q-ml-sm"
                         />
                         <q-checkbox
@@ -1579,7 +1574,7 @@ function onSubmit(event: Event) {
                           v-model="stayAfterSave"
                           dense
                           class="q-ml-sm"
-                          label="Stay after save"
+                          :label="$text('action.stay_after_save')"
                         />
                         <div v-if="mode === 'edit'" class="q-ml-sm">
                           <q-btn

@@ -16,10 +16,18 @@
   "action.cancel": "Cancel",
   "action.add": "Add",
   "action.preview": "Preview",
+  "action.create": "Create",
+  "action.update": "Update",
+  "action.done": "Done",
+  "action.stay_after_save": "Stay after save",
   "date.today": "Today",
   "date.tomorrow": "Tomorrow",
   "date.yesterday": "Yesterday",
   "date.in_days": "In {n} days",
   "date.days_ago": "{n} days ago",
-  "task.prepared": "[prepared]"
+  "task.prepared": "[prepared]",
+  "group.none": "No group",
+  "confirm.delete": "Confirm delete?",
+  "action.confirm": "Confirm",
+  "action.close": "Close"
 }

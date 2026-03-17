@@ -375,7 +375,7 @@
             <div
               style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
             >
-              <q-btn dense flat label="Cancel" @click="parentMenuOpen = false" />
+              <q-btn dense flat :label="$text('action.cancel')" @click="parentMenuOpen = false" />
             </div>
           </div>
         </q-menu>
@@ -402,7 +402,7 @@
           <q-btn
             v-if="editingGroupId"
             flat
-            label="Cancel"
+            :label="$text('action.cancel')"
             color="primary"
             @click.prevent="onCancel"
           />
@@ -414,6 +414,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
+import { $text } from "src/modules/lang";
 import * as api from "src/modules/day-organiser/apiRoot";
 import type { QTreeNode } from "quasar";
 

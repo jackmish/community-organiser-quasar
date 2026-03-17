@@ -93,7 +93,7 @@
                 clickable
                 @click.stop="groupMenu = true"
               >
-                {{ groupName || "No group" }}
+                {{ groupName || $text('group.none') }}
               </q-chip>
               <q-menu
                 v-model="groupMenu"
@@ -115,7 +115,7 @@
                       <q-icon name="clear" />
                     </q-item-section>
                     <q-item-section>
-                      <div style="font-weight: 600">No group</div>
+                      <div style="font-weight: 600">{{$text('group.none')}}</div>
                     </q-item-section>
                   </q-item>
                   <q-separator />

@@ -76,14 +76,14 @@
                     dense
                     color="negative"
                     flat
-                    label="Confirm"
+                    :label="$text('action.confirm')"
                     size="sm"
                     @click.stop.prevent="confirmDelete(prop.node.id)"
                   />
                   <q-btn
                     dense
                     flat
-                    label="Cancel"
+                    :label="$text('action.cancel')"
                     size="sm"
                     @click.stop.prevent="cancelPendingDelete"
                   />
@@ -108,7 +108,7 @@
       </q-card-section>
 
       <q-card-actions align="right">
-        <q-btn flat label="Close" color="primary" @click="close" />
+        <q-btn flat :label="$text('action.close')" color="primary" @click="close" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -116,6 +116,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
+import { $text } from "src/modules/lang";
 import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "../theme";
 

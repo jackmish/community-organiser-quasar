@@ -16,10 +16,18 @@
   "action.cancel": "Anuluj",
   "action.add": "Dodaj",
   "action.preview": "Podgląd",
+  "action.create": "Utwórz",
+  "action.update": "Aktualizuj",
+  "action.done": "Wykonane",
+  "action.stay_after_save": "Pozostań po zapisie",
   "date.today": "Dziś",
   "date.tomorrow": "Jutro",
   "date.yesterday": "Wczoraj",
   "date.in_days": "Za {n} dni",
   "date.days_ago": "{n} dni temu",
-  "task.prepared": "[przygotowane]"
+  "task.prepared": "[przygotowane]",
+  "group.none": "Brak grupy",
+  "confirm.delete": "Czy na pewno usunąć?",
+  "action.confirm": "Potwierdź",
+  "action.close": "Zamknij"
 }

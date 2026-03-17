@@ -269,7 +269,7 @@
                         <q-item-section avatar style="min-width: 36px">
                           <q-icon name="delete" color="#ffffff" />
                         </q-item-section>
-                        <q-item-section style="color: #ffffff !important">Delete</q-item-section>
+                        <q-item-section style="color: #ffffff !important">{{$text('action.delete')}}</q-item-section>
                       </q-item>
                     </template>
                     <template v-else>
@@ -277,7 +277,7 @@
                         <q-item-section>
                           <div style="display: flex; align-items: center; gap: 8px">
                             <div style="flex: 1; font-weight: 600; color: rgba(0, 0, 0, 0.95)">
-                              Confirm delete?
+                              {{$text('confirm.delete')}}
                             </div>
                             <div style="display: flex; gap: 6px">
                               <q-btn
