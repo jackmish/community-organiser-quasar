@@ -73,6 +73,7 @@ This project is in early development and is tested mainly at small laptop-like a
 
 - Make App more useful, use it, improve UX crucial fixes. Code isn't first, but app usage experience is, at least at this point.
 - Fix less important issues, and organize and clean up the codebase. Refactor has began and its long way, when engineering was skipped during creation process with Copilot/VsCode mostly ChatGPT5 + sometimes Claude Sonnet. It would be maybe nice way to learn how to fix vibe/spaghetti, but rather also with AI automation, and maybe later with another solutions.
+- after some stage of project refactor, use some experimental project structure, try to make something more convenient than typical Vue or Laravel projects, a specially optimize it for AI usage + understanding project, or just agree with AI
 - Finish Bluetooth data synchronization between devices
 - Mobile application - and finish layout details, a specially buttons inside task creation form.
 - User and permission system, mainly to dedicate a home tablet that displays the family's task schedule without requiring data restores
@@ -216,13 +217,25 @@ Refactor is slow and very ineffective, git is really helpful.
 
 Maybe with good instructions, knowing better limitations of AI it could be much more useful.
 
-For example API maybe isn't best name at some point but still it has some already build structure, for possible later refactor or not but with AI you are really forced to use some patterns without some project analysis.
+For example "API" maybe isn't best name at some point of development but its already used by plugins and it will be used for backend state sync, it already has some order. At this point i'll name it Controller - its not bad name, but API is shorter name general definition is "Interface" - could be misleading mostly by typical backend-frontend communication usage, but its already used by plugins, which could be developed by external code creators, and probably it would be somehow exposed as as twin backend control system, with similar logic.
 
-It really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure - probably same way it doesnt like to create smaller files.
+Im not 100% sure of design of this vibe code project directions, but once GPT5.1 suggested API as name of central app control system, but when i've decided to move state inside API it became more like Pinia store (but storage sounds more like module not good name for central control system/interface). Generally it could also be place to control not only state/storage like connection with camera,...etc. Engine name would be convenient but probably it wouldn't be engine, just some kind of organizer core, central command system or something similar. Task manager is maybe not correctly describing possible futures of this center, mostly time organization center, but it already is attracted by calendar feature in most cases. Possibly it could be extended by functionality of anty-theft system, trip organization with map functionality,...
 
-Just cant recommend it for operations like: "refactor storage module - use same structure as inside task module". Even it was refactored by Claude, GPT5.1 mini cant accept this way.
+There is also talking about single responsibility principle - i still need to make at least central points for modules and than split project into smaller cells.
+
+It really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure, i really want to avoid of typical names like index which are less objective like. App is also really general name. I have need to experiment with names make some nice own files structure ( a specially after refactor of GPT5.1 ).
+
+- probably the same way it doesn't like to create smaller files, and check in another files to find already existing function. My concept is to try to make some functions map, but mostly it looks like build in init instructions are not included into process of thinking AI, or just not yet correctly formed (mostly created by AI).
+
+Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, GPT5.1 mini cant accept this way.
 
 It needs smaller/simpler tasks for more effective results.
+
+---
+
+Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long, same as generating project maps when AI don't think about using additional tools. Sometimes it knows what to execute to fix the bugs usually commands "tsc", "lint". Generally unit tests even does not need to be executed. Most needed is test of graphic representation of UI and how it behaves or what is disconnected, once again is not working after new feature. There is much more need of higher lvl tests than unit tests, and it could be done by Claude, but it could be too hard for GPT5.1 Mini. Even written test by Claude doesn't make you sure that test is correctly written, but even than its better than nothing - or not.
+
+Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to control, GPT5.1 isn't automatically updating tests. For Claude this is much more obvious habit to improve the test and execute it after changes.
 
 ---
 
@@ -256,7 +269,7 @@ Claude makes many similar mistakes - long list of errors but not so long as GPT5
 
 After refactor of some content once again task list was empty - without TODO task type, missing css button borders, and still I don't think refactor was good enough, I need to schedule some AI instructions to create important tests. Still code requires some improvements, a specially i cant love this chaos of exports, but at least files are smaller now. Singletons are ok but AI definition of everything is mostly plain object without type. It usually recommends interfaces for things which would be not redefined with some replacement/other case of usage. It made short API files so much longer and inconvenient to read.
 
----
+--- OLD NOTES:
 
 Why this project didn't go as smoothly as the Laravel project:
 

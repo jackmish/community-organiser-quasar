@@ -120,7 +120,7 @@ import { $text } from "src/modules/lang";
 import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "../theme";
 
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 import GroupForm from "./GroupForm.vue";
 
 const props = defineProps<{

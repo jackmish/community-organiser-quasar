@@ -265,7 +265,7 @@ import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns
 import logger from "src/utils/logger";
 import { $text, detectAndSetLocale, getLanguage, getCountryCode } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,

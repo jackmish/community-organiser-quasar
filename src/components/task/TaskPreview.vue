@@ -247,7 +247,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 import type { Task } from "src/modules/task/types";
 
 const props = defineProps<{
@@ -459,7 +459,7 @@ async function onToggleDone(val: boolean) {
     const task = activeTask.value;
     if (!task) return;
     const date = task?.date || task?.eventDate || api.task.time.currentDate.value || "";
-    const id = task.id || (task as any)._id || (task as any).uuid;
+    const id = task.id || task._id || task.uuid;
     if (!id) return;
     await api.task.status.toggleComplete(date, id);
   } catch (e) {

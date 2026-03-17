@@ -23,16 +23,16 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 
 const stats = computed(
-  () => (api.task as any).taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }
+  () => api.task.taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }
 );
 
 const groupLabel = computed(() => {
   const id = stats.value.groupId;
   if (!id) return "All groups";
-  const found = (api.group as any).list.all.value?.find((g: any) => g.id === id);
+  const found = api.group.list.all.value?.find((g: any) => g.id === id);
   return found?.name ?? id;
 });
 </script>

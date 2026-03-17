@@ -254,7 +254,7 @@ import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";

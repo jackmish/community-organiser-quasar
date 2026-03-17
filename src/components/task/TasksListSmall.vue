@@ -103,7 +103,7 @@ import { Task } from "src/modules/task/types";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
-import * as api from "src/modules/api/apiRoot";
+import * as api from "src/controllerRoot";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
