@@ -1,9 +1,11 @@
 type Translations = Record<string, string>;
 
+import { ref } from 'vue';
+
 let currentLocale = 'en-US';
 let currentCountry = 'US';
-let dict: Translations = {};
-let fallback: Translations = {};
+const dict = ref<Translations>({});
+const fallback = ref<Translations>({});
 
 import { getSetting, setSetting } from 'src/modules/storage';
 
@@ -27,8 +29,8 @@ export async function setLocale(locale: string) {
 
     const primary = await loadJson(`./translations/${lang}-${region}.json`);
     const en = await loadJson(`./translations/en-US.json`);
-    dict = primary || {};
-    fallback = en || {};
+    dict.value = primary || {};
+    fallback.value = en || {};
   } catch (e) {
     // ignore
   }
@@ -60,8 +62,10 @@ export function getLanguage(): string {
 }
 export function getText(key: string): string {
   if (!key) return '';
-  if (dict && key in dict) return dict[key] ?? '';
-  if (fallback && key in fallback) return fallback[key] ?? '';
+  const d = dict.value || {};
+  const f = fallback.value || {};
+  if (key in d) return d[key] ?? '';
+  if (key in f) return f[key] ?? '';
   // simple dot->space fallback
   const part = key.split('.').slice(-1)[0] ?? '';
   return part.replace(/_/g, ' ');
