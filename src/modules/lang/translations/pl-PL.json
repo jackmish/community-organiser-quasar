@@ -1,0 +1,8 @@
+{
+  "ui.today": "DZIŚ",
+  "ui.yesterday": "WCZORAJ",
+  "ui.tomorrow": "JUTRO",
+  "task.type.time": "Zadanie czasu",
+  "task.type.todo": "Do zrobienia",
+  "task.type.event": "Wydarzenie"
+}

@@ -1,0 +1,8 @@
+{
+  "ui.today": "TODAY",
+  "ui.yesterday": "YESTERDAY",
+  "ui.tomorrow": "TOMORROW",
+  "task.type.time": "Time Task",
+  "task.type.todo": "To-do",
+  "task.type.event": "Event"
+}

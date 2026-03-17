@@ -11,7 +11,7 @@
           @click="setEventDateToToday"
           class="text-weight-bold today-jump-btn"
         >
-          TODAY
+          {{ $text("ui.today") }}
         </q-btn>
         <q-btn
           v-for="(month, index) in nextSixMonths"
@@ -136,19 +136,19 @@
                         v-if="day === format(new Date(), 'yyyy-MM-dd')"
                         class="calendar-today-label calendar-green-label"
                       >
-                        TODAY
+                        {{ $text("ui.today") }}
                       </div>
                       <div
                         v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
                         class="calendar-today-label"
                       >
-                        YESTERDAY
+                        {{ $text("ui.yesterday") }}
                       </div>
                       <div
                         v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
                         class="calendar-today-label calendar-gray-label"
                       >
-                        TOMORROW
+                        {{ $text("ui.tomorrow") }}
                       </div>
                       <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
                         {{
@@ -262,6 +262,7 @@ import {
   onBeforeUnmount,
 } from "vue";
 import logger from "src/utils/logger";
+import { $text, detectAndSetLocale, getLanguage, getCountryCode } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/modules/day-organiser/apiRoot";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
@@ -949,35 +950,7 @@ const isElectron = !!(window as any).electronAPI;
 const holidayCountryCode = ref<string>("PL");
 const holidayDisplayLang = ref<string>("en");
 
-function detectUserLocale() {
-  try {
-    const nav: any = navigator;
-    const raw = (nav.languages && nav.languages[0]) || nav.language || "en";
-    const parts = String(raw).split(/[-_]/);
-    const langPart = (parts[0] || "en").toLowerCase();
-    const regionPart = (parts[1] || "").toUpperCase();
-    let country = "";
-    if (regionPart && regionPart.length === 2) {
-      country = regionPart;
-    } else {
-      const guess: Record<string, string> = {
-        en: "US",
-        pl: "PL",
-        de: "DE",
-        fr: "FR",
-        es: "ES",
-        it: "IT",
-      };
-      country = guess[langPart] || "US";
-    }
-    holidayCountryCode.value = country;
-    holidayDisplayLang.value = langPart;
-    console.log("Detected locale", raw, "-> country", country, "lang", langPart);
-  } catch (e) {
-    holidayCountryCode.value = "US";
-    holidayDisplayLang.value = "en";
-  }
-}
+// Locale detection moved to `src/modules/lang` (detectAndSetLocale)
 
 // Get holidays file path
 async function getHolidaysFilePath(year: number): Promise<string | null> {
@@ -1133,8 +1106,14 @@ function getHoliday(dateString: string): Holiday | undefined {
 
 // Load holidays on mount
 onMounted(async () => {
-  // detect user's locale first so we know which country code to request
-  detectUserLocale();
+  // detect user's locale via lang module so we know which country code to request
+  try {
+    const info = await detectAndSetLocale();
+    holidayCountryCode.value = info.country;
+    holidayDisplayLang.value = info.lang;
+  } catch (e) {
+    // ignore - defaults already set
+  }
   const currentYear = new Date().getFullYear();
   await fetchHolidays(currentYear);
   await fetchHolidays(currentYear + 1); // Also fetch next year's holidays
