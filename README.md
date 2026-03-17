@@ -229,7 +229,7 @@ It really doesn't likes names like "root" which is convenient name for me sugges
 
 Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, GPT5.1 mini cant accept this way.
 
-It needs smaller/simpler tasks for more effective results.
+It needs smaller/simpler tasks for more effective results, or maybe just good configuration of initial "prompt". Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it choses to make 30% of prompt, and by the way of its own database/chat history knowledge it is trying to fill/recreate more prompt details a specially changing user changes like fast margin correction, other kind of border, color,... or probably it just is using own version of file from its own cache, not user file.
 
 ---
 
