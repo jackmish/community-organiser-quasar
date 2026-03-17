@@ -252,7 +252,7 @@
                         <q-icon name="edit" color="#ff9800" />
                       </q-item-section>
                       <q-item-section style="color: rgba(0, 0, 0, 0.95) !important"
-                        >Edit</q-item-section
+                        >{{$text('action.edit')}}</q-item-section
                       >
                     </q-item>
                     <template v-if="pendingDeleteId !== item.id">

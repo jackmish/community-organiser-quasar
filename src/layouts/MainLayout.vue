@@ -48,7 +48,7 @@
                 >
                   <q-list style="min-width: 160px">
                     <q-item clickable v-ripple @click="openManageHeader">
-                      <q-item-section>Manage Groups...</q-item-section>
+                      <q-item-section>{{$text('ui.manage_groups')}}</q-item-section>
                     </q-item>
                     <q-item
                       clickable
@@ -60,10 +60,10 @@
                         }
                       "
                     >
-                      <q-item-section>Connections and data</q-item-section>
+                      <q-item-section>{{$text('menu.connections')}}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openSettings">
-                      <q-item-section>Settings</q-item-section>
+                      <q-item-section>{{$text('menu.settings')}}</q-item-section>
                     </q-item>
 
                     <q-item
@@ -76,14 +76,14 @@
                         }
                       "
                     >
-                      <q-item-section>Debug tools</q-item-section>
+                      <q-item-section>{{$text('menu.debug_tools')}}</q-item-section>
                     </q-item>
 
                     <q-item clickable v-ripple @click="reloadWithTestData">
-                      <q-item-section>Explain CO21 features</q-item-section>
+                      <q-item-section>{{$text('menu.explain_features')}}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openAbout">
-                      <q-item-section>About v{{ appVersion }}</q-item-section>
+                      <q-item-section>{{$text('menu.about')}} v{{ appVersion }}</q-item-section>
                     </q-item>
                   </q-list>
                 </q-menu>
@@ -108,6 +108,7 @@
 <script setup lang="ts">
 import "src/utils/logger-shim";
 import { ref, onMounted, onUnmounted, computed } from "vue";
+import { $text } from "src/modules/lang";
 import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from "vue-router";

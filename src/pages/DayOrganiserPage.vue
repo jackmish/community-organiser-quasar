@@ -65,7 +65,7 @@
               />
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
-              <p class="text-grey-6">No tasks for this day</p>
+              <p class="text-grey-6">{{$text('ui.no_tasks_for_day')}}</p>
             </q-card-section>
 
             <!-- hidden groups are rendered inside TasksListSmall now | Maybe it would be available to switch inside app to TasksListMedium in the future -->

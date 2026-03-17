@@ -31,7 +31,7 @@
                 ' !important;'
               "
             />
-            <span
+              <span
               :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
               style="
                 max-width: 140px;
@@ -40,7 +40,7 @@
                 white-space: nowrap;
               "
             >
-              {{ selectedOption?.label ?? "All Groups" }}
+              {{ selectedOption?.label ?? $text('ui.all_groups') }}
             </span>
           </div>
           <q-icon
@@ -57,7 +57,7 @@
               <q-item-section>
                 <q-icon name="folder_open" />
               </q-item-section>
-              <q-item-section>All Groups</q-item-section>
+              <q-item-section>{{$text('ui.all_groups')}}</q-item-section>
             </q-item>
           </q-list>
 
@@ -98,7 +98,7 @@
                       :style="{ color: prop.node.color }"
                     />
 
-                    <q-tooltip>Shortcut</q-tooltip>
+                    <q-tooltip>{{$text('ui.shortcut')}}</q-tooltip>
                   </span>
                 </div>
               </template>
@@ -109,7 +109,7 @@
 
           <q-list padding>
             <q-item clickable v-ripple @click="openManage">
-              <q-item-section>Manage Groups...</q-item-section>
+              <q-item-section>{{$text('ui.manage_groups')}}</q-item-section>
             </q-item>
           </q-list>
         </q-menu>
@@ -184,6 +184,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { $text } from "src/modules/lang";
 import * as api from "src/modules/day-organiser/apiRoot";
 
 // color helpers for button contrast

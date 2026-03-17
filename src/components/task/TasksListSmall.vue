@@ -79,7 +79,7 @@
             :group="item._group"
             @select="selectHiddenGroup"
           />
-          <div v-else class="unrecognized-item">Error: Unrecognized item type (check console)</div>
+          <div v-else class="unrecognized-item">{{$text('error.unrecognized_item')}}</div>
         </template>
       </template>
     </div>
@@ -104,6 +104,7 @@ import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
 import * as api from "src/modules/day-organiser/apiRoot";
+import { $text } from "src/modules/lang";
 
 const props = defineProps<{
   tasksWithTime: Task[];

@@ -6,7 +6,7 @@
   >
     <div class="row items-center" style="gap: 8px">
       <q-icon name="check" color="grey-7" />
-      <div class="text-subtitle2"><strong>Done</strong></div>
+      <div class="text-subtitle2"><strong>{{$text('action.done')}}</strong></div>
     </div>
     <div class="q-mt-sm done-items-grid">
       <div
@@ -49,8 +49,8 @@
 const props = defineProps<{
   doneTasks: any[];
 }>();
-
 import * as api from "src/modules/day-organiser/apiRoot";
+import { $text } from "src/modules/lang";
 
 async function onDoneClick(task: any) {
   try {
