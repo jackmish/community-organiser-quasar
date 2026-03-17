@@ -202,9 +202,39 @@ Next, in the generation of graphics, code, etc., knowledge of the topic, disting
 
 ## Conclusions after using AI prompts:
 
-### NEW | Claude Refactor
+### GPT5.1 Mini | Copilot model 0x credits - 10$ per month + occasionally manual updates and maybe once Claude at beginning.
 
-One of the most important target of this project is to check if I can +- vibe code some project, just make some few suggestions to AI with 0x credits models and than use some better AI model to make code more acceptable after refactor. Im usually using Claude Sonnet 4.6 - and I'm not going to change IDE to something AI first. But maybe it would be interesting git branch.
+GPT5.1 mini isn't so bad but really annoying if You prefer some file structure and You were previously using better AI models. It would be mostly garbage code, mostly code would be inside single vue file without any recommendations - but it's enough good for some lvl of "vibe coding".
+
+Most of Vue projects looks like "blocks scattered by a child on the floor", but with GPT5.1 Mini it looks much worse.
+
+It would always try to use own "coding style", avoiding user recommendations. It has also short memory isn't cooperating best with git fast reversal changes methods.
+
+It usually can write new feature destroying another one, a specially it likes to touch layout changes, "improving" in wrong way without asking. This thing could be probably most annoying for even every vibe coder.
+
+Refactor is slow and very ineffective, git is really helpful.
+
+Maybe with good instructions, knowing better limitations of AI it could be much more useful.
+
+For example API maybe isn't best name at some point but still it has some already build structure, for possible later refactor or not but with AI you are really forced to use some patterns without some project analysis.
+
+It really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure - probably same way it doesnt like to create smaller files.
+
+Just cant recommend it for operations like: "refactor storage module - use same structure as inside task module". Even it was refactored by Claude, GPT5.1 mini cant accept this way.
+
+It needs smaller/simpler tasks for more effective results.
+
+---
+
+For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
+
+Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.
+
+Some paid AI services performed better for code, but they also contributed to code mess in similar ways. A poor start with ChatGPT4 and attempts to adapt other AIs to that style may have caused problems.
+
+### Claude Sonnet 4.6 | Claude Refactor
+
+One of the most important target of this project is to check if I can +- vibe code some project, design app prototype without code review, occasionally make some few suggestions about code, and than refactor it. Im usually using Claude Sonnet 4.6 - and I'm not going to check Cursor and others at this moment. Maybe after Claude Sonnet. But maybe it would be interesting to create few git branches of vibe refactor and engineering more like refactor.
 
 My methodology for this project is to use cheap GPT5.1 or other better same cheap model, and refactor it after some stage of development. Last 2 times - just i've lost my patience before planned stage was finished and recent time with unit tests problems.
 
@@ -226,19 +256,7 @@ Claude makes many similar mistakes - long list of errors but not so long as GPT5
 
 After refactor of some content once again task list was empty - without TODO task type, missing css button borders, and still I don't think refactor was good enough, I need to schedule some AI instructions to create important tests. Still code requires some improvements, a specially i cant love this chaos of exports, but at least files are smaller now. Singletons are ok but AI definition of everything is mostly plain object without type. It usually recommends interfaces for things which would be not redefined with some replacement/other case of usage. It made short API files so much longer and inconvenient to read.
 
-### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Claude at beginning.
-
-GPT5.1 mini isn't so bad but really annoying if You prefer some file structure and You were previously using better AI models. It would always try to use own "coding style" make everything inside vue view file. It usually can write new feature destroying another one, a specially it likes to touch layout changes. If app is small it would'nt be a large issue. But making translations, filling translations - without any prompt about any other changes could remove some of your styles and its hard to test it, predict these changes.
-Refactor is slow and very ineffective, but maybe with good instructions, knowing better limitations it could be much more useful. Generally it's doing what it thinks its better for user - its maybe not bad idea but if there is some concept of files order it could be easily destroyed. For example API maybe isn't best name for central control system, but design is going to export it to plugin control and more. After many argues it recommended simple name controller - still i'm not sure its best name, after Artisan/Laravel patterns, but looks much more convinient. Usually gamedev libraries were using Manager name for everything, external libraries likes Service name. But after large mess generated by AI lot of names were reserved for some files doing mostly exports of functions. It really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure. Maybe even using this root file could include modules in tree-like structure. After watching changes there wasnt surprise - so many functions instead of linking - not renamed yet API/Controllers.
-Just cant recommend it for operations like: "refactor storage module - use same structure as inside task module". It needs smaller tasks.
-
 ---
-
-For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
-
-Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.
-
-Some paid AI services performed better for code, but they also contributed to code mess in similar ways. A poor start with ChatGPT4 and attempts to adapt other AIs to that style may have caused problems.
 
 Why this project didn't go as smoothly as the Laravel project:
 

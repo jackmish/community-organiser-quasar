@@ -1,47 +1,50 @@
+// apiRoot — index of connected APIs (flat exports)
+// Exports (top-level):
+// - `initApi()`  : initialize storage API (call from pinia boot)
+// - `group`      : group API (Pinia-backed)
+// - `task`       : task API (Pinia-backed)
+// - `storage`    : storage helpers and functions
+
 import * as apiStorage from '../storage/apiStorage';
 import { registerAppService } from 'src/services/appService';
 import { useTaskStore } from '../task/apiTask';
 import { useGroupStore } from '../group/apiGroup';
+import { lazyStore } from './lazyStore';
 
-function lazyStore<T extends object>(fn: () => T): T {
-  return new Proxy<T>({} as T, {
-    get(_, prop: string | symbol) {
-      return (fn() as any)[prop];
-    },
-  });
-}
+class ApiRoot {
+  public group = lazyStore(useGroupStore);
+  public task = lazyStore(useTaskStore);
+  private _storage: ReturnType<typeof apiStorage.construct> | null = null;
 
-// ── Storage lazy singleton ────────────────────────────────────────────────────
-// apiStorage keeps the factory pattern (non-Pinia) – it is created exactly once
-// after Pinia is active. Call `initApi()` from the pinia boot file.
-let _storage: ReturnType<typeof apiStorage.construct> | null = null;
-
-export function initApi() {
-  if (_storage) return _storage;
-  const g = useGroupStore();
-  const t = useTaskStore();
-  _storage = apiStorage.construct(g, t.time);
-  try {
-    registerAppService('storage', _storage);
-  } catch (e) {
-    void e;
+  initApi() {
+    if (this._storage) return this._storage;
+    const g = useGroupStore();
+    const t = useTaskStore();
+    this._storage = apiStorage.construct(g, t.time);
+    try {
+      registerAppService('storage', this._storage);
+    } catch (e) {
+      void e;
+    }
+    return this._storage;
   }
-  return _storage;
+
+  get storage() {
+    return new Proxy({} as any, {
+      get: (_t, prop: string | symbol) => {
+        return (this.initApi() as any)[prop];
+      },
+    });
+  }
 }
 
-// ── Public API exports ────────────────────────────────────────────────────────
-// Components continue to `import * as api from 'src/modules/day-organiser/apiRoot'`
-// and use `api.task.*`, `api.group.*`, `api.storage.*` exactly as before.
+const apiRoot = new ApiRoot();
 
-// `as any` preserves the original API contract used by all consumers – Pinia's
-// conditional-type helpers can't express markRaw nested namespaces, so we keep
-// downstream callers working the same way the old factory pattern did.
-export const group = lazyStore(useGroupStore);
-export const task = lazyStore(useTaskStore);
+// Export a single default instance (the simple "one-line" export you wanted)
+export default apiRoot;
 
-// Storage is also proxied lazily so the first access triggers initApi()
-export const storage = new Proxy({} as any, {
-  get(_, prop: string | symbol) {
-    return (initApi() as any)[prop];
-  },
-});
+// Keep named exports for backward compatibility so callers using `api.task` still work.
+export const group = apiRoot.group;
+export const task = apiRoot.task;
+export const storage = apiRoot.storage;
+export const initApi = apiRoot.initApi.bind(apiRoot);
