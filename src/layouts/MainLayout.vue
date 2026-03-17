@@ -47,12 +47,18 @@
                   style="width: auto"
                 >
                   <q-list style="min-width: 160px">
-                    <q-item>
-                      <q-item-section>
+                    <q-item style="padding: 0; position: relative">
+                      <q-item-section
+                        style="position: absolute; left: 0; right: 0; top: 0; padding: 0"
+                      >
                         <q-select
+                          style="width: 100%; position: relative"
+                          class="lang-select"
                           use-input
                           hide-selected
                           fill-input
+                          :input-style="{ paddingLeft: '16px', paddingRight: '16px' }"
+                          popup-content-class="lang-popup"
                           ref="langSelect"
                           v-model="selectedLanguage"
                           :options="filteredLangOptions"
@@ -64,14 +70,15 @@
                           map-options
                           bg-color="blue"
                           @update:model-value="onLanguageChange"
-                          ><template v-slot:no-option>
-                            <q-item>
-                              <q-item-section class="text-grey">
-                                No results
-                              </q-item-section>
-                            </q-item>
-                          </template></q-select
                         >
+                          <template v-slot:no-option>
+                            <q-item>
+                              <q-item-section class="text-grey"
+                                >No results</q-item-section
+                              >
+                            </q-item>
+                          </template>
+                        </q-select>
                       </q-item-section>
                     </q-item>
                     <q-separator />
@@ -436,3 +443,18 @@ onUnmounted(() => {
 
 // NextEventNotification component handles computation and display
 </script>
+
+<style scoped>
+/* Pad only the inner input/control and option text, without changing parent container background sizing */
+.lang-select .q-field__control,
+.lang-select .q-field__native {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Ensure the select's background fills the parent but inner text is padded */
+.lang-select .q-field {
+  background-clip: padding-box;
+}
+</style>
