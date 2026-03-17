@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import * as api from "src/modules/day-organiser/apiRoot";
+import * as api from "src/modules/api/apiRoot";
 
 const stats = computed(
   () => (api.task as any).taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }

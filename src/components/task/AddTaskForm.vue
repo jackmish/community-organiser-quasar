@@ -3,7 +3,7 @@ import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
-import * as api from "src/modules/day-organiser/apiRoot";
+import * as api from "src/modules/api/apiRoot";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "./ReplenishmentList.vue";

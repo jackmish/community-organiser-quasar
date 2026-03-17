@@ -185,7 +185,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
-import * as api from "src/modules/day-organiser/apiRoot";
+import * as api from "src/modules/api/apiRoot";
 
 // color helpers for button contrast
 function hexToRgb(hex: string) {

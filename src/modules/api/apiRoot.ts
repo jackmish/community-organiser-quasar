@@ -3,10 +3,6 @@ import { registerAppService } from 'src/services/appService';
 import { useTaskStore } from '../task/apiTask';
 import { useGroupStore } from '../group/apiGroup';
 
-// ── Lazy Proxy helper ─────────────────────────────────────────────────────────
-// Returns a proxy that forwards every property access to the live Pinia store.
-// This lets callers keep `import * as api from '...'` and use `api.task.*`
-// without knowing about Pinia, while still getting the singleton store instance.
 function lazyStore<T extends object>(fn: () => T): T {
   return new Proxy<T>({} as T, {
     get(_, prop: string | symbol) {

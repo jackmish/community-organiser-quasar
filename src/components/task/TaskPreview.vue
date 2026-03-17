@@ -247,7 +247,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
-import * as api from "src/modules/day-organiser/apiRoot";
+import * as api from "src/modules/api/apiRoot";
 import type { Task } from "src/modules/task/types";
 
 const props = defineProps<{

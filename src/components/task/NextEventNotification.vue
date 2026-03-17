@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount, watch, nextTick } from 'vue';
-import * as api from 'src/modules/day-organiser/apiRoot';
+import * as api from 'src/modules/api/apiRoot';
 import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
 import { occursOnDay, getCycleType } from 'src/modules/task/utils/occursOnDay';
 
