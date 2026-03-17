@@ -4,5 +4,22 @@
   "ui.tomorrow": "TOMORROW",
   "task.type.time": "Time Task",
   "task.type.todo": "To-do",
-  "task.type.event": "Event"
+  "task.type.event": "Event",
+  "ui.prev": "Prev",
+  "ui.next": "Next",
+  "ui.visible_days": "Visible days",
+  "ui.visible_days_14": "14 days",
+  "ui.visible_days_42": "42 days",
+  "ui.visible_days_3months": "3 months",
+  "action.edit": "Edit",
+  "action.delete": "Delete",
+  "action.cancel": "Cancel",
+  "action.add": "Add",
+  "action.preview": "Preview",
+  "date.today": "Today",
+  "date.tomorrow": "Tomorrow",
+  "date.yesterday": "Yesterday",
+  "date.in_days": "In {n} days",
+  "date.days_ago": "{n} days ago",
+  "task.prepared": "[prepared]"
 }

@@ -284,10 +284,10 @@
                                 dense
                                 flat
                                 color="negative"
-                                label="Delete"
+                                :label="$text('action.delete')"
                                 @click.stop="() => performDelete(item.id)"
                               />
-                              <q-btn dense flat label="Cancel" @click.stop="cancelDelete" />
+                              <q-btn dense flat :label="$text('action.cancel')" @click.stop="cancelDelete" />
                             </div>
                           </div>
                         </q-item-section>
@@ -308,6 +308,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { $text } from 'src/modules/lang';
 
 import { useLongPress } from 'src/composables/useLongPress';
 import ReplenishmentList from './ReplenishmentList.vue';

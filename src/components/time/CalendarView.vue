@@ -208,14 +208,14 @@
   <div class="bottom-row row q-mb-md items-center">
     <div class="col pagination-range-options visible-days-bg">
       <div class="row items-center q-gutter-md">
-        <div class="text-subtitle2">Visible days</div>
+        <div class="text-subtitle2">{{ $text("ui.visible_days") }}</div>
         <div class="">
           <q-option-group
             v-model="calendarViewDays"
             :options="[
-              { label: '14 days', value: 14 },
-              { label: '42 days', value: 42 },
-              { label: '3 months', value: 84 },
+              { label: $text('ui.visible_days_14'), value: 14 },
+              { label: $text('ui.visible_days_42'), value: 42 },
+              { label: $text('ui.visible_days_3months'), value: 84 },
             ]"
             color="primary"
             inline
@@ -255,18 +255,18 @@
 import {
   ref,
   computed,
-  onMounted,
   watch,
   nextTick,
   onUpdated,
   onBeforeUnmount,
+  onMounted,
 } from "vue";
+import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import logger from "src/utils/logger";
 import { $text, detectAndSetLocale, getLanguage, getCountryCode } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/modules/day-organiser/apiRoot";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
-import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,

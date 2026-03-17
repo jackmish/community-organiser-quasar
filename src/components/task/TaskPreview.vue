@@ -21,7 +21,7 @@
             unelevated
             color="orange"
             icon="edit"
-            label="Edit"
+            :label="$text('action.edit')"
             @click.stop="$emit('edit')"
           />
           <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
@@ -232,6 +232,7 @@
 
 <script setup lang="ts">
 import { computed, toRaw, ref, nextTick, watch } from "vue";
+import { $text } from "src/modules/lang";
 import type { ComponentPublicInstance } from "vue";
 import logger from "src/utils/logger";
 import { format } from "date-fns";

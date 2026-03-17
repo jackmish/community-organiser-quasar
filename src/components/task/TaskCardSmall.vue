@@ -108,6 +108,7 @@ import {
 } from "../theme";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
+import { $text } from "src/modules/lang";
 
 const props = defineProps<{ item: any; selectedTaskId: string | null }>();
 const emit = defineEmits<{
@@ -182,10 +183,10 @@ const getEventHoursDisplay = (task: any) => {
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
         let rel = "";
-        if (diffDays === 0) rel = "Today";
-        else if (diffDays === 1) rel = "Tomorrow";
-        else if (diffDays > 1) rel = `In\u00A0${diffDays}\u00A0days`;
-        else rel = `${Math.abs(diffDays)}\u00A0days\u00A0ago`;
+        if (diffDays === 0) rel = $text('date.today');
+        else if (diffDays === 1) rel = $text('date.tomorrow');
+        else if (diffDays > 1) rel = $text('date.in_days').replace('{n}', String(diffDays));
+        else rel = $text('date.days_ago').replace('{n}', String(Math.abs(diffDays)));
 
         const shortDate = formatShortDate(dateStr);
         if (timeStr) return `${rel}\n${shortDate} | ${timeStr}`;
@@ -204,8 +205,8 @@ const getEventHoursDisplay = (task: any) => {
         const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
-        if (diffDays === 0) return `Today | ${timeStr}`;
-        if (diffDays === 1) return `Tomorrow | ${timeStr}`;
+        if (diffDays === 0) return `${$text('date.today')} | ${timeStr}`;
+        if (diffDays === 1) return `${$text('date.tomorrow')} | ${timeStr}`;
         if (diffDays > 1 && diffDays <= 6)
           return `${evD.toLocaleDateString(undefined, { weekday: "long" })} | ${timeStr}`;
       }
@@ -222,9 +223,9 @@ const getEventHoursDisplay = (task: any) => {
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((dateMid.getTime() - todayMid.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays === -1) return "Yesterday";
+  if (diffDays === 0) return $text('date.today');
+  if (diffDays === 1) return $text('date.tomorrow');
+  if (diffDays === -1) return $text('date.yesterday');
   return formatDisplayDate(dateStr);
 };
 
