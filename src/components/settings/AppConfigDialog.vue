@@ -6,10 +6,11 @@
       </q-card-section>
 
       <q-card-section class="q-pt-sm">
-        <div class="q-gutter-md">
-          <q-toggle v-model="notifications" label="Enable notifications" dense />
-          <q-toggle v-model="darkMode" label="Use dark theme" dense />
-        </div>
+            <div class="q-gutter-md">
+              <q-toggle v-model="notifications" label="Enable notifications" dense />
+              <q-toggle v-model="darkMode" label="Use dark theme" dense />
+
+            </div>
       </q-card-section>
 
       <q-card-actions align="right">

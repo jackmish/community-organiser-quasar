@@ -5,6 +5,8 @@ let currentCountry = 'US';
 let dict: Translations = {};
 let fallback: Translations = {};
 
+import { getSetting, setSetting } from 'src/modules/storage';
+
 async function loadJson(path: string): Promise<Translations | null> {
   try {
     // Dynamic import for JSON works with Vite
@@ -67,6 +69,39 @@ export function getText(key: string): string {
 
 export function $text(key: string) {
   return getText(key);
+}
+
+export async function changeLocale(locale: string) {
+  try {
+    await setSetting('language', locale);
+  } catch (e) {
+    // ignore
+  }
+  try {
+    await setLocale(locale);
+  } catch (e) {
+    // ignore
+  }
+  return locale;
+}
+
+export async function loadSavedLocale(): Promise<string> {
+  try {
+    const lang = (await getSetting('language', undefined)) as string | undefined;
+    if (lang) {
+      await setLocale(lang);
+      return lang;
+    }
+    const detected = await detectAndSetLocale();
+    return detected.locale;
+  } catch (e) {
+    try {
+      const detected = await detectAndSetLocale();
+      return detected.locale;
+    } catch (err) {
+      return 'en-US';
+    }
+  }
 }
 
 export function getCountryCode() {

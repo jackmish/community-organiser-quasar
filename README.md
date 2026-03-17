@@ -228,9 +228,12 @@ After refactor of some content once again task list was empty - without TODO tas
 
 ### OLD | EXPERIENCE MOSTLY WITH GPT5.1 mini model 0x credits - 10$ per month + manual updates and maybe once Claude at beginning.
 
-I am used to VS Code, so I'm trying Copilot feature. I know there are other tools better a specially for vibe coding. ChatGPT v4 struggled in many cases; most of the code was produced with ChatGPT5 mini, which handled Vue.js much better. Generally refactor of project is always wanted with this option when its used as vibe code tool. Recommending structure, patterns could work much better, but still AI is used to do what it learned from global resources, and doesn't need to split the files into smaller parts.
+GPT5.1 mini isn't so bad but really annoying if You prefer some file structure and You were previously using better AI models. It would always try to use own "coding style" make everything inside vue view file. It usually can write new feature destroying another one, a specially it likes to touch layout changes. If app is small it would'nt be a large issue. But making translations, filling translations - without any prompt about any other changes could remove some of your styles and its hard to test it, predict these changes.
+Refactor is slow and very ineffective, but maybe with good instructions, knowing better limitations it could be much more useful.
 
-For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using GIT. AI files history isn't best option to trust.
+---
+
+For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
 
 Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.
 

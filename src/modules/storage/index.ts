@@ -329,6 +329,35 @@ export async function saveSettings(settings: any): Promise<void> {
   }
 }
 
+// Higher-level aliases to make intent clear for callers
+export async function getSettings(): Promise<any> {
+  return await loadSettings();
+}
+
+export async function setSettings(settings: any): Promise<void> {
+  return await saveSettings(settings);
+}
+
+export async function getSetting(key: string, defaultValue: any = undefined): Promise<any> {
+  try {
+    const s = await loadSettings();
+    if (s && Object.prototype.hasOwnProperty.call(s, key)) return s[key];
+    return defaultValue;
+  } catch (e) {
+    return defaultValue;
+  }
+}
+
+export async function setSetting(key: string, value: any): Promise<void> {
+  try {
+    const s = (await loadSettings()) || {};
+    s[key] = value;
+    await saveSettings(s);
+  } catch (e) {
+    // ignore errors
+  }
+}
+
 export async function deleteGroupFile(groupId: string): Promise<void> {
   if (window.electronAPI && window.electronAPI.joinPath && window.electronAPI.deleteFile) {
     const appDataDir = await window.electronAPI.getAppDataPath();

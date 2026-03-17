@@ -1810,14 +1810,13 @@ function onSubmit(event: Event) {
 }
 /* Keep border/padding stable on active/outline state to avoid layout shifts */
 .priority-item .q-btn {
-  border: 1px solid transparent !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
   box-sizing: border-box !important;
   padding-left: 6px !important;
   padding-right: 6px !important;
 }
 .priority-btn.q-btn--active,
-.priority-btn.q-btn--unelevated,
-.priority-btn.q-btn--outline {
+.priority-btn.q-btn--unelevated {
   border-color: transparent !important;
   box-shadow: none !important;
   transform: none !important;

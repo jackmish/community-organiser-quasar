@@ -47,8 +47,26 @@
                   style="width: auto"
                 >
                   <q-list style="min-width: 160px">
+                    <q-item>
+                      <q-item-section>
+                        <q-select
+                          v-model="selectedLanguage"
+                          :options="langOptions"
+                          option-label="label"
+                          option-value="value"
+                          dense
+                          use-input
+                          input-debounce="200"
+                          emit-value
+                          map-options
+                          @update:model-value="onLanguageChange"
+                          placeholder="Language"
+                        />
+                      </q-item-section>
+                    </q-item>
+                    <q-separator />
                     <q-item clickable v-ripple @click="openManageHeader">
-                      <q-item-section>{{$text('ui.manage_groups')}}</q-item-section>
+                      <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
                     </q-item>
                     <q-item
                       clickable
@@ -60,10 +78,10 @@
                         }
                       "
                     >
-                      <q-item-section>{{$text('menu.connections')}}</q-item-section>
+                      <q-item-section>{{ $text("menu.connections") }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openSettings">
-                      <q-item-section>{{$text('menu.settings')}}</q-item-section>
+                      <q-item-section>{{ $text("menu.settings") }}</q-item-section>
                     </q-item>
 
                     <q-item
@@ -76,14 +94,18 @@
                         }
                       "
                     >
-                      <q-item-section>{{$text('menu.debug_tools')}}</q-item-section>
+                      <q-item-section>{{ $text("menu.debug_tools") }}</q-item-section>
                     </q-item>
 
                     <q-item clickable v-ripple @click="reloadWithTestData">
-                      <q-item-section>{{$text('menu.explain_features')}}</q-item-section>
+                      <q-item-section>{{
+                        $text("menu.explain_features")
+                      }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openAbout">
-                      <q-item-section>{{$text('menu.about')}} v{{ appVersion }}</q-item-section>
+                      <q-item-section
+                        >{{ $text("menu.about") }} v{{ appVersion }}</q-item-section
+                      >
                     </q-item>
                   </q-list>
                 </q-menu>
@@ -109,6 +131,9 @@
 import "src/utils/logger-shim";
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { $text } from "src/modules/lang";
+import { app } from "src/services/appService";
+import { setLocale, detectAndSetLocale, changeLocale, loadSavedLocale } from "src/modules/lang";
+import { langOptions } from "src/modules/lang/options";
 import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from "vue-router";
@@ -129,12 +154,10 @@ const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const showDebugDialog = ref(false);
 const menuOpen = ref(false);
-const testMode = computed(() =>
-  presentation && presentation.mode ? presentation.mode.value === "test" : false
-);
-const presentationActive = computed(() =>
-  presentation && presentation.active ? presentation.active.value : false
-);
+const selectedLanguage = ref("en-US");
+
+// `langOptions` moved to src/modules/lang/options.ts
+
 let headerManageHandler: any = null;
 // Obtain router and route during setup (inject must run inside setup)
 const router = useRouter();
@@ -151,9 +174,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer);
 });
-const currentDateWeekday = computed(() => format(now.value, "EEEE"));
-const currentDateShort = computed(() => format(now.value, "dd.MM.yyyy"));
-const currentTimeDisplay = computed(() => format(now.value, "HH:mm"));
 
 async function checkInternetConnection(): Promise<boolean> {
   try {
@@ -227,24 +247,28 @@ onMounted(async () => {
   // no-op: `testMode` derived from `presentation.mode` via computed
 });
 
-function refreshNotifications() {
+onMounted(async () => {
   try {
-    // refreshNotifications triggers a UI refresh event; do not reload data here
+    const locale = await loadSavedLocale();
+    selectedLanguage.value = locale;
+  } catch (e) {
     try {
-      // notify pages that data was reloaded so they can refresh UI (calendar, lists)
-      window.dispatchEvent(new Event("organiser:reloaded"));
-    } catch (e) {
-      // ignore
+      const detected = await detectAndSetLocale();
+      selectedLanguage.value = detected.locale;
+    } catch (err) {
+      selectedLanguage.value = "en-US";
     }
+  }
+});
+
+async function onLanguageChange(lang: string) {
+  try {
+    await changeLocale(lang);
   } catch (e) {
     // ignore
+  } finally {
+    menuOpen.value = false;
   }
-}
-
-function handleConnectionClick() {
-  // trigger an immediate connection check and close menu
-  updateOnlineStatus();
-  menuOpen.value = false;
 }
 
 function openSettings() {
