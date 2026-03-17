@@ -142,7 +142,7 @@
           unelevated
           color="dark"
           class="panel-toggle-btn"
-          label="Hide"
+          :label="$text('ui.hide')"
           icon="keyboard_arrow_down"
           @click="panelHidden = true"
         />
@@ -203,7 +203,7 @@
       icon="add"
       dense
       @click="onFloatingAddClick"
-      title="Add new task"
+      :title="$text('ui.add_new_task')"
     />
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
@@ -212,7 +212,7 @@
       unelevated
       color="dark"
       icon="keyboard_arrow_up"
-      label="Show"
+      :label="$text('ui.show')"
       @click="panelHidden = false"
     />
   </q-page>
@@ -250,6 +250,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";

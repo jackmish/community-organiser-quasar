@@ -15,7 +15,7 @@
         text-color="blue"
         unelevated
         to="/"
-        label="Go Home"
+        :label="$text('ui.go_home')"
         no-caps
       />
     </div>
@@ -23,5 +23,5 @@
 </template>
 
 <script setup lang="ts">
-//
+import { $text } from "src/modules/lang";
 </script>

@@ -1002,7 +1002,7 @@ function onSubmit(event: Event) {
             unelevated
             color="primary"
             icon="visibility"
-            label="Preview"
+            :label="$text('action.preview')"
             @click.stop="() => emit('update:mode', 'preview')"
           />
         </div>
@@ -1051,7 +1051,7 @@ function onSubmit(event: Event) {
                             v-model="autoIncrementYear"
                             dense
                             size="xs"
-                            label="Auto Year"
+                            :label="$text('label.auto_year')"
                           />
                         </div>
                       </div>
@@ -1069,7 +1069,7 @@ function onSubmit(event: Event) {
                         <div v-if="repeatCycleType === 'nth'" class="q-mb-sm">
                           <q-input
                             type="number"
-                            label="Nth day"
+                            :label="$text('label.nth_day')"
                             dense
                             outlined
                             v-model.number="everyNDayOfMonth"
@@ -1151,14 +1151,14 @@ function onSubmit(event: Event) {
                               dense
                               flat
                               size="sm"
-                              label="Check all"
+                              :label="$text('action.check_all')"
                               @click="checkAllDays"
                             />
                             <q-btn
                               dense
                               flat
                               size="sm"
-                              label="Clear"
+                              :label="$text('action.clear')"
                               @click="clearDays"
                             />
                           </div>
@@ -1188,7 +1188,7 @@ function onSubmit(event: Event) {
                                 (e.target as HTMLInputElement).select()
                             "
                             type="number"
-                            label="Day"
+                            :label="$text('label.day')"
                             outlined
                             dense
                             min="1"
@@ -1204,7 +1204,7 @@ function onSubmit(event: Event) {
                                 (e.target as HTMLInputElement).select()
                             "
                             type="number"
-                            label="Month"
+                            :label="$text('label.month')"
                             outlined
                             dense
                             min="1"
@@ -1220,7 +1220,7 @@ function onSubmit(event: Event) {
                                 (e.target as HTMLInputElement).select()
                             "
                             type="number"
-                            label="Year"
+                            :label="$text('label.year')"
                             outlined
                             dense
                             style="max-width: 80px; min-width: 64px"
@@ -1259,7 +1259,7 @@ function onSubmit(event: Event) {
                                 (e.target as HTMLInputElement)?.select &&
                                 (e.target as HTMLInputElement).select()
                             "
-                            label="Hour"
+                            :label="$text('label.hour')"
                             outlined
                             dense
                             min="0"
@@ -1276,7 +1276,7 @@ function onSubmit(event: Event) {
                                 (e.target as HTMLInputElement)?.select &&
                                 (e.target as HTMLInputElement).select()
                             "
-                            label="Minute"
+                            :label="$text('label.minute')"
                             outlined
                             dense
                             min="0"
@@ -1318,7 +1318,7 @@ function onSubmit(event: Event) {
                           ref="offsetInput"
                           v-model.number="eventTimeOffsetDays"
                           type="number"
-                          label="Days before"
+                          :label="$text('label.days_before')"
                           dense
                           outlined
                           style="max-width: 120px"
@@ -1372,7 +1372,7 @@ function onSubmit(event: Event) {
                         v-if="!isReplenish"
                         ref="descriptionInput"
                         :model-value="localNewTask.description"
-                        label="Description"
+                        :label="$text('label.description')"
                         outlined
                         type="textarea"
                         rows="1"
@@ -1393,7 +1393,7 @@ function onSubmit(event: Event) {
                           v-model="replenishQuery"
                           @update:model-value="onReplenishInput"
                           @focus="onReplenishFocus"
-                          label="Search existing Replenish or type a new title"
+                          :label="$text('label.search_replenish')"
                           outlined
                           dense
                           class="col"
@@ -1581,7 +1581,7 @@ function onSubmit(event: Event) {
                             flat
                             color="negative"
                             icon="delete"
-                            label="Remove"
+                            :label="$text('action.remove')"
                             @click.stop="openDeleteConfirm"
                           />
                           <div
@@ -1589,20 +1589,9 @@ function onSubmit(event: Event) {
                             class="row items-center"
                             style="gap: 8px; display: inline-flex; margin-left: 8px"
                           >
-                            <div>Delete?</div>
-                            <q-btn
-                              flat
-                              dense
-                              color="negative"
-                              label="Yes"
-                              @click.stop="performDelete"
-                            />
-                            <q-btn
-                              flat
-                              dense
-                              label="No"
-                              @click.stop="cancelDeleteConfirm"
-                            />
+                            <div>{{$text('confirm.delete')}}</div>
+                            <q-btn flat dense color="negative" :label="$text('action.yes')" @click.stop="performDelete" />
+                            <q-btn flat dense :label="$text('action.no')" @click.stop="cancelDeleteConfirm" />
                           </div>
                         </div>
                       </div>

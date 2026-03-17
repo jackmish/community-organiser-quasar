@@ -10,7 +10,7 @@
               dense
               :flat="privilegeMode !== 'preview'"
               :unelevated="privilegeMode === 'preview'"
-              label="Preview"
+              :label="$text('action.preview')"
               @click.prevent="privilegeMode = 'preview'"
               class="mode-btn"
               :class="{ active: privilegeMode === 'preview' }"
@@ -19,7 +19,7 @@
               dense
               :flat="privilegeMode !== 'edit'"
               :unelevated="privilegeMode === 'edit'"
-              label="Edit"
+              :label="$text('action.edit')"
               @click.prevent="privilegeMode = 'edit'"
               class="mode-btn"
               :class="{ active: privilegeMode === 'edit' }"
@@ -28,7 +28,7 @@
               dense
               :flat="privilegeMode !== 'remove'"
               :unelevated="privilegeMode === 'remove'"
-              label="Remove"
+              :label="$text('action.remove')"
               @click.prevent="privilegeMode = 'remove'"
               class="mode-btn"
               :class="{ active: privilegeMode === 'remove' }"

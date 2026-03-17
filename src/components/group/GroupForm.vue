@@ -2,7 +2,7 @@
   <q-form @submit.prevent="onSubmit" class="q-mb-md">
     <div style="display: flex; flex-direction: column; gap: 8px; width: 100%">
       <div class="row q-gutter-sm items-end">
-        <q-input v-model="localName" label="Group Name" outlined dense class="col" />
+        <q-input v-model="localName" :label="$text('label.group_name')" outlined dense class="col" />
 
         <!-- Icon preview and selector (moved out of the input) -->
         <div
@@ -381,19 +381,19 @@
         </q-menu>
 
         <div style="display: flex; align-items: center; gap: 8px">
-          <q-checkbox v-model="localShareSubgroups" label="Share subgroups" dense />
+          <q-checkbox v-model="localShareSubgroups" :label="$text('label.share_subgroups')" dense />
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px">
           <q-checkbox
             v-model="localHideTasksInParent"
-            label="In parent show only summary of tasks"
+            :label="$text('label.parent_summary')"
             dense
           />
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px">
-          <q-checkbox v-model="localShortcut" label="Make shortcut" dense />
+          <q-checkbox v-model="localShortcut" :label="$text('label.make_shortcut')" dense />
         </div>
 
         <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
