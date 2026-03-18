@@ -254,7 +254,7 @@ I have need to experiment with names make some nice own files structure ( a spec
 Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, and GPT5.1 mini cant accept this way sometimes.
 
 It needs smaller/simpler tasks for more effective results, to avoid "single file style".
-Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it chooses to make 30% of the prompt. It likes to create smaller tasks by itself when prompt is too long.
+Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it chooses to make 30% of the prompt. It likes to create smaller tasks by itself when prompt is too long. Maybe more notes could explain how to not touch for example sizes of list/elements wrappings, when there is only changed box-shadow under single element of the list. Its much harder to find wrong change a specially when another thing needs to be repaired.
 
 ---
 

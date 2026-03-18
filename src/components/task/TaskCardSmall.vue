@@ -427,6 +427,8 @@ const getBoundingRect = (): DOMRect | null => {
   align-items: center;
   gap: 8px;
   justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 .title-text {
   min-width: 0;
