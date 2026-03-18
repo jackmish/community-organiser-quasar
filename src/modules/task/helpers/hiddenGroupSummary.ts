@@ -61,9 +61,9 @@ export function createHiddenGroupSummary(
         }
       }
 
-      const groupsArr = Array.from(groupsMap.values()).sort((a: any, b: any) =>
-        String(a.name).localeCompare(String(b.name)),
-      );
+      // Only include hidden groups that actually have active (non-done) tasks.
+      let groupsArr = Array.from(groupsMap.values()).filter((g: any) => (g.total || 0) > 0);
+      groupsArr = groupsArr.sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)));
       const totals: { total: number; low: number; medium: number; high: number; critical: number } =
         {
           total: 0,
@@ -72,6 +72,9 @@ export function createHiddenGroupSummary(
           high: 0,
           critical: 0,
         };
+      if (groupsArr.length === 0)
+        return { total: 0, low: 0, medium: 0, high: 0, critical: 0, groups: [] };
+
       for (const g of groupsArr) {
         totals.total += g.total || 0;
         totals.low += g.low || 0;
