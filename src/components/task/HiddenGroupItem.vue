@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import * as api from 'src/RootController';
+import * as api from 'src/CentralController';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -67,7 +67,7 @@ const emit = defineEmits<{
   (e: 'select', g: any): void;
 }>();
 
-const groups = api.group.list.all;
+const groups = CC.group.list.all;
 
 function getGroupColor(id: string | number | undefined) {
   if (!id) return '#1976d2';

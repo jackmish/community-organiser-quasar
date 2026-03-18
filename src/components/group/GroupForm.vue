@@ -2,7 +2,13 @@
   <q-form @submit.prevent="onSubmit" class="q-mb-md">
     <div style="display: flex; flex-direction: column; gap: 8px; width: 100%">
       <div class="row q-gutter-sm items-end">
-        <q-input v-model="localName" :label="$text('label.group_name')" outlined dense class="col" />
+        <q-input
+          v-model="localName"
+          :label="$text('label.group_name')"
+          outlined
+          dense
+          class="col"
+        />
 
         <!-- Icon preview and selector (moved out of the input) -->
         <div
@@ -375,13 +381,22 @@
             <div
               style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
             >
-              <q-btn dense flat :label="$text('action.cancel')" @click="parentMenuOpen = false" />
+              <q-btn
+                dense
+                flat
+                :label="$text('action.cancel')"
+                @click="parentMenuOpen = false"
+              />
             </div>
           </div>
         </q-menu>
 
         <div style="display: flex; align-items: center; gap: 8px">
-          <q-checkbox v-model="localShareSubgroups" :label="$text('label.share_subgroups')" dense />
+          <q-checkbox
+            v-model="localShareSubgroups"
+            :label="$text('label.share_subgroups')"
+            dense
+          />
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px">
@@ -393,7 +408,11 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px">
-          <q-checkbox v-model="localShortcut" :label="$text('label.make_shortcut')" dense />
+          <q-checkbox
+            v-model="localShortcut"
+            :label="$text('label.make_shortcut')"
+            dense
+          />
         </div>
 
         <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
@@ -415,7 +434,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import { $text } from "src/modules/lang";
-import * as api from "src/RootController";
+import CC from "src/CentralController";
 import type { QTreeNode } from "quasar";
 
 const props = defineProps<{
@@ -685,7 +704,7 @@ watch(
       // Fallback: query the shared group list API for the full record.
       if (!full) {
         try {
-          const listAny: any = api.group.list.all;
+          const listAny: any = CC.group.list.all;
           const arr = Array.isArray(listAny) ? listAny : (listAny && listAny.value) || [];
           full = (arr || []).find((g: any) => String(g.id) === String(id));
         } catch (err) {

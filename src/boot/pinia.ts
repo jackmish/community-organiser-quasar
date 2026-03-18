@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers';
 import { createPinia } from 'pinia';
-import { initApi } from 'src/RootController';
+
 import { loadPluginsFromManifest } from 'src/plugins/pluginLoader';
 import { registerPlugins, getPiniaPlugins } from 'src/plugins/pluginRegistry';
 
@@ -17,5 +17,4 @@ export default boot(async ({ app }) => {
   app.use(pinia);
   // Eagerly construct the storage module so `saveData()` can always resolve
   // `app('storage')` – even before any component first accesses `api.storage`.
-  initApi();
 });

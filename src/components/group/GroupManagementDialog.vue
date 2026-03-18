@@ -120,7 +120,7 @@ import { $text } from "src/modules/lang";
 import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "../theme";
 
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import GroupForm from "./GroupForm.vue";
 
 const props = defineProps<{
@@ -408,7 +408,7 @@ async function handleGroupFormSubmit(payload: any) {
   const parent = payload.parent || undefined;
   try {
       if (editingGroupId.value) {
-      await api.group.update(editingGroupId.value, {
+      await CC.group.update(editingGroupId.value, {
         name,
         ...(parent ? { parentId: parent } : {}),
         ...(color ? { color } : {}),
@@ -423,7 +423,7 @@ async function handleGroupFormSubmit(payload: any) {
         ...(typeof payload.shortcut === "boolean" ? { shortcut: payload.shortcut } : {}),
       });
     } else {
-      await api.group.add({
+      await CC.group.add({
         name,
         parentId: parent,
         color,
@@ -444,7 +444,7 @@ async function handleGroupFormSubmit(payload: any) {
 
 async function onDeleteGroup(id: string) {
   try {
-    await api.group.delete(id);
+    await CC.group.delete(id);
     if (editingGroupId.value === id) cancelEdit();
   } catch (e) {
     logger.error("deleteGroup failed", e);
@@ -475,7 +475,7 @@ async function confirmDelete(id: string) {
 
 function startEdit(node: any) {
   try {
-    const groups = api.group.list.all;
+    const groups = CC.group.list.all;
     // Helper: accept either an array or a ref/computed that holds an array
     function unwrapArray(maybe: unknown): any[] {
       if (Array.isArray(maybe)) return maybe;

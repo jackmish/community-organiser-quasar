@@ -3,7 +3,7 @@ import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "./ReplenishmentList.vue";
@@ -86,7 +86,7 @@ const activeGroupLabelShort = computed(() => {
 
 // Group menu state for edit-mode group changing
 const groupMenu = ref(false);
-const groups = api.group.list.all;
+const groups = CC.group.list.all;
 
 function getGroupIcon(gid: string | undefined) {
   try {

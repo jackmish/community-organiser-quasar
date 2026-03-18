@@ -328,7 +328,7 @@
               "getGroupName(groupId)": "lookup from groups.value",
               "getGroupColor(groupId)": "lookup from groups.value",
               "getGroupIcon(groupId)": "lookup from groups.value",
-              "mergedTasks() [computed]": "builds sentinel entries for hiddenGroups and replenishTasks; filters via api.group.list.isVisibleForActive; groups tasks into buckets and sorts groups and tasks; returns flattened list with _group references",
+              "mergedTasks() [computed]": "builds sentinel entries for hiddenGroups and replenishTasks; filters via CC.group.list.isVisibleForActive; groups tasks into buckets and sorts groups and tasks; returns flattened list with _group references",
               "isNewGroup(idx, task)": "detect boundary between group buckets for rendering labels",
               "getGroupContainerStyle(n)": "compute gridColumn span based on item count",
               "selectHiddenGroup(g)": "set activeGroup.value to group"

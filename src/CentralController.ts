@@ -4,12 +4,16 @@ import { useTaskStore } from 'src/modules/task/TaskController';
 import { useGroupStore } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/controllers/lazyStore';
 
-class ControllerRoot {
+class CentralController {
   public group = lazyStore(useGroupStore as any);
   public task = lazyStore(useTaskStore as any);
   private _storage: ReturnType<typeof apiStorage.construct> | null = null;
 
-  initApi() {
+  constructor() {
+    this.initControllers();
+  }
+
+  initControllers() {
     if (this._storage) return this._storage;
     const g = useGroupStore();
     const t = useTaskStore();
@@ -27,16 +31,12 @@ class ControllerRoot {
   get storage() {
     return new Proxy({} as any, {
       get: (_t, prop: string | symbol) => {
-        return (this.initApi() as any)[prop];
+        return (this.initControllers() as any)[prop];
       },
     });
   }
 }
 
-const controllerRoot = new ControllerRoot();
+const CC = new CentralController();
 
-export default controllerRoot;
-export const group: any = controllerRoot.group;
-export const task: any = controllerRoot.task;
-export const storage: any = controllerRoot.storage;
-export const initApi: any = controllerRoot.initApi.bind(controllerRoot);
+export default CC;

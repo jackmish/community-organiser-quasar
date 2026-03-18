@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import type { DayData } from './types';
 import { storage, loadSettings, saveSettings } from '../storage';
 import logger from 'src/utils/logger';
-import * as api from 'src/RootController';
+import * as api from 'src/CentralController';
 import { createHiddenGroupSummary } from 'src/modules/task/helpers/hiddenGroupSummary';
 
 export {
@@ -38,7 +38,7 @@ export function useDayOrganiser() {
   // Persist activeGroup changes to settings
   try {
     watch(
-      () => api.group.active.activeGroup.value,
+      () => CC.group.active.activeGroup.value,
       async (val) => {
         try {
           logger.info('[day-organiser] activeGroup changed, persisting', { value: val });
@@ -68,7 +68,7 @@ export function useDayOrganiser() {
   const exportData = () => {
     const payload = {
       days: api.task.time.days.value,
-      groups: api.group.list.all.value,
+      groups: CC.group.list.all.value,
       lastModified: api.task.time.lastModified.value,
     };
     if (typeof api.storage.exportToFile === 'function') return api.storage.exportToFile(payload);
@@ -98,13 +98,13 @@ export function useDayOrganiser() {
   const prevDay = () => api.task.time.prevDay();
 
   const organiserLike = computed(() => ({
-    groups: api.group.list.all.value,
+    groups: CC.group.list.all.value,
     days: api.task.time.days.value,
   }));
 
   const hiddenGroupSummary = createHiddenGroupSummary(
     organiserLike as any,
-    api.group.active.activeGroup,
+    CC.group.active.activeGroup,
   );
 
   // Minimal public surface: prefer using `api.*` namespaced APIs directly

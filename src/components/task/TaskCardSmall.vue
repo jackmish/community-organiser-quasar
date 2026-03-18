@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { ref, toRef } from "vue";
 import { useLongPress } from "src/composables/useLongPress";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,

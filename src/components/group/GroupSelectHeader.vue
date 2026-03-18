@@ -120,7 +120,7 @@
         dense
         round
         title="Go to parent group"
-        @click.stop.prevent="() => api.group.active.goToParent()"
+        @click.stop.prevent="() => CC.group.active.goToParent()"
         :style="{
           border: '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
           background: 'transparent',
@@ -185,7 +185,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
 
 function getBtnTextColor(g: any) {
@@ -200,9 +200,9 @@ function getBtnBorderColor(g: any) {
   return getBtnTextColor(g) || "transparent";
 }
 
-const groups = api.group.list.all;
-const activeGroup = api.group.active.activeGroup;
-const parentGroup = api.group.active.parent;
+const groups = CC.group.list.all;
+const activeGroup = CC.group.active.activeGroup;
+const parentGroup = CC.group.active.parent;
 const isLoading = api.storage.isLoading;
 
 // Normalize parent id values: accept string/number or object like { value, id }
@@ -316,7 +316,7 @@ const convertNode = (n: any): any => ({
 
 const treeNodes = computed(() => {
   try {
-    return (api.group.list.tree.value || []).map(convertNode);
+    return (CC.group.list.tree.value || []).map(convertNode);
   } catch (e) {
     return [];
   }
@@ -353,7 +353,7 @@ watch(
     if (!activeGroup.value) {
       const fg = list[0];
       if (!fg) return;
-      api.group.active.activate(fg);
+      CC.group.active.activate(fg);
       localValue.value = String(fg.id);
       prevValue = String(fg.id);
       return;
@@ -370,7 +370,7 @@ watch(
       const agObj = typeof ag === "object" && ag ? (ag as Record<string, any>) : null;
       const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
       const agValue = agObj ? (agObj.value as string | undefined) : undefined;
-      if (agLabel !== found.name || String(agValue ?? "") !== gid) api.group.active.activate(found);
+      if (agLabel !== found.name || String(agValue ?? "") !== gid) CC.group.active.activate(found);
       if (localValue.value !== gid) localValue.value = gid;
     }
   },
@@ -379,7 +379,7 @@ watch(
 
 function onSelectAll() {
   // delegate the canonical selection change to the shared API
-  api.group.active.selectAll();
+  CC.group.active.selectAll();
   // keep local UI state in sync
   localValue.value = null;
   menuOpen.value = false;
@@ -394,8 +394,8 @@ function onTreeSelect(val: any) {
     // if special keys used, handle them (none here)
     localValue.value = String(key);
     const found = options.value.find((o: any) => String(o.value) === String(key));
-    if (found) api.group.active.activate(found);
-    else api.group.active.activate(String(key));
+    if (found) CC.group.active.activate(found);
+    else CC.group.active.activate(String(key));
   } finally {
     menuOpen.value = false;
   }
@@ -443,7 +443,7 @@ function activateTreeShortcut(node: any) {
       node && node.group
         ? node.group
         : (groups.value || []).find((gg: any) => String(gg.id) === String(node.id));
-    if (grp) api.group.active.activate(grp);
+    if (grp) CC.group.active.activate(grp);
   } catch (e) {
     void e;
   }
@@ -477,7 +477,7 @@ function isShortcutActive(g: any) {
 function onShortcutClick(g: any) {
   try {
     if (isShortcutActive(g)) return; // do nothing for active shortcut
-    api.group.active.activate(g);
+    CC.group.active.activate(g);
   } catch (e) {
     void e;
   }

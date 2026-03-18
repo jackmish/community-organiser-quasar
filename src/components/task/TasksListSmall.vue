@@ -68,12 +68,12 @@
                   @click="() => {
                     const gid = groupIdOf(item);
                     if (!gid) {
-                      api.group.active.selectAll();
+                      CC.group.active.selectAll();
                     } else {
                       try {
                         const found = (groups.value || []).find((g: any) => String(g.id) === String(gid));
-                        if (found) api.group.active.activate(found);
-                        else api.group.active.activate(String(gid));
+                        if (found) CC.group.active.activate(found);
+                        else CC.group.active.activate(String(gid));
                       } catch (e) {
                         void e;
                       }
@@ -116,7 +116,7 @@ import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
 import GroupButton from "src/components/group/GroupButton.vue";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
@@ -136,8 +136,8 @@ const emit = defineEmits<{
   (e: "add-task"): void;
 }>();
 
-const groups = api.group.list.all;
-const activeGroup = api.group.active.activeGroup;
+const groups = CC.group.list.all;
+const activeGroup = CC.group.active.activeGroup;
 
 function getGroupName(groupId: any) {
   if (!groupId) return "";
@@ -181,7 +181,7 @@ const mergedTasks = computed(() => {
       const taskGroupId = groupIdOf(t);
       if (!taskGroupId) return true;
       try {
-        return api.group.list.isVisibleForActive(taskGroupId);
+        return CC.group.list.isVisibleForActive(taskGroupId);
       } catch (e) {
         if (!activeId) return true;
         return true;
@@ -335,7 +335,7 @@ function getGroupContainerStyle(n: number) {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    api.group.active.activate(g);
+    CC.group.active.activate(g);
   } catch (e) {
     void e;
   }

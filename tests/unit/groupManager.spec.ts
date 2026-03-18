@@ -234,7 +234,7 @@ describe('GroupActive.goToParent', () => {
     });
 
     const ga = new GroupActive(groups, active);
-    // Simulate what `() => api.group.active.goToParent()` does — call through the object
+    // Simulate what `() => CC.group.active.goToParent()` does — call through the object
     const boundCall = () => ga.goToParent();
     expect(() => boundCall()).not.toThrow();
     expect(active.value?.value).toBe('p1');

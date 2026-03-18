@@ -247,7 +247,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 import type { Task } from "src/modules/task/types";
 
 const props = defineProps<{
@@ -276,7 +276,7 @@ const quickSubtaskStar = ref(false);
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
 const priorityMenu = ref(false);
 const groupMenu = ref(false);
-const groups = api.group.list.all;
+const groups = CC.group.list.all;
 // track pending transition fallback timers per element
 const transitionFallbacks = new Map<HTMLElement, number>();
 

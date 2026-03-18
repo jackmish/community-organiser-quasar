@@ -58,8 +58,8 @@ const size = props.size || 'default';
 import { computed } from 'vue';
 
 // access group list to resolve group names for tiny labels
-import * as api from 'src/RootController';
-const groups = api.group.list.all;
+import * as api from 'src/CentralController';
+const groups = CC.group.list.all;
 
 function getGroupName(groupId: any) {
   if (!groupId) return '';

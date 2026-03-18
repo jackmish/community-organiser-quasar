@@ -333,9 +333,9 @@ const openDeleteMenu = ref<string | null>(null);
 const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import * as api from 'src/RootController';
-const groups = api.group.list.all;
-const activeGroup = api.group.active.activeGroup;
+import * as api from 'src/CentralController';
+const groups = CC.group.list.all;
+const activeGroup = CC.group.active.activeGroup;
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -405,7 +405,7 @@ const mergedTasks = computed(() => {
       // Delegate visibility rules to the group API which respects
       // `hideTasksFromParent` and `shareSubgroups` flags.
       try {
-        return api.group.list.isVisibleForActive(taskGroupId);
+        return CC.group.list.isVisibleForActive(taskGroupId);
       } catch (e) {
         // Fallback: if helper unavailable, include task when no active group
         if (!activeId) return true;
@@ -453,7 +453,7 @@ const getGroupIcon = (groupId?: string) => {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    api.group.active.activate(g);
+    CC.group.active.activate(g);
   } catch (e) {
     // ignore
   }

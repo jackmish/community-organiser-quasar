@@ -59,7 +59,7 @@
                 </div>
               </div>
               <Watermark
-                :active-group="api.group.active.activeGroup"
+                :active-group="CC.group.active.activeGroup"
                 :color="watermarkTextColor"
                 size="large"
               />
@@ -174,7 +174,7 @@
         >
           <AddTaskForm
             :filtered-parent-options="filteredParentOptions"
-            :active-group="api.group.active.activeGroup.value"
+            :active-group="CC.group.active.activeGroup.value"
             :show-calendar="false"
             :selected-date="newTask.eventDate"
             :all-tasks="allTasks"
@@ -254,7 +254,7 @@ import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
-import * as api from "src/RootController";
+import * as api from "src/CentralController";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";
@@ -463,13 +463,13 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
 // Provide a lightweight organiser-like ref for legacy helpers that expect
 // an `organiserData` ref with `groups` and `days`.
 const organiserLike = computed(() => ({
-  groups: api.group.list.all.value,
+  groups: CC.group.list.all.value,
   days: api.task.time.days.value,
 }));
 
 const hiddenGroupSummary = createHiddenGroupSummary(
   organiserLike as any,
-  api.group.active.activeGroup
+  CC.group.active.activeGroup
 );
 
 // All tasks across days — used to render calendar events
@@ -701,7 +701,7 @@ const {
   currentDate: api.task.time.currentDate,
   allTasks,
   apiTask: api.task,
-  apiGroup: api.group,
+  apiGroup: CC.group,
 });
 
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed
@@ -711,20 +711,20 @@ const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return "Unknown";
-  const group = api.group.list.all.value.find((g: TaskGroup) => g.id === groupId);
+  const group = CC.group.list.all.value.find((g: TaskGroup) => g.id === groupId);
   return group ? group.name : "Unknown";
 };
 
 // Color/style computeds derived from the active group
 const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(
-  api.group.list.all,
-  api.group.active.activeGroup,
+  CC.group.list.all,
+  CC.group.active.activeGroup,
 );
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
   setCurrentDate: api.task.time.setCurrentDate,
-  activeGroup: api.group.active.activeGroup,
+  activeGroup: CC.group.active.activeGroup,
   currentDate: api.task.time.currentDate,
   allTasks,
   quasar: $q,
@@ -1021,13 +1021,13 @@ const handleToggleStatus = async (task: any) => {
 // `toggleStatus` delegates to the task API; child components call the API directly now.
 
 const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await api.group.add({
+  const group = await CC.group.add({
     name: data.name,
     color: data.color,
     hideTasksFromParent: false,
   });
   defaultGroupId.value = group.id;
-  api.group.active.activate(group);
+  CC.group.active.activate(group);
   showFirstRunDialog.value = false;
 };
 
@@ -1095,13 +1095,13 @@ onMounted(async () => {
   window.addEventListener("group:manage", organiserGroupManageHandler as EventListener);
 
   // Show first run dialog if no groups exist
-  if (api.group.list.all.value.length === 0) {
+  if (CC.group.list.all.value.length === 0) {
     showFirstRunDialog.value = true;
   } else {
     // Auto-select first group as active if groups exist
-    const firstGroup = api.group.list.all.value[0];
-    if (firstGroup && !api.group.active.activeGroup.value) {
-      api.group.active.activate(firstGroup);
+    const firstGroup = CC.group.list.all.value[0];
+    if (firstGroup && !CC.group.active.activeGroup.value) {
+      CC.group.active.activate(firstGroup);
       defaultGroupId.value = firstGroup.id;
     }
   }
