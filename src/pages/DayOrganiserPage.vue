@@ -1027,7 +1027,7 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
     hideTasksFromParent: false,
   });
   defaultGroupId.value = group.id;
-  CC.group.active.activate(group);
+  CC.group.active.set(group);
   showFirstRunDialog.value = false;
 };
 
@@ -1101,7 +1101,7 @@ onMounted(async () => {
     // Auto-select first group as active if groups exist
     const firstGroup = CC.group.list.all.value[0];
     if (firstGroup && !CC.group.active.activeGroup.value) {
-      CC.group.active.activate(firstGroup);
+      CC.group.active.set(firstGroup);
       defaultGroupId.value = firstGroup.id;
     }
   }

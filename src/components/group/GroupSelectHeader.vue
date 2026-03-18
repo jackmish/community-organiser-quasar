@@ -353,7 +353,7 @@ watch(
     if (!activeGroup.value) {
       const fg = list[0];
       if (!fg) return;
-      CC.group.active.activate(fg);
+        CC.group.active.set(fg);
       localValue.value = String(fg.id);
       prevValue = String(fg.id);
       return;
@@ -370,7 +370,7 @@ watch(
       const agObj = typeof ag === "object" && ag ? (ag as Record<string, any>) : null;
       const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
       const agValue = agObj ? (agObj.value as string | undefined) : undefined;
-      if (agLabel !== found.name || String(agValue ?? "") !== gid) CC.group.active.activate(found);
+      if (agLabel !== found.name || String(agValue ?? "") !== gid) CC.group.active.set(found);
       if (localValue.value !== gid) localValue.value = gid;
     }
   },
@@ -397,8 +397,8 @@ function onTreeSelect(val: any) {
     // group record from the authoritative groups list and pass that to
     // the group's activate API so it receives the expected shape.
     const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(key));
-    if (groupObj) CC.group.active.activate(groupObj);
-    else CC.group.active.activate(String(key));
+    if (groupObj) CC.group.active.set(groupObj);
+    else CC.group.active.setById(String(key));
   } finally {
     menuOpen.value = false;
   }
@@ -446,7 +446,7 @@ function activateTreeShortcut(node: any) {
       node && node.group
         ? node.group
         : (groups.value || []).find((gg: any) => String(gg.id) === String(node.id));
-    if (grp) CC.group.active.activate(grp);
+    if (grp) CC.group.active.set(grp);
   } catch (e) {
     void e;
   }
@@ -480,7 +480,7 @@ function isShortcutActive(g: any) {
 function onShortcutClick(g: any) {
   try {
     if (isShortcutActive(g)) return; // do nothing for active shortcut
-    CC.group.active.activate(g);
+    CC.group.active.set(g);
   } catch (e) {
     void e;
   }

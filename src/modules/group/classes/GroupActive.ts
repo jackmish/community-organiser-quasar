@@ -62,4 +62,21 @@ export class GroupActive<
       return null;
     }
   }
+
+  /*
+   // NOTE: `activate` compatibility alias removed per maintainer request.
+   // Callers should be migrated to `set`, `setById` or `selectAll`.
+   // If you accidentally restore this method, please instead update
+   // call-sites to the preferred API and add an entry to
+   // .github/copilot-instructions.md explaining the migration.
+  activate(arg: G | string | null) {
+    if (arg == null) {
+      return this.selectAll();
+    }
+    if (typeof arg === 'string') {
+      return this.setById(arg as string);
+    }
+    return this.set(arg as G);
+  }
+  */
 }

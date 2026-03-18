@@ -453,7 +453,7 @@ const getGroupIcon = (groupId?: string) => {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    CC.group.active.activate(g);
+    CC.group.active.set(g);
   } catch (e) {
     // ignore
   }

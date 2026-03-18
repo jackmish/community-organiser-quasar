@@ -46,6 +46,7 @@
                   :key="t.id"
                   :item="t"
                   :selected-task-id="selectedTaskId"
+                  :active-group-id="activeGroup?.value?.value"
                   @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                   @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
                 />
@@ -65,8 +66,8 @@
                     } else {
                       try {
                         const found = getGroupObj(gid);
-                        if (found) CC.group.active.activate(found);
-                        else CC.group.active.activate(String(gid));
+                        if (found) CC.group.active.set(found);
+                        else CC.group.active.setById(String(gid));
                       } catch (e) {
                         void e;
                       }
@@ -82,6 +83,7 @@
               <TaskCardSmall
                 :item="item"
                 :selected-task-id="selectedTaskId"
+                :active-group-id="activeGroup?.value?.value"
                 @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                 @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
               />
@@ -333,7 +335,7 @@ function getGroupContainerStyle(n: number) {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    CC.group.active.activate(g);
+    CC.group.active.set(g);
   } catch (e) {
     void e;
   }

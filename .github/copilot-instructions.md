@@ -134,3 +134,5 @@ rg "app\('storage'\)|useLongPress|save\(" src || true
 ---
 
 If you'd like, I can now create `docs/CODING.md` with expanded examples and add a small checklist/template for refactors and deduplication PRs.
+
+Note for AI agents: Prefer the modern GroupActive API (`set`, `setById`, `selectAll`) instead of calling a non-standard `activate(...)` method. If you encounter code using `activate(...)`, update the call-sites to use `set(...)` or `setById(...)` rather than adding compatibility aliases.

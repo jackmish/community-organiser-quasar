@@ -106,12 +106,12 @@ import {
   typeIcons,
   highlightIcon,
 } from "../theme";
-import { hexToRgba } from "src/utils/colorUtils";
+import { hexToRgba, getContrastColor } from "src/utils/colorUtils";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { $text } from "src/modules/lang";
 
-const props = defineProps<{ item: any; selectedTaskId: string | null }>();
+const props = defineProps<{ item: any; selectedTaskId: string | null; activeGroupId?: any }>();
 const emit = defineEmits<{
   (e: "task-click", t: any, rect?: DOMRect | null): void;
   (e: "task-context", t: any, rect?: DOMRect | null): void;
@@ -240,9 +240,27 @@ const itemStyle = (task: any) => {
 
   // Prefer group color for the shadow if available, otherwise fall back to
   // the task background (priority) color, finally a default.
-  const groupColor = task._group?.color || bg || "#1976d2";
-  // Use a relatively opaque shadow per request (not very transparent)
-  const shadow = hexToRgba(groupColor, 0.85);
+  // If this task belongs to the active group, use a high-contrast text
+  // color instead of the group's background color.
+  const isActiveGroup =
+    typeof props.activeGroupId !== "undefined" && task._group
+      ? String(task._group.id) === String(props.activeGroupId)
+      : false;
+
+  let baseColor = task._group?.color || bg || "#1976d2";
+  if (isActiveGroup) baseColor = getContrastColor(task._group?.color || baseColor);
+
+  // Map priority to an alpha between 1.0 (highest) and 0.2 (lowest).
+  const priorityOrder: Record<string, number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+  };
+  const pIdx = priorityOrder[task.priority] ?? 3;
+  const alpha = Math.max(0.2, 1 - (pIdx * (1 - 0.2)) / 3);
+
+  const shadow = hexToRgba(baseColor, alpha);
 
   return {
     backgroundColor: bg,
@@ -306,7 +324,7 @@ const getBoundingRect = (): DOMRect | null => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .priority-badge {
