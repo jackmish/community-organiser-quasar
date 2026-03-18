@@ -23,7 +23,7 @@
                 <q-avatar
                   size="36"
                   :style="{
-                    background: (item._group?.color || getGroupColor(item._group?.id)),
+                    background: item._group?.color || getGroupColor(item._group?.id),
                   }"
                 >
                   <q-icon
@@ -32,11 +32,11 @@
                     size="18"
                   />
                 </q-avatar>
-                  <div class="title-main">
+                <div class="title-main">
                   <div class="title-text">
-                      <q-item-label class="title-ellipsis">
-                        <strong>{{ item._group?.name || "Ungrouped" }}</strong>
-                      </q-item-label>
+                    <q-item-label class="title-ellipsis">
+                      <strong>{{ item._group?.name || "Ungrouped" }}</strong>
+                    </q-item-label>
                   </div>
                 </div>
               </div>
@@ -59,20 +59,22 @@
               <div v-if="isNewGroup(index, item)" class="group-label">
                 <GroupButton
                   :group="getGroupObj(groupIdOf(item))"
-                  @click="() => {
-                    const gid = groupIdOf(item);
-                    if (!gid) {
-                      CC.group.active.selectAll();
-                    } else {
-                      try {
-                        const found = getGroupObj(gid);
-                        if (found) CC.group.active.set(found);
-                        else CC.group.active.setById(String(gid));
-                      } catch (e) {
-                        void e;
+                  @click="
+                    () => {
+                      const gid = groupIdOf(item);
+                      if (!gid) {
+                        CC.group.active.selectAll();
+                      } else {
+                        try {
+                          const found = getGroupObj(gid);
+                          if (found) CC.group.active.set(found);
+                          else CC.group.active.setById(String(gid));
+                        } catch (e) {
+                          void e;
+                        }
                       }
                     }
-                  }"
+                  "
                 />
               </div>
               <div
@@ -404,6 +406,7 @@ function logIfUnrecognized(item: any) {
   top: -20px;
   left: 8px;
   z-index: 1;
+  box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.4);
 }
 .group-divider {
   position: absolute;
