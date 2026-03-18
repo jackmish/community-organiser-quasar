@@ -284,7 +284,7 @@ else CC.group.active.activate(String(key));
 
 1. Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is main type in this kind of TypeScript.
 2. There is also second problem if there is an ID instead of object: searching/filtering should be build inside activate or activateById function. AI really multiplies code, likes to repeat itself. There are still many lines of code which are taking all loaded tasks/events with some dates instead of taking correct, flat list of tasks.
-3. function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" for every state objects/classes.
+3. function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() for every state object/class inside Central Application Controller CC.
 
 Refactor of things like this with GPT5.1 could take forever and instead of sometime fixing it would do next dumb thing.
 
