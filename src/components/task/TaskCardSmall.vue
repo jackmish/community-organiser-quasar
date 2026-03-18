@@ -111,7 +111,11 @@ import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/to
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { $text } from "src/modules/lang";
 
-const props = defineProps<{ item: any; selectedTaskId: string | null; activeGroupId?: any }>();
+const props = defineProps<{
+  item: any;
+  selectedTaskId: string | null;
+  activeGroupId?: any;
+}>();
 const emit = defineEmits<{
   (e: "task-click", t: any, rect?: DOMRect | null): void;
   (e: "task-context", t: any, rect?: DOMRect | null): void;
@@ -242,10 +246,26 @@ const itemStyle = (task: any) => {
   // the task background (priority) color, finally a default.
   // If this task belongs to the active group, use a high-contrast text
   // color instead of the group's background color.
-  const isActiveGroup =
-    typeof props.activeGroupId !== "undefined" && task._group
-      ? String(task._group.id) === String(props.activeGroupId)
-      : false;
+  // Normalize incoming activeGroupId to a simple string id so callers can
+  // pass either a raw id, number, or an object like `{ value, id }`.
+  const normalizeActiveId = (v: any): string | null => {
+    if (v == null) return null;
+    try {
+      if (typeof v === "object") return String(v.value ?? v.id ?? null);
+      return String(v);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const activeId = normalizeActiveId((props as any).activeGroupId);
+  // If caller didn't pass an `activeGroupId` prop, fall back to the shared
+  // controller's activeGroup so the component still highlights correctly.
+  const fallbackActive = normalizeActiveId(CC.group.active.activeGroup?.value);
+  const resolvedActiveId = activeId || fallbackActive;
+  const isActiveGroup = Boolean(
+    task._group && resolvedActiveId && String(task._group.id) === String(resolvedActiveId)
+  );
 
   let baseColor = task._group?.color || bg || "#1976d2";
   if (isActiveGroup) baseColor = getContrastColor(task._group?.color || baseColor);
