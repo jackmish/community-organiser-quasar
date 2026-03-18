@@ -58,7 +58,26 @@
           <template v-else-if="item instanceof Task">
             <div class="grouped-item card" :style="{ position: 'relative' }">
               <div v-if="isNewGroup(index, item)" class="group-label">
-                {{ getGroupName(groupIdOf(item)) }}
+                <GroupButton
+                  :group="{
+                    id: groupIdOf(item),
+                    name: getGroupName(groupIdOf(item)),
+                    color: getGroupColor(groupIdOf(item)),
+                    icon: getGroupIcon(groupIdOf(item)),
+                  }"
+                  @click="() => {
+                    const gid = groupIdOf(item);
+                    if (!gid) {
+                      api.group.active.selectAll();
+                    } else {
+                      try {
+                        (activeGroup as any).value = { label: getGroupName(gid), value: gid };
+                      } catch (e) {
+                        void e;
+                      }
+                    }
+                  }"
+                />
               </div>
               <div
                 v-if="isNewGroup(index, item)"
@@ -79,7 +98,9 @@
             :group="item._group"
             @select="selectHiddenGroup"
           />
-          <div v-else class="unrecognized-item">{{$text('error.unrecognized_item')}}</div>
+          <div v-else class="unrecognized-item">
+            {{ $text("error.unrecognized_item") }}
+          </div>
         </template>
       </template>
     </div>
@@ -103,6 +124,7 @@ import { Task } from "src/modules/task/types";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
+import GroupButton from "src/components/group/GroupButton.vue";
 import * as api from "src/controllerRoot";
 import { $text } from "src/modules/lang";
 
@@ -304,7 +326,9 @@ function isNewGroup(idx: number, task: any) {
     if (idx === 0) return true;
     const prev = mergedTasks.value[idx - 1];
     const curId = String(groupIdOf(task) ?? "__ungrouped__");
-    const prevId = String(groupIdOf(prev) ?? (prev._group ? prev._group.id : "__ungrouped__"));
+    const prevId = String(
+      groupIdOf(prev) ?? (prev._group ? prev._group.id : "__ungrouped__")
+    );
     return curId !== prevId;
   } catch (e) {
     return true;
@@ -327,10 +351,10 @@ function selectHiddenGroup(g: any) {
 // Log unexpected items for debugging (avoid printing raw objects into the UI)
 function logIfUnrecognized(item: any) {
   try {
-    if (!item || typeof item !== 'object') return;
+    if (!item || typeof item !== "object") return;
     if (item.__isReplenish || item.__isGroup || item.__isHiddenGroup) return;
-    if (typeof item.id !== 'undefined') return;
-    console.warn('TasksListSmall: unrecognized merged item', item);
+    if (typeof item.id !== "undefined") return;
+    console.warn("TasksListSmall: unrecognized merged item", item);
   } catch (e) {
     void e;
   }
@@ -384,16 +408,8 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-  top: -7px;
+  top: -20px;
   left: 8px;
-  font-size: 11px;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.6);
-  background: rgba(255, 255, 255, 0.85);
-  padding: 0 6px;
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02) inset;
-  pointer-events: none;
   z-index: 1;
 }
 .group-divider {
