@@ -1188,6 +1188,53 @@ onMounted(async () => {
   const currentYear = new Date().getFullYear();
   await fetchHolidays(currentYear);
   await fetchHolidays(currentYear + 1); // Also fetch next year's holidays
+  // Listen for locale changes at runtime and refresh holiday data
+  try {
+    const handler = (ev: Event) => {
+      try {
+        const ce = ev as CustomEvent;
+        const info = ce?.detail || {};
+        const newCountry = info.country || getCountryCode();
+        const newLang = info.lang || getLanguage();
+        // If nothing changed, ignore
+        if (
+          newCountry === holidayCountryCode.value &&
+          newLang === holidayDisplayLang.value
+        )
+          return;
+        holidayCountryCode.value = newCountry;
+        holidayDisplayLang.value = newLang;
+        // Clear existing holidays and refetch for current and next year
+        holidays.value = new Map();
+        void (async () => {
+          const y = new Date().getFullYear();
+          try {
+            await fetchHolidays(y);
+            await fetchHolidays(y + 1);
+          } catch (e) {
+            // ignore
+          }
+        })();
+      } catch (e) {
+        // ignore
+      }
+    };
+    window.addEventListener("app:locale-changed", handler as EventListener);
+    // remove listener on unmount
+    try {
+      onBeforeUnmount(() => {
+        try {
+          window.removeEventListener("app:locale-changed", handler as EventListener);
+        } catch (e) {
+          // ignore
+        }
+      });
+    } catch (e) {
+      // ignore
+    }
+  } catch (e) {
+    // ignore
+  }
 });
 
 const calendarCurrentWeek = computed(() => {

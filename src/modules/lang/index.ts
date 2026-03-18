@@ -83,6 +83,18 @@ export async function changeLocale(locale: string) {
   }
   try {
     await setLocale(locale);
+    // Notify renderer components about locale change so they can react
+    try {
+      if (typeof window !== 'undefined' && typeof (window as any).dispatchEvent === 'function') {
+        const parts = String(locale).split(/[-_]/);
+        const lang = (parts[0] || 'en').toLowerCase();
+        const region = (parts[1] || (lang === 'pl' ? 'PL' : 'US')).toUpperCase();
+        const detail = { locale, lang, country: region };
+        window.dispatchEvent(new CustomEvent('app:locale-changed', { detail }));
+      }
+    } catch (e) {
+      // ignore
+    }
   } catch (e) {
     // ignore
   }
