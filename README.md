@@ -245,7 +245,10 @@ It needs smaller/simpler tasks for more effective results, or maybe just good co
 
 ---
 
-Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long, same as generating project maps when AI don't think about using additional tools. Sometimes it knows what to execute to fix the bugs usually commands "tsc", "lint". Generally unit tests even does not need to be executed. Most needed is test of graphic representation of UI and how it behaves or what is disconnected, once again is not working after new feature. There is much more need of higher lvl tests than unit tests, and it could be done by Claude, but it could be too hard for GPT5.1 Mini. Even written test by Claude doesn't make you sure that test is correctly written, but even than its better than nothing - or not.
+Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long, same as generating project maps when AI don't think about using additional tools.
+I'm not very patient anymore to change filenames with AI, and a specially with GPT5.1 i'll be doing it with VS Code non AI extensions. AI can do this after few attempts Claude or GPT5.1 but its not efficient.
+
+Sometimes it knows what to execute to fix the bugs usually commands "tsc", "lint". Generally unit tests even does not need to be executed. Most needed is test of graphic representation of UI and how it behaves or what is disconnected, once again is not working after new feature. There is much more need of higher lvl tests than unit tests, and it could be done by Claude, but it could be too hard for GPT5.1 Mini. Even written test by Claude doesn't make you sure that test is correctly written, but even than its better than nothing - or not.
 
 Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to control, GPT5.1 isn't automatically updating tests. For Claude this is much more obvious habit to improve the test and execute it after changes.
 
