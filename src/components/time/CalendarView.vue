@@ -363,11 +363,7 @@ setLongPressHandlerDay((payload: any) => {
     emit("day-click", { date, rect });
     // Also update selectedDate/time via api like right-click handler does
     try {
-      if (
-        CC.task &&
-        CC.task.time &&
-        typeof CC.task.time.setCurrentDate === "function"
-      ) {
+      if (CC.task && CC.task.time && typeof CC.task.time.setCurrentDate === "function") {
         CC.task.time.setCurrentDate(date);
       }
     } catch (e) {
@@ -385,11 +381,7 @@ async function onEventPointerUp(task: any) {
     // If long-press wasn't triggered, treat as a short click -> preview
     if (!longPressTriggered.value) {
       try {
-        if (
-          CC.task &&
-          CC.task.active &&
-          typeof CC.task.active.setMode === "function"
-        ) {
+        if (CC.task && CC.task.active && typeof CC.task.active.setMode === "function") {
           if (CC.task && CC.task.active && CC.task.active.setTask)
             CC.task.active.setTask(task ?? null);
           CC.task.active.setMode("preview");
@@ -1331,18 +1323,18 @@ function handleDateSelect(e: Event | string, dateString?: string, isContext = fa
       }
     }
 
-      try {
-        if (
-          CC &&
-          CC.task &&
-          CC.task.time &&
-          typeof CC.task.time.setCurrentDate === "function"
-        ) {
-          CC.task.time.setCurrentDate(date);
-        }
-      } catch (e) {
-        // ignore
+    try {
+      if (
+        CC &&
+        CC.task &&
+        CC.task.time &&
+        typeof CC.task.time.setCurrentDate === "function"
+      ) {
+        CC.task.time.setCurrentDate(date);
       }
+    } catch (e) {
+      // ignore
+    }
     // Always update the selected date on left or right click
     emit("update:selectedDate", date);
     // Only emit `day-click` (for positioning add form) on right-click/contextmenu
@@ -1417,8 +1409,6 @@ function isNewMonthStart(
   }
   return false;
 }
-
-
 
 function shouldShowMonth(
   day: string,
