@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
 
 const props = defineProps<{
   group?: any;
@@ -41,43 +42,13 @@ const textColor = computed(() => {
     return (
       props.group.textColor ||
       props.group.text_color ||
-      (props.group.color ? getContrastColorLocal(props.group.color) : 'inherit')
+      (props.group.color ? getContrastColor(props.group.color) : 'inherit')
     );
   } catch (e) {
     return 'inherit';
   }
 });
 
-function getContrastColorLocal(hex: string) {
-  try {
-    const rgb = hexToRgbLocal(hex);
-    if (!rgb) return '#000';
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.6 ? '#000' : '#fff';
-  } catch (e) {
-    return '#000';
-  }
-}
-
-function hexToRgbLocal(hex: string) {
-  if (!hex) return null;
-  const h = String(hex).replace(/^#/, '');
-  const full =
-    h.length === 3
-      ? h
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : h;
-  const bigint = parseInt(full, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return { r, g, b };
-}
 
 const btnStyle = computed(() => {
   try {
@@ -89,19 +60,7 @@ const btnStyle = computed(() => {
   }
 });
 
-function darkenHex(hex: string, amount: number) {
-  try {
-    const h = String(hex).replace(/^#/, '');
-    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
-    const num = parseInt(full, 16);
-    const r = Math.round(((num >> 16) & 255) * (1 - amount));
-    const g = Math.round(((num >> 8) & 255) * (1 - amount));
-    const b = Math.round((num & 255) * (1 - amount));
-    return '#' + [r,g,b].map(n => n.toString(16).padStart(2,'0')).join('');
-  } catch (e) {
-    return hex;
-  }
-}
+// using shared color helpers from src/utils/colorUtils
 
 </script>
 

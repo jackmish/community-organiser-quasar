@@ -106,6 +106,7 @@ import {
   typeIcons,
   highlightIcon,
 } from "../theme";
+import { hexToRgba } from "src/utils/colorUtils";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { $text } from "src/modules/lang";
@@ -183,10 +184,11 @@ const getEventHoursDisplay = (task: any) => {
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
         let rel = "";
-        if (diffDays === 0) rel = $text('date.today');
-        else if (diffDays === 1) rel = $text('date.tomorrow');
-        else if (diffDays > 1) rel = $text('date.in_days').replace('{n}', String(diffDays));
-        else rel = $text('date.days_ago').replace('{n}', String(Math.abs(diffDays)));
+        if (diffDays === 0) rel = $text("date.today");
+        else if (diffDays === 1) rel = $text("date.tomorrow");
+        else if (diffDays > 1)
+          rel = $text("date.in_days").replace("{n}", String(diffDays));
+        else rel = $text("date.days_ago").replace("{n}", String(Math.abs(diffDays)));
 
         const shortDate = formatShortDate(dateStr);
         if (timeStr) return `${rel}\n${shortDate} | ${timeStr}`;
@@ -205,8 +207,8 @@ const getEventHoursDisplay = (task: any) => {
         const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
-        if (diffDays === 0) return `${$text('date.today')} | ${timeStr}`;
-        if (diffDays === 1) return `${$text('date.tomorrow')} | ${timeStr}`;
+        if (diffDays === 0) return `${$text("date.today")} | ${timeStr}`;
+        if (diffDays === 1) return `${$text("date.tomorrow")} | ${timeStr}`;
         if (diffDays > 1 && diffDays <= 6)
           return `${evD.toLocaleDateString(undefined, { weekday: "long" })} | ${timeStr}`;
       }
@@ -223,22 +225,30 @@ const getEventHoursDisplay = (task: any) => {
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((dateMid.getTime() - todayMid.getTime()) / 86400000);
-  if (diffDays === 0) return $text('date.today');
-  if (diffDays === 1) return $text('date.tomorrow');
-  if (diffDays === -1) return $text('date.yesterday');
+  if (diffDays === 0) return $text("date.today");
+  if (diffDays === 1) return $text("date.tomorrow");
+  if (diffDays === -1) return $text("date.yesterday");
   return formatDisplayDate(dateStr);
 };
 
 const itemStyle = (task: any) => {
   if (!task) return {};
   if (Number(task.status_id) === 0) return {};
-  const bg = priorityColor(task.priority) || "transparent";
+  const bg = priorityColor(task.priority) || "#ffffff";
   const color = priorityTextColor(task.priority) || "inherit";
   const typeColor = typeColors[task.type_id || task.type] || "transparent";
+
+  // Prefer group color for the shadow if available, otherwise fall back to
+  // the task background (priority) color, finally a default.
+  const groupColor = task._group?.color || bg || "#1976d2";
+  // Use a relatively opaque shadow per request (not very transparent)
+  const shadow = hexToRgba(groupColor, 0.85);
+
   return {
     backgroundColor: bg,
     color,
     borderLeft: `4px solid ${typeColor}`,
+    boxShadow: `0 10px 30px ${shadow}`,
   } as Record<string, string>;
 };
 
