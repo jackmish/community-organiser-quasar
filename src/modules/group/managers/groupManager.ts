@@ -18,10 +18,7 @@ export type CreateGroupInput = {
   textColor?: string | undefined;
 };
 
-export function addGroup(
-  organiserData: OrganiserData | any[],
-  payload: CreateGroupInput,
-): Group {
+export function addGroup(organiserData: OrganiserData | any[], payload: CreateGroupInput): Group {
   const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent, shortcut, textColor } =
     payload;
   const now = new Date().toISOString();

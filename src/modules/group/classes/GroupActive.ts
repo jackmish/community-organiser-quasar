@@ -10,9 +10,9 @@ import type { ActiveInterface } from '../ActiveInterface';
  * richer model instances. The helper methods `set` and `setById`
  * provide a clearer API surface than callers doing lookups themselves.
  */
-export class GroupActive<G extends { id?: any; name?: string; label?: string; value?: any } = Group>
-  implements ActiveInterface<G>
-{
+export class GroupActive<
+  G extends { id?: any; name?: string; label?: string; value?: any } = Group,
+> implements ActiveInterface<G> {
   readonly activeGroup: Ref<{ label: string; value: string | null } | null>;
   readonly parent: ComputedRef<any>;
 
