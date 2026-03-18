@@ -1,6 +1,7 @@
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/types';
-import * as api from 'src/CentralController';
+import CC from 'src/CentralController';
+const CCx: any = CC as any;
 
 export function createTaskCrudHandlers(args: {
   setCurrentDate: (d: string | null) => void;
@@ -50,7 +51,7 @@ export function createTaskCrudHandlers(args: {
 
     let created: any = null;
     try {
-      created = await api.task.add(targetDate, taskData);
+      created = await CCx.task.add(targetDate, taskData);
     } catch (err) {
       try {
         quasar.notify({ type: 'negative', message: 'Failed to save task', position: 'top' });
@@ -79,7 +80,7 @@ export function createTaskCrudHandlers(args: {
     const targetDate =
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
     const updatedPayload = { ...updatedTask };
-    await api.task.update(targetDate, updatedPayload);
+    await CCx.task.update(targetDate, updatedPayload);
     const updated = (allTasks.value || []).find((t) => t.id === updatedTask.id) || null;
     if (setTask) setTask(updated);
     else taskToEdit.value = updated;

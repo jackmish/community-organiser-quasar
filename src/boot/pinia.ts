@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 
 import { loadPluginsFromManifest } from 'src/plugins/pluginLoader';
 import { registerPlugins, getPiniaPlugins } from 'src/plugins/pluginRegistry';
+import CC from 'src/CentralController';
 
 export default boot(async ({ app }) => {
   // Load plugins from manifest — resolves IDs to bundled modules
@@ -17,4 +18,5 @@ export default boot(async ({ app }) => {
   app.use(pinia);
   // Eagerly construct the storage module so `saveData()` can always resolve
   // `app('storage')` – even before any component first accesses `api.storage`.
+  CC.initControllers();
 });

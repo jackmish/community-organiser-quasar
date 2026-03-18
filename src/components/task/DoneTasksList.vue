@@ -49,7 +49,7 @@
 const props = defineProps<{
   doneTasks: any[];
 }>();
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import { $text } from "src/modules/lang";
 
 async function onDoneClick(task: any) {
@@ -60,9 +60,9 @@ async function onDoneClick(task: any) {
       Array.isArray(task?.history) &&
       task.history.some((h: any) => h && h.type === "cycleDone" && h.date === date);
     if (hasCycleDone) {
-      await api.task.status.undoCycleDone(date, id);
+      await CC.task.status.undoCycleDone(date, id);
     } else {
-      await api.task.status.toggleComplete(date, id);
+      await CC.task.status.toggleComplete(date, id);
 
 
     }

@@ -333,7 +333,7 @@ const openDeleteMenu = ref<string | null>(null);
 const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import * as api from 'src/CentralController';
+import CC from 'src/CentralController';
 const groups = CC.group.list.all;
 const activeGroup = CC.group.active.activeGroup;
 import {
@@ -613,7 +613,7 @@ function handleTaskClick(task: any) {
 async function toggleStatus(task: any) {
   try {
     const date = task?.date || task?.eventDate || '';
-    await api.task.status.toggleComplete(date, task.id || task._id || task.uuid);
+    await CC.task.status.toggleComplete(date, task.id || task._id || task.uuid);
   } catch (e) {
     // ignore
   }

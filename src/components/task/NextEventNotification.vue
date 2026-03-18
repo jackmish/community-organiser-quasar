@@ -6,7 +6,10 @@
           v-for="ev in nextEvents"
           :key="ev.id + '-' + (ev.eventTime || '') + '-' + (ev._date || '')"
           class="next-event"
-          :style="{ backgroundColor: priorityColor(ev) || 'transparent', color: priorityText(ev) }"
+          :style="{
+            backgroundColor: priorityColor(ev) || 'transparent',
+            color: priorityText(ev),
+          }"
           @click.prevent.stop="onClickEvent(ev)"
           role="button"
           tabindex="0"
@@ -38,33 +41,38 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount, watch, nextTick } from 'vue';
-import * as api from 'src/CentralController';
-import { priorityColors, priorityTextColor, priorityDefinitions, typeIcons } from '../theme';
-import { occursOnDay, getCycleType } from 'src/modules/task/utils/occursOnDay';
+import { computed, ref, onBeforeUnmount, watch, nextTick } from "vue";
+import CC from "src/CentralController";
+import {
+  priorityColors,
+  priorityTextColor,
+  priorityDefinitions,
+  typeIcons,
+} from "../theme";
+import { occursOnDay, getCycleType } from "src/modules/task/utils/occursOnDay";
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
-const timeApi = api.task.time;
-const groupApi = CC.group;
-const setCurrentDate = (d: string | null) => api.task.time.setCurrentDate(d);
-const setPreviewTask = (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p);
-const getTasksInRange = (s: string, e: string) => api.task.list.inRange(s, e);
+
+const setCurrentDate = (d: string | null) => CC.task.time.setCurrentDate(d);
+const setPreviewTask = (p: Parameters<typeof CC.task.active.setTask>[0]) =>
+  CC.task.active.setTask(p);
+const getTasksInRange = (s: string, e: string) => CC.task.list.inRange(s, e);
 // data load is handled centrally by DayOrganiserPage; do not call loadData here
 
 const containerRef = ref<HTMLElement | null>(null);
 
 function formatDateLabel(dateStr?: string) {
-  if (!dateStr) return '';
-  const dt = new Date(dateStr + 'T00:00:00');
+  if (!dateStr) return "";
+  const dt = new Date(dateStr + "T00:00:00");
   const today = new Date();
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const evMid = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
   const diffMs = evMid.getTime() - todayMid.getTime();
   const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Tomorrow';
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
   if (days > 1 && days <= 6) {
-    return dt.toLocaleDateString(undefined, { weekday: 'long' });
+    return dt.toLocaleDateString(undefined, { weekday: "long" });
   }
   return dt.toLocaleDateString();
 }
@@ -74,9 +82,9 @@ function formatDateLabel(dateStr?: string) {
 const nextEvents = computed(() => {
   // Touch time.days to ensure this computed tracks changes to the days map
   // (some callers mutate nested structures and explicit access guarantees reactivity)
-  void (timeApi.days && timeApi.days.value);
+  void (CC.task.time.days && CC.task.time.days.value);
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, "0");
 
   // Build the next N local dates as YYYY-MM-DD (extended window to find more occurrences)
   const MAX_EVENTS = 20;
@@ -88,10 +96,10 @@ const nextEvents = computed(() => {
 
   // Gather tasks
   let allTasks: any[] = [];
-  try {
-    allTasks = api.task.list.all() || [];
+    try {
+    allTasks = CC.task.list.all() || [];
   } catch (e) {
-    const days = (timeApi.days && timeApi.days.value) || {};
+    const days = (CC.task.time.days && CC.task.time.days.value) || {};
     Object.keys(days).forEach((d) => {
       const day = days[d];
       if (day && Array.isArray(day.tasks)) allTasks.push(...day.tasks);
@@ -105,15 +113,17 @@ const nextEvents = computed(() => {
     const done = Number(t.status_id) === 0;
     const cycleType = getCycleType(t);
     // Include non-cyclic 'prepare' reminders even if marked done; otherwise skip non-cyclic done tasks
-    if (!cycleType && done && t.timeMode !== 'prepare') continue;
+    if (!cycleType && done && t.timeMode !== "prepare") continue;
 
     const addOccurrence = (dateStr: string) => {
       // compute local Date for this occurrence
-      const [y, m, d] = dateStr.split('-').map((p) => Number(p));
+      const [y, m, d] = dateStr.split("-").map((p) => Number(p));
       if (!y || !m || !d) return;
       let occ: Date;
       if (t.eventTime) {
-        const [hh, mm] = (t.eventTime || '').split(':').map((p: string) => Number(p || 0));
+        const [hh, mm] = (t.eventTime || "")
+          .split(":")
+          .map((p: string) => Number(p || 0));
         occ = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
       } else {
         occ = new Date(y, m - 1, d, 0, 0, 0, 0);
@@ -122,7 +132,7 @@ const nextEvents = computed(() => {
     };
 
     // Only consider TimeEvent tasks, cyclic tasks, or explicit 'prepare' reminders for notifications
-    const isTimeEvent = t.type_id === 'TimeEvent' || t.timeMode === 'prepare';
+    const isTimeEvent = t.type_id === "TimeEvent" || t.timeMode === "prepare";
     if (!cycleType && !isTimeEvent) continue;
 
     if (cycleType) {
@@ -143,13 +153,17 @@ const nextEvents = computed(() => {
   // Additionally, treat all-day occurrences (no `eventTime`) for TODAY as valid
   // for the whole day so they show up regardless of the current hour.
   const cutoff = new Date(now.getTime() - 60 * 60 * 1000);
-  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+    now.getDate()
+  )}`;
   const future = occurrences.filter((o) => {
     const isCyclic = Boolean(getCycleType(o.task));
     const isAllDay = !o.task.eventTime;
     const isToday = o.dateStr === todayStr;
     if (isAllDay && isToday) return true;
-    return isCyclic ? o.occ.getTime() >= now.getTime() : o.occ.getTime() >= cutoff.getTime();
+    return isCyclic
+      ? o.occ.getTime() >= now.getTime()
+      : o.occ.getTime() >= cutoff.getTime();
   });
 
   // Sort by occurrence datetime
@@ -159,7 +173,7 @@ const nextEvents = computed(() => {
   const out: any[] = [];
   const seen = new Set<string>();
   for (const o of future) {
-    const key = `${o.task.id}-${o.dateStr}-${o.task.eventTime || ''}`;
+    const key = `${o.task.id}-${o.dateStr}-${o.task.eventTime || ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
     const item = { ...o.task, _date: o.dateStr };
@@ -200,47 +214,47 @@ function handleDocumentClick(evt: MouseEvent) {
 watch(collapsed, (val) => {
   nextTick(() => {
     if (!val) {
-      document.addEventListener('click', handleDocumentClick);
-      document.addEventListener('keydown', onKeyDown);
+      document.addEventListener("click", handleDocumentClick);
+      document.addEventListener("keydown", onKeyDown);
     } else {
-      document.removeEventListener('click', handleDocumentClick);
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener("click", handleDocumentClick);
+      document.removeEventListener("keydown", onKeyDown);
     }
   });
 });
 
 function onKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape') collapsed.value = true;
+  if (e.key === "Escape") collapsed.value = true;
 }
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick);
-  document.removeEventListener('keydown', onKeyDown);
+  document.removeEventListener("click", handleDocumentClick);
+  document.removeEventListener("keydown", onKeyDown);
 });
 
 function formatEventDisplay(ev: any) {
-  const dateStr = (ev && (ev._date || ev.date || ev.eventDate)) || '';
+  const dateStr = (ev && (ev._date || ev.date || ev.eventDate)) || "";
   const dateLabel = formatDateLabel(dateStr);
-  const timePart = ev.eventTime ? ` • ${ev.eventTime}` : '';
+  const timePart = ev.eventTime ? ` • ${ev.eventTime}` : "";
   return `${dateLabel}${timePart}`;
 }
 
 function priorityColor(ev: any) {
-  if (!ev) return '';
-  return priorityColors[String(ev.priority)] || '';
+  if (!ev) return "";
+  return priorityColors[String(ev.priority)] || "";
 }
 
 function priorityText(ev: any) {
-  if (!ev) return 'white';
+  if (!ev) return "white";
   return priorityTextColor(ev.priority);
 }
 
 function iconFor(ev: any) {
-  if (!ev) return 'notifications';
+  if (!ev) return "notifications";
   const pd = ev.priority ? priorityDefinitions[String(ev.priority)] : null;
   if (pd && pd.icon) return pd.icon;
   if (ev.type_id && typeIcons[ev.type_id]) return typeIcons[ev.type_id];
-  return 'notifications';
+  return "notifications";
 }
 
 function onClickEvent(ev: any) {
@@ -268,9 +282,7 @@ function onClickEvent(ev: any) {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition:
-    border-color 120ms ease,
-    filter 120ms ease;
+  transition: border-color 120ms ease, filter 120ms ease;
   border: 1px solid transparent;
 }
 .next-events-row {
@@ -328,9 +340,7 @@ function onClickEvent(ev: any) {
   border-top-right-radius: 0px;
   padding-bottom: 8px;
   /* increased opacity so outline is more visible */
-  box-shadow:
-    0 0 0 8px rgba(255, 230, 118, 0.72),
-    0 0 18px 2px rgba(222, 230, 222, 0.88),
+  box-shadow: 0 0 0 8px rgba(255, 230, 118, 0.72), 0 0 18px 2px rgba(222, 230, 222, 0.88),
     0 8px 24px rgba(0, 0, 0, 0.82);
 }
 

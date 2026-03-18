@@ -271,7 +271,7 @@ import {
   loadSavedLocale,
 } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,
@@ -323,16 +323,16 @@ setLongPressHandler((task: any) => {
       try {
         // Prefer to handle edit internally via API so parent doesn't need to wire handlers
         // Set active task and switch to edit mode
-        // Using static `api` import at top
+        // Using static `CC` import at top
         if (
-          api &&
-          api.task &&
-          api.task.active &&
-          typeof api.task.active.setMode === "function"
+          CC &&
+          CC.task &&
+          CC.task.active &&
+          typeof CC.task.active.setMode === "function"
         ) {
-          if (api.task && api.task.active && api.task.active.setTask)
-            api.task.active.setTask(task ?? null);
-          api.task.active.setMode("edit");
+          if (CC.task && CC.task.active && CC.task.active.setTask)
+            CC.task.active.setTask(task ?? null);
+          CC.task.active.setMode("edit");
         }
       } catch (e) {
         // ignore internal handling failures
@@ -364,12 +364,11 @@ setLongPressHandlerDay((payload: any) => {
     // Also update selectedDate/time via api like right-click handler does
     try {
       if (
-        api &&
-        api.task &&
-        api.task.time &&
-        typeof api.task.time.setCurrentDate === "function"
+        CC.task &&
+        CC.task.time &&
+        typeof CC.task.time.setCurrentDate === "function"
       ) {
-        api.task.time.setCurrentDate(date);
+        CC.task.time.setCurrentDate(date);
       }
     } catch (e) {
       // ignore
@@ -387,14 +386,13 @@ async function onEventPointerUp(task: any) {
     if (!longPressTriggered.value) {
       try {
         if (
-          api &&
-          api.task &&
-          api.task.active &&
-          typeof api.task.active.setMode === "function"
+          CC.task &&
+          CC.task.active &&
+          typeof CC.task.active.setMode === "function"
         ) {
-          if (api.task && api.task.active && api.task.active.setTask)
-            api.task.active.setTask(task ?? null);
-          api.task.active.setMode("preview");
+          if (CC.task && CC.task.active && CC.task.active.setTask)
+            CC.task.active.setTask(task ?? null);
+          CC.task.active.setMode("preview");
         }
       } catch (e) {
         // ignore internal handling failures
@@ -1333,18 +1331,18 @@ function handleDateSelect(e: Event | string, dateString?: string, isContext = fa
       }
     }
 
-    try {
-      if (
-        api &&
-        api.task &&
-        api.task.time &&
-        typeof api.task.time.setCurrentDate === "function"
-      ) {
-        api.task.time.setCurrentDate(date);
+      try {
+        if (
+          CC &&
+          CC.task &&
+          CC.task.time &&
+          typeof CC.task.time.setCurrentDate === "function"
+        ) {
+          CC.task.time.setCurrentDate(date);
+        }
+      } catch (e) {
+        // ignore
       }
-    } catch (e) {
-      // ignore
-    }
     // Always update the selected date on left or right click
     emit("update:selectedDate", date);
     // Only emit `day-click` (for positioning add form) on right-click/contextmenu
@@ -1397,37 +1395,30 @@ function isNewMonthStart(
   weekIndex: number,
   allWeeks: string[][]
 ) {
-  const dayDate = parseDay(day);
-  const dayOfMonth = dayDate.getDate();
+  try {
+    const cur = parseDay(day);
+    // If it's the first day of a month, flag it
+    if (cur.getDate() === 1) return true;
 
-  // Must be day 1-7 of the month
-  if (dayOfMonth > 7) return false;
+    const idx = week.indexOf(day);
+    if (idx > 0) {
+      const prev = parseDay(week[idx - 1]!);
+      return prev.getMonth() !== cur.getMonth();
+    }
 
-  // Check if day 1 of this month is in the current week
-  const firstDayOfMonth = week.some(
-    (d) => new Date(d).getDate() === 1 && new Date(d).getMonth() === dayDate.getMonth()
-  );
-
-  // Only apply padding if day 1 is in THIS week (not in a previous week)
-  if (!firstDayOfMonth) return false;
-
-  // Check if this is the first week (no previous week)
-  if (weekIndex === 0) {
-    // Only apply if day 1 is not the first day of the week
-    return week.indexOf(day) > 0;
+    if (weekIndex > 0) {
+      const prevWeek = allWeeks[weekIndex - 1] || [];
+      const prev = parseDay(prevWeek[prevWeek.length - 1]!);
+      return prev.getMonth() !== cur.getMonth();
+    }
+  } catch (e) {
+    // conservative fallback
+    return false;
   }
-
-  // Check if previous week has days from a different month
-  const previousWeek = allWeeks[weekIndex - 1]!;
-  if (!previousWeek) return false;
-
-  const currentMonth = dayDate.getMonth();
-  const hasPreviousMonth = previousWeek.some(
-    (d) => new Date(d).getMonth() !== currentMonth
-  );
-
-  return hasPreviousMonth;
+  return false;
 }
+
+
 
 function shouldShowMonth(
   day: string,

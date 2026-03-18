@@ -704,7 +704,7 @@ watch(
       // Fallback: query the shared group list API for the full record.
       if (!full) {
         try {
-          const listAny: any = CC.group.list.all;
+          const listAny: any = CC.group.list?.all;
           const arr = Array.isArray(listAny) ? listAny : (listAny && listAny.value) || [];
           full = (arr || []).find((g: any) => String(g.id) === String(id));
         } catch (err) {

@@ -3,7 +3,7 @@ import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import type { TaskGroup } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "./ReplenishmentList.vue";
@@ -109,7 +109,7 @@ function getGroupName(gid: string | undefined) {
     return null;
   }
 }
-const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
+const updateTask = (...args: any[]) => CC.task.update(...(args as [any, any, any]));
 
 async function selectGroupForEdit(gid: string | null) {
   try {

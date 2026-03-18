@@ -161,7 +161,7 @@ import pkg from "../../package.json";
 import { useRouter, useRoute } from "vue-router";
 import NextEventNotification from "../components/task/NextEventNotification.vue";
 import { format } from "date-fns";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
@@ -365,11 +365,11 @@ async function toggleTestMode() {
   // Enable test mode only. Disallow reverting to normal mode from the UI.
   menuOpen.value = false;
   try {
-    if (
+      if (
       presentation &&
       typeof (presentation as any).enableTestModeWithApi === "function"
     ) {
-      await (presentation as any).enableTestModeWithApi(api);
+      await (presentation as any).enableTestModeWithApi(CC);
     } else {
       presentation.toggleTestMode();
     }
@@ -385,7 +385,7 @@ async function startPresentation() {
       presentation &&
       typeof (presentation as any).startPresentationWithApi === "function"
     ) {
-      await (presentation as any).startPresentationWithApi(api);
+      await (presentation as any).startPresentationWithApi(CC);
     } else {
       presentation.start();
     }
@@ -401,7 +401,7 @@ async function stopPresentation() {
       presentation &&
       typeof (presentation as any).stopPresentationWithApi === "function"
     ) {
-      await (presentation as any).stopPresentationWithApi(api);
+      await (presentation as any).stopPresentationWithApi(CC);
     } else {
       presentation.stop();
     }
@@ -417,7 +417,7 @@ async function reloadWithTestData() {
       presentation &&
       typeof (presentation as any).enableTestModeWithApi === "function"
     ) {
-      await (presentation as any).enableTestModeWithApi(api);
+      await (presentation as any).enableTestModeWithApi(CC);
     } else {
       presentation.toggleTestMode();
     }

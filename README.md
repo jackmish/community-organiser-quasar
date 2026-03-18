@@ -231,26 +231,44 @@ This part of code is already used by experimental plugin, which could be develop
 
 ---
 
-Im not 100% sure of design of this vibe code project directions, but once GPT5.1 suggested API as name of central app control system, but when i've decided to move state inside API it became more like Pinia store (but storage sounds more like module not good name for central control system/interface). Generally it could also be place to control not only state/storage like connection with camera,...etc. Engine name would be convenient but probably it wouldn't be engine, just some kind of organizer core, central command system or something similar. Task manager is maybe not correctly describing possible futures of this center, mostly time organization center, but it already is attracted by calendar feature in most cases. Possibly it could be extended by functionality of anty-theft system, trip organization with map functionality,...
+Im not 100% sure of design of this vibe code project directions, but once GPT5.1 suggested API as name of central app control system, but when i've decided to move state inside API it became more like Pinia store (but storage sounds more like module not good name for central control system/interface. It could be good also as some layer or object/class, but thinking about car as an store isn't convenient way).
+
+Generally app would be controlling only state/storage but connection with camera,...etc, its not only some interface linking database.
+
+Engine name would be convenient but probably it wouldn't be engine, just some kind of organizer core, central command system or something similar.
+
+Task manager is maybe not correctly describing possible futures of this center, mostly time organization center, but it already is attracted by calendar feature in most cases. Possibly it could be extended by functionality of anty-theft system, trip organization with map functionality,...
 
 There is also talking about single responsibility principle - i still need to make at least central points for modules and than split project into smaller cells.
 
-It really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure, i really want to avoid of typical names like index which are less objective like. App is also really general name. I have need to experiment with names make some nice own files structure ( a specially after refactor of GPT5.1 ).
+GPT5.1 really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure, i really want to avoid of typical names like index which are less objective like. App is hmm... too general name.
 
-- probably the same way it doesn't like to create smaller files, and check in another files to find already existing function. My concept is to try to make some functions map, but mostly it looks like build in init instructions are not included into process of thinking AI, or just not yet correctly formed (mostly created by AI).
-
-Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, GPT5.1 mini cant accept this way.
-
-It needs smaller/simpler tasks for more effective results, or maybe just good configuration of initial "prompt". Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it choses to make 30% of prompt, and by the way of its own database/chat history knowledge it is trying to fill/recreate more prompt details a specially changing user changes like fast margin correction, other kind of border, color,... or probably it just is using own version of file from its own cache, not user file.
+I have need to experiment with names make some nice own files structure ( a specially after refactor of GPT5.1 it could be different experience ).
 
 ---
 
-Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long, same as generating project maps when AI don't think about using additional tools.
-I'm not very patient anymore to change filenames with AI, and a specially with GPT5.1 i'll be doing it with VS Code non AI extensions. AI can do this after few attempts Claude or GPT5.1 but its not efficient.
+- My concept is to try to make some functions map for AI - to avoid repeating code.
 
-Sometimes it knows what to execute to fix the bugs usually commands "tsc", "lint". Generally unit tests even does not need to be executed. Most needed is test of graphic representation of UI and how it behaves or what is disconnected, once again is not working after new feature. There is much more need of higher lvl tests than unit tests, and it could be done by Claude, but it could be too hard for GPT5.1 Mini. Even written test by Claude doesn't make you sure that test is correctly written, but even than its better than nothing - or not.
+---
 
-Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to control, GPT5.1 isn't automatically updating tests. For Claude this is much more obvious habit to improve the test and execute it after changes.
+Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, and GPT5.1 mini cant accept this way sometimes.
+
+It needs smaller/simpler tasks for more effective results, to avoid "single file style".
+Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it chooses to make 30% of the prompt. It likes to create smaller tasks by itself when prompt is too long.
+
+---
+
+There is also problem with AI knowledge about project - it has own versions of files - probably. It easily changes user improvements made manually. Also when it see some conflict it would probably change more code than it was asked for, its trying to solve problem from wrong direction for example: there was done some refactor, but unit tests were not updated. It changed refactored code instead of outdated unit tests.
+
+---
+
+Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long process and generally AI isn't very adapted to use tools. In most cases to run tsc or lint, or check unit tests by AI it needs to always check package.json - its repeating checking project every time structure instead of doing something instant.
+
+---
+
+I'm not very patient anymore to change filenames with AI, and a specially with GPT5.1. AI can do this after few attempts Claude or GPT5.1 but its not efficient. It has also problems with using replacement tools. Instead of replacing some text it will destroy file structure accidentally, it doesn't see IDE/VSCode error tools. It could only use console, which could do the same but not instantly. This really needs some optimization.
+
+Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to control, GPT5.1 isn't automatically updating tests. For Claude this is much more obvious habit to update the automatic tests and execute it after changes.
 
 ---
 

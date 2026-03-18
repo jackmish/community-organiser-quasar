@@ -70,7 +70,7 @@ vi.mock('src/modules/task/classes/TaskStatus', () => ({
 }));
 
 // Import after mocks
-import { useTaskStore } from '../../src/modules/task/apiTask';
+import { useTaskStore } from '../../src/modules/task/TaskController';
 
 // ─────────────────────────────────────────────────────────────────────────────
 

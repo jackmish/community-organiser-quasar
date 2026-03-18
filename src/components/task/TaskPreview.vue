@@ -192,8 +192,8 @@
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
                   @click.stop="
-                    api.task.subtaskLine.toggleStatus(
-                      api.task.active.task.value,
+                    CC.task.subtaskLine.toggleStatus(
+                      CC.task.active.task.value,
                       Number(idx)
                     )
                   "
@@ -247,7 +247,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import type { Task } from "src/modules/task/types";
 
 const props = defineProps<{
@@ -258,7 +258,7 @@ const props = defineProps<{
 }>();
 // Prefer the central active task reference from the API. Use this alias
 // throughout the component so callers don't need to pass a task prop.
-const activeTask = api.task.active.task;
+const activeTask = CC.task.active.task;
 const emit = defineEmits([
   "edit",
   "close",
@@ -292,7 +292,7 @@ function selectPriority(p: string) {
 
 async function selectGroup(gid: string | null) {
   try {
-    const updateTask = (...args: any[]) => api.task.update(...(args as [any, any, any]));
+    const updateTask = (...args: any[]) => CC.task.update(...(args as [any, any, any]));
     const date =
       (activeTask.value && (activeTask.value.date || activeTask.value.eventDate)) || "";
     if (!activeTask.value || !activeTask.value.id) return;
@@ -341,7 +341,7 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: string | 
 function addQuickSubtask() {
   const text = quickSubtask.value;
   // Delegate insertion and persistence to the task API which will trim/validate input.
-  void api.task.subtaskLine.add(text);
+  void CC.task.subtaskLine.add(text);
   quickSubtask.value = "";
   quickSubtaskStar.value = false;
   nextTick(() => {
@@ -451,17 +451,17 @@ const renderedDescription = computed(() => {
 
 // parsedLines is provided by the central task API so components share the same
 // parsed representation and watcher. Use that shared ref here.
-const parsedLines = api.task.subtaskLine.parsedLines;
+const parsedLines = CC.task.subtaskLine.parsedLines;
 const isDone = computed(() => Number(activeTask.value?.status_id) === 0);
 
 async function onToggleDone(val: boolean) {
   try {
     const task = activeTask.value;
     if (!task) return;
-    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || "";
+    const date = task?.date || task?.eventDate || CC.task.time.currentDate.value || "";
     const id = task.id || task._id || task.uuid;
     if (!id) return;
-    await api.task.status.toggleComplete(date, id);
+    await CC.task.status.toggleComplete(date, id);
   } catch (e) {
     // ignore
   }

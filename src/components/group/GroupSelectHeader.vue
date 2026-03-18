@@ -185,7 +185,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
 
 function getBtnTextColor(g: any) {
@@ -203,7 +203,7 @@ function getBtnBorderColor(g: any) {
 const groups = CC.group.list.all;
 const activeGroup = CC.group.active.activeGroup;
 const parentGroup = CC.group.active.parent;
-const isLoading = api.storage.isLoading;
+const isLoading = CC.storage.isLoading;
 
 // Normalize parent id values: accept string/number or object like { value, id }
 const normalizeId = (v: any): string | null => {

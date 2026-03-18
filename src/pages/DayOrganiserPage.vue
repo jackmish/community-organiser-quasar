@@ -4,7 +4,7 @@
 
     <!-- Loading State -->
     <div
-      v-if="api.storage.isLoading && api.storage.isLoading.value"
+      v-if="CC.storage.isLoading && CC.storage.isLoading.value"
       class="text-center q-pa-lg"
     >
       <q-spinner color="primary" size="3em" />
@@ -23,7 +23,7 @@
                   style="align-items: center; margin-top: 6px; justify-content: center"
                 >
                   <div class="row items-center" style="gap: 8px">
-                    <q-btn flat dense round @click="api.task.time.prevDay">
+                    <q-btn flat dense round @click="CC.task.time.prevDay">
                       <q-icon
                         name="chevron_left"
                         :style="'color: ' + headerStyle.color + ' !important;'"
@@ -33,12 +33,12 @@
                     <span
                       :class="[
                         'text-weight-bold',
-                        getTimeDiffClass(api.task.time.currentDate.value),
+                        getTimeDiffClass(CC.task.time.currentDate.value),
                       ]"
                       :style="'color: ' + headerStyle.color + ' !important;'"
-                      >{{ formatDateOnly(api.task.time.currentDate.value) }}</span
+                      >{{ formatDateOnly(CC.task.time.currentDate.value) }}</span
                     >
-                    <q-btn flat dense round @click="api.task.time.nextDay">
+                    <q-btn flat dense round @click="CC.task.time.nextDay">
                       <q-icon
                         name="chevron_right"
                         :style="'color: ' + headerStyle.color + ' !important;'"
@@ -103,9 +103,9 @@
         <div class="col-12 col-md-8">
           <CalendarView
             :key="reloadKey"
-            :selected-date="api.task.time.currentDate.value"
+            :selected-date="CC.task.time.currentDate.value"
             :tasks="allTasks"
-            @update:selectedDate="(d) => api.task.time.setCurrentDate(d)"
+            @update:selectedDate="(d) => CC.task.time.setCurrentDate(d)"
             @day-click="onCalendarDayClick"
           />
         </div>
@@ -149,15 +149,15 @@
 
         <!-- Single TaskPreview instance: toggles between floating and fixed placement -->
         <TaskPreview
-          v-if="api.task.active.mode.value === 'preview' && api.task.active.task.value"
-          :task="api.task.active.task.value"
-          :group-name="getGroupName(api.task.active.task.value.groupId)"
+          v-if="CC.task.active.mode.value === 'preview' && CC.task.active.task.value"
+          :task="CC.task.active.task.value"
+          :group-name="getGroupName(CC.task.active.task.value.groupId)"
           :animating-lines="animatingLines"
           @line-collapsed="onLineCollapsed"
           @line-expanded="onLineExpanded"
           @edit="
             () => {
-              api.task.active.mode.value = 'edit';
+              CC.task.active.mode.value = 'edit';
             }
           "
           @close="clearTaskToEdit"
@@ -169,7 +169,7 @@
           class="floating-preview-wrapper"
           :class="{ floating: previewFloating }"
           v-if="
-            api.task.active.mode.value === 'add' || api.task.active.mode.value === 'edit'
+            CC.task.active.mode.value === 'add' || CC.task.active.mode.value === 'edit'
           "
         >
           <AddTaskForm
@@ -179,9 +179,9 @@
             :selected-date="newTask.eventDate"
             :all-tasks="allTasks"
             :replenish-tasks="replenishTasks"
-            :initial-task="api.task.active.task.value"
-            :mode="api.task.active.mode.value"
-            @update:mode="(v) => api.task.active.setMode(v)"
+            :initial-task="CC.task.active.task.value"
+            :mode="CC.task.active.mode.value"
+            @update:mode="(v) => CC.task.active.setMode(v)"
             @add-task="handleAddTask"
             @update-task="handleUpdateTask"
             @delete-task="handleDeleteTask"
@@ -196,7 +196,7 @@
 
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
-      v-if="panelHidden || api.task.active.mode.value !== 'add'"
+      v-if="panelHidden || CC.task.active.mode.value !== 'add'"
       class="floating-add-btn"
       color="green"
       fab
@@ -207,7 +207,7 @@
     />
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
-      v-if="panelHidden && api.task.active.mode.value !== 'add'"
+      v-if="panelHidden && CC.task.active.mode.value !== 'add'"
       class="panel-show-btn"
       unelevated
       color="dark"
@@ -254,7 +254,7 @@ import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { TaskGroup } from "../modules/day-organiser";
@@ -263,14 +263,14 @@ import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 const $q = useQuasar();
 
 const currentDayData = computed(() => {
-  const days = api.task.time.days.value || {};
-  const d = api.task.time.currentDate.value;
+  const days = CC.task.time.days.value || {};
+  const d = CC.task.time.currentDate.value;
   return days[d] || ({ date: d, tasks: [], notes: "" } as any);
 });
 
 async function onTaskClicked(task: any, rect?: DOMRect | null) {
   try {
-    const activeId = api.task.active.task.value?.id;
+    const activeId = CC.task.active.task.value?.id;
     if (
       activeId &&
       task &&
@@ -287,9 +287,9 @@ async function onTaskClicked(task: any, rect?: DOMRect | null) {
       handleTaskClick(task);
     } catch (e) {
       try {
-        // fallback: use api directly
-        api.task.active.setTask(task);
-        api.task.active.mode.value = "preview";
+        // fallback: use CC directly
+        CC.task.active.setTask(task);
+        CC.task.active.mode.value = "preview";
       } catch (err) {
         void err;
       }
@@ -341,7 +341,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
       // that immediately so form bindings point to the same instance.
       let candidate: any = task;
       try {
-        const all = api.task.list.all();
+        const all = CC.task.list.all();
         const found = (all || []).find((t: any) => String(t.id) === String(id));
         if (found) candidate = found;
       } catch (e) {
@@ -361,7 +361,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
           const dataId = cur?.getAttribute?.("data-task-id") || null;
           if (dataId) {
             try {
-              const all = api.task.list.all();
+              const all = CC.task.list.all();
               const found2 = (all || []).find(
                 (t: any) => String(t.id) === String(dataId)
               );
@@ -384,10 +384,10 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
       let setSucceeded = false;
       try {
         if (candidate != null) {
-          api.task.active.setTask(candidate);
+          CC.task.active.setTask(candidate);
           setSucceeded = true;
         } else if (id != null) {
-          api.task.active.setTask(id);
+          CC.task.active.setTask(id);
           setSucceeded = true;
         } else {
           // no candidate or id to set
@@ -398,7 +398,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
 
       if (setSucceeded) {
         try {
-          api.task.active.setMode("edit");
+          CC.task.active.setMode("edit");
           panelHidden.value = false;
         } catch (e) {
           // ignore
@@ -416,18 +416,18 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
     await nextTick();
     await new Promise((r) => requestAnimationFrame(r));
     try {
-      const activeId = api.task.active.task.value?.id;
-      if (
+      const activeId = CC.task.active.task.value?.id;
+        if (
         !activeId ||
         String(activeId) !== String(id) ||
-        api.task.active.mode.value !== "edit"
+        CC.task.active.mode.value !== "edit"
       ) {
         try {
-          const all = api.task.list.all();
+          const all = CC.task.list.all();
           const found = (all || []).find((t: any) => String(t.id) === String(id));
           if (found) {
-            api.task.active.setTask(found);
-            api.task.active.setMode("edit");
+            CC.task.active.setTask(found);
+            CC.task.active.setMode("edit");
             panelHidden.value = false;
           }
         } catch (e) {
@@ -464,7 +464,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
 // an `organiserData` ref with `groups` and `days`.
 const organiserLike = computed(() => ({
   groups: CC.group.list.all.value,
-  days: api.task.time.days.value,
+  days: CC.task.time.days.value,
 }));
 
 const hiddenGroupSummary = createHiddenGroupSummary(
@@ -473,7 +473,7 @@ const hiddenGroupSummary = createHiddenGroupSummary(
 );
 
 // All tasks across days — used to render calendar events
-const allTasks = computed(() => api.task.list.all());
+const allTasks = computed(() => CC.task.list.all());
 
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
@@ -486,7 +486,7 @@ const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
 const panelHidden = ref(false);
-const selectedTaskId = computed(() => api.task.active.task.value?.id ?? null);
+const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // child line animation handlers (API handles the data changes)
@@ -494,18 +494,18 @@ const { onLineCollapsed, onLineExpanded } = createLineEventHandlers();
 
 // task UI handlers moved to module
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
-  activeTask: api.task.active.task,
-  activeMode: api.task.active.mode,
-  setActiveTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
+  activeTask: CC.task.active.task,
+  activeMode: CC.task.active.mode,
+  setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
   panelHidden,
-  currentDate: api.task.time.currentDate,
+  currentDate: CC.task.time.currentDate,
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
 
 const { handleImportFile } = createImportHandler({
-  storage: api.storage,
+  storage: CC.storage,
   quasar: $q,
   reloadKey,
   showFirstRunDialog,
@@ -532,17 +532,17 @@ onBeforeUnmount(() => {
 
 // Ensure we return to 'add' mode when no task is selected
 watch(
-  () => api.task.active.task.value,
+  () => CC.task.active.task.value,
   (val) => {
-    if (!val && api.task.active.mode.value !== "add") {
-      api.task.active.mode.value = "add";
+    if (!val && CC.task.active.mode.value !== "add") {
+      CC.task.active.mode.value = "add";
     }
   }
 );
 
 // When the current date changes (via calendar or prev/next arrows), switch to creation mode
 watch(
-  () => api.task.time.currentDate.value,
+  () => CC.task.time.currentDate.value,
   (newDate, oldDate) => {
     try {
       if (newDate !== oldDate) {
@@ -551,15 +551,15 @@ watch(
           try {
             // Determine if the selected date has any tasks
             const all =
-              api.task.list && typeof api.task.list.all === "function"
-                ? api.task.list.all()
+              CC.task.list && typeof CC.task.list.all === "function"
+                ? CC.task.list.all()
                 : [];
             const tasksOnDate = (all || []).filter((t: any) => {
               const d = t?.date || t?.eventDate || null;
               return d === newDate;
             });
 
-            const activeTask = api.task.active.task.value;
+            const activeTask = CC.task.active.task.value;
 
             // If there are no tasks on the new date, or the currently active task doesn't belong
             // to the new date, clear selection and switch to creation mode.
@@ -570,9 +570,9 @@ watch(
             ) {
               try {
                 // Clear any active task so the form enters add mode (no initialTask)
-                if (api.task && api.task.active && api.task.active.setTask)
-                  api.task.active.setTask(null);
-                else if (api.task && api.task.active) api.task.active.task.value = null;
+                if (CC.task && CC.task.active && CC.task.active.setTask)
+                  CC.task.active.setTask(null);
+                else if (CC.task && CC.task.active) CC.task.active.task.value = null;
 
                 // Ensure the newTask helper defaults to a TimeEvent type so the form
                 // shows the TimeEvent chooser when creating a new task.
@@ -584,16 +584,16 @@ watch(
                 }
               } catch (e) {
                 try {
-                  api.task.active.task.value = null;
+                  CC.task.active.task.value = null;
                 } catch (_err) {
                   void _err;
                 }
               }
               try {
-                api.task.active.mode.value = "add";
+                CC.task.active.mode.value = "add";
               } catch (e) {
                 try {
-                  if (api.task.active.setMode) api.task.active.setMode("add");
+                  if (CC.task.active.setMode) CC.task.active.setMode("add");
                 } catch (_err) {
                   void _err;
                 }
@@ -614,7 +614,7 @@ watch(
 // unless the add was initiated from a calendar day click (in which case the calendar
 // handler already positioned the add form near the clicked day).
 watch(
-  () => api.task.active.mode.value,
+  () => CC.task.active.mode.value,
   (mode) => {
     try {
       if (mode === "add") {
@@ -646,13 +646,13 @@ watch(
 
 // createGroupUiHandlers removed: no UI opens the inline edit dialog
 
-// mode change handling moved into api.task
+// mode change handling moved into CC.task
 
 // Respond to preview requests coming from other parts of the app
-// preview requests are handled by `api.task.setPreviewTask` and mapped to `api.task.active`
+// preview requests are handled by `CC.task.setPreviewTask` and mapped to `CC.task.active`
 
 // If a payload was provided (e.g. from notifications) use it to preview the task
-// payload-based previews are handled via `api.task.setPreviewTask`
+// payload-based previews are handled via `CC.task.setPreviewTask`
 
 // calendar preview handled by createCalendarHandlers
 
@@ -664,7 +664,7 @@ const {
   handleTaskClick,
   filterParentTasks,
 } = createTaskViewHelpers({
-  currentDate: api.task.time.currentDate,
+  currentDate: CC.task.time.currentDate,
   currentDayData,
   setTaskToEdit,
   editTask,
@@ -678,12 +678,12 @@ const {
 } = createCalendarHandlers({
   isClickBlocked,
   newTask,
-  setCurrentDate: (d: string | null) => api.task.time.setCurrentDate(d),
+  setCurrentDate: (d: string | null) => CC.task.time.setCurrentDate(d),
   allTasks,
   editTask,
-  setTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
-  activeMode: api.task.active.mode,
-  setPreviewTask: (p: Parameters<typeof api.task.active.setTask>[0]) => api.task.active.setTask(p),
+  setTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
+  activeMode: CC.task.active.mode,
+  setPreviewTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
 });
 
 // compute task lists in a separate module for reuse and testability
@@ -698,9 +698,9 @@ const {
   groupTree,
 } = createTaskComputed({
   currentDayData,
-  currentDate: api.task.time.currentDate,
+  currentDate: CC.task.time.currentDate,
   allTasks,
-  apiTask: api.task,
+  apiTask: CC.task,
   apiGroup: CC.group,
 });
 
@@ -723,18 +723,18 @@ const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGrou
 
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
-  setCurrentDate: api.task.time.setCurrentDate,
+  setCurrentDate: CC.task.time.setCurrentDate,
   activeGroup: CC.group.active.activeGroup,
-  currentDate: api.task.time.currentDate,
+  currentDate: CC.task.time.currentDate,
   allTasks,
   quasar: $q,
-  active: api.task.active,
+  active: CC.task.active,
 });
 
 const handleDeleteTask = async (payload: any) => {
   try {
     let id: string | undefined;
-    let date: string = api.task.time.currentDate.value;
+    let date: string = CC.task.time.currentDate.value;
     if (!payload) return;
     if (typeof payload === "string") {
       id = payload;
@@ -743,11 +743,11 @@ const handleDeleteTask = async (payload: any) => {
       if (payload.date) date = payload.date;
     }
     if (!id) return;
-    await api.task.delete(date, id);
+    await CC.task.delete(date, id);
     // If the deleted task was currently selected for preview/edit, switch back to create mode
-    if (api.task.active.task.value && api.task.active.task.value.id === id) {
-      api.task.active.setTask(null);
-      api.task.active.setMode("add");
+    if (CC.task.active.task.value && CC.task.active.task.value.id === id) {
+      CC.task.active.setTask(null);
+      CC.task.active.setMode("add");
     }
   } finally {
     openDeleteMenu.value = null;
@@ -767,7 +767,7 @@ const {
   width: 640,
   shouldIgnoreClick: (target) => {
     try {
-      const activeId = api.task.active.task.value?.id;
+      const activeId = CC.task.active.task.value?.id;
       if (activeId && target && (target as Element).closest) {
         return Boolean((target as Element).closest(`[data-task-id="${activeId}"]`));
       }
@@ -827,7 +827,7 @@ async function onListAdd(evt?: Event, go?: any) {
   try {
     // clear any active task so the form opens in 'add' mode
     try {
-      api.task.active.setTask(null);
+      CC.task.active.setTask(null);
     } catch (e) {
       void e;
     }
@@ -835,10 +835,10 @@ async function onListAdd(evt?: Event, go?: any) {
     // mode watcher does not clear the floating placement immediately.
     lastAddAnchored.value = true;
     try {
-      api.task.active.mode.value = "add";
+      CC.task.active.mode.value = "add";
     } catch (e) {
       try {
-        if (api.task.active.setMode) api.task.active.setMode("add");
+        if (CC.task.active.setMode) CC.task.active.setMode("add");
       } catch (_err) {
         void _err;
       }
@@ -877,16 +877,16 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
     lastAddFromCalendar.value = true;
     // Clear any active task so AddTaskForm enters add mode
     try {
-      api.task.active.setTask(null);
+      CC.task.active.setTask(null);
     } catch (e) {
       void e;
     }
     // switch to add mode
     try {
-      api.task.active.mode.value = "add";
+      CC.task.active.mode.value = "add";
     } catch (e) {
       try {
-        if (api.task.active.setMode) api.task.active.setMode("add");
+        if (CC.task.active.setMode) CC.task.active.setMode("add");
       } catch (_err) {
         void _err;
       }
@@ -896,7 +896,7 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
     try {
       if (typeof newTask !== "undefined" && newTask && "value" in newTask) {
         (newTask as any).value.eventDate =
-          payload?.date || api.task.time.currentDate.value;
+          payload?.date || CC.task.time.currentDate.value;
         (newTask as any).value.type_id = "TimeEvent";
       }
     } catch (e) {
@@ -905,7 +905,7 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
 
     // Ensure the calendar's currentDate is in sync
     try {
-      api.task.time.setCurrentDate(payload?.date || api.task.time.currentDate.value);
+      CC.task.time.setCurrentDate(payload?.date || CC.task.time.currentDate.value);
     } catch (e) {
       void e;
     }
@@ -942,7 +942,7 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
 async function onInlineAdd() {
   try {
     try {
-      api.task.active.setTask(null);
+      CC.task.active.setTask(null);
     } catch (e) {
       void e;
     }
@@ -951,10 +951,10 @@ async function onInlineAdd() {
     lastAddFromCalendar.value = false;
 
     try {
-      api.task.active.mode.value = "add";
+      CC.task.active.mode.value = "add";
     } catch (e) {
       try {
-        if (api.task.active.setMode) api.task.active.setMode("add");
+        if (CC.task.active.setMode) CC.task.active.setMode("add");
       } catch (_err) {
         void _err;
       }
@@ -976,7 +976,7 @@ async function onInlineAdd() {
 async function onFloatingAddClick() {
   try {
     try {
-      api.task.active.setTask(null);
+      CC.task.active.setTask(null);
     } catch (e) {
       void e;
     }
@@ -985,10 +985,10 @@ async function onFloatingAddClick() {
     lastAddFromCalendar.value = false;
 
     try {
-      api.task.active.mode.value = "add";
+      CC.task.active.mode.value = "add";
     } catch (e) {
       try {
-        if (api.task.active.setMode) api.task.active.setMode("add");
+        if (CC.task.active.setMode) CC.task.active.setMode("add");
       } catch (_err) {
         void _err;
       }
@@ -1009,10 +1009,10 @@ async function onFloatingAddClick() {
 const handleToggleStatus = async (task: any) => {
   try {
     if (!task) return;
-    const date = task?.date || task?.eventDate || api.task.time.currentDate.value || "";
+    const date = task?.date || task?.eventDate || CC.task.time.currentDate.value || "";
     const id = task.id || task._id || task.uuid;
     if (!id) return;
-    await api.task.status.toggleComplete(date, id);
+    await CC.task.status.toggleComplete(date, id);
   } catch (e) {
     // ignore
   }
@@ -1033,20 +1033,20 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
 
 // Advance to today if behind the clock; also starts a periodic 60-second check
 useDayRollover({
-  currentDate: api.task.time.currentDate,
-  setCurrentDate: (d) => api.task.time.setCurrentDate(d),
+  currentDate: CC.task.time.currentDate,
+  setCurrentDate: (d) => CC.task.time.setCurrentDate(d),
 });
 
 onMounted(async () => {
   try {
-    await api.storage.loadData();
+    await CC.storage.loadData();
     // Ensure the app starts on today's date if stored date is older or missing
     try {
       const todayStr = todayString();
-      const curStr = String(api.task.time.currentDate?.value || "");
+      const curStr = String(CC.task.time.currentDate?.value || "");
       if (!curStr || curStr < todayStr) {
         try {
-          api.task.time.setCurrentDate(todayStr);
+          CC.task.time.setCurrentDate(todayStr);
         } catch (e) {
           void e;
         }
@@ -1070,12 +1070,12 @@ onMounted(async () => {
     try {
       // If current active date is before today, move active day to today when refreshing
       const todayStr = todayString();
-      if (api.task.time.currentDate && api.task.time.currentDate.value) {
+      if (CC.task.time.currentDate && CC.task.time.currentDate.value) {
         // Compare YYYY-MM-DD strings to avoid Date parsing/timezone issues.
-        const curStr = String(api.task.time.currentDate.value || "");
+        const curStr = String(CC.task.time.currentDate.value || "");
         if (curStr < todayStr) {
           try {
-            api.task.time.setCurrentDate(todayStr);
+            CC.task.time.setCurrentDate(todayStr);
           } catch (e) {
             // ignore
           }

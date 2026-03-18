@@ -23,10 +23,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import * as api from "src/CentralController";
+import CC from "src/CentralController";
 
 const stats = computed(
-  () => api.task.taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }
+  () => CC.task.taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }
 );
 
 const groupLabel = computed(() => {

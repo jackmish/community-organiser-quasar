@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import * as api from 'src/CentralController';
+import CC from 'src/CentralController';
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,

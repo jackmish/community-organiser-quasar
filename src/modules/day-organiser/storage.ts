@@ -2,7 +2,8 @@ import { ref, computed, watch } from 'vue';
 import type { DayData } from './types';
 import { storage, loadSettings, saveSettings } from '../storage';
 import logger from 'src/utils/logger';
-import * as api from 'src/CentralController';
+import CC from 'src/CentralController';
+const CCx: any = CC as any;
 import { createHiddenGroupSummary } from 'src/modules/task/helpers/hiddenGroupSummary';
 
 export {
@@ -29,7 +30,7 @@ export function useDayOrganiser() {
   const loadData = async () => {
     try {
       // Delegate loading and ref population to the storage API.
-      await api.storage.loadData();
+      await CCx.storage.loadData();
     } catch (error) {
       logger.error('Failed to load data:', error);
     }
@@ -38,7 +39,7 @@ export function useDayOrganiser() {
   // Persist activeGroup changes to settings
   try {
     watch(
-      () => CC.group.active.activeGroup.value,
+      () => CCx.group.active.activeGroup.value,
       async (val) => {
         try {
           logger.info('[day-organiser] activeGroup changed, persisting', { value: val });
@@ -57,31 +58,31 @@ export function useDayOrganiser() {
   }
 
   const getDayData = (date: string): DayData => {
-    if (!api.task.time.days.value[date]) {
-      api.task.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
+    if (!CCx.task.time.days.value[date]) {
+      CCx.task.time.days.value[date] = { date, tasks: [], notes: '' } as DayData;
     }
-    return api.task.time.days.value[date];
+    return CCx.task.time.days.value[date];
   };
 
-  const currentDayData = computed(() => getDayData(api.task.time.currentDate.value));
+  const currentDayData = computed(() => getDayData(CCx.task.time.currentDate.value));
 
   const exportData = () => {
     const payload = {
-      days: api.task.time.days.value,
-      groups: CC.group.list.all.value,
-      lastModified: api.task.time.lastModified.value,
+      days: CCx.task.time.days.value,
+      groups: CCx.group.list.all.value,
+      lastModified: CCx.task.time.lastModified.value,
     };
-    if (typeof api.storage.exportToFile === 'function') return api.storage.exportToFile(payload);
+    if (typeof CCx.storage.exportToFile === 'function') return CCx.storage.exportToFile(payload);
     return storage.exportToFile(payload);
   };
 
   const importData = async (file: File) => {
     try {
-      const data = await api.storage.importFromFile(file);
+      const data = await CCx.storage.importFromFile(file);
       if (data) {
         // Persist imported payload then reload to populate refs
-        await api.storage.saveData(data);
-        await api.storage.loadData();
+        await CCx.storage.saveData(data);
+        await CCx.storage.loadData();
       }
     } catch (error) {
       logger.error('Failed to import data:', error);
@@ -90,34 +91,34 @@ export function useDayOrganiser() {
   };
 
   const setCurrentDate = (date: string | number | null) => {
-    if (date && typeof date === 'string') api.task.time.setCurrentDate(String(date));
+    if (date && typeof date === 'string') CCx.task.time.setCurrentDate(String(date));
   };
 
-  const goToToday = () => api.task.time.goToToday();
-  const nextDay = () => api.task.time.nextDay();
-  const prevDay = () => api.task.time.prevDay();
+  const goToToday = () => CCx.task.time.goToToday();
+  const nextDay = () => CCx.task.time.nextDay();
+  const prevDay = () => CCx.task.time.prevDay();
 
   const organiserLike = computed(() => ({
-    groups: CC.group.list.all.value,
-    days: api.task.time.days.value,
+    groups: CCx.group.list.all.value,
+    days: CCx.task.time.days.value,
   }));
 
   const hiddenGroupSummary = createHiddenGroupSummary(
     organiserLike as any,
-    CC.group.active.activeGroup,
+    CCx.group.active.activeGroup,
   );
 
   // Minimal public surface: prefer using `api.*` namespaced APIs directly
   const instance = {
     // State
     organiserData: organiserLike,
-    isLoading: api.storage.isLoading,
-    currentDate: api.task.time.currentDate,
+    isLoading: CCx.storage.isLoading,
+    currentDate: CCx.task.time.currentDate,
     currentDayData,
 
     // Methods
     loadData,
-    saveData: api.storage.saveData,
+    saveData: CCx.storage.saveData,
     getDayData,
 
     // Navigation
@@ -127,8 +128,8 @@ export function useDayOrganiser() {
     prevDay,
 
     // Preview (mapped to new task active API)
-    previewTaskId: computed(() => api.task.active.task.value?.id ?? null),
-    previewTaskPayload: computed(() => api.task.active.task.value),
+    previewTaskId: computed(() => CCx.task.active.task.value?.id ?? null),
+    previewTaskPayload: computed(() => CCx.task.active.task.value),
 
     // Misc
     exportData,

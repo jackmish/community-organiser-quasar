@@ -5,13 +5,13 @@ import { useGroupStore } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/controllers/lazyStore';
 
 class CentralController {
-  public group = lazyStore(useGroupStore as any);
-  public task = lazyStore(useTaskStore as any);
+  // Use `any` here to reflect the dynamic Pinia store shape at runtime
+  // and avoid excessive casting across the codebase.
+  public group: any = lazyStore(useGroupStore as any);
+  public task: any = lazyStore(useTaskStore as any);
   private _storage: ReturnType<typeof apiStorage.construct> | null = null;
 
-  constructor() {
-    this.initControllers();
-  }
+  constructor() {}
 
   initControllers() {
     if (this._storage) return this._storage;
