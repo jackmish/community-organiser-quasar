@@ -276,6 +276,20 @@ There is also another problem when code is adjusted, fixed etc. It leaves unused
 
 ---
 
+There are so many problems with types like this:
+
+const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(key));
+if (groupObj) CC.group.active.activate(groupObj);
+else CC.group.active.activate(String(key));
+
+1. Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is main type in this kind of TypeScript.
+2. There is also second problem if there is an ID instead of object: searching/filtering should be build inside activate or activateById function. AI really multiplies code, likes to repeat itself. There are still many lines of code which are taking all loaded tasks/events with some dates instead of taking correct, flat list of tasks.
+3. function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" for every state objects/classes.
+
+Refactor of things like this with GPT5.1 could take forever and instead of sometime fixing it would do next dumb thing.
+
+---
+
 For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
 
 Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.

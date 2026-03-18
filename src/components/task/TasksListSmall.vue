@@ -23,7 +23,7 @@
                 <q-avatar
                   size="36"
                   :style="{
-                    background: item._group?.color || getGroupColor(item._group?.id),
+                    background: (item._group?.color || getGroupColor(item._group?.id)),
                   }"
                 >
                   <q-icon
@@ -32,13 +32,11 @@
                     size="18"
                   />
                 </q-avatar>
-                <div class="title-main">
+                  <div class="title-main">
                   <div class="title-text">
-                    <q-item-label class="title-ellipsis"
-                      ><strong>{{
-                        item._group?.name || "Ungrouped"
-                      }}</strong></q-item-label
-                    >
+                      <q-item-label class="title-ellipsis">
+                        <strong>{{ item._group?.name || "Ungrouped" }}</strong>
+                      </q-item-label>
                   </div>
                 </div>
               </div>
@@ -59,19 +57,14 @@
             <div class="grouped-item card" :style="{ position: 'relative' }">
               <div v-if="isNewGroup(index, item)" class="group-label">
                 <GroupButton
-                  :group="{
-                    id: groupIdOf(item),
-                    name: getGroupName(groupIdOf(item)),
-                    color: getGroupColor(groupIdOf(item)),
-                    icon: getGroupIcon(groupIdOf(item)),
-                  }"
+                  :group="getGroupObj(groupIdOf(item))"
                   @click="() => {
                     const gid = groupIdOf(item);
                     if (!gid) {
                       CC.group.active.selectAll();
                     } else {
                       try {
-                        const found = (groups.value || []).find((g: any) => String(g.id) === String(gid));
+                        const found = getGroupObj(gid);
                         if (found) CC.group.active.activate(found);
                         else CC.group.active.activate(String(gid));
                       } catch (e) {
@@ -163,6 +156,11 @@ function getGroupIcon(groupId: any) {
   if (!groupId) return null;
   const g = groups.value.find((x: any) => String(x.id) === String(groupId));
   return g?.icon || null;
+}
+
+function getGroupObj(groupId: any) {
+  if (!groupId) return null;
+  return (groups.value || []).find((g: any) => String(g.id) === String(groupId)) || null;
 }
 
 const mergedTasks = computed(() => {

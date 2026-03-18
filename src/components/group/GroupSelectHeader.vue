@@ -393,8 +393,11 @@ function onTreeSelect(val: any) {
     if (!key) return;
     // if special keys used, handle them (none here)
     localValue.value = String(key);
-    const found = options.value.find((o: any) => String(o.value) === String(key));
-    if (found) CC.group.active.activate(found);
+    // options.value contains lightweight option objects; find the full
+    // group record from the authoritative groups list and pass that to
+    // the group's activate API so it receives the expected shape.
+    const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(key));
+    if (groupObj) CC.group.active.activate(groupObj);
     else CC.group.active.activate(String(key));
   } finally {
     menuOpen.value = false;
