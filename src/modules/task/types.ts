@@ -1,7 +1,7 @@
 export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-import type { TaskGroup } from '../group/classes/TaskGroup';
-export type { TaskGroup };
+import type { Group } from '../group/classes/Group';
+export type { Group };
 
 export class Task {
   id!: string;
@@ -20,7 +20,7 @@ export class Task {
   eventDate?: string;
   // `completed` kept for backward compatibility but will be deprecated
   // legacy `completed` field removed; use `status_id` (0 = done) instead
-  groupId?: string; // Reference to TaskGroup
+  groupId?: string; // Reference to Group
   tags?: string[];
   eventTime?: string; // HH:mm format
   // Canonical repeat settings for cyclic tasks

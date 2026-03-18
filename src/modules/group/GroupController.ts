@@ -4,12 +4,13 @@ import { saveData } from 'src/utils/storageUtils';
 import * as groupManager from './managers/groupManager';
 import { GroupList } from './classes/GroupList';
 import { GroupActive } from './classes/GroupActive';
+import type { Group } from './classes/Group';
 
 class GroupStore {
-  readonly groups = ref<any[]>([]);
+  readonly groups = ref<Group[]>([]);
   readonly activeGroupRef = ref<{ label: string; value: string | null } | null>(null);
-  readonly list = markRaw(new GroupList(this.groups, this.activeGroupRef));
-  readonly active = markRaw(new GroupActive(this.groups, this.activeGroupRef));
+  readonly list = markRaw(new GroupList(this.groups as any, this.activeGroupRef));
+  readonly active = markRaw(new GroupActive<Group>(this.groups as any, this.activeGroupRef));
 
   async add(payload: any) {
     const group = groupManager.addGroup(this.groups.value, payload);

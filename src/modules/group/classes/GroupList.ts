@@ -5,17 +5,18 @@ import {
   getGroupsByParent as getGroupsByParentUtil,
   isVisibleForActive,
 } from '../utils/groupUtils';
+import type { Group } from './Group';
 
 export class GroupList {
-  readonly all: ComputedRef<any[]>;
+  readonly all: ComputedRef<Group[]>;
   readonly tree: ComputedRef<any>;
 
   constructor(
-    private readonly groups: Ref<any[]>,
+    private readonly groups: Ref<Group[]>,
     private readonly activeGroup: Ref<{ label: string; value: string | null } | null>,
   ) {
     this.all = computed(() => groups.value || []);
-    this.tree = groupManager.createTreeComputed(groups);
+    this.tree = groupManager.createTreeComputed(groups as any);
   }
 
   getGroupsByParent(parentId?: string) {

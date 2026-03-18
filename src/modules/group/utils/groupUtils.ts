@@ -1,4 +1,4 @@
-import type { TaskGroup } from '../classes/TaskGroup';
+import type { Group } from '../classes/Group';
 
 // Normalize various possible id shapes into a string id or null
 export const normalizeId = (v: any): string | null => {
@@ -8,7 +8,7 @@ export const normalizeId = (v: any): string | null => {
 };
 
 // Return groups whose parent matches `parentId` (both can be null/undefined)
-export const getGroupsByParent = (groups: TaskGroup[] = [], parentId?: string): TaskGroup[] => {
+export const getGroupsByParent = (groups: Group[] = [], parentId?: string): Group[] => {
   const norm = parentId == null ? null : String(parentId);
   return (groups || []).filter((g: any) => {
     const pid = normalizeId(g.parentId ?? g.parent_id ?? null);
@@ -23,7 +23,7 @@ export const getGroupsByParent = (groups: TaskGroup[] = [], parentId?: string): 
 
 // Determine whether a candidate group id should be visible when `activeGroupValue` is selected.
 export const isVisibleForActive = (
-  groups: TaskGroup[] = [],
+  groups: Group[] = [],
   activeGroupValue: any,
   candidateId: any,
 ) => {

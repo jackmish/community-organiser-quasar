@@ -1,4 +1,5 @@
-import type { OrganiserData, TaskGroup } from '../../day-organiser/types';
+import type { OrganiserData, Group } from '../../day-organiser/types';
+import { Group as GroupClass } from '../classes/Group';
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 import logger from 'src/utils/logger';
@@ -20,11 +21,11 @@ export type CreateGroupInput = {
 export function addGroup(
   organiserData: OrganiserData | any[],
   payload: CreateGroupInput,
-): TaskGroup {
+): Group {
   const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent, shortcut, textColor } =
     payload;
   const now = new Date().toISOString();
-  const group: TaskGroup = {
+  const group = new GroupClass({
     id: generateGroupId(name),
     name,
     createdAt: now,
@@ -35,7 +36,7 @@ export function addGroup(
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
     ...(typeof shortcut === 'boolean' ? { shortcut } : {}),
-  };
+  });
 
   // Allow callers to pass either the full organiserData object or the groups array directly.
   if (Array.isArray(organiserData)) {
@@ -55,7 +56,7 @@ function _ensureGroupsAndDays(src: any): { groups: any[]; days: Record<string, a
 export function updateGroup(
   organiserData: OrganiserData | any[],
   groupId: string,
-  updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
+  updates: Partial<Omit<Group, 'id' | 'createdAt'>>,
 ): void {
   const { groups } = _ensureGroupsAndDays(organiserData);
   const group = (groups || []).find((g: any) => g.id === groupId);

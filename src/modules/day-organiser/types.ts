@@ -1,5 +1,5 @@
 import type { Task } from '../task/types';
-import type { TaskGroup } from '../group/classes/TaskGroup';
+import type { Group } from '../group/classes/Group';
 
 export interface DayData {
   date: string; // YYYY-MM-DD
@@ -9,8 +9,8 @@ export interface DayData {
 
 export interface OrganiserData {
   days: Record<string, DayData>;
-  groups: TaskGroup[];
+  groups: Group[];
   lastModified: string;
 }
 
-export type { TaskGroup };
+export type { Group };

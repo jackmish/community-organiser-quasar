@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import { $text } from "src/modules/lang";
-import type { TaskGroup } from "src/modules/day-organiser";
+import type { Group } from "src/modules/day-organiser";
 import { useQuasar } from "quasar";
 import CC from "src/CentralController";
 import logger from "src/utils/logger";

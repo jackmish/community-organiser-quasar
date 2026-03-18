@@ -257,7 +257,7 @@ import logger from "src/utils/logger";
 import CC from "src/CentralController";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
-import type { TaskGroup } from "../modules/day-organiser";
+import type { Group } from "../modules/day-organiser";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 
 const $q = useQuasar();
@@ -711,7 +711,7 @@ const formatDateOnly = (date: string) => formatDisplayDate(date);
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return "Unknown";
-  const group = CC.group.list.all.value.find((g: TaskGroup) => g.id === groupId);
+  const group = CC.group.list.all.value.find((g: Group) => g.id === groupId);
   return group ? group.name : "Unknown";
 };
 

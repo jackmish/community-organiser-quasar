@@ -276,7 +276,7 @@ There is also another problem when code is adjusted, fixed etc. It leaves unused
 
 ---
 
-There are so many problems with types like this:
+There are so many problems/scenario with code like this:
 
 const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(key));
 if (groupObj) CC.group.active.activate(groupObj);
@@ -287,6 +287,10 @@ else CC.group.active.activate(String(key));
 3. function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() for every state object/class inside Central Application Controller CC.
 
 Refactor of things like this with GPT5.1 could take forever and instead of sometime fixing it would do next dumb thing.
+
+4. I activated prompt with previously written problems, and as usual result wasn't satisfying a) code with errors - it needs to run few test before code would be working b) there is interface for GroupRecord - but Group should be class, some model defined somewhere by the way of creating group module. Interface for group is rather useless its not thing that should be defined in many ways like payment gateways. c) still i cant see interface for "set" and "setById" methods - which shouldn't be limited only to groupRecord. d) there is many prompts before it will adapt, but probably AI likes more examples, e) when its creating model class it still wants to use GroupInterface - which makes every TS function using it unintuitive, over-engineered, instead of using just direct Group class. I don't have any plan to implement many Group classes using this interface. It there is something shared it could be interface for model - forcing to use "id", and maybe some methods
+
+With Claude Sonnet there is much fewer things like this, but still needs lot of guidance to create convenient code, by default each code generator have precedent behavior like this (still haven't checked Cursor)
 
 ---
 

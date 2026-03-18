@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { TaskGroup } from '../../day-organiser/types';
+import type { Group } from '../../day-organiser/types';
 
 export function createGroupUiHandlers(args: {
   editGroupLocal: Ref<{
@@ -11,7 +11,7 @@ export function createGroupUiHandlers(args: {
   showEditGroupDialog: Ref<boolean>;
   updateGroup: (
     groupId: string,
-    updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>>,
+    updates: Partial<Omit<Group, 'id' | 'createdAt'>>,
   ) => Promise<void>;
 }) {
   const { editGroupLocal, showEditGroupDialog, updateGroup } = args;
@@ -20,7 +20,7 @@ export function createGroupUiHandlers(args: {
     if (!editGroupLocal.value) return;
     const { id, name, parentId, color } = editGroupLocal.value;
     if (!name || !name.trim()) return;
-    const updates: Partial<Omit<TaskGroup, 'id' | 'createdAt'>> = {};
+    const updates: Partial<Omit<Group, 'id' | 'createdAt'>> = {};
     updates.name = name.trim();
     if (parentId !== undefined && parentId !== null) updates.parentId = parentId as any;
     if (color !== undefined && color !== null) updates.color = color as any;
