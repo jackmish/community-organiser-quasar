@@ -263,7 +263,13 @@ import {
 } from "vue";
 import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns";
 import logger from "src/utils/logger";
-import { $text, detectAndSetLocale, getLanguage, getCountryCode } from "src/modules/lang";
+import {
+  $text,
+  detectAndSetLocale,
+  getLanguage,
+  getCountryCode,
+  loadSavedLocale,
+} from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
 import * as api from "src/controllerRoot";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
@@ -960,7 +966,7 @@ async function getHolidaysFilePath(year: number): Promise<string | null> {
   return (window as any).electronAPI.joinPath(
     appDataPath,
     "holidays",
-    `holidays_${holidayCountryCode.value}_${year}.json`
+    `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}.json`
   );
 }
 
@@ -969,13 +975,41 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
   try {
     if (isElectron) {
       // Load from APPDATA file
+      // Try language-specific file first, then fall back to legacy filename
       const filePath = await getHolidaysFilePath(year);
       if (!filePath) return false;
 
-      const exists = await (window as any).electronAPI.fileExists(filePath);
-      if (!exists) return false;
+      let exists = await (window as any).electronAPI.fileExists(filePath);
+      let data: HolidayCache | null = null;
 
-      const data: HolidayCache = await (window as any).electronAPI.readJsonFile(filePath);
+      if (exists) {
+        data = await (window as any).electronAPI.readJsonFile(filePath);
+      } else {
+        // Legacy file name without language component
+        const appDataPath = await (window as any).electronAPI.getAppDataPath();
+        const legacyPath = (window as any).electronAPI.joinPath(
+          appDataPath,
+          "holidays",
+          `holidays_${holidayCountryCode.value}_${year}.json`
+        );
+        const legacyExists = await (window as any).electronAPI.fileExists(legacyPath);
+        if (legacyExists) {
+          try {
+            data = await (window as any).electronAPI.readJsonFile(legacyPath);
+            // Migrate: save under the new language-specific path
+            const safe = JSON.parse(JSON.stringify(data));
+            await (window as any).electronAPI.ensureDir(
+              (window as any).electronAPI.joinPath(appDataPath, "holidays")
+            );
+            await (window as any).electronAPI.writeJsonFile(filePath, safe);
+            exists = true;
+          } catch (e) {
+            // ignore and treat as not found
+          }
+        }
+      }
+
+      if (!data) return false;
 
       // Load holidays into Map (no expiry check for APPDATA files)
       data.holidays.forEach((holiday) => {
@@ -984,9 +1018,16 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
 
       return true;
     } else {
-      // Load from localStorage
-      const cacheKey = `holidays_${holidayCountryCode.value}_${year}`;
-      const cached = localStorage.getItem(cacheKey);
+      // Load from localStorage. Prefer language-specific key, but fall back to
+      // legacy key without language to support older installs.
+      const langKey = `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}`;
+      const legacyKey = `holidays_${holidayCountryCode.value}_${year}`;
+      let cached = localStorage.getItem(langKey);
+      let usedLegacy = false;
+      if (!cached) {
+        cached = localStorage.getItem(legacyKey);
+        usedLegacy = !!cached;
+      }
 
       if (!cached) return false;
 
@@ -997,7 +1038,12 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       const isExpired = Date.now() - data.fetchedAt > thirtyDaysMs;
 
       if (isExpired) {
-        localStorage.removeItem(cacheKey);
+        try {
+          if (usedLegacy) localStorage.removeItem(legacyKey);
+          else localStorage.removeItem(langKey);
+        } catch (e) {
+          // ignore
+        }
         return false;
       }
 
@@ -1005,6 +1051,17 @@ async function loadHolidaysFromCache(year: number): Promise<boolean> {
       data.holidays.forEach((holiday) => {
         holidays.value.set(holiday.date, holiday);
       });
+
+      // If we used legacy data (no language in key), save it under the
+      // language-specific key so future loads are per-language.
+      if (usedLegacy) {
+        try {
+          localStorage.setItem(langKey, JSON.stringify(data));
+          localStorage.removeItem(legacyKey);
+        } catch (e) {
+          // ignore storage errors
+        }
+      }
 
       return true;
     }
@@ -1041,7 +1098,9 @@ async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
       await (window as any).electronAPI.writeJsonFile(filePath, safe);
     } else {
       // Save to localStorage
-      const cacheKey = `holidays_${holidayCountryCode.value}_${year}`;
+      // Save under a language-specific key so cached data is tied to
+      // the display language as well as country/year.
+      const cacheKey = `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}`;
       localStorage.setItem(cacheKey, JSON.stringify(cache));
     }
   } catch (error) {
@@ -1106,11 +1165,23 @@ function getHoliday(dateString: string): Holiday | undefined {
 
 // Load holidays on mount
 onMounted(async () => {
-  // detect user's locale via lang module so we know which country code to request
+  // detect/load user's locale via lang module so we know which country code to request
   try {
-    const info = await detectAndSetLocale();
-    holidayCountryCode.value = info.country;
-    holidayDisplayLang.value = info.lang;
+    // Prefer saved locale from app settings (appdata) so startup uses stored language
+    try {
+      await loadSavedLocale();
+      holidayCountryCode.value = getCountryCode();
+      holidayDisplayLang.value = getLanguage();
+    } catch (e) {
+      // Fallback: detect from navigator if no saved locale
+      try {
+        const info = await detectAndSetLocale();
+        holidayCountryCode.value = info.country;
+        holidayDisplayLang.value = info.lang;
+      } catch (err) {
+        // ignore - defaults already set
+      }
+    }
   } catch (e) {
     // ignore - defaults already set
   }
