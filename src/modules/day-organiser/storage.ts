@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue';
 import type { DayData } from './types';
 import { storage, loadSettings, saveSettings } from '../storage';
 import logger from 'src/utils/logger';
-import * as api from 'src/controllerRoot';
+import * as api from 'src/RootController';
 import { createHiddenGroupSummary } from 'src/modules/task/helpers/hiddenGroupSummary';
 
 export {

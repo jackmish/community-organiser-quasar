@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers';
 import { createPinia } from 'pinia';
-import { initApi } from 'src/controllerRoot';
+import { initApi } from 'src/RootController';
 import { loadPluginsFromManifest } from 'src/plugins/pluginLoader';
 import { registerPlugins, getPiniaPlugins } from 'src/plugins/pluginRegistry';
 

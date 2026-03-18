@@ -104,17 +104,6 @@
         </template>
       </template>
     </div>
-
-    <!-- Add button removed from here; parent should render the add button at a higher DOM level -->
-    <!-- <q-btn
-      class="add-task-btn"
-      color="positive"
-      unelevated
-      aria-label="Add task"
-      @click="$emit('add-task')"
-    >
-      <q-icon name="add" />
-    </q-btn> -->
   </div>
 </template>
 
@@ -125,7 +114,7 @@ import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
 import GroupButton from "src/components/group/GroupButton.vue";
-import * as api from "src/controllerRoot";
+import * as api from "src/RootController";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
@@ -157,7 +146,9 @@ function getGroupName(groupId: any) {
 // Normalize group id access to support legacy `group_id` fields on raw objects
 function groupIdOf(item: any) {
   if (!item) return null;
-  return item.groupId ?? item.group_id ?? null;
+  return (
+    item.groupId ?? item.group_id ?? (item._group ? item._group.id ?? null : null) ?? null
+  );
 }
 
 function getGroupColor(groupId: any) {

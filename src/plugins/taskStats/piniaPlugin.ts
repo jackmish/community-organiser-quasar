@@ -7,7 +7,7 @@
 
 import { computed } from 'vue';
 import type { PiniaPluginContext } from 'pinia';
-import { useGroupStore } from 'src/modules/group/apiGroup';
+import { useGroupStore } from 'src/modules/group/GroupController';
 import type { Task } from 'src/modules/task/types';
 
 export interface TaskStats {

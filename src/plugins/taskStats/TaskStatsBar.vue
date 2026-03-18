@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import * as api from "src/controllerRoot";
+import * as api from "src/RootController";
 
 const stats = computed(
   () => api.task.taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }

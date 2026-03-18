@@ -271,7 +271,7 @@ import {
   loadSavedLocale,
 } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
-import * as api from "src/controllerRoot";
+import * as api from "src/RootController";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,

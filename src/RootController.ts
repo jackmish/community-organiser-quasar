@@ -1,7 +1,7 @@
 // Top-level controller root for the whole app.
-import * as apiStorage from 'src/modules/storage/controllerStorage';
-import { useTaskStore } from 'src/modules/task/controllerTask';
-import { useGroupStore } from 'src/modules/group/controllerGroup';
+import * as apiStorage from 'src/modules/storage/StorageController';
+import { useTaskStore } from 'src/modules/task/TaskController';
+import { useGroupStore } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/controllers/lazyStore';
 
 class ControllerRoot {

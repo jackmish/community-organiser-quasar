@@ -161,7 +161,7 @@ import pkg from "../../package.json";
 import { useRouter, useRoute } from "vue-router";
 import NextEventNotification from "../components/task/NextEventNotification.vue";
 import { format } from "date-fns";
-import * as api from "src/controllerRoot";
+import * as api from "src/RootController";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
