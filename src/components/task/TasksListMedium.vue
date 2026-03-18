@@ -453,7 +453,7 @@ const getGroupIcon = (groupId?: string) => {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    activeGroup.value = { label: g.name || String(g.id), value: g.id };
+    api.group.active.activate(g);
   } catch (e) {
     // ignore
   }

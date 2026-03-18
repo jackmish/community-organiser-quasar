@@ -186,61 +186,11 @@
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
 import * as api from "src/RootController";
-
-// color helpers for button contrast
-function hexToRgb(hex: string) {
-  if (!hex) return null;
-  const h = String(hex).replace(/^#/, "");
-  const full =
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h;
-  const bigint = parseInt(full, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return { r, g, b };
-}
-
-function getContrastColor(hex: string) {
-  try {
-    const rgb = hexToRgb(hex || "#1976d2");
-    if (!rgb) return "#000";
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.6 ? "#000" : "#fff";
-  } catch (e) {
-    return "#000";
-  }
-}
+import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";
   return g.textColor || g.text_color || (g.color ? getContrastColor(g.color) : "inherit");
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (n: number) =>
-    Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function darkenHex(hex: string, amount: number) {
-  try {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return hex;
-    const r = Math.round(rgb.r * (1 - amount));
-    const g = Math.round(rgb.g * (1 - amount));
-    const b = Math.round(rgb.b * (1 - amount));
-    return rgbToHex(r, g, b);
-  } catch (e) {
-    return hex;
-  }
 }
 
 function getBtnBorderColor(g: any) {
@@ -403,7 +353,7 @@ watch(
     if (!activeGroup.value) {
       const fg = list[0];
       if (!fg) return;
-      activeGroup.value = { label: fg.name || String(fg.id), value: String(fg.id) };
+      api.group.active.activate(fg);
       localValue.value = String(fg.id);
       prevValue = String(fg.id);
       return;
@@ -420,8 +370,7 @@ watch(
       const agObj = typeof ag === "object" && ag ? (ag as Record<string, any>) : null;
       const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
       const agValue = agObj ? (agObj.value as string | undefined) : undefined;
-      if (agLabel !== found.name || String(agValue ?? "") !== gid)
-        activeGroup.value = { label: found.name, value: gid };
+      if (agLabel !== found.name || String(agValue ?? "") !== gid) api.group.active.activate(found);
       if (localValue.value !== gid) localValue.value = gid;
     }
   },
@@ -445,8 +394,8 @@ function onTreeSelect(val: any) {
     // if special keys used, handle them (none here)
     localValue.value = String(key);
     const found = options.value.find((o: any) => String(o.value) === String(key));
-    if (found) activeGroup.value = { label: found.label, value: found.value };
-    else activeGroup.value = { label: String(key), value: String(key) };
+    if (found) api.group.active.activate(found);
+    else api.group.active.activate(String(key));
   } finally {
     menuOpen.value = false;
   }
@@ -488,25 +437,13 @@ const filteredShortcutGroups = computed(() => {
   }
 });
 
-function activateGroup(g: any) {
-  try {
-    if (!g) return;
-    api.group.active.activeGroup.value = {
-      label: g.name || String(g.id),
-      value: String(g.id),
-    };
-  } catch (e) {
-    void e;
-  }
-}
-
 function activateTreeShortcut(node: any) {
   try {
     const grp =
       node && node.group
         ? node.group
         : (groups.value || []).find((gg: any) => String(gg.id) === String(node.id));
-    if (grp) activateGroup(grp);
+    if (grp) api.group.active.activate(grp);
   } catch (e) {
     void e;
   }
@@ -540,7 +477,7 @@ function isShortcutActive(g: any) {
 function onShortcutClick(g: any) {
   try {
     if (isShortcutActive(g)) return; // do nothing for active shortcut
-    activateGroup(g);
+    api.group.active.activate(g);
   } catch (e) {
     void e;
   }

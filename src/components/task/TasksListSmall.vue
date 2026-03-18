@@ -71,7 +71,9 @@
                       api.group.active.selectAll();
                     } else {
                       try {
-                        (activeGroup as any).value = { label: getGroupName(gid), value: gid };
+                        const found = (groups.value || []).find((g: any) => String(g.id) === String(gid));
+                        if (found) api.group.active.activate(found);
+                        else api.group.active.activate(String(gid));
                       } catch (e) {
                         void e;
                       }
@@ -333,7 +335,7 @@ function getGroupContainerStyle(n: number) {
 function selectHiddenGroup(g: any) {
   if (!g) return;
   try {
-    activeGroup.value = { label: g.name || String(g.id), value: g.id };
+    api.group.active.activate(g);
   } catch (e) {
     void e;
   }

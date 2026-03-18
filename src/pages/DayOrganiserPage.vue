@@ -1027,10 +1027,7 @@ const handleFirstGroupCreation = async (data: { name: string; color: string }) =
     hideTasksFromParent: false,
   });
   defaultGroupId.value = group.id;
-  api.group.active.activeGroup.value = {
-    label: group.name,
-    value: group.id,
-  };
+  api.group.active.activate(group);
   showFirstRunDialog.value = false;
 };
 
@@ -1104,10 +1101,7 @@ onMounted(async () => {
     // Auto-select first group as active if groups exist
     const firstGroup = api.group.list.all.value[0];
     if (firstGroup && !api.group.active.activeGroup.value) {
-      api.group.active.activeGroup.value = {
-        label: firstGroup.name,
-        value: firstGroup.id,
-      };
+      api.group.active.activate(firstGroup);
       defaultGroupId.value = firstGroup.id;
     }
   }

@@ -217,7 +217,19 @@ Refactor is slow and very ineffective, git is really helpful.
 
 Maybe with good instructions, knowing better limitations of AI it could be much more useful.
 
-For example "API" maybe isn't best name at some point of development but its already used by plugins and it will be used for backend state sync, it already has some order. At this point i'll name it Controller - its not bad name, but API is shorter name general definition is "Interface" - could be misleading mostly by typical backend-frontend communication usage, but its already used by plugins, which could be developed by external code creators, and probably it would be somehow exposed as as twin backend control system, with similar logic.
+For example "API" maybe isn't best name for central part of code but its already used by plugins and it will be used for backend state sync, it already had some order - it was AI advice at some point of development.
+
+At this point i'll name it Controller - next GPT5.1 suggestion - its maybe not bad name , but API is shorter name general definition is "Interface". I don't like naming anything Facade. In PHP its usually very confusing pattern doesn't explaining how something works in simply way, in reality Facade is also something empty/useless.
+
+Controller probably same as API could not be the best name when im thinking about MVC/PHP typical backend tasks. Inside backend apps it's mostly used to extend routing REST endpoint choice, but maybe "Controller" name is something more than MVC, and stateless server APP is maybe best for static pages, not for responsive app.
+
+Generally this app doesn't use typical URL/REST API/Page switch functionalities. View is controlled by responsive value changes. Changing active group is a bit different than switching url.
+
+Probably i'll name most crucial file just Command Center - and use it around project as CC.group.setActive(...) or ctr.group - i haven't decided yet. Api logic for plugins would be probably limited, and maybe its a good choice to rename access points.
+
+This part of code is already used by experimental plugin, which could be developed by external code creators, and probably it would be somehow exposed as as twin backend control system, with similar logic.
+
+---
 
 Im not 100% sure of design of this vibe code project directions, but once GPT5.1 suggested API as name of central app control system, but when i've decided to move state inside API it became more like Pinia store (but storage sounds more like module not good name for central control system/interface). Generally it could also be place to control not only state/storage like connection with camera,...etc. Engine name would be convenient but probably it wouldn't be engine, just some kind of organizer core, central command system or something similar. Task manager is maybe not correctly describing possible futures of this center, mostly time organization center, but it already is attracted by calendar feature in most cases. Possibly it could be extended by functionality of anty-theft system, trip organization with map functionality,...
 

@@ -22,4 +22,24 @@ export class GroupActive {
     this.activeGroup.value = null;
     return null;
   }
+
+  /**
+   * Activate a given group (set as the active group in the app).
+   * Accepts a group object with `id`/`value`/`name` or a primitive id.
+   */
+  activate(g: any) {
+    try {
+      if (!g) return;
+      const gid = typeof g === 'object' ? String(g.id ?? g.value ?? '') : String(g);
+      if (!gid) return;
+      this.activeGroup.value = { label: g.name || String(gid), value: String(gid) };
+    } catch (e) {
+      void e;
+    }
+  }
+
+  // legacy-friendly alias if callers expect a terse name
+  API(g: any) {
+    return this.activate(g);
+  }
 }
