@@ -1,37 +1,70 @@
 <template>
-  <q-btn
-    dense
-    rounded
-    unelevated
-    class="group-button"
-    :class="{ selected: selected }"
-    :title="title"
-    :style="btnStyle"
-    @click.stop.prevent="$emit('click')"
-  >
-    <q-icon
-      :name="group?.icon || 'folder_open'"
-      :style="`color: ${textColor} !important; fill: ${textColor} !important; stroke: ${textColor} !important;`"
-    />
-    <span :style="{ color: textColor }" class="label-text">{{ label }}</span>
-  </q-btn>
+  <div>
+    <q-btn
+      :dense="size === 'small'"
+      :unelevated="true"
+      :round="round"
+      class="group-button"
+      :class="{ selected: selected }"
+      :title="title"
+      @click.stop.prevent="handleClick"
+      :style="btnStyle"
+    >
+      <q-icon
+        :name="group?.icon || 'folder_open'"
+        :style="`color: ${textColor} !important; fill: ${textColor} !important; stroke: ${textColor} !important;`"
+      />
+      <span :style="{ color: textColor }" class="label-text">{{ displayLabel }}</span>
+      <q-icon v-if="hasMenu" name="arrow_drop_down" />
+    </q-btn>
+
+    <q-menu v-if="hasMenu" v-model="menuOpen" auto-close>
+      <div style="padding: 6px">
+        <group-tree-selector :groups="groups" @select="onSelect" />
+      </div>
+    </q-menu>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
+import GroupTreeSelector from './GroupTreeSelector.vue';
 
 const props = defineProps<{
   group?: any;
+  groups?: any[];
+  size?: 'small' | 'normal';
+  label?: string;
+  round?: boolean;
   selected?: boolean;
   title?: string;
 }>();
 
 const emit = defineEmits<{
+  (e: 'select', group: any): void;
   (e: 'click'): void;
 }>();
 
-const label = computed(() => {
+const menuOpen = ref(false);
+
+function onSelect(g: any) {
+  menuOpen.value = false;
+  emit('select', g);
+}
+
+function handleClick() {
+  if (hasMenu.value) {
+    menuOpen.value = !menuOpen.value;
+  } else {
+    emit('click');
+  }
+}
+
+const hasMenu = computed(() => Array.isArray(props.groups) && props.groups.length > 0);
+
+const displayLabel = computed(() => {
+  if (props.label) return props.label;
   if (!props.group) return '';
   return props.group.name ?? props.group.label ?? '';
 });
@@ -49,7 +82,6 @@ const textColor = computed(() => {
   }
 });
 
-
 const btnStyle = computed(() => {
   try {
     const base = props.group?.color || 'transparent';
@@ -60,8 +92,8 @@ const btnStyle = computed(() => {
   }
 });
 
-// using shared color helpers from src/utils/colorUtils
-
+const size = props.size || 'normal';
+const round = props.round ?? false;
 </script>
 
 <style scoped>
@@ -73,8 +105,8 @@ const btnStyle = computed(() => {
   display: inline-flex;
   align-items: center;
 }
-.group-button .label-text {
-  max-width: 140px;
+.label-text {
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

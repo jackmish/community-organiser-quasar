@@ -37,11 +37,12 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 ---
 
-User instructions section (for AI agents):
+-User instructions section (for AI agents):
 
-- run automatic tests, lint, tsc without asking me after you'll finish your task. Dont use npm run format. Its hard to check code differences in Git, after it, and it could be incompatible with VS Code current formatting settings.
-- after task is done, tests are fine clear console logs - but only logs, not errors or warnings and infos.
-- try to update copilot instructions after refactorings, when refactors are tested and done.
+- After making code changes, automatically run the following checks **without asking**: `npm run lint`, `npx tsc --noEmit`, and `npm run test:unit`. If any step fails, fix the failures and re-run the checks until the test suite passes. Do **not** run `npm run format` (formatting can create noisy diffs and may conflict with local editor settings).
+- When the changes are complete and tests pass, remove or silence ordinary `console.log` output so the console remains clean; keep error, warning and important informational messages visible.
+- Try to update this `copilot-instructions.md` file after significant refactorings once the refactor is implemented and its tests pass.
+- If you discover a better, more reliable way to enforce or communicate these policies to the agent (for example, a pre-commit hook, CI job, or a dedicated checklist file), adopt that approach and add a short note here linking to it.
 - instead of vue emits try tu utilize functions in CentralController usually CC.task.someFunction(...) or CC.group.someFunction(...) to trigger cross-component behavior. If the function doesn't exist, consider adding it to the relevant module (task/group) and then calling it from components instead of emitting events. Local functions should stay inside component or utils if something looks reusable.
 - try to make at least unit tests for any new logic you add, and if you refactor something, try to add tests for the new code and keep the old tests passing. If you need to mock Electron or Capacitor APIs, use `tests/setup.ts` for common mocks.
 - at this moment project structure is going to be like:
@@ -57,6 +58,27 @@ User instructions section (for AI agents):
 
 - Unit tests in `tests/unit/` use Vitest. Mock filesystem or platform-specific APIs when testing Electron/Capacitor features.
 - E2E tests in `tests/e2e/` use Playwright; the app should be in a testable dev mode for reliable e2e runs.
+
+PowerShell check for Vue SFC template errors
+
+- Quick PowerShell scan to detect Vue single-file components containing more than one `<template>` (useful to catch plugin:vite:vue SFC errors from the terminal):
+
+```powershell
+# Run from repository root (Windows PowerShell / PowerShell Core)
+$files = Get-ChildItem -Recurse -Filter *.vue src
+$bad = @()
+foreach ($f in $files) {
+  $n = (Select-String -Path $f.FullName -Pattern '<template' -AllMatches).Matches.Count
+  if ($n -gt 1) { $bad += "$($f.FullName): $n templates" }
+}
+if ($bad.Count -gt 0) {
+  $bad -join "`n"; exit 1
+} else {
+  Write-Output "No multi-template SFCs found."; exit 0
+}
+```
+
+- Use this before running `npm run dev` or `npm run build` to quickly detect offending `.vue` files without starting Vite. You can add this script to CI or run it locally in PowerShell.
 
 6. Common pitfalls for automation
 
