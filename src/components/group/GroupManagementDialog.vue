@@ -429,9 +429,26 @@ async function handleGroupFormSubmit(payload: any) {
           await CC.group.update(id, updates);
         } else {
           // Fallback when CC.group.update is not available (defensive)
-          const groupsRef = (CC.group.list && (CC.group.list.all?.value ?? CC.group.list.all)) || [];
-          groupManager.updateGroup(groupsRef, id, updates);
-          await saveData();
+          // Try to update the live group object inside the group's list reference
+          const groupsList = (CC.group.list && (CC.group.list.all?.value ?? CC.group.list.all)) || [];
+          const found = (groupsList || []).find((g: any) => String(g.id) === String(id));
+          if (found) {
+            Object.assign(found, updates);
+            await saveData();
+          } else {
+            // last resort: try manager update on whatever was provided
+            try {
+              groupManager.updateGroup(groupsList, id, updates);
+            } catch (err) {
+              logger.error('add/update group failed (fallback)', err);
+            }
+            // always attempt to persist current state
+            try {
+              await saveData();
+            } catch (err) {
+              logger.error('saveData failed after fallback update', err);
+            }
+          }
         }
       } else {
         await CC.group.add({

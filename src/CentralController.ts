@@ -3,6 +3,7 @@ import * as apiStorage from 'src/modules/storage/StorageController';
 import { useTaskStore } from 'src/modules/task/TaskController';
 import { useGroupStore } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/controllers/lazyStore';
+import { registerAppService } from 'src/services/appService';
 
 class CentralController {
   // Use `any` here to reflect the dynamic Pinia store shape at runtime
@@ -19,9 +20,9 @@ class CentralController {
     const t = useTaskStore();
     this._storage = apiStorage.construct(g, t.time as any);
     try {
-      // lazy register app service if available
+      // lazy register app service so `saveData()` and other helpers can find it
       // keep silent on errors to match prior behavior
-      // registerAppService('storage', this._storage);
+      registerAppService('storage', this._storage);
     } catch (e) {
       void e;
     }
