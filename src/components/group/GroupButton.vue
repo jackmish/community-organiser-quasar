@@ -27,14 +27,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
-import GroupTreeSelector from './GroupTreeSelector.vue';
+import { ref, computed } from "vue";
+import { getContrastColor, darkenHex } from "src/utils/colorUtils";
+import GroupTreeSelector from "./GroupTreeSelector.vue";
 
 const props = defineProps<{
   group?: any;
   groups?: any[];
-  size?: 'small' | 'normal';
+  size?: "small" | "normal";
   label?: string;
   round?: boolean;
   selected?: boolean;
@@ -42,22 +42,22 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'select', group: any): void;
-  (e: 'click'): void;
+  (e: "select", group: any): void;
+  (e: "click"): void;
 }>();
 
 const menuOpen = ref(false);
 
 function onSelect(g: any) {
   menuOpen.value = false;
-  emit('select', g);
+  emit("select", g);
 }
 
 function handleClick() {
   if (hasMenu.value) {
     menuOpen.value = !menuOpen.value;
   } else {
-    emit('click');
+    emit("click");
   }
 }
 
@@ -65,34 +65,36 @@ const hasMenu = computed(() => Array.isArray(props.groups) && props.groups.lengt
 
 const displayLabel = computed(() => {
   if (props.label) return props.label;
-  if (!props.group) return '';
-  return props.group.name ?? props.group.label ?? '';
+  if (!props.group) return "";
+  return props.group.name ?? props.group.label ?? "";
 });
 
 const textColor = computed(() => {
   try {
-    if (!props.group) return 'inherit';
+    if (!props.group) return "inherit";
     return (
       props.group.textColor ||
       props.group.text_color ||
-      (props.group.color ? getContrastColor(props.group.color) : 'inherit')
+      (props.group.color ? getContrastColor(props.group.color) : "inherit")
     );
   } catch (e) {
-    return 'inherit';
+    return "inherit";
   }
 });
 
 const btnStyle = computed(() => {
   try {
-    const base = props.group?.color || 'transparent';
-    const border = props.group?.color ? darkenHex(props.group.color, 0.35) : 'transparent';
+    const base = props.group?.color || "transparent";
+    const border = props.group?.color
+      ? darkenHex(props.group.color, 0.35)
+      : "transparent";
     return `background-color: ${base} !important; border:1px solid ${border}; padding: 2px 8px; min-height: 24px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
   } catch (e) {
-    return '';
+    return "";
   }
 });
 
-const size = props.size || 'normal';
+const size = props.size || "normal";
 const round = props.round ?? false;
 </script>
 
@@ -114,7 +116,7 @@ const round = props.round ?? false;
 .group-button.selected {
   opacity: 1;
   filter: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   outline-offset: 2px;
   outline: none;
   pointer-events: none;

@@ -28,13 +28,15 @@ export function lazyStore<T extends object>(fn: () => T): T {
       }
       try {
         const real = fn() as any;
-        if (real && (prop in real)) {
-          return Object.getOwnPropertyDescriptor(real, prop) || {
-            configurable: true,
-            enumerable: true,
-            writable: true,
-            value: real[prop],
-          };
+        if (real && prop in real) {
+          return (
+            Object.getOwnPropertyDescriptor(real, prop) || {
+              configurable: true,
+              enumerable: true,
+              writable: true,
+              value: real[prop],
+            }
+          );
         }
       } catch (e) {
         void e;
