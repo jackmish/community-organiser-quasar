@@ -711,6 +711,38 @@ watch(
     }
   }
 );
+
+// Keep local group selection in sync with parent's activeGroup, but only when
+// the form is in add mode. Do NOT overwrite the group when editing an existing
+// task.
+watch(
+  () => (props as any).activeGroup,
+  (val) => {
+    try {
+      if (props.mode !== "add") return;
+      const gid = extractGroupId(val);
+      // normalize undefined/null to undefined used in localNewTask
+      localNewTask.value.groupId = gid == null ? undefined : gid;
+    } catch (e) {
+      // ignore
+    }
+  }
+);
+
+// When parent switches the form back into add mode, ensure the group is
+// initialized from the activeGroup so the chooser reflects the current context.
+watch(
+  () => props.mode,
+  (m) => {
+    try {
+      if (m === "add") {
+        localNewTask.value.groupId = extractGroupId((props as any).activeGroup);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+);
 // ...existing code continues...
 
 const priorityOptions = [

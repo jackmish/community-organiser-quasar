@@ -32,9 +32,24 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 - Domain grouping: components are grouped into folders by feature (e.g. `src/components/task/AddTaskForm.vue`) — follow this when adding UI.
 - Composition API + TypeScript: prefer composables for reusable logic; avoid ad-hoc cross-component string-based emits where a service call is clearer.
-- Central service usage: use `appService` (or create a new service in `src/services/`) for cross-cutting operations rather than free-floating emits.
 - Storage: desktop data saved under `%APPDATA%/community-organiser/` — for Electron-only changes consider `src-electron` codepaths.
 - Logging: use `utils/logger.ts` helper to keep logs consistent.
+
+---
+
+User instructions section (for AI agents):
+
+- after task is done clear console logs - but only logs, not errors or warnings, infos.
+- try to update copilot instructions after refactorings, when refactors are tested and done.
+- instead of vue emits try tu utilize functions in CentralController usually CC.task.someFunction(...) or CC.group.someFunction(...) to trigger cross-component behavior. If the function doesn't exist, consider adding it to the relevant module (task/group) and then calling it from components instead of emitting events. Local functions should stay inside component or utils if something looks reusable.
+- try to make at least unit tests for any new logic you add, and if you refactor something, try to add tests for the new code and keep the old tests passing. If you need to mock Electron or Capacitor APIs, use `tests/setup.ts` for common mocks.
+- at this moment project structure is going to be like:
+  CentralController (CC) is orchestrating other controllers, making some singleton/index solving some chaotic AI generation problems, also it's trying to avoid emit/event-listener based chaos. In the future it would gather more control.
+- try to avoid names like Service or App. Manager is acceptable at this point, but it would be refactored/changed to another name.
+- avoid also Store name for other modules than storage. It would be confusing with storage module. It could make some layer of model/class but not core name for Controller file.
+- try to use model classes, and implement some model interface. At this moment there is no model interface, but should be created at some point. For example Group model should implement Model Interface. Don't create interfaces for everything, every model separately is not needed, but if you see that there is some common logic between models, consider creating an interface for them.
+- general model.ts interface should be adapted to project needs, not overcomplicated. It should be similar to Laravel backend models, but adapted to frontend needs. It should have some common properties like id, created_at, updated_at, and some common methods like save, delete, etc. But it should not be overcomplicated with too many methods or properties that are not needed at this moment. It should be simple and easy to use.
+- there is module called day-organizer- needs to be refactored. You can treat it as app folder or core folder - temporary.
 
 5. Testing notes
 
