@@ -121,6 +121,8 @@ import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "../theme";
 
 import CC from "src/CentralController";
+import * as groupManager from 'src/modules/group/managers/groupManager';
+import { saveData } from 'src/utils/storageUtils';
 import GroupForm from "./GroupForm.vue";
 
 const props = defineProps<{
@@ -408,32 +410,41 @@ async function handleGroupFormSubmit(payload: any) {
   const parent = payload.parent || undefined;
   try {
       if (editingGroupId.value) {
-      await CC.group.update(editingGroupId.value, {
-        name,
-        ...(parent ? { parentId: parent } : {}),
-        ...(color ? { color } : {}),
-        ...(icon ? { icon } : {}),
-        ...(typeof payload.textColor === "string" ? { textColor: payload.textColor } : {}),
-        ...(typeof payload.shareSubgroups === "boolean"
-          ? { shareSubgroups: payload.shareSubgroups }
-          : {}),
-        ...(typeof payload.hideTasksFromParent === "boolean"
-          ? { hideTasksFromParent: payload.hideTasksFromParent }
-          : {}),
-        ...(typeof payload.shortcut === "boolean" ? { shortcut: payload.shortcut } : {}),
-      });
-    } else {
-      await CC.group.add({
-        name,
-        parentId: parent,
-        color,
-        icon: icon,
-        textColor: payload.textColor,
-        shareSubgroups: payload.shareSubgroups,
-        hideTasksFromParent: payload.hideTasksFromParent,
-        shortcut: payload.shortcut,
-      });
-    }
+        const id = editingGroupId.value;
+        const updates: any = {
+          name,
+          ...(parent ? { parentId: parent } : {}),
+          ...(color ? { color } : {}),
+          ...(icon ? { icon } : {}),
+          ...(typeof payload.textColor === "string" ? { textColor: payload.textColor } : {}),
+          ...(typeof payload.shareSubgroups === "boolean"
+            ? { shareSubgroups: payload.shareSubgroups }
+            : {}),
+          ...(typeof payload.hideTasksFromParent === "boolean"
+            ? { hideTasksFromParent: payload.hideTasksFromParent }
+            : {}),
+          ...(typeof payload.shortcut === "boolean" ? { shortcut: payload.shortcut } : {}),
+        };
+        if (typeof CC.group.update === 'function') {
+          await CC.group.update(id, updates);
+        } else {
+          // Fallback when CC.group.update is not available (defensive)
+          const groupsRef = (CC.group.list && (CC.group.list.all?.value ?? CC.group.list.all)) || [];
+          groupManager.updateGroup(groupsRef, id, updates);
+          await saveData();
+        }
+      } else {
+        await CC.group.add({
+          name,
+          parentId: parent,
+          color,
+          icon: icon,
+          textColor: payload.textColor,
+          shareSubgroups: payload.shareSubgroups,
+          hideTasksFromParent: payload.hideTasksFromParent,
+          shortcut: payload.shortcut,
+        });
+      }
   } catch (e) {
     logger.error("add/update group failed", e);
   }

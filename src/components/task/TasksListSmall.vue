@@ -103,6 +103,39 @@
         </template>
       </template>
     </div>
+    <div
+      v-if="childGroupsNoTasks.length > 0"
+      class="hidden-children-list__list q-pa-sm"
+      aria-hidden="false"
+    >
+      <div
+        class="row items-start justify-end hidden-children-list__container"
+        style="
+          gap: 8px;
+          flex-wrap: wrap;
+          width: 100%;
+          justify-content: flex-end;
+          padding-right: 60px;
+          box-sizing: border-box;
+          filter: grayscale(0.5) opacity(0.5);
+        "
+      >
+        <GroupButton
+          v-for="g in childGroupsNoTasks"
+          :key="g.id"
+          :group="g"
+          @click="
+            () => {
+              try {
+                CC.group.active.set(g);
+              } catch (e) {
+                void e;
+              }
+            }
+          "
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -312,6 +345,23 @@ watch(mergedTasks, (list) => {
     (list || []).forEach((it: any) => logIfUnrecognized(it));
   } catch (e) {
     void e;
+  }
+});
+
+const childGroupsNoTasks = computed(() => {
+  try {
+    const activeId =
+      activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
+    if (!activeId) return [] as any[];
+    const allTasks = [...(props.tasksWithTime || []), ...(props.tasksWithoutTime || [])];
+    const directChildren = (groups.value || []).filter((g: any) => {
+      const pid = g.parentId ?? g.parent_id ?? null;
+      return pid != null && String(pid) === String(activeId);
+    });
+    // show direct children regardless of whether they have tasks
+    return directChildren;
+  } catch (e) {
+    return [] as any[];
   }
 });
 

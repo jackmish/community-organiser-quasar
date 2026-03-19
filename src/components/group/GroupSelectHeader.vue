@@ -1,144 +1,18 @@
 <template>
-  <div style="display: flex; align-items: center; gap: 8px">
+  <div
+    style="
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      justify-content: space-between;
+    "
+  >
     <template v-if="optionsReady">
-      <div style="min-width: 220px">
-        <q-btn
-          unelevated
-          dense
-          outline
-          class="group-select--header"
-          @click.stop.prevent="menuOpen = !menuOpen"
-          :style="{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            color: getBtnTextColor(selectedOption) || 'inherit',
-            border: '1px solid ' + (getBtnBorderColor(selectedOption) || 'transparent'),
-            boxShadow: 'none !important',
-          }"
-        >
-          <div style="display: flex; align-items: center; gap: 8px; flex: 1">
-            <q-icon
-              :name="selectedOption?.icon || 'folder_open'"
-              :style="
-                'color: ' +
-                (getBtnTextColor(selectedOption) || 'inherit') +
-                ' !important; fill: ' +
-                (getBtnTextColor(selectedOption) || 'inherit') +
-                ' !important; stroke: ' +
-                (getBtnTextColor(selectedOption) || 'inherit') +
-                ' !important;'
-              "
-            />
-              <span
-              :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
-              style="
-                max-width: 140px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              "
-            >
-              {{ selectedOption?.label ?? $text('ui.all_groups') }}
-            </span>
-          </div>
-          <q-icon
-            name="arrow_drop_down"
-            :style="
-              'color: ' + (getBtnTextColor(selectedOption) || 'inherit') + ' !important;'
-            "
-          />
-        </q-btn>
-
-        <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
-          <q-list padding>
-            <q-item clickable v-ripple @click="onSelectAll">
-              <q-item-section>
-                <q-icon name="folder_open" />
-              </q-item-section>
-              <q-item-section>{{$text('ui.all_groups')}}</q-item-section>
-            </q-item>
-          </q-list>
-
-          <q-separator />
-
-          <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
-            <q-tree
-              :nodes="treeNodes"
-              node-key="id"
-              default-expand-all
-              :selected="selectedKeyArray"
-              @update:selected="onTreeSelect"
-            >
-              <template #default-header="prop">
-                <div class="row items-center full-width">
-                  <q-icon
-                    :name="prop.node.icon || 'folder'"
-                    class="q-mr-sm"
-                    :style="{ color: prop.node.color }"
-                  />
-                  <span>{{ prop.node.label }}</span>
-                  <q-space />
-                  <span
-                    v-if="isNodeShortcut(prop.node)"
-                    flat
-                    dense
-                    style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      text-transform: none;
-                    "
-                    class="q-ml-sm"
-                    @click.stop.prevent="activateTreeShortcut(prop.node)"
-                  >
-                    <q-icon
-                      :name="prop.node.icon || 'folder'"
-                      :style="{ color: prop.node.color }"
-                    />
-
-                    <q-tooltip>{{$text('ui.shortcut')}}</q-tooltip>
-                  </span>
-                </div>
-              </template>
-            </q-tree>
-          </div>
-
-          <q-separator />
-
-          <q-list padding>
-            <q-item clickable v-ripple @click="openManage">
-              <q-item-section>{{$text('ui.manage_groups')}}</q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
-      </div>
-      <q-btn
-        v-if="parentButtonVisible"
-        flat
-        dense
-        round
-        title="Go to parent group"
-        @click.stop.prevent="() => CC.group.active.goToParent()"
-        :style="{
-          border: '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
-          background: 'transparent',
-        }"
-      >
-        <q-icon
-          name="arrow_upward"
-          :style="
-            'color: ' +
-            (getBtnTextColor(parentGroup?.value) || 'inherit') +
-            ' !important;'
-          "
-        />
-        <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
-      </q-btn>
+      <!-- Left: shortcuts (moved to left of select) -->
       <div
         v-if="shortcutGroups && shortcutGroups.length"
-        style="display: flex; gap: 8px; align-items: center"
+        style="display: flex; gap: 8px; align-items: center; min-width: 160px"
       >
         <q-btn
           v-for="g in shortcutGroups"
@@ -173,6 +47,159 @@
           >
         </q-btn>
       </div>
+
+      <!-- Middle: select + parent -->
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          justify-content: center;
+        "
+      >
+        <div style="min-width: 220px">
+          <q-btn
+            unelevated
+            dense
+            outline
+            class="group-select--header"
+            @click.stop.prevent="menuOpen = !menuOpen"
+            :style="{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              color: getBtnTextColor(selectedOption) || 'inherit',
+              border: '1px solid ' + (getBtnBorderColor(selectedOption) || 'transparent'),
+              boxShadow: 'none !important',
+            }"
+          >
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1">
+              <q-icon
+                :name="selectedOption?.icon || 'folder_open'"
+                :style="
+                  'color: ' +
+                  (getBtnTextColor(selectedOption) || 'inherit') +
+                  ' !important; fill: ' +
+                  (getBtnTextColor(selectedOption) || 'inherit') +
+                  ' !important; stroke: ' +
+                  (getBtnTextColor(selectedOption) || 'inherit') +
+                  ' !important;'
+                "
+              />
+              <span
+                :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
+                style="
+                  max-width: 140px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                "
+              >
+                {{ selectedOption?.label ?? $text("ui.all_groups") }}
+              </span>
+            </div>
+            <q-icon
+              name="arrow_drop_down"
+              :style="
+                'color: ' +
+                (getBtnTextColor(selectedOption) || 'inherit') +
+                ' !important;'
+              "
+            />
+          </q-btn>
+
+          <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
+            <q-list padding>
+              <q-item clickable v-ripple @click="onSelectAll">
+                <q-item-section>
+                  <q-icon name="folder_open" />
+                </q-item-section>
+                <q-item-section>{{ $text("ui.all_groups") }}</q-item-section>
+              </q-item>
+            </q-list>
+
+            <q-separator />
+
+            <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
+              <q-tree
+                :nodes="treeNodes"
+                node-key="id"
+                default-expand-all
+                :selected="selectedKeyArray"
+                @update:selected="onTreeSelect"
+              >
+                <template #default-header="prop">
+                  <div class="row items-center full-width">
+                    <q-icon
+                      :name="prop.node.icon || 'folder'"
+                      class="q-mr-sm"
+                      :style="{ color: prop.node.color }"
+                    />
+                    <span>{{ prop.node.label }}</span>
+                    <q-space />
+                    <span
+                      v-if="isNodeShortcut(prop.node)"
+                      flat
+                      dense
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        text-transform: none;
+                      "
+                      class="q-ml-sm"
+                      @click.stop.prevent="activateTreeShortcut(prop.node)"
+                    >
+                      <q-icon
+                        :name="prop.node.icon || 'folder'"
+                        :style="{ color: prop.node.color }"
+                      />
+
+                      <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
+                    </span>
+                  </div>
+                </template>
+              </q-tree>
+            </div>
+
+            <q-separator />
+
+            <q-list padding>
+              <q-item clickable v-ripple @click="openManage">
+                <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </div>
+
+        <q-btn
+          v-if="parentButtonVisible"
+          flat
+          dense
+          round
+          title="Go to parent group"
+          @click.stop.prevent="() => CC.group.active.goToParent()"
+          :style="{
+            border:
+              '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
+            background: 'transparent',
+          }"
+        >
+          <q-icon
+            name="arrow_upward"
+            :style="
+              'color: ' +
+              (getBtnTextColor(parentGroup?.value) || 'inherit') +
+              ' !important;'
+            "
+          />
+          <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
+        </q-btn>
+      </div>
+
+      <!-- Right slot intentionally left empty (child group buttons rendered under tasks list) -->
     </template>
     <template v-else>
       <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
@@ -186,7 +213,7 @@
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
 import CC from "src/CentralController";
-import { getContrastColor, darkenHex } from 'src/utils/colorUtils';
+import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";
@@ -353,7 +380,7 @@ watch(
     if (!activeGroup.value) {
       const fg = list[0];
       if (!fg) return;
-        CC.group.active.set(fg);
+      CC.group.active.set(fg);
       localValue.value = String(fg.id);
       prevValue = String(fg.id);
       return;
@@ -370,7 +397,8 @@ watch(
       const agObj = typeof ag === "object" && ag ? (ag as Record<string, any>) : null;
       const agLabel = agObj ? (agObj.label as string | undefined) : undefined;
       const agValue = agObj ? (agObj.value as string | undefined) : undefined;
-      if (agLabel !== found.name || String(agValue ?? "") !== gid) CC.group.active.set(found);
+      if (agLabel !== found.name || String(agValue ?? "") !== gid)
+        CC.group.active.set(found);
       if (localValue.value !== gid) localValue.value = gid;
     }
   },
@@ -469,8 +497,7 @@ function isShortcutActive(g: any) {
   try {
     if (!g) return false;
     const gid = String(g.id ?? g.value ?? "");
-    const cur =
-      localValue.value ?? activeGroup?.value?.value ?? null;
+    const cur = localValue.value ?? activeGroup?.value?.value ?? null;
     return gid && String(gid) === String(cur ?? "");
   } catch (e) {
     return false;
