@@ -103,37 +103,21 @@
         </template>
       </template>
     </div>
-    <div
-      v-if="childGroupsNoTasks.length > 0"
-      class="hidden-children-list__list q-pa-sm"
-      aria-hidden="false"
-    >
+    <div v-if="childGroupsNoTasks.length > 0" class="hidden-children-list__list q-pa-sm" aria-hidden="false">
       <div
         class="row items-start justify-end hidden-children-list__container"
-        style="
-          gap: 8px;
-          flex-wrap: wrap;
-          width: 100%;
-          justify-content: flex-end;
-          padding-right: 60px;
-          box-sizing: border-box;
-          filter: grayscale(0.5) opacity(0.5);
-        "
+        style="gap: 8px; flex-wrap: wrap; width: 100%; justify-content: flex-end; padding-right: 60px; box-sizing: border-box;"
       >
-        <GroupButton
+        <div
           v-for="g in childGroupsNoTasks"
           :key="g.id"
-          :group="g"
-          @click="
-            () => {
-              try {
-                CC.group.active.set(g);
-              } catch (e) {
-                void e;
-              }
-            }
-          "
-        />
+          class="child-group-btn"
+          role="button"
+          tabindex="0"
+          @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }"
+        >
+          <GroupButton :group="g" />
+        </div>
       </div>
     </div>
   </div>
@@ -466,5 +450,22 @@ function logIfUnrecognized(item: any) {
   height: 1px;
   background: rgba(0, 0, 0, 0.06);
   pointer-events: none;
+}
+/* Child group buttons: apply grayscale/opacity per-button and remove on hover */
+.child-group-btn {
+  display: inline-block;
+  filter: grayscale(0.5) opacity(0.5);
+  transition: filter 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+  -webkit-backface-visibility: hidden;
+}
+.child-group-btn:hover,
+.child-group-btn:focus {
+  filter: none;
+  opacity: 1;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  outline: none;
+}
+.child-group-btn:active {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 </style>

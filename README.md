@@ -294,6 +294,8 @@ Refactor of things like this with GPT5.1 could take forever and instead of somet
 
 6. I've updated few times copilot instructions but at least GPT5.1 is rather ignoring it, or just I haven't recognized yet its working or not. Probably its prioritizing some part of text and it would be more efficient to make start prompt/instructions different for example: for CSS and different for TS files - include it like with graphic AI generators. AI from GPT5.1 is neural network so its logic it's using weight system/fuzzy logic learned by some very talkative sources, or its just nature of all GPT based models. It likes to generate many line of text but it doesn't like to read it. Its hard to prepare optimized for AI map/shortcuts for project, a specially to generate it with help of AI.
 
+7. Actually this code is wired with child groups section. Than styling hover effect could be acceptable, but instead of doing simple instructions like change grayscale on hover it would also animate transform y property, make animation without asking. Actually its not acceptable for my standards to use transform/scale operations for button text as hover action - it has many issues.
+
 With Claude Sonnet there is much fewer things like this, but still needs lot of guidance to create convenient code, by default each code generator have precedent behavior like this (still haven't checked Cursor)
 
 ---

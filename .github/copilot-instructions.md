@@ -113,6 +113,8 @@ registerAppService('storage', storageApi);
 
 - Keep this file short. Add longer examples, linting rules, and component style in `CONTRIBUTING.md` or `docs/CODING.md` and link from this file.
 
+- Styling guideline (grayscale & hover): If you are asked to change grayscale, change only the grayscale/opacity values — do not add other visual effects. Specifically avoid hover styles that move, scale, or shift text or primary interactive elements (these can blur text and invalidate the hover/tap area). Transform/scale operations are allowed only for additional decorative elements (for example an underline or outline), and color changes on hover are acceptable. Avoid moving borders or changing layout on hover.
+
 If you want, I can now add 6–10 concrete code examples to `docs/CODING.md` and add links to specific lines in `src/services/appService.ts` and `src/modules/day-organiser/apiRoot.ts`.
 
 11. Avoid monoliths & deduplication guidance
