@@ -39,7 +39,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 User instructions section (for AI agents):
 
-- run automatic tests, lint, tsc without asking me after you'll finish your task
+- run automatic tests, lint, tsc without asking me after you'll finish your task. Dont use npm run format. Its hard to check code differences in Git, after it, and it could be incompatible with VS Code current formatting settings.
 - after task is done, tests are fine clear console logs - but only logs, not errors or warnings and infos.
 - try to update copilot instructions after refactorings, when refactors are tested and done.
 - instead of vue emits try tu utilize functions in CentralController usually CC.task.someFunction(...) or CC.group.someFunction(...) to trigger cross-component behavior. If the function doesn't exist, consider adding it to the relevant module (task/group) and then calling it from components instead of emitting events. Local functions should stay inside component or utils if something looks reusable.
