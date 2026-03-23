@@ -21,28 +21,7 @@
     "launchYear": null,
     "types": ["Public"]
   },
-  {
-    "date": "2026-04-05",
-    "localName": "Wielkanoc",
-    "name": "Easter Sunday",
-    "countryCode": "PL",
-    "fixed": false,
-    "global": true,
-    "counties": null,
-    "launchYear": null,
-    "types": ["Public"]
-  },
-  {
-    "date": "2026-04-06",
-    "localName": "Drugi Dzień Wielkanocy",
-    "name": "Easter Monday",
-    "countryCode": "PL",
-    "fixed": false,
-    "global": true,
-    "counties": null,
-    "launchYear": null,
-    "types": ["Public"]
-  },
+
   {
     "date": "2026-05-01",
     "localName": "Święto Pracy",

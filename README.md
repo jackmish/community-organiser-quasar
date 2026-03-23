@@ -44,7 +44,7 @@ The chosen name, CO21, stands for Community Organiser with the number chosen as 
 Below are a few screenshots from the in-app guide (files available in `public/app-guide`).
 
 <p align="center">
-  <img src="public/app-guide/CO21%20-%20main%20layout.jpg" alt="Main layout" style="max-width:800px;width:100%;height:auto" />
+  <img src="public/app-guide/CO21%20-%20main%20layout - B.jpg" alt="Main layout" style="max-width:800px;width:100%;height:auto" />
 </p>
 
 | Ways to complete task/subtask, as whole task or list edited anywhere like:

@@ -514,12 +514,12 @@ days[lastDayIso].tasks.push({
 export const sampleData = {
   groups: [
     { id: 'g-family', name: 'Family', color: '#1976d2', icon: 'group' },
-    { id: 'g-house', name: 'House', parentId: 'g-family', color: '#c9a676', icon: 'home' },
+    { id: 'g-house', name: 'House', parentId: 'g-family', color: '#a97636', icon: 'home' },
     { id: 'g-adam', name: 'Adam', parentId: 'g-family', color: '#4caf50', icon: 'person' },
     { id: 'g-nataly', name: 'Nataly', parentId: 'g-family', color: '#ffb300', icon: 'person' },
     { id: 'g-richard', name: 'Richard', parentId: 'g-family', color: '#90caf9', icon: 'person' },
     { id: 'g-elisa', name: 'Elisa', parentId: 'g-family', color: '#ce93d8', icon: 'person' },
-    { id: 'g-car1', name: 'Car 1', parentId: 'g-family', color: '#9e9e9e', icon: 'directions_car' },
+    { id: 'g-car1', name: 'Car 1', parentId: 'g-family', color: '#fff', icon: 'directions_car' },
     // Adam's subgroups
     { id: 'g-adam-work', name: 'Work', parentId: 'g-adam', color: '#1976d2', icon: 'work' },
     {
