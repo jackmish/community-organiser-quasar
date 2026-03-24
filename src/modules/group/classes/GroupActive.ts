@@ -2,7 +2,7 @@ import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 import * as groupManager from '../managers/groupManager';
 import type { Group } from './Group';
-import type { ActiveInterface } from '../ActiveInterface';
+import type { ActiveInterface } from 'src/types/ActiveInterface';
 
 /**
  * Manage the currently active group. Uses a generic group type `G`

@@ -160,7 +160,6 @@ import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from "vue-router";
 import NextEventNotification from "src/modules/task/components/list/NextEventNotification.vue";
-import { format } from "date-fns";
 import CC from "src/CentralController";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
