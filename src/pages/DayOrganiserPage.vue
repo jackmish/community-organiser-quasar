@@ -257,7 +257,7 @@ import logger from "src/utils/logger";
 import CC from "src/CentralController";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
-import type { Group } from "../modules/day-organiser";
+import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 
 const $q = useQuasar();

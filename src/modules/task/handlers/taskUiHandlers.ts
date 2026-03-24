@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { Task } from '../../day-organiser';
+import type { Task } from '../models/TaskModel';
 import { getCycleType } from 'src/modules/task/utils/occursOnDay';
 
 export function createTaskUiHandlers(args: {

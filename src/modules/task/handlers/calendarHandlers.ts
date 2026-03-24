@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { Task } from 'src/modules/day-organiser';
+import type { Task } from 'src/modules/task/models/TaskModel';
 import { resolveTask } from 'src/utils/taskResolve';
 
 export function createCalendarHandlers(args: {

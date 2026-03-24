@@ -6,7 +6,7 @@ import { useQuasar } from "quasar";
 import CC from "src/CentralController";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
-import ReplenishmentList from "../list/ReplenishmentList.vue";
+import ReplenishmentList from "./ReplenishmentList.vue";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -15,7 +15,7 @@ import {
   getReplenishText as themeGetReplenishText,
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
-} from "src/components/theme";
+} from "../theme";
 import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
 import { hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";
@@ -162,7 +162,7 @@ const {
   buildRepeatPayload,
   loadFromTask: loadRepeatFromTask,
   reset: resetRepeat,
-} = useRepeatSchedule({ currentEventDate: toRef(props, "selectedDate") as any });
+} = useRepeatSchedule({ currentEventDate: toRef(props, 'selectedDate') as any });
 
 // Local newTask state, default to today
 const today = new Date();
@@ -582,11 +582,7 @@ watch(
 
       // Ensure the time-type toggle reflects whether the loaded task has an hour set
       try {
-        timeType.value =
-          localNewTask.value.eventTime &&
-          String(localNewTask.value.eventTime).trim() !== ""
-            ? "exactHour"
-            : "wholeDay";
+        timeType.value = localNewTask.value.eventTime && String(localNewTask.value.eventTime).trim() !== "" ? "exactHour" : "wholeDay";
         // clear cachedTime when loading an explicit time so toggles behave predictably
         if (timeType.value === "exactHour") {
           cachedTime.value.hour = null;
@@ -851,7 +847,7 @@ watch(
 
 // Supplement composable's nth-mode handling with the actual current event day
 watch(repeatCycleType, (val) => {
-  if (val === "nth" && !everyNDayOfMonth.value) {
+  if (val === 'nth' && !everyNDayOfMonth.value) {
     try {
       const dayNum = Number(eventDateDay.value) || null;
       if (dayNum && !isNaN(dayNum)) everyNDayOfMonth.value = dayNum;
@@ -949,9 +945,7 @@ function onSubmit(event: Event) {
             @click.stop="groupMenu = true"
           >
             {{
-              getGroupName(localNewTask.groupId) ||
-              activeGroupLabelShort ||
-              $text("group.none")
+              getGroupName(localNewTask.groupId) || activeGroupLabelShort || $text('group.none')
             }}
           </q-chip>
           <q-menu
@@ -974,7 +968,7 @@ function onSubmit(event: Event) {
                   <q-icon name="clear" />
                 </q-item-section>
                 <q-item-section>
-                  <div style="font-weight: 600">{{ $text("group.none") }}</div>
+                  <div style="font-weight: 600">{{$text('group.none')}}</div>
                 </q-item-section>
               </q-item>
               <q-separator />
@@ -1587,13 +1581,7 @@ function onSubmit(event: Event) {
                           type="submit"
                           unelevated
                           :icon="submitIcon || undefined"
-                          :label="
-                            mode === 'add'
-                              ? $text('action.create')
-                              : mode === 'edit'
-                              ? $text('action.update')
-                              : $text('action.preview')
-                          "
+                          :label="mode === 'add' ? $text('action.create') : mode === 'edit' ? $text('action.update') : $text('action.preview')"
                           :disable="mode === 'preview'"
                           :style="`background: ${submitColor} !important; background-color: ${submitColor} !important; border-color: ${submitColor} !important; color: ${submitTextColor} !important;`"
                         />
@@ -1633,20 +1621,9 @@ function onSubmit(event: Event) {
                             class="row items-center"
                             style="gap: 8px; display: inline-flex; margin-left: 8px"
                           >
-                            <div>{{ $text("confirm.delete") }}</div>
-                            <q-btn
-                              flat
-                              dense
-                              color="negative"
-                              :label="$text('action.yes')"
-                              @click.stop="performDelete"
-                            />
-                            <q-btn
-                              flat
-                              dense
-                              :label="$text('action.no')"
-                              @click.stop="cancelDeleteConfirm"
-                            />
+                            <div>{{$text('confirm.delete')}}</div>
+                            <q-btn flat dense color="negative" :label="$text('action.yes')" @click.stop="performDelete" />
+                            <q-btn flat dense :label="$text('action.no')" @click.stop="cancelDeleteConfirm" />
                           </div>
                         </div>
                       </div>
