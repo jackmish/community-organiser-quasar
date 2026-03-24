@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import { createImportHandler } from '../../src/modules/storage/importHandlers';
+import { createImportHandler } from '../../src/modules/storage/handlers/importHandlers';
 
 function makeStorage(overrides: Partial<Record<string, any>> = {}) {
   return {

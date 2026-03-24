@@ -220,7 +220,7 @@
 
 <script setup lang="ts">
 import { todayString } from "src/utils/dateUtils";
-import { createImportHandler } from "src/modules/storage/importHandlers";
+import { createImportHandler } from "src/modules/storage/handlers/importHandlers";
 import { useDayRollover } from "src/composables/useDayRollover";
 
 import AddTaskForm from "src/modules/task/components/element/AddTaskForm.vue";
