@@ -1,4 +1,4 @@
-import type { OrganiserData } from '../day-organiser/types';
+import type { OrganiserData } from './types';
 import logger from '../../utils/logger';
 import type { ElectronAPI } from './types';
 

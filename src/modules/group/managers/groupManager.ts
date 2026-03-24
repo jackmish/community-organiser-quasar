@@ -1,4 +1,5 @@
-import type { OrganiserData, Group } from '../../day-organiser/types';
+import type { OrganiserData } from '../../storage/types';
+import type { Group } from '../models/GroupModel';
 import { Group as GroupClass } from '../models/GroupModel';
 import { computed } from 'vue';
 import type { Ref } from 'vue';
