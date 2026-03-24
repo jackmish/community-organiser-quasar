@@ -48,7 +48,7 @@ import {
   priorityTextColor,
   priorityDefinitions,
   typeIcons,
-} from "../theme";
+} from "src/components/theme";
 import { occursOnDay, getCycleType } from "src/modules/task/utils/occursOnDay";
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result

@@ -6,7 +6,9 @@
   >
     <div class="row items-center" style="gap: 8px">
       <q-icon name="check" color="grey-7" />
-      <div class="text-subtitle2"><strong>{{$text('action.done')}}</strong></div>
+      <div class="text-subtitle2">
+        <strong>{{ $text("action.done") }}</strong>
+      </div>
     </div>
     <div class="q-mt-sm done-items-grid">
       <div
@@ -63,8 +65,6 @@ async function onDoneClick(task: any) {
       await CC.task.status.undoCycleDone(date, id);
     } else {
       await CC.task.status.toggleComplete(date, id);
-
-
     }
   } catch (e) {
     // ignore
@@ -78,8 +78,8 @@ import {
   findReplenishSet,
   getReplenishBg,
   getReplenishText,
-} from "../theme";
-import { typeIcons } from "../theme";
+} from "src/components/theme";
+import { typeIcons } from "src/components/theme";
 import { getCycleType } from "src/modules/task/utils/occursOnDay";
 
 // Replenish color data imported from theme

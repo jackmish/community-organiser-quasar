@@ -1,7 +1,10 @@
 <template>
   <q-card
     flat
-    :class="['q-pa-sm q-mb-md', size === 'small' ? 'replenish-small' : 'replenish-default']"
+    :class="[
+      'q-pa-sm q-mb-md',
+      size === 'small' ? 'replenish-small' : 'replenish-default',
+    ]"
     :style="containerStyle"
   >
     <!-- <div class="row items-center" style="gap: 8px">
@@ -41,30 +44,30 @@
 </template>
 
 <script setup lang="ts">
-import { useLongPress } from 'src/composables/useLongPress';
+import { useLongPress } from "src/composables/useLongPress";
 import {
   findReplenishSet,
   getReplenishBg as themeGetReplenishBg,
   getReplenishText as themeGetReplenishText,
-} from '../theme';
+} from "src/components/theme";
 
 const props = defineProps<{
   replenishTasks: any[];
-  size?: 'default' | 'small';
+  size?: "default" | "small";
 }>();
 
-const size = props.size || 'default';
+const size = props.size || "default";
 
-import { computed } from 'vue';
+import { computed } from "vue";
 
 // access group list to resolve group names for tiny labels
-import CC from 'src/CentralController';
+import CC from "src/CentralController";
 const groups = CC.group.list.all;
 
 function getGroupName(groupId: any) {
-  if (!groupId) return '';
+  if (!groupId) return "";
   const g = groups.value.find((x: any) => String(x.id) === String(groupId));
-  return g ? g.name : '';
+  return g ? g.name : "";
 }
 
 function isNewGroup(idx: number, task: any) {
@@ -100,14 +103,14 @@ const sortedReplenish = computed(() => {
     for (let i = 0; i < max; i++) {
       if (i >= pa.length) return -1; // a is ancestor (shorter path) -> comes first
       if (i >= pb.length) return 1; // b is ancestor
-      const na = (pa[i] || '').toLowerCase();
-      const nb = (pb[i] || '').toLowerCase();
+      const na = (pa[i] || "").toLowerCase();
+      const nb = (pb[i] || "").toLowerCase();
       if (na < nb) return -1;
       if (na > nb) return 1;
     }
     // same group path: fallback to task name
-    const na = (a.name || '').toLowerCase();
-    const nb = (b.name || '').toLowerCase();
+    const na = (a.name || "").toLowerCase();
+    const nb = (b.name || "").toLowerCase();
     if (na < nb) return -1;
     if (na > nb) return 1;
     return 0;
@@ -119,8 +122,8 @@ const sortedReplenish = computed(() => {
 // multiple columns in the parent grid. For small mode: 1-3 items -> span 1,
 // 4-6 -> span 2, 7-9 -> span 3, etc.
 const containerStyle = computed(() => {
-  const base: any = { background: 'transparent', borderRadius: '8px' };
-  if (size !== 'small') return base;
+  const base: any = { background: "transparent", borderRadius: "8px" };
+  if (size !== "small") return base;
   const n = Array.isArray(props.replenishTasks) ? props.replenishTasks.length : 0;
   const span = Math.max(1, Math.ceil(n / 3));
   // Set gridColumn to span N so the card consumes multiple columns in the parent's grid
@@ -129,9 +132,9 @@ const containerStyle = computed(() => {
 });
 
 const emit = defineEmits<{
-  (e: 'toggle-status', task: any): void;
-  (e: 'edit-task', task: any): void;
-  (e: 'replenish-restore', taskId: string): void;
+  (e: "toggle-status", task: any): void;
+  (e: "edit-task", task: any): void;
+  (e: "replenish-restore", taskId: string): void;
 }>();
 
 // Use centralized replenish color helpers from theme
@@ -139,8 +142,13 @@ const getReplenishBg = (task: any) => themeGetReplenishBg(task.color_set);
 const getReplenishText = (task: any) => themeGetReplenishText(task.color_set);
 
 // Use local long-press to emit edit requests
-const { startLongPress, cancelLongPress, setLongPressHandler, longPressTriggered } = useLongPress();
-setLongPressHandler((t: any) => emit('edit-task', t));
+const {
+  startLongPress,
+  cancelLongPress,
+  setLongPressHandler,
+  longPressTriggered,
+} = useLongPress();
+setLongPressHandler((t: any) => emit("edit-task", t));
 
 function onReplenishClick(task: any) {
   // If a long-press handler was triggered, don't toggle status on the subsequent click.
@@ -153,11 +161,11 @@ function onReplenishClick(task: any) {
   } catch (e) {
     // ignore and proceed
   }
-  emit('toggle-status', task);
+  emit("toggle-status", task);
 }
 
 function onDoneClick(task: any) {
-  emit('toggle-status', task);
+  emit("toggle-status", task);
 }
 </script>
 

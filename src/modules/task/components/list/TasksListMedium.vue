@@ -28,7 +28,9 @@
               <div style="display: flex; align-items: center; gap: 8px; flex: 1 1 auto">
                 <q-avatar
                   size="40"
-                  :style="{ background: item._group.color || getGroupColor(item._group.id) }"
+                  :style="{
+                    background: item._group.color || getGroupColor(item._group.id),
+                  }"
                 >
                   <q-icon
                     :name="item._group.icon || getGroupIcon(item._group.id) || 'group'"
@@ -77,7 +79,10 @@
                     color: themePriorityTextColor('medium'),
                   }"
                 >
-                  <q-icon :name="themePriorityDefinitions['medium']?.icon || 'label'" size="14px" />
+                  <q-icon
+                    :name="themePriorityDefinitions['medium']?.icon || 'label'"
+                    size="14px"
+                  />
                   {{ item._group.medium }}
                 </span>
                 <span
@@ -127,7 +132,8 @@
                   <q-item-label
                     :class="[
                       {
-                        'text-strike': Number(item.status_id) === 0 && item.timeMode !== 'prepare',
+                        'text-strike':
+                          Number(item.status_id) === 0 && item.timeMode !== 'prepare',
                       },
                       'title-ellipsis',
                     ]"
@@ -193,7 +199,11 @@
                 </span>
                 {{ getEventHoursDisplay(item) }}
               </q-item-label>
-              <q-item-label v-else-if="getDisplayDescription(item)" caption class="task-desc">
+              <q-item-label
+                v-else-if="getDisplayDescription(item)"
+                caption
+                class="task-desc"
+              >
                 <span
                   class="priority-inline"
                   :title="item.priority"
@@ -214,7 +224,14 @@
           <q-item-section side>
             <div class="task-controls-grid">
               <div class="controls-edit">
-                <q-btn flat round dense icon="edit" class="edit-btn" @click.stop="editTask(item)" />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="edit"
+                  class="edit-btn"
+                  @click.stop="editTask(item)"
+                />
               </div>
 
               <div class="controls-menu">
@@ -251,9 +268,9 @@
                       <q-item-section avatar style="min-width: 36px">
                         <q-icon name="edit" color="#ff9800" />
                       </q-item-section>
-                      <q-item-section style="color: rgba(0, 0, 0, 0.95) !important"
-                        >{{$text('action.edit')}}</q-item-section
-                      >
+                      <q-item-section style="color: rgba(0, 0, 0, 0.95) !important">{{
+                        $text("action.edit")
+                      }}</q-item-section>
                     </q-item>
                     <template v-if="pendingDeleteId !== item.id">
                       <q-item
@@ -269,15 +286,23 @@
                         <q-item-section avatar style="min-width: 36px">
                           <q-icon name="delete" color="#ffffff" />
                         </q-item-section>
-                        <q-item-section style="color: #ffffff !important">{{$text('action.delete')}}</q-item-section>
+                        <q-item-section style="color: #ffffff !important">{{
+                          $text("action.delete")
+                        }}</q-item-section>
                       </q-item>
                     </template>
                     <template v-else>
                       <q-item>
                         <q-item-section>
                           <div style="display: flex; align-items: center; gap: 8px">
-                            <div style="flex: 1; font-weight: 600; color: rgba(0, 0, 0, 0.95)">
-                              {{$text('confirm.delete')}}
+                            <div
+                              style="
+                                flex: 1;
+                                font-weight: 600;
+                                color: rgba(0, 0, 0, 0.95);
+                              "
+                            >
+                              {{ $text("confirm.delete") }}
                             </div>
                             <div style="display: flex; gap: 6px">
                               <q-btn
@@ -287,7 +312,12 @@
                                 :label="$text('action.delete')"
                                 @click.stop="() => performDelete(item.id)"
                               />
-                              <q-btn dense flat :label="$text('action.cancel')" @click.stop="cancelDelete" />
+                              <q-btn
+                                dense
+                                flat
+                                :label="$text('action.cancel')"
+                                @click.stop="cancelDelete"
+                              />
                             </div>
                           </div>
                         </q-item-section>
@@ -297,7 +327,9 @@
                 </q-menu>
               </div>
 
-              <div class="group-name">{{ getGroupName(item.groupId || item.group_id) }}</div>
+              <div class="group-name">
+                {{ getGroupName(item.groupId || item.group_id) }}
+              </div>
             </div>
           </q-item-section>
         </q-item>
@@ -307,11 +339,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { $text } from 'src/modules/lang';
+import { ref, computed } from "vue";
+import { $text } from "src/modules/lang";
 
-import { useLongPress } from 'src/composables/useLongPress';
-import ReplenishmentList from './ReplenishmentList.vue';
+import { useLongPress } from "src/composables/useLongPress";
+import ReplenishmentList from "./ReplenishmentList.vue";
 
 const props = defineProps<{
   tasksWithTime: any[];
@@ -322,18 +354,23 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'toggle-status', task: any): void;
-  (e: 'edit-task', task: any): void;
-  (e: 'task-click', task: any): void;
-  (e: 'delete-task', id: string): void;
+  (e: "toggle-status", task: any): void;
+  (e: "edit-task", task: any): void;
+  (e: "task-click", task: any): void;
+  (e: "delete-task", id: string): void;
 }>();
 
 const openDeleteMenu = ref<string | null>(null);
 
-const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
+const {
+  startLongPress,
+  cancelLongPress,
+  longPressTriggered,
+  setLongPressHandler,
+} = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import CC from 'src/CentralController';
+import CC from "src/CentralController";
 const groups = CC.group.list.all;
 const activeGroup = CC.group.active.activeGroup;
 import {
@@ -342,12 +379,12 @@ import {
   priorityDefinitions as themePriorityDefinitions,
   typeIcons,
   highlightIcon,
-} from '../theme';
+} from "src/components/theme";
 import {
   formatDisplayDate,
   formatEventHoursDiff,
   parseYmdLocal,
-} from 'src/modules/task/utils/occursOnDay';
+} from "src/modules/task/utils/occursOnDay";
 
 const openItemMenuId = ref<string | null>(null);
 const pendingDeleteId = ref<string | null>(null);
@@ -364,7 +401,7 @@ function requestDelete(id: string) {
 function performDelete(id: string) {
   pendingDeleteId.value = null;
   openItemMenuId.value = null;
-  emit('delete-task', id);
+  emit("delete-task", id);
 }
 
 function cancelDelete() {
@@ -379,11 +416,12 @@ const mergedTasks = computed(() => {
   }
   // Replenishment floating card: insert as a full-width sentinel before tasks
   if (props.replenishTasks && props.replenishTasks.length > 0) {
-    out.push({ __isReplenish: true, id: 'replenish-card', _items: props.replenishTasks });
+    out.push({ __isReplenish: true, id: "replenish-card", _items: props.replenishTasks });
   }
   // If an active group is selected and it's a child, exclude tasks that belong
   // to any ancestor (parent) groups so parent tasks don't appear inside child view.
-  const activeId = activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
+  const activeId =
+    activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
 
   const isAncestor = (ancestorId: any, childId: any) => {
     if (!ancestorId || !childId) return false;
@@ -421,27 +459,27 @@ const mergedTasks = computed(() => {
   return out;
 });
 
-const priorityColor = (priority: any) => themePriorityColors[priority] || 'transparent';
+const priorityColor = (priority: any) => themePriorityColors[priority] || "transparent";
 const priorityTextColor = (priority: any) => themePriorityTextColor(priority);
 
 // Colors for task types (match AddTaskForm.vue)
 const typeColors: Record<string, string> = {
-  TimeEvent: '#2196f3', // blue
-  Todo: '#4caf50', // green
-  NoteLater: '#9e9e9e', // grey
-  Replenish: '#c9a676', // yellow
+  TimeEvent: "#2196f3", // blue
+  Todo: "#4caf50", // green
+  NoteLater: "#9e9e9e", // grey
+  Replenish: "#c9a676", // yellow
 };
 
 const getGroupName = (groupId?: string) => {
-  if (!groupId) return 'Unknown';
+  if (!groupId) return "Unknown";
   const g = groups.value.find((gg: any) => gg.id === groupId);
-  return g ? g.name : 'Unknown';
+  return g ? g.name : "Unknown";
 };
 
 const getGroupColor = (groupId?: string) => {
-  if (!groupId) return '#1976d2';
+  if (!groupId) return "#1976d2";
   const g = groups.value.find((gg: any) => gg.id === groupId);
-  return g?.color || '#1976d2';
+  return g?.color || "#1976d2";
 };
 
 const getGroupIcon = (groupId?: string) => {
@@ -462,37 +500,38 @@ function selectHiddenGroup(g: any) {
 // parent navigation handled elsewhere in the UI
 
 const isTodoType = (task: any) => {
-  const t = String(task?.type || task?.type_id || '').toLowerCase();
-  return t.includes('todo');
+  const t = String(task?.type || task?.type_id || "").toLowerCase();
+  return t.includes("todo");
 };
 
 const getEventHoursDisplay = (task: any) => {
-  const dateStr = task?.date || task?.eventDate || '';
-  const timeStr = task?.eventTime || '';
-  if (!dateStr) return '';
+  const dateStr = task?.date || task?.eventDate || "";
+  const timeStr = task?.eventTime || "";
+  if (!dateStr) return "";
 
   const formatShortDate = (s: string) => {
     const d = parseYmdLocal(s) || new Date(s);
     if (!d || isNaN(d.getTime())) return formatDisplayDate(s);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
     const yy = String(d.getFullYear()).slice(-2);
     return `${dd}.${mm}.${yy}`;
   };
 
   // If task is a prepare/expiration reminder, show remaining days to the event
   try {
-    const mode = task?.timeMode || (task && (task.timeOffsetDays ? 'prepare' : 'event')) || 'event';
-    if (mode === 'prepare' || mode === 'expiration') {
+    const mode =
+      task?.timeMode || (task && (task.timeOffsetDays ? "prepare" : "event")) || "event";
+    if (mode === "prepare" || mode === "expiration") {
       const evD = parseYmdLocal(dateStr);
       const today = new Date();
       const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       if (evD) {
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
-        let rel = '';
-        if (diffDays === 0) rel = 'Today';
-        else if (diffDays === 1) rel = 'Tomorrow';
+        let rel = "";
+        if (diffDays === 0) rel = "Today";
+        else if (diffDays === 1) rel = "Tomorrow";
         else if (diffDays > 1) rel = `In ${diffDays}days`;
         else rel = `${Math.abs(diffDays)} days ago`;
 
@@ -521,7 +560,7 @@ const getEventHoursDisplay = (task: any) => {
         if (diffDays === 0) return `Today | ${timeStr}`;
         if (diffDays === 1) return `Tomorrow | ${timeStr}`;
         if (diffDays > 1 && diffDays <= 6)
-          return `${evD.toLocaleDateString(undefined, { weekday: 'long' })} | ${timeStr}`;
+          return `${evD.toLocaleDateString(undefined, { weekday: "long" })} | ${timeStr}`;
       }
     } catch (e) {
       // fall back to short date formatting
@@ -537,9 +576,9 @@ const getEventHoursDisplay = (task: any) => {
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((dateMid.getTime() - todayMid.getTime()) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays === -1) return 'Yesterday';
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
   return formatDisplayDate(dateStr);
 };
 
@@ -547,10 +586,10 @@ const getEventHoursDisplay = (task: any) => {
 // duplicate implementations and timezone issues.
 
 const getDisplayName = (task: any) => {
-  if (!task) return '';
-  const name = task.name || '';
+  if (!task) return "";
+  const name = task.name || "";
   try {
-    if (Number(task.status_id) === 0 && task.timeMode === 'prepare') {
+    if (Number(task.status_id) === 0 && task.timeMode === "prepare") {
       return `${name} [prepared]`;
     }
   } catch (e) {
@@ -562,37 +601,37 @@ const getDisplayName = (task: any) => {
 const hasDate = (task: any) => {
   // Consider a task to "have a date" if it's a time-event type or has explicit date/time
   if (!task) return false;
-  if (task.type === 'event' || task.type_id === 'TimeEvent') return true;
+  if (task.type === "event" || task.type_id === "TimeEvent") return true;
   if (task?.eventTime) return true;
   if (task?.date || task?.eventDate) return true;
   return false;
 };
 
 const getDisplayDescription = (task: any) => {
-  const desc = (task.description || '').trim();
-  const name = (task.name || '').trim();
-  if (!desc) return '';
+  const desc = (task.description || "").trim();
+  const name = (task.name || "").trim();
+  if (!desc) return "";
   if (!name) return desc;
-  if (desc === name) return '';
+  if (desc === name) return "";
   if (desc.startsWith(name)) {
     const remainder = desc
       .slice(name.length)
-      .replace(/^[\s\-:\u2013\u2014]+/, '')
+      .replace(/^[\s\-:\u2013\u2014]+/, "")
       .trim();
-    return remainder || '';
+    return remainder || "";
   }
   return desc;
 };
 
-import { countTodoSubtasks, countStarredUndone } from 'src/modules/task/utils/todo';
+import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
 
 const itemStyle = (task: any) => {
   if (!task) return {};
   // keep "done" items using the grey styles
   if (Number(task.status_id) === 0) return {};
-  const bg = priorityColor(task.priority) || 'transparent';
-  const color = priorityTextColor(task.priority) || 'inherit';
-  const typeColor = typeColors[task.type_id || task.type] || 'transparent';
+  const bg = priorityColor(task.priority) || "transparent";
+  const color = priorityTextColor(task.priority) || "inherit";
+  const typeColor = typeColors[task.type_id || task.type] || "transparent";
   return {
     backgroundColor: bg,
     color,
@@ -607,12 +646,12 @@ function handleTaskClick(task: any) {
     longPressTriggered.value = false;
     return;
   }
-  emit('task-click', task);
+  emit("task-click", task);
 }
 
 async function toggleStatus(task: any) {
   try {
-    const date = task?.date || task?.eventDate || '';
+    const date = task?.date || task?.eventDate || "";
     await CC.task.status.toggleComplete(date, task.id || task._id || task.uuid);
   } catch (e) {
     // ignore
@@ -620,12 +659,12 @@ async function toggleStatus(task: any) {
 }
 
 function editTask(task: any) {
-  emit('edit-task', task);
+  emit("edit-task", task);
 }
 
 function confirmDelete(id: string) {
   openDeleteMenu.value = null;
-  emit('delete-task', id);
+  emit("delete-task", id);
 }
 </script>
 

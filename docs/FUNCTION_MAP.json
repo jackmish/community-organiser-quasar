@@ -280,7 +280,7 @@
           ]
         },
         {
-          "file": "src/components/task/TasksListMedium.vue",
+          "file": "src/modules/task/components/TasksListMedium.vue",
           "exports": ["default"],
           "type": "vue-component",
           "description": "Medium-size task list grid (uses ReplenishmentList and inline task cards).",

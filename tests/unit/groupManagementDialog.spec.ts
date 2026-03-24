@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
-import GroupManagementDialog from '../../src/components/group/GroupManagementDialog.vue';
+import GroupManagementDialog from '../../src/modules/group/components/GroupManagementDialog.vue';
 import CC from '../../src/CentralController';
 import * as groupManager from '../../src/modules/group/managers/groupManager';
 import * as storageUtils from '../../src/utils/storageUtils';

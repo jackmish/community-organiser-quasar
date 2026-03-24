@@ -65,7 +65,7 @@
               />
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
-              <p class="text-grey-6">{{$text('ui.no_tasks_for_day')}}</p>
+              <p class="text-grey-6">{{ $text("ui.no_tasks_for_day") }}</p>
             </q-card-section>
 
             <!-- hidden groups are rendered inside TasksListSmall now | Maybe it would be available to switch inside app to TasksListMedium in the future -->
@@ -223,17 +223,17 @@ import { todayString } from "src/utils/dateUtils";
 import { createImportHandler } from "src/modules/storage/importHandlers";
 import { useDayRollover } from "src/composables/useDayRollover";
 
-import AddTaskForm from "../components/task/AddTaskForm.vue";
+import AddTaskForm from "src/modules/task/components/element/AddTaskForm.vue";
 import Watermark from "src/components/ui/Watermark.vue";
 
-import DoneTasksList from "../components/task/DoneTasksList.vue";
+import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
-import GroupManagementDialog from "../components/group/GroupManagementDialog.vue";
+import GroupManagementDialog from "src/modules/group/components/GroupManagementDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
-import TaskPreview from "../components/task/TaskPreview.vue";
+import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
-import GroupSelectHeader from "../components/group/GroupSelectHeader.vue";
+import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
 import { useGroupColor } from "src/composables/useGroupColor";
 import { createLineEventHandlers } from "src/modules/task/handlers/lineEventHandlers";
@@ -242,7 +242,7 @@ import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers"
 import { createCalendarHandlers } from "src/modules/task/handlers/calendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
 import { createTaskCrudHandlers } from "src/modules/task/handlers/taskCrudHandlers";
-import TasksListSmall from "src/components/task/TasksListSmall.vue";
+import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -417,7 +417,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
     await new Promise((r) => requestAnimationFrame(r));
     try {
       const activeId = CC.task.active.task.value?.id;
-        if (
+      if (
         !activeId ||
         String(activeId) !== String(id) ||
         CC.task.active.mode.value !== "edit"
@@ -496,7 +496,8 @@ const { onLineCollapsed, onLineExpanded } = createLineEventHandlers();
 const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
   activeTask: CC.task.active.task,
   activeMode: CC.task.active.mode,
-  setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
+  setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) =>
+    CC.task.active.setTask(p),
   panelHidden,
   currentDate: CC.task.time.currentDate,
 });
@@ -683,7 +684,8 @@ const {
   editTask,
   setTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
   activeMode: CC.task.active.mode,
-  setPreviewTask: (p: Parameters<typeof CC.task.active.setTask>[0]) => CC.task.active.setTask(p),
+  setPreviewTask: (p: Parameters<typeof CC.task.active.setTask>[0]) =>
+    CC.task.active.setTask(p),
 });
 
 // compute task lists in a separate module for reuse and testability
@@ -718,7 +720,7 @@ const getGroupName = (groupId?: string): string => {
 // Color/style computeds derived from the active group
 const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(
   CC.group.list.all,
-  CC.group.active.activeGroup,
+  CC.group.active.activeGroup
 );
 
 // Extract add/update handlers into a task CRUD module

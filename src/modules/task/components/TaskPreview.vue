@@ -242,7 +242,7 @@ import {
   priorityDefinitions,
   priorityIcons,
   highlightIcon,
-} from "../theme";
+} from "src/components/theme";
 import {
   formatDisplayDate,
   formatEventHoursDiff,

@@ -105,7 +105,7 @@ import {
   priorityDefinitions as themePriorityDefinitions,
   typeIcons,
   highlightIcon,
-} from "../theme";
+} from "src/components/theme";
 import { hexToRgba, getContrastColor } from "src/utils/colorUtils";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";

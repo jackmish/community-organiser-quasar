@@ -7,7 +7,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 - Frontend: Quasar (Vue 3 + Vite) in `src/`.
 - Desktop: Electron integration lives in `src-electron/` and `electron-main.ts`.
 - Mobile: Capacitor config and Android targets are in `src-capacitor/`.
-- Domain separation: UI components are grouped by domain under `src/components/` (e.g. `task/`, `group/`, `settings/`). Business logic and feature modules live under `src/modules/` (e.g. `task`, `group`, `day-organiser`).
+- Domain separation: Domain-specific Vue components are co-located with their module under `src/modules/<domain>/components/` (e.g. `src/modules/task/components/`, `src/modules/group/components/`). Shared/cross-cutting components (ui, time, settings) remain in `src/components/`. Business logic and feature modules live under `src/modules/` (e.g. `task`, `group`, `day-organiser`).
 
 2. Key files and services to inspect first
 
@@ -30,7 +30,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 4. Project-specific conventions & patterns
 
-- Domain grouping: components are grouped into folders by feature (e.g. `src/components/task/AddTaskForm.vue`) — follow this when adding UI.
+- Domain grouping: domain-specific components live in `src/modules/<domain>/components/` (e.g. `src/modules/task/components/AddTaskForm.vue`); shared/cross-cutting components stay in `src/components/` (e.g. `ui/`, `time/`, `settings/`) — follow this when adding UI.
 - Composition API + TypeScript: prefer composables for reusable logic; avoid ad-hoc cross-component string-based emits where a service call is clearer.
 - Storage: desktop data saved under `%APPDATA%/community-organiser/` — for Electron-only changes consider `src-electron` codepaths.
 - Logging: use `utils/logger.ts` helper to keep logs consistent.
@@ -39,7 +39,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 -User instructions section (for AI agents):
 
-- After making code changes, automatically run the following checks **without asking**: `npm run lint`, `npx tsc --noEmit`, and `npm run test:unit`. If any step fails, fix the failures and re-run the checks until the test suite passes. Do **not** run `npm run format` (formatting can create noisy diffs and may conflict with local editor settings).
+- After making code changes, automatically run the following checks **without asking**: `npm run lint`, `npx tsc --noEmit`, `node scripts/check-imports.cjs`, and `npm run test:unit`. If any step fails, fix the failures and re-run the checks until the test suite passes. Do **not** run `npm run format` (formatting can create noisy diffs and may conflict with local editor settings).
 - When the changes are complete and tests pass, remove or silence ordinary `console.log` output so the console remains clean; keep error, warning and important informational messages visible.
 - Try to update this `copilot-instructions.md` file after significant refactorings once the refactor is implemented and its tests pass.
 - If you discover a better, more reliable way to enforce or communicate these policies to the agent (for example, a pre-commit hook, CI job, or a dedicated checklist file), adopt that approach and add a short note here linking to it.
@@ -87,7 +87,7 @@ if ($bad.Count -gt 0) {
 
 7. Where to look for examples
 
-- UI pattern: `src/components/task/AddTaskForm.vue` (task creation patterns).
+- UI pattern: `src/modules/task/components/AddTaskForm.vue` (task creation patterns).
 - Domain module: `src/modules/group/` and `src/modules/day-organiser/` show how business logic is organized.
 - Electron entry: `src-electron/electron-main.ts`.
 
@@ -159,7 +159,7 @@ rg "app\('storage'\)|useLongPress|save\(" src || true
 - Task domain: `src/modules/task/` — task business logic and public API used by UI components.
 - Group domain: `src/modules/group/` — group hierarchy, persistence calls typically via `app('storage')`.
 - Storage: `src/modules/storage/` and `src/services/appService.ts` (storage is registered as `storage` service in `apiRoot.ts`).
-- UI components: `src/components/*` grouped by domain (`task/`, `group/`, `settings/`, `time/`).
+- UI components: domain-specific components in `src/modules/<domain>/components/` (e.g. `task/`, `group/`); shared components in `src/components/` (e.g. `ui/`, `time/`, `settings/`).
 - Composables: `src/composables/` — reusable UI and behavior code (e.g., `useClock.ts`, `useLongPress.ts`).
 - Services: `src/services/` — cross-cutting services (notably `appService.ts`).
 - Electron entry & desktop-specific: `src-electron/electron-main.ts` and `src-electron/*`.

@@ -118,7 +118,7 @@
 import { ref, watch, computed } from "vue";
 import { $text } from "src/modules/lang";
 import logger from "src/utils/logger";
-import { typeIcons, priorityIcons } from "../theme";
+import { typeIcons, priorityIcons } from "src/components/theme";
 
 import CC from "src/CentralController";
 import * as groupManager from 'src/modules/group/managers/groupManager';

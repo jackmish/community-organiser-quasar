@@ -1,16 +1,19 @@
 <template>
-  <DoneTasksList :done-tasks="doneTasks" @toggle-status="$emit('toggle-status', $event)" />
+  <DoneTasksList
+    :done-tasks="doneTasks"
+    @toggle-status="$emit('toggle-status', $event)"
+  />
 </template>
 
 <script setup lang="ts">
-import DoneTasksList from './DoneTasksList.vue';
+import DoneTasksList from "./DoneTasksList.vue";
 
 const props = defineProps<{
   doneTasks: any[];
 }>();
 
 const emit = defineEmits<{
-  (e: 'toggle-status', task: any): void;
+  (e: "toggle-status", task: any): void;
 }>();
 </script>
 

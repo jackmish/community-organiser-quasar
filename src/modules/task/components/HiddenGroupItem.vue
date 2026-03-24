@@ -60,7 +60,7 @@ import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
   priorityDefinitions as themePriorityDefinitions,
-} from '../theme';
+} from 'src/components/theme';
 
 const props = defineProps<{ group: any }>();
 const emit = defineEmits<{

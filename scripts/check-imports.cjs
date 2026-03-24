@@ -27,7 +27,17 @@ function walk(dir, filelist = []) {
 
 function readFile(file) {
   try {
-    return fs.readFileSync(file, 'utf8');
+    let content = fs.readFileSync(file, 'utf8');
+    // For .vue files, only scan <script> blocks to avoid false matches
+    // in <template> or <style> sections (e.g. CSS `from` in @import)
+    if (file.endsWith('.vue')) {
+      const scriptBlocks = [];
+      const scriptRe = /<script(\b[^>]*)>([\s\S]*?)<\/script>/gi;
+      let sm;
+      while ((sm = scriptRe.exec(content))) scriptBlocks.push(sm[2]);
+      content = scriptBlocks.join('\n');
+    }
+    return content;
   } catch (e) {
     return '';
   }

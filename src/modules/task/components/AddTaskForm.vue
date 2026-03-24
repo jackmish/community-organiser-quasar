@@ -15,7 +15,7 @@ import {
   getReplenishText as themeGetReplenishText,
   typeColors as themeTypeColors,
   typeTextColors as themeTypeTextColors,
-} from "../theme";
+} from "src/components/theme";
 import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
 import { hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";

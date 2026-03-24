@@ -159,7 +159,7 @@ import { langOptions } from "src/modules/lang/options";
 import pkg from "../../package.json";
 // Import package.json so the renderer can display the app version reliably
 import { useRouter, useRoute } from "vue-router";
-import NextEventNotification from "../components/task/NextEventNotification.vue";
+import NextEventNotification from "src/modules/task/components/list/NextEventNotification.vue";
 import { format } from "date-fns";
 import CC from "src/CentralController";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
@@ -365,7 +365,7 @@ async function toggleTestMode() {
   // Enable test mode only. Disallow reverting to normal mode from the UI.
   menuOpen.value = false;
   try {
-      if (
+    if (
       presentation &&
       typeof (presentation as any).enableTestModeWithApi === "function"
     ) {
