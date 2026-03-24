@@ -18,7 +18,7 @@ vi.mock('src/modules/presentation/presentationManager', () => ({
   presentation: { mode: { value: 'default' } },
 }));
 vi.mock('src/modules/presentation/sampleData', () => ({ sampleData: {} }));
-vi.mock('src/modules/storage', () => ({
+vi.mock('src/modules/storage/StorageBackend', () => ({
   storage: {
     loadData: vi.fn(async () => ({ days: {}, groups: [], lastModified: '' })),
     saveData: vi.fn(async () => {}),
@@ -43,7 +43,7 @@ import {
   listFromDays,
 } from '../../src/modules/task/managers/taskManager';
 import { createTaskComputed } from '../../src/modules/task/computed/computedTaskLists';
-import { construct as constructStorage } from '../../src/modules/storage/apiStorage';
+import { construct as constructStorage } from '../../src/modules/storage/StorageController';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -383,7 +383,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage');
+    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     // Construct a fresh storage instance with stub APIs
@@ -418,7 +418,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage');
+    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});
@@ -451,7 +451,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage');
+    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});

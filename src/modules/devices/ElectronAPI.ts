@@ -9,5 +9,3 @@ export interface ElectronAPI {
   ensureDir: (dirPath: string) => Promise<boolean>;
   readDir: (dirPath: string) => Promise<string[]>;
 }
-
-export type MaybeElectronAPI = ElectronAPI | undefined;

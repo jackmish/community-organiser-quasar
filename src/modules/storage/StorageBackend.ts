@@ -1,6 +1,12 @@
-import type { OrganiserData } from './models/OrganiserData';
 import logger from '../../utils/logger';
-import type { ElectronAPI } from './types';
+import type { DayData } from '../task/models/classes/DayData';
+import type { Group } from '../group/models/GroupModel';
+import type { ElectronAPI } from '../devices/ElectronAPI';
+export interface OrganiserData {
+  days: Record<string, DayData>;
+  groups: Group[];
+  lastModified: string;
+}
 
 declare global {
   // Augment Window so existing code that uses `window.electronAPI` keeps working.

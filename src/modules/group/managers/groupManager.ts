@@ -1,4 +1,4 @@
-import type { OrganiserData } from '../../storage/models/OrganiserData';
+import type { OrganiserData } from '../../storage/StorageBackend';
 import type { Group } from '../models/GroupModel';
 import { Group as GroupClass } from '../models/GroupModel';
 import { computed } from 'vue';

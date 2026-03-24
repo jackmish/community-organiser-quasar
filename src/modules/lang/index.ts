@@ -7,7 +7,7 @@ let currentCountry = 'US';
 const dict = ref<Translations>({});
 const fallback = ref<Translations>({});
 
-import { getSetting, setSetting } from 'src/modules/storage';
+import { getSetting, setSetting } from 'src/modules/storage/StorageBackend';
 
 async function loadJson(path: string): Promise<Translations | null> {
   try {
