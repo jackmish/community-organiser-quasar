@@ -7,7 +7,7 @@
 
 import { computed } from 'vue';
 import type { PiniaPluginContext } from 'pinia';
-import { useGroupStore } from 'src/modules/group/GroupController';
+import { useGroupController } from 'src/modules/group/GroupController';
 import type { Task } from 'src/modules/task/models/TaskModel';
 
 export interface TaskStats {
@@ -28,7 +28,7 @@ declare module 'pinia' {
 export function taskStatsPiniaPlugin({ store, pinia }: PiniaPluginContext) {
   if (store.$id !== 'task') return;
 
-  const groupStore = useGroupStore(pinia);
+  const groupStore = useGroupController(pinia);
 
   const taskStats = computed<TaskStats>(() => {
     const activeId = groupStore.active.activeGroup.value?.value ?? null;

@@ -6,7 +6,7 @@ import { GroupList } from './models/classes/GroupList';
 import { GroupActive } from './models/classes/GroupActive';
 import type { Group } from './models/GroupModel';
 
-class GroupStore {
+class GroupController {
   readonly groups = ref<Group[]>([]);
   readonly activeGroupRef = ref<{ label: string; value: string | null } | null>(null);
   readonly list = markRaw(new GroupList(this.groups as any, this.activeGroupRef));
@@ -30,4 +30,4 @@ class GroupStore {
   }
 }
 
-export const useGroupStore = defineStore('group', () => new GroupStore());
+export const useGroupController = defineStore('group', () => new GroupController());

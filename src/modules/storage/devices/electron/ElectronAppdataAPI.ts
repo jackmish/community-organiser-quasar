@@ -1,4 +1,4 @@
-export interface ElectronAPI {
+export interface ElectronAppdataAPI {
   readJsonFile: (filePath: string) => Promise<any>;
   writeJsonFile: (filePath: string, data: any) => Promise<boolean>;
   writeFile: (filePath: string, data: string) => Promise<boolean>;
@@ -9,3 +9,5 @@ export interface ElectronAPI {
   ensureDir: (dirPath: string) => Promise<boolean>;
   readDir: (dirPath: string) => Promise<string[]>;
 }
+
+export type MaybeElectronAppdataAPI = ElectronAppdataAPI | undefined;

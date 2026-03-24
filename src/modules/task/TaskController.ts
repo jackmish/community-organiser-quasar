@@ -11,7 +11,7 @@ import { TaskStatus } from './models/classes/TaskStatus';
 
 export type { PreviewPayload } from './models/classes/TaskActive';
 
-class TaskStore {
+class TaskController {
   readonly time = markRaw(timeManager.construct());
 
   private readonly taskRef = ref<Task | null>(null);
@@ -40,6 +40,6 @@ class TaskStore {
   };
 }
 
-export const useTaskStore = defineStore('task', () => new TaskStore());
+export const useTaskController = defineStore('task', () => new TaskController());
 
-export type ApiTask = ReturnType<typeof useTaskStore>;
+export type ApiTask = ReturnType<typeof useTaskController>;

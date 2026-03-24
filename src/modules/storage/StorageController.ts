@@ -5,7 +5,7 @@ import { presentation } from 'src/modules/presentation/presentationManager';
 import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskManager';
 
-export class ApiStorage {
+export class StorageController {
   isLoading = ref(false);
   private suppressPersist = true;
   private groupApi: any;
@@ -312,7 +312,7 @@ export class ApiStorage {
 }
 
 export function construct(groupApi?: any, timeApi?: any) {
-  return new ApiStorage(groupApi, timeApi);
+  return new StorageController(groupApi, timeApi);
 }
 
 export type ApiStorageType = ReturnType<typeof construct>;
