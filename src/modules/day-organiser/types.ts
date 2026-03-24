@@ -1,5 +1,5 @@
 import type { Task } from '../task/models/TaskModel';
-import type { Group } from '../group/classes/Group';
+import type { Group } from '../group/models/GroupModel';
 
 export interface DayData {
   date: string; // YYYY-MM-DD

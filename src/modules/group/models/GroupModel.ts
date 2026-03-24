@@ -1,5 +1,6 @@
-export class Group {
-  id: string;
+import { BaseModel } from 'src/types/BaseModel';
+
+export class GroupModel extends BaseModel {
   name: string;
   color: string | undefined;
   shortcut: boolean | undefined;
@@ -8,10 +9,14 @@ export class Group {
   icon: string | undefined;
   parentId: string | undefined;
   parent_id?: string | null;
-  createdAt: string;
 
-  constructor(data: Partial<Group> & { id?: string; name?: string } = {}) {
-    this.id = String(data.id ?? data.parent_id ?? '') || '';
+  constructor(data: Partial<GroupModel> & { id?: string; name?: string } = {}) {
+    const resolvedId = String(data.id ?? data.parent_id ?? '') || undefined;
+    const superInit: { id?: string; createdAt?: string; updatedAt?: string } = {};
+    if (resolvedId !== undefined) superInit.id = resolvedId;
+    if (data.createdAt !== undefined) superInit.createdAt = data.createdAt;
+    if (data.updatedAt !== undefined) superInit.updatedAt = data.updatedAt;
+    super(superInit);
     this.name = data.name ?? '';
     this.color = data.color;
     this.shortcut = data.shortcut;
@@ -20,7 +25,6 @@ export class Group {
     this.icon = data.icon;
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
     this.parent_id = data.parent_id ?? null;
-    this.createdAt = data.createdAt ?? new Date().toISOString();
   }
 
   toJSON(): Record<string, any> {
@@ -35,6 +39,10 @@ export class Group {
       parentId: this.parentId,
       parent_id: this.parent_id ?? null,
       createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     };
   }
 }
+
+// Backward-compat alias — prefer `GroupModel` in new code
+export { GroupModel as Group };

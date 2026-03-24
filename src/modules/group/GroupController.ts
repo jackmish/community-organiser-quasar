@@ -2,9 +2,9 @@ import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { saveData } from 'src/utils/storageUtils';
 import * as groupManager from './managers/groupManager';
-import { GroupList } from './classes/GroupList';
-import { GroupActive } from './classes/GroupActive';
-import type { Group } from './classes/Group';
+import { GroupList } from './models/classes/GroupList';
+import { GroupActive } from './models/classes/GroupActive';
+import type { Group } from './models/GroupModel';
 
 class GroupStore {
   readonly groups = ref<Group[]>([]);

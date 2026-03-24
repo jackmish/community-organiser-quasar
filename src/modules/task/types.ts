@@ -4,7 +4,7 @@
 export { TaskModel, TaskModel as Task } from './models/TaskModel';
 export type { TaskDuration } from './models/TaskModel';
 
-import type { Group } from '../group/classes/Group';
+import type { Group } from '../group/models/GroupModel';
 export type { Group };
 
 // DayData and OrganiserData moved to `src/modules/day-organiser/types.ts`

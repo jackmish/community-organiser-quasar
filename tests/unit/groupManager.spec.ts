@@ -179,7 +179,7 @@ describe('prepareGroupsForSave', () => {
 
 // ─── GroupActive.goToParent ───────────────────────────────────────────────────
 import { ref } from 'vue';
-import { GroupActive } from '../../src/modules/group/classes/GroupActive';
+import { GroupActive } from '../../src/modules/group/models/classes/GroupActive';
 
 describe('GroupActive.goToParent', () => {
   it('navigates to the parent group when a child is active', () => {

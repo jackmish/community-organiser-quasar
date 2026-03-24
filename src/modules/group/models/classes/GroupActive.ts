@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import * as groupManager from '../managers/groupManager';
-import type { Group } from './Group';
+import * as groupManager from '../../managers/groupManager';
+import type { Group } from '../GroupModel';
 import type { ActiveInterface } from 'src/types/ActiveInterface';
 
 /**

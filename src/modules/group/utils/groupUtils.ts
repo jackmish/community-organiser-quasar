@@ -1,4 +1,4 @@
-import type { Group } from '../classes/Group';
+import type { Group } from '../models/GroupModel';
 
 // Normalize various possible id shapes into a string id or null
 export const normalizeId = (v: any): string | null => {
