@@ -8,7 +8,7 @@
 import { computed } from 'vue';
 import type { PiniaPluginContext } from 'pinia';
 import { useGroupStore } from 'src/modules/group/GroupController';
-import type { Task } from 'src/modules/task/types';
+import type { Task } from 'src/modules/task/models/TaskModel';
 
 export interface TaskStats {
   /** ID of the active group, or null when "All groups" is selected. */

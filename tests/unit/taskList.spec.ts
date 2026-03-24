@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ref } from 'vue';
-import { Task } from '../../src/modules/task/types';
+import { Task } from '../../src/modules/task/models/TaskModel';
 
 // ─── Mock heavy external deps before importing modules that pull them in ────
 vi.mock('src/modules/presentation/presentationManager', () => ({

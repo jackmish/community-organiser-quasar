@@ -1,45 +1,10 @@
-export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+// Re-export TaskModel under the legacy name `Task` so all existing
+// imports of `Task` from this file continue to work without changes.
+// Prefer importing `TaskModel` directly from './TaskModel' in new code.
+export { TaskModel, TaskModel as Task } from './models/TaskModel';
+export type { TaskDuration } from './models/TaskModel';
 
 import type { Group } from '../group/classes/Group';
 export type { Group };
-
-export class Task {
-  id!: string;
-  name!: string;
-  description!: string;
-  date!: string; // YYYY-MM-DD format
-  category!: 'work' | 'personal' | 'meeting' | 'other';
-  priority!: 'low' | 'medium' | 'high' | 'critical';
-  // Numeric status code for the task lifecycle (e.g. 0 = done, 1 = just created)
-  status_id?: number | string | undefined;
-  // Type of task, e.g. 'TimeEvent' or 'Todo'
-  type_id?: string;
-  // Legacy alternative name used in some persisted records
-  type?: string;
-  // Alternate event date field; some code uses `eventDate` instead of `date`
-  eventDate?: string;
-  // `completed` kept for backward compatibility but will be deprecated
-  // legacy `completed` field removed; use `status_id` (0 = done) instead
-  groupId?: string; // Reference to Group
-  tags?: string[];
-  eventTime?: string; // HH:mm format
-  // Canonical repeat settings for cyclic tasks
-  repeat?: Record<string, unknown> | null;
-  // History of changes for this task
-  history?: Array<Record<string, unknown>>;
-  // Time mode controls how the event is shown: 'event' (on date),
-  // 'prepare' (appear in days-before window), or 'expiration' (appear until done)
-  timeMode?: 'event' | 'prepare' | 'expiration';
-  // Number of days before the event when prepare/expiration modes start showing
-  timeOffsetDays?: number | null;
-  // Optional per-task chosen color set id (e.g. 'set-1'..'set-12')
-  color_set?: string | null;
-  createdAt!: string;
-  updatedAt!: string;
-
-  constructor(init?: Partial<Task>) {
-    if (init) Object.assign(this, init);
-  }
-}
 
 // DayData and OrganiserData moved to `src/modules/day-organiser/types.ts`

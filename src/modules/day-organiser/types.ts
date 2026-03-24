@@ -1,4 +1,4 @@
-import type { Task } from '../task/types';
+import type { Task } from '../task/models/TaskModel';
 import type { Group } from '../group/classes/Group';
 
 export interface DayData {

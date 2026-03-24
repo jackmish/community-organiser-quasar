@@ -1,4 +1,4 @@
-import type { TaskManager } from '../managers/taskManager';
+import type { TaskManager } from '../../managers/taskManager';
 import type { TaskActive } from './TaskActive';
 
 export class TaskSubtaskLine {

@@ -248,7 +248,7 @@ import {
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
 import CC from "src/CentralController";
-import type { Task } from "src/modules/task/types";
+import type { Task } from "src/modules/task/models/TaskModel";
 
 const props = defineProps<{
   task: Task;

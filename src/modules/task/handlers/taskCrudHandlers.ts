@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { Task } from 'src/modules/task/types';
+import type { Task } from 'src/modules/task/models/TaskModel';
 import CC from 'src/CentralController';
 const CCx: any = CC as any;
 

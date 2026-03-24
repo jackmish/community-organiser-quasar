@@ -125,7 +125,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from "vue";
-import { Task } from "src/modules/task/types";
+import { Task } from "src/modules/task/models/TaskModel";
 import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";

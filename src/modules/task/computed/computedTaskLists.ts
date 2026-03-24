@@ -10,7 +10,7 @@ import {
   getTimeOffsetDaysForTask as getTimeOffsetDaysDefault,
 } from 'src/utils/dateUtils';
 import type { Ref } from 'vue';
-import type { Task } from 'src/modules/task/types';
+import type { Task } from 'src/modules/task/models/TaskModel';
 
 export function createTaskComputed(args: {
   currentDayData: Ref<{ tasks: Task[] }>;

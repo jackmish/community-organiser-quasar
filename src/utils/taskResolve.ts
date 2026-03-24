@@ -10,7 +10,7 @@
  *   - unknown          → returns null
  */
 import type { Ref } from 'vue';
-import type { Task } from 'src/modules/task/types';
+import type { Task } from 'src/modules/task/models/TaskModel';
 
 export function resolveTask(payload: any, allTasks: Ref<Task[]> | Task[]): Task | null {
   const list: Task[] = Array.isArray(allTasks) ? allTasks : (allTasks.value ?? []);

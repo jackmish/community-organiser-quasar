@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
-import type { Task } from '../../types';
+import type { Task } from 'src/modules/task/models/TaskModel';
 import type { TaskManager } from '../taskManager';
 import { getCycleType } from '../../utils/occursOnDay';
 
@@ -28,7 +28,7 @@ export class SubtaskLineManager {
     let stateOrActiveTask: any = undefined;
     try {
       if (taskManager && typeof taskManager === 'object') {
-        stateOrActiveTask = taskManager.apiTask && (taskManager.apiTask.state);
+        stateOrActiveTask = taskManager.apiTask && taskManager.apiTask.state;
         this.opts = {
           time: taskManager.apiTask && taskManager.apiTask.time,
           persist: async (date: string, taskObj: Task) => {

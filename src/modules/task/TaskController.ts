@@ -3,13 +3,13 @@ import { defineStore } from 'pinia';
 import { TaskManager } from './managers/taskManager';
 import * as timeManager from './managers/timeManager/timeManager';
 import { saveData } from 'src/utils/storageUtils';
-import type { Task } from './types';
-import { TaskActive } from './classes/TaskActive';
-import { TaskList } from './classes/TaskList';
-import { TaskSubtaskLine } from './classes/TaskSubtaskLine';
-import { TaskStatus } from './classes/TaskStatus';
+import type { Task } from './models/TaskModel';
+import { TaskActive } from './models/classes/TaskActive';
+import { TaskList } from './models/classes/TaskList';
+import { TaskSubtaskLine } from './models/classes/TaskSubtaskLine';
+import { TaskStatus } from './models/classes/TaskStatus';
 
-export type { PreviewPayload } from './classes/TaskActive';
+export type { PreviewPayload } from './models/classes/TaskActive';
 
 class TaskStore {
   readonly time = markRaw(timeManager.construct());
