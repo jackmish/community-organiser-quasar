@@ -2,7 +2,7 @@
 import * as apiStorage from 'src/modules/storage/StorageController';
 import { useTaskStore } from 'src/modules/task/TaskController';
 import { useGroupStore } from 'src/modules/group/GroupController';
-import { lazyStore } from 'src/modules/controllers/lazyStore';
+import { lazyStore } from 'src/modules/storage/controllers/lazyStore';
 import { registerAppService } from 'src/services/appService';
 
 class CentralController {
