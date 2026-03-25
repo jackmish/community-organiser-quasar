@@ -51,6 +51,7 @@
 
 import type { Group } from '../../group/models/GroupModel';
 import type { DayData } from '../../task/models/classes/DayData';
+import type { ChangeEntry } from '../sync/ChangeEntry';
 
 // ---------------------------------------------------------------------------
 // Shared data shape (previously only in electronBackend.ts)
@@ -60,6 +61,12 @@ export interface OrganiserData {
   days: Record<string, DayData>;
   groups: Group[];
   lastModified: string;
+  /**
+   * Append-only change log used for field-level LWW sync between devices.
+   * Optional so that existing data without a log is still valid — the sync
+   * layer treats absent as an empty log on the first sync.
+   */
+  changeLog?: ChangeEntry[];
 }
 
 // ---------------------------------------------------------------------------
