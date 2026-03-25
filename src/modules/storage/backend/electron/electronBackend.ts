@@ -1,6 +1,6 @@
-import logger from '../../utils/logger';
-import type { DayData } from '../task/models/classes/DayData';
-import type { Group } from '../group/models/GroupModel';
+import logger from '../../../../utils/logger';
+import type { DayData } from '../../../task/models/classes/DayData';
+import type { Group } from '../../../group/models/GroupModel';
 import type { ElectronAppdataAPI } from './devices/electron/ElectronAppdataAPI';
 export interface OrganiserData {
   days: Record<string, DayData>;

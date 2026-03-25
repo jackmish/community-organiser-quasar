@@ -1,6 +1,10 @@
 import { ref, watch } from 'vue';
 import logger from '../../utils/logger';
-import { storage as backendStorage, loadSettings, saveSettings } from './StorageBackend';
+import {
+  storage as backendStorage,
+  loadSettings,
+  saveSettings,
+} from './backend/electron/electronBackend';
 import { presentation } from 'src/modules/presentation/presentationManager';
 import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskManager';

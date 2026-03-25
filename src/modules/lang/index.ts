@@ -7,7 +7,7 @@ let currentCountry = 'US';
 const dict = ref<Translations>({});
 const fallback = ref<Translations>({});
 
-import { getSetting, setSetting } from 'src/modules/storage/StorageBackend';
+import { getSetting, setSetting } from 'src/modules/storage/backend/electron/electronBackend';
 
 async function loadJson(path: string): Promise<Translations | null> {
   try {
