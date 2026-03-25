@@ -92,10 +92,7 @@ export class P2PBackend implements StorageBackend {
    * Electron (Chromium), and Capacitor WebViews.
    */
   isAvailable(): boolean {
-    return (
-      typeof window !== 'undefined' &&
-      typeof window.RTCPeerConnection !== 'undefined'
-    );
+    return typeof window !== 'undefined' && typeof window.RTCPeerConnection !== 'undefined';
   }
 
   // ── Connection lifecycle ───────────────────────────────────────────────────

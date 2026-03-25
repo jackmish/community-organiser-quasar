@@ -383,7 +383,8 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
+    const { storage: backendMock } =
+      await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     // Construct a fresh storage instance with stub APIs
@@ -418,7 +419,8 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
+    const { storage: backendMock } =
+      await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});
@@ -451,7 +453,8 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
+    const { storage: backendMock } =
+      await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});
