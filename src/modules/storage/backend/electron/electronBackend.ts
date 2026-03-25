@@ -1,12 +1,9 @@
 import logger from '../../../../utils/logger';
-import type { DayData } from '../../../task/models/classes/DayData';
-import type { Group } from '../../../group/models/GroupModel';
-import type { ElectronAppdataAPI } from './devices/electron/ElectronAppdataAPI';
-export interface OrganiserData {
-  days: Record<string, DayData>;
-  groups: Group[];
-  lastModified: string;
-}
+import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
+import type { StorageBackend } from '../StorageBackend';
+// Re-export so existing callers that import OrganiserData from this module keep working.
+export type { OrganiserData } from '../StorageBackend';
+import type { OrganiserData } from '../StorageBackend';
 
 declare global {
   // Augment Window so existing code that uses `window.electronAPI` keeps working.
@@ -15,7 +12,56 @@ declare global {
   }
 }
 
-class DayOrganiserStorage {
+class DayOrganiserStorage implements StorageBackend {
+  readonly name = 'electron';
+
+  isAvailable(): boolean {
+    return (
+      (typeof window !== 'undefined' && !!window.electronAPI) ||
+      (typeof window !== 'undefined' && !!window.localStorage)
+    );
+  }
+
+  // ── StorageBackend: groups ────────────────────────────────────────────────
+
+  async loadAllGroups() {
+    return this.loadAllGroupsFromFiles();
+  }
+
+  async saveGroups(groups: any[]) {
+    return saveGroupsToFiles(groups);
+  }
+
+  async deleteGroup(groupId: string) {
+    return deleteGroupFile(groupId);
+  }
+
+  // ── StorageBackend: settings ──────────────────────────────────────────────
+
+  async loadSettings(): Promise<Record<string, any>> {
+    return loadSettings();
+  }
+
+  async saveSettings(settings: Record<string, any>): Promise<void> {
+    return saveSettings(settings);
+  }
+
+  async getSetting(key: string, defaultValue: any = undefined): Promise<any> {
+    return getSetting(key, defaultValue);
+  }
+
+  async setSetting(key: string, value: any): Promise<void> {
+    return setSetting(key, value);
+  }
+
+  // ── StorageBackend: diagnostics ───────────────────────────────────────────
+
+  async getStoragePath(): Promise<string> {
+    return this.getDataFilePathPublic();
+  }
+
+  // ── Legacy / internal ─────────────────────────────────────────────────────
+
   async loadData(): Promise<OrganiserData> {
     try {
       const groups = await this.loadAllGroupsFromFiles();

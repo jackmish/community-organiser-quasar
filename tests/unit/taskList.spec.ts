@@ -18,7 +18,7 @@ vi.mock('src/modules/presentation/presentationManager', () => ({
   presentation: { mode: { value: 'default' } },
 }));
 vi.mock('src/modules/presentation/sampleData', () => ({ sampleData: {} }));
-vi.mock('src/modules/storage/StorageBackend', () => ({
+vi.mock('src/modules/storage/backend/electron/electronBackend', () => ({
   storage: {
     loadData: vi.fn(async () => ({ days: {}, groups: [], lastModified: '' })),
     saveData: vi.fn(async () => {}),
@@ -383,7 +383,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
+    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     // Construct a fresh storage instance with stub APIs
@@ -418,7 +418,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
+    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});
@@ -451,7 +451,7 @@ describe('apiStorage.loadData — task preservation', () => {
       lastModified: new Date().toISOString(),
     };
 
-    const { storage: backendMock } = await import('../../src/modules/storage/StorageBackend');
+    const { storage: backendMock } = await import('../../src/modules/storage/backend/electron/electronBackend');
     (backendMock.loadData as any).mockResolvedValueOnce(fakeData);
 
     const daysRef = ref<Record<string, any>>({});
