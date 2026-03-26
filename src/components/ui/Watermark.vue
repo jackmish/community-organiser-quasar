@@ -213,7 +213,7 @@ watch(
   font-size: 40px;
 }
 .co21-watermark--large .co21-watermark-text {
-  font-size: 80px;
+  font-size: 75px;
 }
 .co21-watermark {
   overflow: visible;
