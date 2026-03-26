@@ -130,9 +130,10 @@ export const monthColors: Record<string, string> = {
 export function getOverlayColorForMonth(monthLike: string | number | Date): string {
   const overlayColorArray = [
     '#1976d2', // current month
+    '#ff9800',
     '#4caf50',
     '#9c27b0',
-    '#ff9800',
+
     '#009688',
     '#e91e63',
     '#3f51b5',

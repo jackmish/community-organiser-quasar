@@ -27,6 +27,97 @@ export interface RoleData {
   updatedAt: number;
 }
 
+// ── Privilege scoring ────────────────────────────────────────────────────────
+
+/** Numeric rank for each privilege level (higher = more access). */
+export const PRIVILEGE_ORDER: Record<RolePrivilege, number> = {
+  preview: 1,
+  edit: 2,
+  full: 3,
+};
+
+/** Numeric rank for each access range (higher = more access). */
+export const RANGE_ORDER: Record<AccessRange, number> = {
+  single: 1,
+  child: 2,
+  max: 3,
+};
+
+/**
+ * Combined numeric access score.
+ * higher score === more access.
+ */
+export function roleAccessScore(privilege: RolePrivilege, accessRange: AccessRange): number {
+  return PRIVILEGE_ORDER[privilege] * 10 + RANGE_ORDER[accessRange];
+}
+
+/**
+ * Score for the implicit "Creator" default (no explicit role set on the group).
+ * Equals full(3)*10 + max(3) = 33, the maximum explicit slot.
+ */
+export const CREATOR_ACCESS_SCORE = 33;
+
+// ── Change detection ─────────────────────────────────────────────────────────
+
+export interface PrivilegeChange {
+  roleName: string;
+  changeType: 'reduction' | 'extension';
+  /** Formatted label for the old state (built by caller). */
+  fromLabel: string;
+  /** Formatted label for the new state (built by caller). */
+  toLabel: string;
+}
+
+/**
+ * Compare two arrays of roles and return a list of meaningful privilege changes.
+ *
+ * @param labelFn  Converts a privilege+accessRange pair to a human-readable string.
+ * @param creatorLabel  Label to use when the implicit "Creator (default)" state is the
+ *                      old or new value (no explicit role on the group).
+ */
+export function computeRoleChanges(
+  oldRoles: RoleData[],
+  newRoles: RoleData[],
+  labelFn: (privilege: RolePrivilege, accessRange: AccessRange) => string,
+  creatorLabel: string,
+): PrivilegeChange[] {
+  const changes: PrivilegeChange[] = [];
+
+  // Edited or new roles
+  for (const nr of newRoles) {
+    const or = oldRoles.find((r) => r.id === nr.id);
+    const newScore = roleAccessScore(nr.privilege, nr.accessRange);
+    const oldScore = or ? roleAccessScore(or.privilege, or.accessRange) : CREATOR_ACCESS_SCORE;
+    const fromLabel = or ? labelFn(or.privilege, or.accessRange) : creatorLabel;
+    const toLabel = labelFn(nr.privilege, nr.accessRange);
+
+    if (newScore !== oldScore) {
+      changes.push({
+        roleName: nr.name,
+        changeType: newScore < oldScore ? 'reduction' : 'extension',
+        fromLabel,
+        toLabel,
+      });
+    }
+  }
+
+  // Deleted roles → device reverts to creator (extension)
+  for (const or of oldRoles) {
+    if (!newRoles.find((nr) => nr.id === or.id)) {
+      changes.push({
+        roleName: or.name,
+        changeType: 'extension',
+        fromLabel: labelFn(or.privilege, or.accessRange),
+        toLabel: creatorLabel,
+      });
+    }
+  }
+
+  return changes;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export class Role implements RoleData {
   id: string;
   name: string;

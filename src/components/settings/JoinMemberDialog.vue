@@ -47,9 +47,18 @@
           <div v-if="!selectedGroupId" class="text-grey-6 text-caption">
             {{ $text('role.select_group_first') }}
           </div>
-          <div v-else-if="rolesForGroup.length === 0" class="text-grey-6 text-caption">
-            {{ $text('role.no_roles') }}
-          </div>
+          <!-- Creator default: shown when no explicit roles are set -->
+          <q-list v-else-if="rolesForGroup.length === 0" bordered separator style="border-radius: 6px">
+            <q-item style="background: rgba(0,0,0,0.03)">
+              <q-item-section avatar>
+                <q-icon name="verified_user" color="positive" size="22px" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ $text('role.creator_default_name') }}</q-item-label>
+                <q-item-label caption>{{ $text('role.creator_default_desc') }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
           <q-list v-else bordered separator style="border-radius: 6px">
             <q-item v-for="role in rolesForGroup" :key="role.id">
               <q-item-section>
@@ -85,15 +94,23 @@
     :initial-privilege="editingRole?.privilege ?? null"
     @save="onRoleSave"
   />
+
+  <PrivilegeChangeSyncDialog
+    v-model="showSyncConfirm"
+    :changes="pendingChanges"
+    @confirm="onSyncConfirm"
+    @cancel="onSyncCancel"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import CC from 'src/CentralController';
-import { Role } from 'src/modules/storage/sync/RoleModel';
-import type { RoleData, AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
+import { Role, computeRoleChanges } from 'src/modules/storage/sync/RoleModel';
+import type { RoleData, AccessRange, RolePrivilege, PrivilegeChange } from 'src/modules/storage/sync/RoleModel';
 import RoleEditDialog from './RoleEditDialog.vue';
+import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
 import { saveData } from 'src/utils/storageUtils';
 
 const props = defineProps<{
@@ -183,6 +200,53 @@ async function saveRoles(roles: RoleData[]) {
   }
 }
 
+// ── Privilege change confirmation ─────────────────────────────────────────────
+
+const showSyncConfirm = ref(false);
+const pendingRoles = ref<RoleData[] | null>(null);
+const pendingChanges = ref<PrivilegeChange[]>([]);
+
+function roleLabel(privilege: RolePrivilege, accessRange: AccessRange): string {
+  return `${$text('role.priv_' + privilege)} / ${$text('role.range_' + accessRange)}`;
+}
+
+/**
+ * Called instead of saveRoles directly.
+ * Computes privilege changes and shows the confirmation dialog when needed.
+ * If no privilege-relevant changes (e.g. name-only), saves immediately.
+ */
+function requestSaveRoles(newRoles: RoleData[]) {
+  const changes = computeRoleChanges(
+    rolesForGroup.value,
+    newRoles,
+    roleLabel,
+    $text('role.priv_creator'),
+  );
+
+  if (changes.length === 0) {
+    // No privilege change — save immediately (e.g. role name edited only)
+    void saveRoles(newRoles);
+    return;
+  }
+
+  pendingRoles.value = newRoles;
+  pendingChanges.value = changes;
+  showSyncConfirm.value = true;
+}
+
+async function onSyncConfirm() {
+  if (pendingRoles.value !== null) {
+    await saveRoles(pendingRoles.value);
+  }
+  pendingRoles.value = null;
+  pendingChanges.value = [];
+}
+
+function onSyncCancel() {
+  pendingRoles.value = null;
+  pendingChanges.value = [];
+}
+
 // ── Role edit dialog ──────────────────────────────────────────────────────
 
 const showRoleEdit = ref(false);
@@ -201,7 +265,7 @@ function openEditRole(role: RoleData) {
   showRoleEdit.value = true;
 }
 
-async function onRoleSave(payload: { name: string; accessRange: AccessRange; privilege: RolePrivilege }) {
+function onRoleSave(payload: { name: string; accessRange: AccessRange; privilege: RolePrivilege }) {
   const current = [...rolesForGroup.value];
   if (editingRoleId.value) {
     const idx = current.findIndex((r) => r.id === editingRoleId.value);
@@ -212,10 +276,10 @@ async function onRoleSave(payload: { name: string; accessRange: AccessRange; pri
     const newRole = Role.create(payload.name, selectedGroupId.value, payload.accessRange, payload.privilege);
     current.push(newRole.toJSON());
   }
-  await saveRoles(current);
+  requestSaveRoles(current);
 }
 
-async function onDeleteRole(id: string) {
-  await saveRoles(rolesForGroup.value.filter((r) => r.id !== id));
+function onDeleteRole(id: string) {
+  requestSaveRoles(rolesForGroup.value.filter((r) => r.id !== id));
 }
 </script>
