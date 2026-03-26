@@ -15,6 +15,12 @@
           </q-item-section>
           <q-item-section>{{ $text('ui.edit_group') }}</q-item-section>
         </q-item>
+        <q-item clickable @click="onJoinDevice">
+          <q-item-section avatar>
+            <q-icon name="person_add" />
+          </q-item-section>
+          <q-item-section>{{ $text('ui.join_device') }}</q-item-section>
+        </q-item>
       </q-list>
     </q-menu>
   </q-btn>
@@ -44,5 +50,9 @@ function onEditGroup() {
   window.dispatchEvent(
     new CustomEvent('group:manage-edit', { detail: { groupId } })
   );
+}
+
+function onJoinDevice() {
+  window.dispatchEvent(new Event('community:open'));
 }
 </script>

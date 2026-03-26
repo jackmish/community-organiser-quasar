@@ -130,6 +130,8 @@
       v-model="showGroupEditDialog"
       :editing-group-id="editDialogGroupId"
     />
+    <!-- Community Dialog (opened from options menu 'Join new member or device') -->
+    <CommunityDialog v-model="showCommunityDialog" />
     <!-- First Run Dialog -->
     <FirstRunDialog
       v-model="showFirstRunDialog"
@@ -236,6 +238,7 @@ import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
 import GroupManagementDialog from "src/modules/group/components/GroupManagementDialog.vue";
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
+import CommunityDialog from "src/components/settings/CommunityDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
@@ -491,6 +494,7 @@ const editDialogGroupId = ref<string | null>(null);
 watch(showGroupEditDialog, (v) => {
   if (!v) editDialogGroupId.value = null;
 });
+const showCommunityDialog = ref(false);
 
 // Inline edit-group dialog removed (unused)
 const showFirstRunDialog = ref(false);
@@ -526,6 +530,7 @@ const { handleImportFile } = createImportHandler({
 });
 let organiserGroupManageHandler: any = null;
 let organiserGroupManageEditHandler: any = null;
+let organiserCommunityOpenHandler: any = null;
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
@@ -545,6 +550,8 @@ onBeforeUnmount(() => {
         "group:manage-edit",
         organiserGroupManageEditHandler as EventListener
       );
+    if (organiserCommunityOpenHandler)
+      window.removeEventListener('community:open', organiserCommunityOpenHandler as EventListener);
   } catch (e) {
     // ignore
   }
@@ -1125,6 +1132,10 @@ onMounted(async () => {
     "group:manage-edit",
     organiserGroupManageEditHandler as EventListener
   );
+
+  // allow TaskListOptionsMenu 'Join new member or device' to open community dialog
+  organiserCommunityOpenHandler = () => { showCommunityDialog.value = true; };
+  window.addEventListener('community:open', organiserCommunityOpenHandler as EventListener);
 
   // Show first run dialog if no groups exist
   if (CC.group.list.all.value.length === 0) {

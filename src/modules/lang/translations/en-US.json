@@ -44,6 +44,7 @@
   "ui.shortcut": "Shortcut",
   "ui.manage_groups": "Manage Groups...",
   "ui.edit_group": "Edit group",
+  "ui.join_device": "Join new member or device",
   "ui.go_to_parent": "Go to parent:",
   "menu.connections": "Connections and data",
   "menu.settings": "Settings",

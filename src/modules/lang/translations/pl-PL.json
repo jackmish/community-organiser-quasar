@@ -44,6 +44,7 @@
   "ui.shortcut": "Skrót",
   "ui.manage_groups": "Zarządzaj grupami...",
   "ui.edit_group": "Edytuj grupę",
+  "ui.join_device": "Dołącz nowego członka lub urządzenie",
   "ui.go_to_parent": "Przejdź do rodzica:",
   "menu.connections": "Połączenia i dane",
   "menu.settings": "Ustawienia",
