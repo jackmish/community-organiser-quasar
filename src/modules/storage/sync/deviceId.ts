@@ -1,96 +1,94 @@
 /**
- * deviceId — persistent unique identifier for this installation.
+ * DeviceId — persistent unique identifier for this installation.
  *
  * One ID per device/installation, generated once and stored in settings.
- * Used as the author field in every ChangeEntry so that sync can attribute
+ * Used as the author field in every ChangeEntry so sync can attribute
  * and deduplicate changes by source device.
  *
- * When multi-user (not just multi-device) is needed later, this becomes
- * the "session identity" and a user layer can be added on top.
+ * Usage:
+ *   import { deviceId } from 'src/modules/storage/sync/deviceId';
+ *   deviceId.init(getSetting, setSetting);   // once at app boot
+ *   const id = await deviceId.get();
  */
 
 import logger from '../../../utils/logger';
 
-const SETTING_KEY = 'deviceId';
-
-// Lazy in-memory cache so settings IO only happens once per session.
-let _cached: string | null = null;
-
-// ---------------------------------------------------------------------------
-// Internal helpers — kept separate so tests can inject a mock getSetting
-// ---------------------------------------------------------------------------
-
 type SettingsReader = (key: string, fallback: string) => Promise<string>;
 type SettingsWriter = (key: string, value: string) => Promise<void>;
 
-let _read: SettingsReader = async () => '';
-let _write: SettingsWriter = async () => {};
+export class DeviceId {
+  private readonly SETTING_KEY = 'deviceId';
+  private _cached: string | null = null;
+  private _read: SettingsReader = async () => '';
+  private _write: SettingsWriter = async () => {};
 
-/**
- * Inject the settings accessors on app boot.
- * Call this once from apiRoot / boot before any sync code runs.
- *
- * Example:
- *   import { initDeviceId } from 'src/modules/storage/sync/deviceId';
- *   import { getSetting, setSetting } from 'src/modules/storage/backend/electron/electronBackend';
- *   initDeviceId(getSetting, setSetting);
- */
-export function initDeviceId(reader: SettingsReader, writer: SettingsWriter): void {
-  _read = reader;
-  _write = writer;
-  _cached = null; // reset cache so next getDeviceId() re-reads
-}
+  // ── Initialisation ────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+  /**
+   * Inject the settings accessors on app boot.
+   * Call this once before any sync code runs.
+   *
+   * Example:
+   *   import { deviceId } from 'src/modules/storage/sync/deviceId';
+   *   deviceId.init(getSetting, setSetting);
+   */
+  init(reader: SettingsReader, writer: SettingsWriter): void {
+    this._read = reader;
+    this._write = writer;
+    this._cached = null; // reset cache so next get() re-reads
+  }
 
-/**
- * Return the persistent device ID, creating and saving it if absent.
- * Result is cached in memory for the lifetime of the session.
- */
-export async function getDeviceId(): Promise<string> {
-  if (_cached) return _cached;
+  // ── Public API ────────────────────────────────────────────────────────────
 
-  try {
-    const stored = await _read(SETTING_KEY, '');
-    if (stored) {
-      _cached = stored;
-      return _cached;
+  /**
+   * Return the persistent device ID, creating and saving it if absent.
+   * Result is cached in memory for the lifetime of the session.
+   */
+  async get(): Promise<string> {
+    if (this._cached) return this._cached;
+
+    try {
+      const stored = await this._read(this.SETTING_KEY, '');
+      if (stored) {
+        this._cached = stored;
+        return this._cached;
+      }
+    } catch (e) {
+      logger.warn('[deviceId] failed to read stored deviceId', e);
     }
-  } catch (e) {
-    logger.warn('[deviceId] failed to read stored deviceId', e);
+
+    const newId = crypto.randomUUID();
+    logger.info('[deviceId] generated new deviceId', newId);
+
+    try {
+      await this._write(this.SETTING_KEY, newId);
+    } catch (e) {
+      logger.warn('[deviceId] failed to persist deviceId', e);
+      // Continue with the in-memory ID for this session.
+    }
+
+    this._cached = newId;
+    return this._cached;
   }
 
-  const newId = crypto.randomUUID();
-  logger.info('[deviceId] generated new deviceId', newId);
-
-  try {
-    await _write(SETTING_KEY, newId);
-  } catch (e) {
-    logger.warn('[deviceId] failed to persist deviceId', e);
-    // Continue with the in-memory ID for this session.
+  /**
+   * Override the device ID (useful in tests or when the user explicitly sets
+   * a human-readable device label via settings UI).
+   */
+  async set(id: string): Promise<void> {
+    this._cached = id;
+    await this._write(this.SETTING_KEY, id);
   }
 
-  _cached = newId;
-  return _cached;
+  /** Synchronous read of the cached value — only valid after the first await get(). */
+  getSync(): string | null {
+    return this._cached;
+  }
+
+  /** Reset cache (for tests). */
+  _resetCache(): void {
+    this._cached = null;
+  }
 }
 
-/**
- * Override the device ID (useful in tests or when the user explicitly sets
- * a human-readable device label via settings UI).
- */
-export async function setDeviceId(id: string): Promise<void> {
-  _cached = id;
-  await _write(SETTING_KEY, id);
-}
-
-/** Synchronous read of the cached value — only valid after the first await getDeviceId(). */
-export function getDeviceIdSync(): string | null {
-  return _cached;
-}
-
-/** Reset cache (for tests). */
-export function _resetCache(): void {
-  _cached = null;
-}
+export const deviceId = new DeviceId();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { merge, applyEntriesToRecord } from 'src/modules/storage/sync/lwwMerge';
+import { lwwMerge } from 'src/modules/storage/sync/lwwMerge';
 import type { ChangeEntry } from 'src/modules/storage/sync/ChangeEntry';
 
 // Helper to build a ChangeEntry without boilerplate.
@@ -28,7 +28,7 @@ function entry(
 describe('merge()', () => {
   it('applies a remote entry when the local log has nothing for that field', () => {
     const remote = entry({ field: 'title', value: 'Remote title', deviceId: 'dev-B', clock: 1 });
-    const result = merge([], [remote]);
+    const result = lwwMerge.merge([], [remote]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0]).toMatchObject({ field: 'title', value: 'Remote title' });
@@ -39,7 +39,7 @@ describe('merge()', () => {
     const local = entry({ field: 'title', value: 'Local', deviceId: 'dev-A', clock: 2 });
     const remote = entry({ field: 'description', value: 'Remote', deviceId: 'dev-B', clock: 2 });
 
-    const result = merge([local], [remote]);
+    const result = lwwMerge.merge([local], [remote]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0].field).toBe('description');
@@ -62,7 +62,7 @@ describe('merge()', () => {
       timestamp: '2024-01-02T00:00:00.000Z',
     });
 
-    const result = merge([local], [remote]);
+    const result = lwwMerge.merge([local], [remote]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0].value).toBe('New');
@@ -85,7 +85,7 @@ describe('merge()', () => {
       timestamp: '2024-01-01T00:00:00.000Z',
     });
 
-    const result = merge([local], [remote]);
+    const result = lwwMerge.merge([local], [remote]);
 
     // Remote is stale — nothing new to apply.
     expect(result.applied).toHaveLength(0);
@@ -109,7 +109,7 @@ describe('merge()', () => {
       timestamp: ts,
     });
 
-    const result = merge([local], [remote]);
+    const result = lwwMerge.merge([local], [remote]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0].value).toBe('High clock');
@@ -133,7 +133,7 @@ describe('merge()', () => {
       timestamp: ts,
     });
 
-    const result = merge([local], [remote]);
+    const result = lwwMerge.merge([local], [remote]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0].value).toBe('zzz value');
@@ -155,7 +155,7 @@ describe('merge()', () => {
       clock: 3,
     });
 
-    const result = merge([localA], [remoteB]);
+    const result = lwwMerge.merge([localA], [remoteB]);
 
     expect(result.applied).toHaveLength(1);
     expect(result.applied[0].entityId).toBe('entity-B');
@@ -170,7 +170,7 @@ describe('merge()', () => {
       clock: 5,
     });
 
-    const result = merge([shared], [shared]);
+    const result = lwwMerge.merge([shared], [shared]);
 
     expect(result.applied).toHaveLength(0);
     expect(result.conflicts).toHaveLength(0);
@@ -180,7 +180,7 @@ describe('merge()', () => {
     const local = entry({ field: 'title', value: 'Local', deviceId: 'dev-A', clock: 2 });
     const remoteOld = entry({ field: 'title', value: 'Remote old', deviceId: 'dev-B', clock: 1 });
 
-    const result = merge([local], [remoteOld]);
+    const result = lwwMerge.merge([local], [remoteOld]);
 
     const ids = result.mergedLog.map((e) => e.id);
     expect(ids).toContain(local.id);
@@ -198,7 +198,7 @@ describe('applyEntriesToRecord()', () => {
       entry({ field: 'status', value: 'done' }),
     ];
 
-    const result = applyEntriesToRecord(record, entries);
+    const result = lwwMerge.applyEntriesToRecord(record, entries);
 
     expect(result).not.toBeNull();
     expect(result?.title).toBe('new title');
@@ -209,14 +209,14 @@ describe('applyEntriesToRecord()', () => {
     const record = { title: 'something' };
     const entries = [entry({ field: '$entity', value: null })];
 
-    expect(applyEntriesToRecord(record, entries)).toBeNull();
+    expect(lwwMerge.applyEntriesToRecord(record, entries)).toBeNull();
   });
 
   it('returns a shallow copy, not a mutation of the original', () => {
     const original = { title: 'original' };
     const entries = [entry({ field: 'title', value: 'updated' })];
 
-    const result = applyEntriesToRecord(original, entries);
+    const result = lwwMerge.applyEntriesToRecord(original, entries);
 
     expect(original.title).toBe('original');
     expect(result?.title).toBe('updated');
@@ -225,7 +225,7 @@ describe('applyEntriesToRecord()', () => {
   it('returns the record unchanged when entries list is empty', () => {
     const record = { title: 'untouched' };
 
-    const result = applyEntriesToRecord(record, []);
+    const result = lwwMerge.applyEntriesToRecord(record, []);
 
     expect(result).toEqual(record);
   });

@@ -31,14 +31,8 @@
 
 import type { OrganiserData } from '../backend/StorageBackend';
 import type { ChangeEntry, MergeResult, SyncVector } from './ChangeEntry';
-import {
-  getEntriesSince,
-  appendEntries,
-  pruneLog,
-  buildSyncVector,
-  mergeSyncVectors,
-} from './changeLog';
-import { merge, applyEntriesToRecord } from './lwwMerge';
+import { changeLog } from './changeLog';
+import { lwwMerge } from './lwwMerge';
 import logger from '../../../utils/logger';
 
 // ---------------------------------------------------------------------------
@@ -82,7 +76,7 @@ export class SyncEngine {
     receiverVector: SyncVector = {},
   ): SyncPayload {
     const log = data.changeLog ?? [];
-    const delta = getEntriesSince(log, receiverVector);
+    const delta = changeLog.getEntriesSince(log, receiverVector);
 
     logger.debug(
       `[SyncEngine] building payload: ${delta.length} entries for receiver`,
@@ -91,7 +85,7 @@ export class SyncEngine {
 
     return {
       senderDeviceId: localDeviceId,
-      senderVector: buildSyncVector(log),
+      senderVector: changeLog.buildSyncVector(log),
       entries: delta,
       builtAt: new Date().toISOString(),
     };
@@ -119,14 +113,14 @@ export class SyncEngine {
     const localLog = localData.changeLog ?? [];
 
     // Merge the change logs
-    const result = merge(localLog, payload.entries);
+    const result = lwwMerge.merge(localLog, payload.entries);
 
     if (result.applied.length === 0 && result.conflicts.length === 0) {
       logger.debug('[SyncEngine] nothing new to apply');
       return {
         updatedData: {
           ...localData,
-          changeLog: pruneLog(result.mergedLog),
+          changeLog: changeLog.pruneLog(result.mergedLog),
         },
         result,
       };
@@ -140,7 +134,7 @@ export class SyncEngine {
     const updatedData = this._applyEntriesToData(localData, result.applied);
 
     // Update the change log
-    const finalLog = pruneLog(appendEntries(localLog, payload.entries));
+    const finalLog = changeLog.pruneLog(changeLog.appendEntries(localLog, payload.entries));
 
     return {
       updatedData: {
@@ -180,7 +174,7 @@ export class SyncEngine {
           if (newRecord) groups = [...groups, newRecord as any];
         }
       } else {
-        const updated = applyEntriesToRecord(groups[idx] as any, eList);
+        const updated = lwwMerge.applyEntriesToRecord(groups[idx] as any, eList);
         if (updated === null) {
           // Deletion
           groups = groups.filter((g: any) => g.id !== entityId);
@@ -201,7 +195,7 @@ export class SyncEngine {
         if (idx === -1) continue;
 
         found = true;
-        const updated = applyEntriesToRecord(tasks[idx], eList);
+        const updated = lwwMerge.applyEntriesToRecord(tasks[idx], eList);
         if (updated === null) {
           // Deletion
           days = {
