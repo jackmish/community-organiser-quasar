@@ -221,10 +221,7 @@ $sep-color: $primary;
 .today-jump-btn {
   margin-right: 18px;
 }
-.first-month-btn {
-  background-color: #66bb6a !important;
-  color: #fff !important;
-}
+/* .first-month-btn colors are now set dynamically via getOverlayColorForMonth */
 .calendar-event-pill .event-time {
   font-weight: 600;
   opacity: 0.95;

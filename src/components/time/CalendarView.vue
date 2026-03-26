@@ -18,11 +18,9 @@
           :key="month.value"
           unelevated
           size="md"
-          :color="['blue', 'purple', 'orange', 'teal', 'pink', 'indigo'][index]"
-          text-color="white"
           @click="jumpToMonth(month.value)"
-          :class="['text-weight-bold', { 'first-month-btn': index === 0 }]"
-          style="font-size: 16px"
+          class="text-weight-bold"
+          :style="{ fontSize: '16px', backgroundColor: buttonColors[index], color: 'white' }"
         >
           {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
             month.label.toUpperCase()
@@ -276,7 +274,6 @@ import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
-  monthColors,
   getOverlayColorForMonth,
 } from "../theme";
 import Watermark from "src/components/ui/Watermark.vue";
@@ -1261,12 +1258,9 @@ const nextSixMonths = computed(() => {
   return months;
 });
 
-// Button colors derived from theme monthColors for the next six months
+// Button colors derived from getOverlayColorForMonth so they match calendar overlays
 const buttonColors = computed(() =>
-  nextSixMonths.value.map((m) => {
-    const mm = String(new Date(m.value).getMonth() + 1).padStart(2, "0");
-    return monthColors[mm] ?? "#1976d2";
-  })
+  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value))
 );
 
 function previousCalendarWeeks() {
