@@ -1,4 +1,5 @@
 import { BaseModel } from 'src/types/BaseModel';
+import type { RoleData } from 'src/modules/storage/sync/RoleModel';
 
 export class GroupModel extends BaseModel {
   name: string;
@@ -9,6 +10,7 @@ export class GroupModel extends BaseModel {
   icon: string | undefined;
   parentId: string | undefined;
   parent_id?: string | null;
+  roles: RoleData[];
 
   constructor(data: Partial<GroupModel> & { id?: string; name?: string } = {}) {
     const resolvedId = String(data.id ?? data.parent_id ?? '') || undefined;
@@ -25,6 +27,7 @@ export class GroupModel extends BaseModel {
     this.icon = data.icon;
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
     this.parent_id = data.parent_id ?? null;
+    this.roles = (data as any).roles ?? [];
   }
 
   toJSON(): Record<string, any> {
@@ -38,6 +41,7 @@ export class GroupModel extends BaseModel {
       icon: this.icon,
       parentId: this.parentId,
       parent_id: this.parent_id ?? null,
+      roles: this.roles ?? [],
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

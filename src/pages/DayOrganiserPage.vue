@@ -130,8 +130,8 @@
       v-model="showGroupEditDialog"
       :editing-group-id="editDialogGroupId"
     />
-    <!-- Community Dialog (opened from options menu 'Join new member or device') -->
-    <CommunityDialog v-model="showCommunityDialog" />
+    <!-- Join Member Dialog (opened from options menu 'Join new member or device') -->
+    <JoinMemberDialog v-model="showCommunityDialog" />
     <!-- First Run Dialog -->
     <FirstRunDialog
       v-model="showFirstRunDialog"
@@ -238,7 +238,7 @@ import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
 import GroupManagementDialog from "src/modules/group/components/GroupManagementDialog.vue";
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
-import CommunityDialog from "src/components/settings/CommunityDialog.vue";
+import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
