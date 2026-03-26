@@ -124,7 +124,11 @@
       v-model="showGroupDialog"
       :group-options="groupOptions"
       :group-tree="groupTree"
-      :initial-editing-group-id="initialEditingGroupId"
+    />
+    <!-- Group Edit Dialog (opened from options menu) -->
+    <GroupEditDialog
+      v-model="showGroupEditDialog"
+      :editing-group-id="editDialogGroupId"
     />
     <!-- First Run Dialog -->
     <FirstRunDialog
@@ -231,6 +235,7 @@ import Watermark from "src/components/ui/Watermark.vue";
 import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
 import GroupManagementDialog from "src/modules/group/components/GroupManagementDialog.vue";
+import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
@@ -480,10 +485,11 @@ const allTasks = computed(() => CC.task.list.all());
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
 const showGroupDialog = ref(false);
-const initialEditingGroupId = ref<string | null>(null);
-// reset the pre-selected group whenever the dialog is closed
-watch(showGroupDialog, (v) => {
-  if (!v) initialEditingGroupId.value = null;
+const showGroupEditDialog = ref(false);
+const editDialogGroupId = ref<string | null>(null);
+// reset edit group id whenever that dialog is closed
+watch(showGroupEditDialog, (v) => {
+  if (!v) editDialogGroupId.value = null;
 });
 
 // Inline edit-group dialog removed (unused)
@@ -1109,11 +1115,11 @@ onMounted(async () => {
   };
   window.addEventListener("group:manage", organiserGroupManageHandler as EventListener);
 
-  // allow TaskListOptionsMenu 'edit group' action to open dialog and pre-select group
+  // allow TaskListOptionsMenu 'edit group' action to open the dedicated edit dialog
   organiserGroupManageEditHandler = (e: Event) => {
     const groupId = (e as CustomEvent<{ groupId?: string }>).detail?.groupId ?? null;
-    initialEditingGroupId.value = groupId;
-    showGroupDialog.value = true;
+    editDialogGroupId.value = groupId;
+    showGroupEditDialog.value = true;
   };
   window.addEventListener(
     "group:manage-edit",

@@ -7,12 +7,12 @@ $task-blue: #0d47a1;
 $inactive-blue: #1976d2; // matches :root --q-primary
 
 $menu-bg: #4af;
-$menu-bg-opacity: #4afc;
+$menu-bg-opacity: rgba(11, 111, 222, 0.7);
 
 /* Set main element background to app theme main color */
 main {
   // background: #def !important;
-  background-image: url('/images/months/bg_04.jpg') !important;
+  background-image: url("/images/months/bg_04.jpg") !important;
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -41,7 +41,7 @@ main {
   overflow: hidden;
 }
 .q-menu .q-item::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -133,7 +133,7 @@ body .q-select ::v-deep .q-field__control,
 /* Specific high-precedence fixes observed in DevTools */
 body .q-dialog ::v-deep .q-select__focus-target,
 body .q-dialog ::v-deep input.q-select__focus-target,
-body .q-dialog ::v-deep input[type='color'] {
+body .q-dialog ::v-deep input[type="color"] {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
@@ -212,7 +212,7 @@ html body .q-dialog .q-card textarea::placeholder {
 }
 
 /* Responsive overrides imported separately */
-@import 'responsive-overrides.scss';
+@import "responsive-overrides.scss";
 
 /* Override Quasar outlined button pseudo-element so it doesn't inherit
    `currentColor` (which picks up group button text color). Make it
