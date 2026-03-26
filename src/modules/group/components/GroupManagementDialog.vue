@@ -129,6 +129,7 @@ const props = defineProps<{
   modelValue: boolean;
   groupOptions: any[];
   groupTree: any[];
+  initialEditingGroupId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -332,6 +333,26 @@ const dialogVisible = computed({
   get: () => !!props.modelValue,
   set: (v: boolean) => emit("update:modelValue", v),
 });
+
+// Auto-start editing when dialog opens with a pre-selected group id
+watch(
+  () => dialogVisible.value,
+  (open) => {
+    if (!open || !props.initialEditingGroupId) return;
+    try {
+      const grpList = (() => {
+        return CC.group.list.all.value ?? [];
+      })();
+      const g = grpList.find((x: any) => String(x.id) === String(props.initialEditingGroupId));
+      if (g) {
+        privilegeMode.value = 'edit';
+        startEdit({ id: g.id, label: g.name, name: g.name, icon: g.icon, color: g.color });
+      }
+    } catch (e) {
+      void e;
+    }
+  }
+);
 
 const editingGroupId = ref<string | null>(null);
 

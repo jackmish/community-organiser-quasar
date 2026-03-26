@@ -5,7 +5,7 @@
       align-items: center;
       gap: 8px;
       width: 100%;
-      justify-content: space-between;
+      justify-content: flex-end;
     "
   >
     <template v-if="optionsReady">
@@ -199,7 +199,10 @@
         </q-btn>
       </div>
 
-      <!-- Right slot intentionally left empty (child group buttons rendered under tasks list) -->
+      <!-- Right slot: options menu for the current group -->
+      <div style="display: flex; align-items: center">
+        <TaskListOptionsMenu :text-color="getBtnTextColor(selectedOption) || undefined" />
+      </div>
     </template>
     <template v-else>
       <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
@@ -214,6 +217,7 @@ import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
 import CC from "src/CentralController";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
+import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";

@@ -43,6 +43,7 @@
   "ui.all_groups": "All Groups",
   "ui.shortcut": "Shortcut",
   "ui.manage_groups": "Manage Groups...",
+  "ui.edit_group": "Edit group",
   "ui.go_to_parent": "Go to parent:",
   "menu.connections": "Connections and data",
   "menu.settings": "Settings",

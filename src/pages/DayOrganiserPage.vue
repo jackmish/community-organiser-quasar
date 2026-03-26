@@ -20,7 +20,7 @@
               <div class="text-h6 task-list-header" :style="headerStyle">
                 <div
                   class="row items-center justify-between"
-                  style="align-items: center; margin-top: 6px; justify-content: center"
+                  style="align-items: center; margin-top: 6px; justify-content: flex-end"
                 >
                   <div class="row items-center" style="gap: 8px">
                     <q-btn flat dense round @click="CC.task.time.prevDay">
@@ -62,6 +62,7 @@
                 :active-group="CC.group.active.activeGroup"
                 :color="watermarkTextColor"
                 size="large"
+                justifyContent="flex-start"
               />
             </q-card-section>
             <q-card-section v-if="sortedTasks.length === 0">
@@ -123,6 +124,7 @@
       v-model="showGroupDialog"
       :group-options="groupOptions"
       :group-tree="groupTree"
+      :initial-editing-group-id="initialEditingGroupId"
     />
     <!-- First Run Dialog -->
     <FirstRunDialog
@@ -478,6 +480,11 @@ const allTasks = computed(() => CC.task.list.all());
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
 const showGroupDialog = ref(false);
+const initialEditingGroupId = ref<string | null>(null);
+// reset the pre-selected group whenever the dialog is closed
+watch(showGroupDialog, (v) => {
+  if (!v) initialEditingGroupId.value = null;
+});
 
 // Inline edit-group dialog removed (unused)
 const showFirstRunDialog = ref(false);
@@ -512,6 +519,7 @@ const { handleImportFile } = createImportHandler({
   showFirstRunDialog,
 });
 let organiserGroupManageHandler: any = null;
+let organiserGroupManageEditHandler: any = null;
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
@@ -525,6 +533,11 @@ onBeforeUnmount(() => {
       window.removeEventListener(
         "group:manage",
         organiserGroupManageHandler as EventListener
+      );
+    if (organiserGroupManageEditHandler)
+      window.removeEventListener(
+        "group:manage-edit",
+        organiserGroupManageEditHandler as EventListener
       );
   } catch (e) {
     // ignore
@@ -1095,6 +1108,17 @@ onMounted(async () => {
     showGroupDialog.value = true;
   };
   window.addEventListener("group:manage", organiserGroupManageHandler as EventListener);
+
+  // allow TaskListOptionsMenu 'edit group' action to open dialog and pre-select group
+  organiserGroupManageEditHandler = (e: Event) => {
+    const groupId = (e as CustomEvent<{ groupId?: string }>).detail?.groupId ?? null;
+    initialEditingGroupId.value = groupId;
+    showGroupDialog.value = true;
+  };
+  window.addEventListener(
+    "group:manage-edit",
+    organiserGroupManageEditHandler as EventListener
+  );
 
   // Show first run dialog if no groups exist
   if (CC.group.list.all.value.length === 0) {
