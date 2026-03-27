@@ -221,28 +221,36 @@ const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(k
 if (groupObj) CC.group.active.activate(groupObj);
 else CC.group.active.activate(String(key));
 
-Its not very serious problem, but it can be, a specially when talking about performance, app size and continuing some project clear code principles for future project growth.
+Its not very serious problem in small apps, but it can grow with a project. Talking about performance, app size and continue extending code with or without AI could be impossible without some cleaning efforts - refactor.
 
-- Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is most common type in this kind of AI TypeScript - universal parameter functions,...
+- Its TypeScript but GPT5.1 really likes to make universal methods, its not effective to navigate in universal code, find input type/definition or just use somewhere else the code not knowing input types.
 
-- its a chaos of parameter names with this "any" convention.
+- its additionally chaotic when its located inside some file, without good context why this function is needed. There is lot of abandoned functions like this, that AI should remove after refactor, or it doesn't solve the problem. Code like this is growing sometimes to 20 lines, when solution is not found in the first attempt. Additionally its usually split inside some shared file or directly inside .vue view file. Making some core/shared features is not the way this AI works.
 
-- this time filtering isn't so bad but in many cases its filtering too much, it filters twice 1) to get full flat list - instead of getting flat list directly 2) and than to find an object
+- this time filtering isn't so bad,... but in many cases it filters too much 1) its making full flat list - doesn't try to find or create some cache with list already existing 2) than it's filtering it second time, creating second loop iterating objects once again.
 
 - next thing - maybe active group is the same as the new one - so why to filter list before checking if there is any difference
 
-- it should rather extend some helper class method to do some finding operation and inside some ORM/collection class to automate query/filtering things.
+- it should rather add/extend some helper/repository/controller class method to do some finding operation. Probably whole function is useless, when it could be wrapped inside single function like CC.group.active.setById - or something similar. Only some validation/handlers connected to component actions should be inside this specific part of code.
 
-- function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() and it would single line activating group, and i've even skipped other lines setting active group.
+- Inside shared method of CC.group.active.set it would be nice to find any recommendation about some ORM/collection class but it doesn't happen without beginning programer organization plan. Laravel has built in collection/ORM - this time Quasar - doesn't have anything like this, its more frontend framework. There is a Pinia, but I thing except some dev tools its useless in this case, or maybe I don't know something yet. CC is organizing methods and memory in more simply way, avoiding array key calls, its rather self documenting - or would be after finishing refactor job.
 
-Refactor of things like this with GPT5.1 could take forever, sometimes with not many chances of success after hours of waiting, correcting next errors,...
+- function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/class" and make "active.set()" + setById() and it would single line activating group, and i've even skipped other lines setting active group.
 
-- process of fixing earlier issues is like: a) code with errors. It could fix most of them by its own, a specially if there is permission granted to tsc/lint/unit tests commands, but not all are visible without using app. Allowing AI to run app can find some problems but probably faster way is to copy errors in the chat and seeing window with opened app while doing something else is really distracting
-  Fixing errors is usually longest process of creating new thing/improving something. Some materials are talking about Cursor having much less problems with code errors b) AI created not wanted interface: GroupRecord. As interface its rather useless, its hard to change mind of AI to change style. Even with correct prompt or copilot-instructions config it still prefers the old way. Lot of decisions is made by other places containing already some another code pattern c) prompted request is usually partially done. Sometimes AI creates plan/queue and sometimes not d) sometimes fixing one thing brakes/modifying in worst case is long chain of changes. Usually if there is too many files to change its a moment when its good to think when to revert changes e) reverting changes with AI Copilot build in tools is really risky, better to create much more commits before next AI job. Its another question about amount of commits, and cooperation with team.
+Refactor of things like this with GPT5.1 could take forever, sometimes with not many chances of success. After hours of waiting, correcting next errors, sometimes project can be really hard to fix by AI and human generally needs to learn the project first to fix something,... Without Git and other history tools its hard to think about AI direction of development.
+
+- process of fixing issues or creating new things usually is like this:
+
+a) first code almost always with errors or unfixed css/lookout. It could fix most of errors by its own, a specially if there is permission granted to tsc/lint/unit tests commands, but not all are visible without using app, a specially visual changes. Allowing AI to run app can find some problems but probably faster way is to copy errors in the chat and seeing window with opened app while doing something else is really distracting
+b) Fixing errors is usually longest process of creating new thing/improving something - and most of users could give up, without knowing additional ways to "feel safe" - GIT would be rather too hard/scarry for non-coders, but AI can recommend some commands, but user doesn't know meaning of most of commands. Generally reverting single change shouldn't be very hard, and learn single command. Some video reviews are mentioning about Cursor - probably it has much less problems with code errors, but is it best option for programer? I cant tell now and its not what i'm testing now
+c) reverting changes with AI Copilot build in tools is really risky, better to create much more commits before next AI job. Its another question about amount of commits, and cooperation with team.
+d) AI created interface: GroupRecord. It wasn't my intention. Sometimes i can tell its my fault, but generally almost all generative AI works in similar way. It connects sometimes word interface with something else in the prompt. This interface is useless, and next commands did job rather correctly, but still code needs refactor, and unification of names, shortening code, checking possible performance optimizations, additional useless code....
+e) prompted request is usually partially done. Sometimes AI creates plan/queue and sometimes not. Shorter tasks but with good explanation, telling what is working correctly to avoid some additional change is routine with models like GPT5.1. Claude usually is asking additional questions if its not sure but still not always asks even if prompt was more like a need of advice, planning moment not implementation moment.
+f) sometimes fixing one thing brakes/modifying in worst case is long chain of changes. Usually if there is too many files to change its a moment when its good to think when to revert changes or give AI a chance.
 
 #### Security issues
 
-Its mostly talking about project installation. It usually ignores security issues and its very risky to use/create some connection features without code check.
+Its mostly talking about project installation - old dependencies or data recovery/compatibility problems. It usually ignores security issues and its very risky to use/create some Internet app features without code check. Thats most common reason making app offline first is convenient way for non-coders, or just for test reasons.
 
 #### Conclusion about ChatGPT5.1 Mini
 
