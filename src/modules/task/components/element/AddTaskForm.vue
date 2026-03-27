@@ -109,6 +109,33 @@ function getGroupName(gid: string | undefined) {
     return null;
   }
 }
+
+function getGroupChipStyle(gid: string | undefined): Record<string, string> {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return {};
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    if (!found || !found.color) return {};
+    const bg = found.color;
+    const text = found.textColor || found.text_color || '#ffffff';
+    return { backgroundColor: bg + ' !important', color: text + ' !important' };
+  } catch (e) {
+    return {};
+  }
+}
+
+function getGroupTextColor(gid: string | undefined): string {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return 'inherit';
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    if (!found || !found.color) return 'inherit';
+    return found.textColor || found.text_color || '#ffffff';
+  } catch (e) {
+    return 'inherit';
+  }
+}
+
 const updateTask = (...args: any[]) => CC.task.update(...(args as [any, any, any]));
 
 async function selectGroupForEdit(gid: string | null) {
@@ -943,11 +970,16 @@ function onSubmit(event: Event) {
         <div style="display: inline-block; margin-left: 8px">
           <q-chip
             size="md"
-            :icon="getGroupIcon(localNewTask.groupId)"
             class="q-pointer group-select-chip"
             clickable
+            :style="getGroupChipStyle(localNewTask.groupId)"
             @click.stop="groupMenu = true"
           >
+            <q-icon
+              :name="getGroupIcon(localNewTask.groupId)"
+              :style="{ color: getGroupTextColor(localNewTask.groupId) }"
+              class="q-mr-xs"
+            />
             {{
               getGroupName(localNewTask.groupId) ||
               activeGroupLabelShort ||

@@ -226,4 +226,5 @@ watch(
 .co21-watermark-text {
   z-index: 1;
 }
+
 </style>

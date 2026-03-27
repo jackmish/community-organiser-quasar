@@ -551,7 +551,10 @@ onBeforeUnmount(() => {
         organiserGroupManageEditHandler as EventListener
       );
     if (organiserCommunityOpenHandler)
-      window.removeEventListener('community:open', organiserCommunityOpenHandler as EventListener);
+      window.removeEventListener(
+        "community:open",
+        organiserCommunityOpenHandler as EventListener
+      );
   } catch (e) {
     // ignore
   }
@@ -1134,8 +1137,13 @@ onMounted(async () => {
   );
 
   // allow TaskListOptionsMenu 'Join new member or device' to open community dialog
-  organiserCommunityOpenHandler = () => { showCommunityDialog.value = true; };
-  window.addEventListener('community:open', organiserCommunityOpenHandler as EventListener);
+  organiserCommunityOpenHandler = () => {
+    showCommunityDialog.value = true;
+  };
+  window.addEventListener(
+    "community:open",
+    organiserCommunityOpenHandler as EventListener
+  );
 
   // Show first run dialog if no groups exist
   if (CC.group.list.all.value.length === 0) {
