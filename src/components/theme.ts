@@ -129,11 +129,11 @@ export const monthColors: Record<string, string> = {
 // Overlay color chooser used for calendar overlays and jump-button alignment.
 export function getOverlayColorForMonth(monthLike: string | number | Date): string {
   const overlayColorArray = [
-    '#1976d2', // current month
-    '#ff9800',
-    '#4caf50',
-    '#9c27b0',
+    '#4caff0',
 
+    '#25c6c7',
+    '#ff9800',
+    '#9c27b0',
     '#009688',
     '#e91e63',
     '#3f51b5',
