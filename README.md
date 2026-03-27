@@ -254,11 +254,16 @@ Its mostly talking about project installation - old dependencies or data recover
 
 #### Conclusion about ChatGPT5.1 Mini
 
-Generally it could be good tool for programmer. Without any other options it could be very helpful but it rather needs coder to help, revert changes, make another prompt using some programer words.
+Generally it could be good tool for programmer. For non-coder it could work, but without good tutorial could be too hard to get in.
 
-Better to use Claude if its possible.
+Claude and more premium AI models are much more convenient, You are loosing much more time fixing errors, checking progress, than with Claude.
 
-Today it's rather talking about price and how you value Your time or You have an idea how to use multiple agents same time or you have some good prompts doing good enough job. Translating/localising content is the simplest way to make almost every AI model useful.
+Translating/localising content is the simplest task to make almost every AI model useful. Writing smaller parts of code, part by part could be also good reason to use this cheaper model.
+Writing smaller parts of code You have probably more control of project design, but also you are slowing down process of making project prototype.
+
+Refactor of code could be really hard with GPT5.1 mini, but I cant tell its impossible. Fixing performance issues, various warnings in browser dev tools are sometimes out of range for this model.
+
+If You don't want to pay more than 10$ monthly or reduce cost You can use both models, and use stronger model for most hard issues.
 
 ### Claude Sonnet 4.6 - model | VS Code | 1x - it means constant 10$/month + optionally with additional credits if limit reached. Still not very expansive option.
 
