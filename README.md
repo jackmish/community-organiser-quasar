@@ -229,7 +229,9 @@ Its not very serious problem, but it can be, a specially when talking about perf
 
 - this time filtering isn't so bad but in many cases its filtering too much, it filters twice 1) to get full flat list - instead of getting flat list directly 2) and than to find an object
 
-- it should rather extend some helper class method to do some finding operation or just use some ORM/collection thing.
+- next thing - maybe active group is the same as the new one - so why to filter list before checking if there is any difference
+
+- it should rather extend some helper class method to do some finding operation and inside some ORM/collection class to automate query/filtering things.
 
 - function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() and it would single line activating group, and i've even skipped other lines setting active group.
 
