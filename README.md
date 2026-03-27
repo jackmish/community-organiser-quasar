@@ -221,7 +221,11 @@ const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(k
 if (groupObj) CC.group.active.activate(groupObj);
 else CC.group.active.activate(String(key));
 
+Its not very serious problem, but it can be, a specially when talking about performance, app size and continuing some project clear code principles for future project growth.
+
 - Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is most common type in this kind of AI TypeScript - universal parameter functions,...
+
+- this time filtered is flat array with groups - but i many cases its filtering too much, too large objects, or doing really strange things - which are usually working but in strange unoptimized way
 
 - its filtering groups list - but probably it could use some class method function, a specially if its some ORM/collection thing. It likes to write more than install/wire something useful
 
