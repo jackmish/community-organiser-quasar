@@ -104,39 +104,54 @@
       </template>
     </div>
     <div
-      v-if="childGroupsNoTasks.length > 0"
+      v-if="childGroupsNoTasks.length > 0 || shortcutGroups.length > 0"
       class="hidden-children-list__list q-pa-sm"
       aria-hidden="false"
     >
       <div
-        class="row items-start justify-end hidden-children-list__container"
         style="
-          gap: 8px;
+          display: flex;
+          align-items: center;
           flex-wrap: wrap;
+          gap: 8px;
           width: 100%;
-          justify-content: flex-end;
           padding-right: 60px;
           box-sizing: border-box;
         "
       >
-        <div
-          v-for="g in childGroupsNoTasks"
-          :key="g.id"
-          class="child-group-btn"
-          role="button"
-          tabindex="0"
-          @click="
-            () => {
-              try {
-                CC.group.active.set(g);
-              } catch (e) {
-                void e;
-              }
-            }
-          "
-        >
-          <GroupButton :group="g" />
-        </div>
+        <!-- Push everything to the right -->
+        <span style="flex: 1" />
+
+        <!-- Shortcuts section (left of subgroups) -->
+        <template v-if="shortcutGroups.length > 0">
+          <span class="bottom-section-label">Shortcuts:</span>
+          <div
+            v-for="g in shortcutGroups"
+            :key="g.id"
+            class="child-group-btn"
+            :class="{ 'child-group-btn--active': isShortcutActive(g) }"
+            role="button"
+            tabindex="0"
+            @click="() => onShortcutClick(g)"
+          >
+            <GroupButton :group="g" :selected="isShortcutActive(g)" />
+          </div>
+        </template>
+
+        <!-- Subgroups section (right) -->
+        <template v-if="childGroupsNoTasks.length > 0">
+          <span class="bottom-section-label">{{ activeGroupName }} subgroups:</span>
+          <div
+            v-for="g in childGroupsNoTasks"
+            :key="g.id"
+            class="child-group-btn"
+            role="button"
+            tabindex="0"
+            @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }"
+          >
+            <GroupButton :group="g" />
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -351,6 +366,46 @@ watch(mergedTasks, (list) => {
   }
 });
 
+const shortcutGroups = computed(() => {
+  try {
+    return (groups.value || []).filter((g: any) => g && g.shortcut) as any[];
+  } catch {
+    return [] as any[];
+  }
+});
+
+const activeGroupName = computed(() => {
+  try {
+    const activeId =
+      activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
+    if (!activeId) return '';
+    const found = (groups.value || []).find((g: any) => String(g.id) === activeId);
+    return found?.name ?? '';
+  } catch {
+    return '';
+  }
+});
+
+function isShortcutActive(g: any) {
+  try {
+    const gid = String(g?.id ?? '');
+    const cur =
+      activeGroup?.value?.value == null ? null : String(activeGroup.value.value);
+    return !!gid && gid === cur;
+  } catch {
+    return false;
+  }
+}
+
+function onShortcutClick(g: any) {
+  try {
+    if (isShortcutActive(g)) return;
+    CC.group.active.set(g);
+  } catch (e) {
+    void e;
+  }
+}
+
 const childGroupsNoTasks = computed(() => {
   try {
     const activeId =
@@ -486,5 +541,19 @@ function logIfUnrecognized(item: any) {
 }
 .child-group-btn:active {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+.child-group-btn--active {
+  filter: none !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  cursor: default;
+}
+.bottom-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  align-self: center;
 }
 </style>

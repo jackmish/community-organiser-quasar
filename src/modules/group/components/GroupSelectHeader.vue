@@ -9,45 +9,6 @@
     "
   >
     <template v-if="optionsReady">
-      <!-- Left: shortcuts (moved to left of select) -->
-      <div
-        v-if="shortcutGroups && shortcutGroups.length"
-        style="display: flex; gap: 8px; align-items: center; min-width: 160px"
-      >
-        <q-btn
-          v-for="g in shortcutGroups"
-          :key="g.id"
-          dense
-          rounded
-          unelevated
-          class="shortcut-header"
-          :class="{ selected: isShortcutActive(g) }"
-          :aria-disabled="isShortcutActive(g)"
-          :tabindex="isShortcutActive(g) ? -1 : 0"
-          :title="`Go to ${g.name}`"
-          @click.stop.prevent="onShortcutClick(g)"
-          :text-color="getBtnTextColor(g)"
-          :style="getShortcutStyle(g)"
-        >
-          <q-icon
-            :name="g.icon || 'folder_open'"
-            :style="`color: ${getBtnTextColor(g)} !important; fill: ${getBtnTextColor(
-              g
-            )} !important; stroke: ${getBtnTextColor(g)} !important;`"
-          />
-          <span
-            :style="{ color: getBtnTextColor(g) }"
-            style="
-              max-width: 140px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            "
-            >{{ g.name }}</span
-          >
-        </q-btn>
-      </div>
-
       <!-- Middle: select + parent -->
       <div
         style="
@@ -320,22 +281,6 @@ const selectedOption = computed(() => {
   }
 });
 
-function getShortcutStyle(g: any) {
-  try {
-    const baseColor = g?.color || "transparent";
-    const text = getBtnTextColor(g) || "transparent";
-    const borderColor = getBtnBorderColor(g) || text;
-    const isActive = isShortcutActive(g);
-    let s = `background-color: ${baseColor} !important; border:1px solid ${borderColor}; padding: 4px 8px; min-height: 28px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
-    if (isActive) {
-      s += ` outline: 2px dashed ${text} !important; outline-offset: 2px; pointer-events: none; cursor: default;`;
-    }
-    return s;
-  } catch (e) {
-    return ``;
-  }
-}
-
 //converting api tree into q-tree
 const convertNode = (n: any): any => ({
   id: String(n.id),
@@ -454,24 +399,6 @@ const selectedGroupObj = computed(() => {
   }
 });
 
-const shortcutGroups = computed(() => {
-  try {
-    return (groups.value || []).filter((g: any) => g && g.shortcut) || [];
-  } catch (e) {
-    return [];
-  }
-});
-
-const filteredShortcutGroups = computed(() => {
-  try {
-    return (shortcutGroups.value || []).filter(
-      (g: any) => String(g.id) !== String(localValue.value ?? "")
-    );
-  } catch (e) {
-    return [];
-  }
-});
-
 function activateTreeShortcut(node: any) {
   try {
     const grp =
@@ -497,49 +424,6 @@ function isNodeShortcut(node: any) {
   }
 }
 
-function isShortcutActive(g: any) {
-  try {
-    if (!g) return false;
-    const gid = String(g.id ?? g.value ?? "");
-    const cur = localValue.value ?? activeGroup?.value?.value ?? null;
-    return gid && String(gid) === String(cur ?? "");
-  } catch (e) {
-    return false;
-  }
-}
-
-function onShortcutClick(g: any) {
-  try {
-    if (isShortcutActive(g)) return; // do nothing for active shortcut
-    CC.group.active.set(g);
-  } catch (e) {
-    void e;
-  }
-}
 </script>
 
-<style scoped>
-.shortcut-header {
-  border-radius: 6px;
-  padding: 2px 6px !important;
-  font-size: 0.88rem;
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Disabled visual state for shortcuts (when the shortcut matches the active group)
-   Use a selected-like appearance rather than muting the item. Clicks are still
-   ignored by the handler when this state applies. */
-.shortcut-header.selected {
-  /* Selected-like appearance for the active shortcut. Non-interactive. */
-  opacity: 1;
-  filter: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-
-  outline-offset: 2px;
-  outline: none;
-  pointer-events: none;
-  cursor: default;
-}
-</style>
+<style scoped></style>
