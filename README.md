@@ -231,6 +231,10 @@ Refactor of things like this with GPT5.1 could take forever and instead of somet
 
 - process of fixing errors like earlier meets with: a) code with errors - it needs to run few test before code would be working b) there is interface for GroupRecord - but Group should be class, some model defined somewhere by the way of creating group module. Interface for group is rather useless its not thing that should be defined in many ways like payment gateways. It really thinks that interface is the best for any model/structure c) prompted request is usually partially done even if they work d) sometimes fixing one thing brakes/modifying another thing and sometimes its a chain of changing things, hard to find without looking on code changes or by using connected app feature.
 
+#### Security issues
+
+Its talking mostly about project installation. It usually ignores security issues and its very risky to use/create some connection features without code check.
+
 #### Conclusion about ChatGPT5.1 Mini
 
 Generally it could be good tool for programmer. Without any other options it could be very helpful but it rather needs coder to help, revert changes, make another prompt using some programer words.
