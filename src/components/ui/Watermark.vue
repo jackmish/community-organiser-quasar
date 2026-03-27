@@ -212,8 +212,13 @@ watch(
 .co21-watermark--medium .co21-watermark-text {
   font-size: 40px;
 }
-.co21-watermark--large .co21-watermark-text {
-  font-size: 75px;
+.co21-watermark--large {
+  .co21-watermark-text {
+    font-size: 75px;
+  }
+  @media (max-width: 1200px) {
+    display: none !important;
+  }
 }
 .co21-watermark {
   overflow: visible;

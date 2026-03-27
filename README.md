@@ -2,26 +2,30 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 # Community Organiser 21 - CO21
 
-Don't recommend it yet. Too early development progress, however it its very useful a specially calendar, and making project notes inside project groups. I'll make some final Readme.md closer to version 0.9 of app.
+Too early development progress to be used by anyone other than the software developer (me),
+
+, however even now its very useful, more convenient than Google Calendar, or cant say any other organisers are better.
 
 ---
 
-The main goal of this application is to simplify organization for families and communities; in its current state it serves as a personal organizer for events and tasks.
+The main goal of this application is to create central command of communities like family, minor accounting, club, school group, team or small company.
 
-The application is designed to work primarily offline—even in environments with no internet access—and is not constrained by the storage limits common to some PWAs that rely on servers to continue operating.
+App is focusing on central command - PC/Laptop - some workstation computer, which could work locally and organize networks without need of Internet connection - totally.
 
-I said myself that there is a lot of this type of software, but when I wanted to find a convenient one, one that I would even pay for, I couldn't find it - either for my own organization or for maintaining communities/groups/circles/school classes/bus trips (sending resources, maps, guides, around peer too peer networks, maybe some navigation helper, tracking tool for schools - with small optimal not hidden process).
+Primary Offline would be working at beginning with bluetooth synchronization. There is a plan to create backend plugin/library to integrate CMS like Wordpress and synchronize everything with Internet, a specially with own services.
 
-Visually, I focus on readability. Of course, the layout is not finished, especially the margins and the backgrounds here and there, but instead of giving one or two matching colors, I prefer to use distinctive colors to immediately know where to look, what group is active. Currently the layout is a bit too bright,
-due to muted colors on one of the screens.
+---
 
-Apart from comfort/expression, I will try to implement the so-called immersion so that the appearance is not a patchwork of typical form and list control components.
+Visually, I focus on readability than on aesthetics, so it would be rather colorful. Theme manager would be not included in version 1.0.
+Of course, the layout is not finished, especially the margins and few colors are too vibrant.
+
+Apart from comfort/expression, I will try to implement the so-called immersion so that the appearance is not a patchwork of typical form and list control components, instead of typical office layout.
 
 This will also be the basis for the so-called smart houses, for now only within the information board and tablet/screen with announcements.
 
 ---
 
-Second reason to create this app was to check what AI/Copilot would generate without any engineering tips and refactor it later. UX development and app features were 1st, now as usual opinion "vibe code" like attempt do many mess,... but it works fine. It was hard to not show AI that for example whole app is initiating 7 times, solution also wasn't best. AI does'nt like DRY - it likes very much to repeat itself, whatever AI model it was.
+Second reason to create this app was to check what AI/Copilot would generate without any engineering tips and refactor it later. Refactor could be done with AI. This is also test ChatGPT5.1 Mini vs ClaudeSonnet 4.6 - which have different prices - using VS Code. I know Claude could be good for vibe code - a specially in programmer hands, but is ChatGPT5.1 Mini good enough?
 
 ## Name and ideology
 
@@ -29,7 +33,7 @@ The ideology is to make easier organisation lifes, and connect some internal dev
 
 The chosen name, CO21, stands for Community Organiser with the number chosen as a distinguishing element. Human communities are emitting CO2 so its maybe not so bad name, but probably chemically CO21 would be toxic or neutral or just impossible atomic structure. The logo is an initial design created in Inkscape.
 
-## Main features
+## Main primary off-line app features
 
 1. Time-based tasks — scheduling meetings, reminders about upcoming events, vehicle insurance renewals, expiring ID documents, task deadlines, cyclic events etc.
 2. To-do tasks — items not yet tied to a specific time. Each task can later be associated with time; simple task/subtask lists are supported. Subtasks are created by prefixing lines with "-". The app can recognize pasted lists and detect subtasks without modifying the original text; a marker appears only when a subtask is marked complete.
@@ -71,7 +75,7 @@ This project is in early development and is tested mainly at small laptop-like a
 
 ## Next steps
 
-- Make App more useful, use it, improve UX crucial fixes. Code isn't first, but app usage experience is, at least at this point.
+- Make prototype functionalities using mostly "Vibe Code" method and than refactor - anything useful i'll have in mind - a specially if feature or change is small.
 - Fix less important issues, and organize and clean up the codebase. Refactor has began and its long way, when engineering was skipped during creation process with Copilot/VsCode mostly ChatGPT5 + sometimes Claude Sonnet. It would be maybe nice way to learn how to fix vibe/spaghetti, but rather also with AI automation, and maybe later with another solutions.
 - after some stage of project refactor, use some experimental project structure, try to make something more convenient than typical Vue or Laravel projects, a specially optimize it for AI usage + understanding project, or just agree with AI
 - Finish Bluetooth data synchronization between devices
