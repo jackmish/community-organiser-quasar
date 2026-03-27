@@ -798,6 +798,18 @@ const {
   width: 640,
   shouldIgnoreClick: (target) => {
     try {
+      // Ignore clicks inside Quasar teleported overlays (menus, dialogs, popups).
+      // These are attached to <body> so they appear "outside" the panel even when
+      // triggered by UI inside the panel (e.g. the group selector q-menu).
+      if (target && (target as Element).closest) {
+        if ((target as Element).closest('.q-menu, .q-dialog, .q-popup-proxy, .q-tooltip')) {
+          return true;
+        }
+      }
+    } catch (e) {
+      void e;
+    }
+    try {
       const activeId = CC.task.active.task.value?.id;
       if (activeId && target && (target as Element).closest) {
         return Boolean((target as Element).closest(`[data-task-id="${activeId}"]`));

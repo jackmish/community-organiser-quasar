@@ -189,96 +189,31 @@ See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-
 The development process can be broken into stages:
 
 1. Choosing technologies and confirming that a familiar framework is a good choice.
-2. I might not have had as much motivation to build this app if I had not previously used AI to create a small Laravel project that proved practical with little effort. This time I decided to generate something larger and less typical mainly using prompts. I note that AI did not necessarily save time overall and may have even added work, although it allowed me to focus on things other than coding.
-3. Stage three consisted mostly of "lazy" prompt input, concentrating on project thinking, design, appearance and user-facing features (with an intuition about where that would lead).
-4. After the main features were implemented I stopped adding features and focused on tidying the app. In short, this stage could be called an Augean stable, though I do not entirely blame AI—many factors led to this state. Working on the architecture after AI-generated code can be interesting and also a logical puzzle or challenge.
+2. I might not have had as much motivation to build this app if I had not previously used AI to create a small Laravel project that proved practical with little effort, but also it was pointless project. This time I decided to generate something more useful and larger using this time electron more desktop solution.
+3. Stage three consisted mostly of "lazy" prompt input, concentrating on project thinking, design, appearance and user-facing features (without thinking about AI garbage code. Yes - in most cases it is garbage without suggestions, and even with suggestions AI likes it's own style, mostly generating 10x more lines of code multiplying sometimes whole App init which could be very crucial for performance... more later or on blog).
+4. Solving AI puzzles - Refactor. Optimizing code structure, lot of thinking also about names of newly created structures, a specially centralize around central part which is named CentralController, which is extending Pinia features, but its not only store/storage. Lot of changes were actual 100 commits ago, a specially names. Slow refactor without good conclusion could be too hard to realize with ChatGPT5.1 its much more convenient with Claude. Without good structure, project would be multiplying the same functionalities. I wonder if centralization could affect component dependency and possibility to load app part by part, but its rather not an option to not use most of Central/Core controlling app methods.
 
 ## General talking about AI:
 
-I know from many sources that AI is used for rather smaller things, smaller projects, smaller graphics, short videos, etc.
+I know from many sources that AI is used for rather smaller things, smaller projects, smaller graphics, short videos, etc. It could be called "slope", a specially creation without any control. It could be good tool to create something fast if usage of app is more important than later long process of refactor - which could improve app scalability. After refactor APP could grow more, even if its another talking about vibe coding.
 
-As for the code, there are a lot more uncertainties as there are newer and newer integrations within the code that are no longer just a "language" generator.
-Apart from the question of what can be achieved with low-cost AI, another question arises. Can't AI be treated as a good tool for "expansion?" As part of technological expansion, I would talk about, for example, replacing horses with combustion cars. With the emergence of opportunities, instead of just replacing the horse, the potential translated into the construction of roads, further journeys, more less tiring journeys - so instead of ultimately slowing down the labor market, he raised the bar of what can be achieved.
+There were few crucial moments when a specially cheaper AI models were working much less efficient. Larger app grows it rather would be better with more expansive AI model, but its not a problem if user knows project structure and can show AI the files is prompting smaller commands, using css words known for programmers like: position fixed, position absolute.
 
-I can certainly say from this experience of using AI that in many cases it speeds up work many times over,
-which can be somewhat thought of as speeding up your work by installing an additional library written by someone rather than writing it from scratch.
+## Conclusions about AI models
 
-Next, in the generation of graphics, code, etc., knowledge of the topic, distinguishing quality is often important, and a programmer or graphic designer is needed at least to refine the project.
+### GPT5.1 Mini - model | Copilot VS Code | 0x credits - it means 10$ per month without additional payments
 
-## Conclusions after using AI prompts:
+GPT5.1 mini isn't so bad but it could be really annoying, a specially for css/graphic tasks, splitting content into files, refactor. It really likes to create large files, and it has many problems with tags. It usually doesn't make any code without error. Writing automatic tests could be not best combo, when its testing code with low quality at start, that needs to be refactored. Sometimes instead of updating automatic test it would rather try to change refactored functionality, to previous state.
 
-### GPT5.1 Mini | Copilot model 0x credits - 10$ per month + occasionally manual updates and maybe once Claude at beginning.
+Trying to find correct names for project structure could be also very confusing with this model or with Claude Sonnet.
 
-GPT5.1 mini isn't so bad but really annoying if You prefer some file structure and You were previously using better AI models. It would be mostly garbage code, mostly code would be inside single vue file without any recommendations - but it's enough good for some lvl of "vibe coding".
+Generally app would be controlling connection with camera,...etc and its hard to find best names for offline first app, by the definitions. It would be not only organizer - it could be part of central command for Smart House or "Smart Ship".
 
-Most of Vue projects looks like "blocks scattered by a child on the floor", but with GPT5.1 Mini it looks much worse.
-
-It would always try to use own "coding style", avoiding user recommendations. It has also short memory isn't cooperating best with git fast reversal changes methods.
-
-It usually can write new feature destroying another one, a specially it likes to touch layout changes, "improving" in wrong way without asking. This thing could be probably most annoying for even every vibe coder.
-
-Refactor is slow and very ineffective, git is really helpful.
-
-Maybe with good instructions, knowing better limitations of AI it could be much more useful.
-
-For example "API" maybe isn't best name for central part of code but its already used by plugins and it will be used for backend state sync, it already had some order - it was AI advice at some point of development.
-
-At this point i'll name it Controller - next GPT5.1 suggestion - its maybe not bad name , but API is shorter name general definition is "Interface". I don't like naming anything Facade. In PHP its usually very confusing pattern doesn't explaining how something works in simply way, in reality Facade is also something empty/useless.
-
-Controller probably same as API could not be the best name when im thinking about MVC/PHP typical backend tasks. Inside backend apps it's mostly used to extend routing REST endpoint choice, but maybe "Controller" name is something more than MVC, and stateless server APP is maybe best for static pages, not for responsive app.
-
-Generally this app doesn't use typical URL/REST API/Page switch functionalities. View is controlled by responsive value changes. Changing active group is a bit different than switching url.
-
-Probably i'll name most crucial file just Command Center - and use it around project as CC.group.setActive(...) or ctr.group - i haven't decided yet. Api logic for plugins would be probably limited, and maybe its a good choice to rename access points.
-
-This part of code is already used by experimental plugin, which could be developed by external code creators, and probably it would be somehow exposed as as twin backend control system, with similar logic.
+There is also thinking about SOLID/DRY, but at this point it would be good to just split largest files into smaller and decide to some convenient project structure or use or not to use Pinia etc.
 
 ---
 
-Im not 100% sure of design of this vibe code project directions, but once GPT5.1 suggested API as name of central app control system, but when i've decided to move state inside API it became more like Pinia store (but storage sounds more like module not good name for central control system/interface. It could be good also as some layer or object/class, but thinking about car as an store isn't convenient way).
-
-Generally app would be controlling only state/storage but connection with camera,...etc, its not only some interface linking database.
-
-Engine name would be convenient but probably it wouldn't be engine, just some kind of organizer core, central command system or something similar.
-
-Task manager is maybe not correctly describing possible futures of this center, mostly time organization center, but it already is attracted by calendar feature in most cases. Possibly it could be extended by functionality of anty-theft system, trip organization with map functionality,...
-
-There is also talking about single responsibility principle - i still need to make at least central points for modules and than split project into smaller cells.
-
-GPT5.1 really doesn't likes names like "root" which is convenient name for me suggesting some recursive structure, i really want to avoid of typical names like index which are less objective like. App is hmm... too general name.
-
-I have need to experiment with names make some nice own files structure ( a specially after refactor of GPT5.1 it could be different experience ).
-
----
-
-- My concept is to try to make some functions map for AI - to avoid repeating code.
-
----
-
-Just cant recommend GPT5.1 Mini for operations like: "refactor storage module - use same structure/way as task module". Even it was refactored by Claude, and GPT5.1 mini cant accept this way sometimes.
-
-It needs smaller/simpler tasks for more effective results, to avoid "single file style".
-Initial prompts, or just some refactor prompts could be a key to success. Generally AI doesn't like too long prompts. With too long text it could see some logical conflicts and it chooses to make 30% of the prompt. It likes to create smaller tasks by itself when prompt is too long. Maybe more notes could explain how to not touch for example sizes of list/elements wrappings, when there is only changed box-shadow under single element of the list. Its much harder to find wrong change a specially when another thing needs to be repaired.
-
----
-
-There is also problem with AI knowledge about project - it has own versions of files - probably. It easily changes user improvements made manually. Also when it see some conflict it would probably change more code than it was asked for, its trying to solve problem from wrong direction for example: there was done some refactor, but unit tests were not updated. It changed refactored code instead of outdated unit tests.
-
----
-
-Next problem is it doesn't use tools for auto-rename files. Renaming single file could be so long process and generally AI isn't very adapted to use tools. In most cases to run tsc or lint, or check unit tests by AI it needs to always check package.json - its repeating checking project every time structure instead of doing something instant.
-
----
-
-I'm not very patient anymore to change filenames with AI, and a specially with GPT5.1. AI can do this after few attempts Claude or GPT5.1 but its not efficient. It has also problems with using replacement tools. Instead of replacing some text it will destroy file structure accidentally, it doesn't see IDE/VSCode error tools. It could only use console, which could do the same but not instantly. This really needs some optimization.
-
-Why automatic tests could be bad for GPT5.1? Avalanche changes are not easy to control, GPT5.1 isn't automatically updating tests. For Claude this is much more obvious habit to update the automatic tests and execute it after changes.
-
----
-
-There is also another problem when code is adjusted, fixed etc. It leaves unused code or incorrect fixes, which are doing nothing in project except making code heavier.
-
----
+#### Most common code problem
 
 There are so many problems/scenario with code like this:
 
@@ -286,33 +221,25 @@ const groupObj = (groups.value || []).find((g: any) => String(g.id) === String(k
 if (groupObj) CC.group.active.activate(groupObj);
 else CC.group.active.activate(String(key));
 
-1. Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is main type in this kind of TypeScript.
-2. There is also second problem if there is an ID instead of object: searching/filtering should be build inside activate or activateById function. AI really multiplies code, likes to repeat itself. There are still many lines of code which are taking all loaded tasks/events with some dates instead of taking correct, flat list of tasks.
-3. function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() for every state object/class inside Central Application Controller CC.
+- Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is most common type in this kind of AI TypeScript - universal parameter functions,...
+
+- its filtering groups list - but probably it could use some class method function, a specially if its some ORM/collection thing. It likes to write more than install/wire something useful
+
+- function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() for every state object/class inside Central Application Controller CC.
 
 Refactor of things like this with GPT5.1 could take forever and instead of sometime fixing it would do next dumb thing.
 
-4. I activated prompt with previously written problems, and as usual result wasn't satisfying a) code with errors - it needs to run few test before code would be working b) there is interface for GroupRecord - but Group should be class, some model defined somewhere by the way of creating group module. Interface for group is rather useless its not thing that should be defined in many ways like payment gateways. c) still i cant see interface for "set" and "setById" methods - which shouldn't be limited only to groupRecord. d) there is many prompts before it will adapt, but probably AI likes more examples, e) when its creating model class it still wants to use GroupInterface - which makes every TS function using it unintuitive, over-engineered, instead of using just direct Group class. I don't have any plan to implement many Group classes using this interface. It there is something shared it could be interface for model - forcing to use "id", and maybe some methods
+- process of fixing errors like earlier meets with: a) code with errors - it needs to run few test before code would be working b) there is interface for GroupRecord - but Group should be class, some model defined somewhere by the way of creating group module. Interface for group is rather useless its not thing that should be defined in many ways like payment gateways. It really thinks that interface is the best for any model/structure c) prompted request is usually partially done even if they work d) sometimes fixing one thing brakes/modifying another thing and sometimes its a chain of changing things, hard to find without looking on code changes or by using connected app feature.
 
-5. I have watched after some break how copilot-instructions.md looks like to maybe place some guidance instructions in there. File is growing, and so much instructions are not updated/obsolete. Refactoring instructions does not influence very much this file which maybe is a good thing, but refactor should begin inside this file not only inside AI session. With Claude there is much less need to remind AI how something should be working. Maybe training own AI model could be also some good point however id doesn't contain so much wide knowledge its rather impossible to make by own budget full model compared to Claude. Making additional knowledge databases could be a good solution, for example there are additional files for graphic AI models, working locally, which are trying to do thing unknown to base model.
+#### Conclusion about ChatGPT5.1 Mini
 
-6. I've updated few times copilot instructions but at least GPT5.1 is rather ignoring it, or just I haven't recognized yet its working or not. Probably its prioritizing some part of text and it would be more efficient to make start prompt/instructions different for example: for CSS and different for TS files - include it like with graphic AI generators. AI from GPT5.1 is neural network so its logic it's using weight system/fuzzy logic learned by some very talkative sources, or its just nature of all GPT based models. It likes to generate many line of text but it doesn't like to read it, or update knowledge instantly after file change. Its hard to prepare optimized for AI map/shortcuts for project, a specially to generate it with help of AI.
+Generally it could be good tool for programmer. Without any other options it could be very helpful but it rather needs coder to help, revert changes, make another prompt using some programer words.
 
-7. Actually this code is wired with child groups section. Than styling hover effect could be acceptable, but instead of doing simple instructions like change grayscale on hover it would also animate transform y property, make animation without asking. Actually its not acceptable for my standards to use transform/scale operations for button text as hover action - it has many issues.
+Better to use Claude if its possible.
 
-With Claude Sonnet there is much fewer things like this, but still needs lot of guidance to create convenient code, by default each code generator have precedent behavior like this (still haven't checked Cursor)
+Today it's rather talking about price and how you value Your time or You have an idea how to use multiple agents same time or you have some good prompts doing good enough job. Translating/localising content is the simplest way to make almost every AI model useful.
 
----
-
-For frontend/layout tasks it could be ok, but this kind of tasks generates most problematic errors, need of rollback changes using Git. AI files history isn't best option to trust.
-
-Probably generating even vibe code without GIT is pointless with every AI model, a specially AI likes to destroy html structure, cant see correctly without Vue tools if something is correct or not.
-
-Some paid AI services performed better for code, but they also contributed to code mess in similar ways. A poor start with ChatGPT4 and attempts to adapt other AIs to that style may have caused problems.
-
-### Claude Sonnet 4.6 | Claude Refactor
-
-One of the most important target of this project is to check if I can +- vibe code some project, design app prototype without code review, occasionally make some few suggestions about code, and than refactor it. Im usually using Claude Sonnet 4.6 - and I'm not going to check Cursor and others at this moment. Maybe after Claude Sonnet. But maybe it would be interesting to create few git branches of vibe refactor and engineering more like refactor.
+### Claude Sonnet 4.6 - model | VS Code | 1x - it means constant 10$/month + optionally with additional credits if limit reached. Still not very expansive option.
 
 My methodology for this project is to use cheap GPT5.1 or other better same cheap model, and refactor it after some stage of development. Last 2 times - just i've lost my patience before planned stage was finished and recent time with unit tests problems.
 
