@@ -225,15 +225,18 @@ Its not very serious problem, but it can be, a specially when talking about perf
 
 - Its TypeScript but GPT5.1 really likes to make universal methods, which isn't very effective method. "any" is most common type in this kind of AI TypeScript - universal parameter functions,...
 
-- this time filtered is flat array with groups - but i many cases its filtering too much, too large objects, or doing really strange things - which are usually working but in strange unoptimized way
+- its a chaos of parameter names with this "any" convention.
 
-- its filtering groups list - but probably it could use some class method function, a specially if its some ORM/collection thing. It likes to write more than install/wire something useful
+- this time filtering isn't so bad but in many cases its filtering too much, it filters twice 1) to get full flat list - instead of getting flat list directly 2) and than to find an object
 
-- function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() for every state object/class inside Central Application Controller CC.
+- it should rather extend some helper class method to do some finding operation or just use some ORM/collection thing.
 
-Refactor of things like this with GPT5.1 could take forever and instead of sometime fixing it would do next dumb thing.
+- function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/taxonomy" and make "active.set()" + setById() and it would single line activating group, and i've even skipped other lines setting active group.
 
-- process of fixing earlier issues is like: a) code with errors. It could fix most of them using console commands, but not all are visible without using app. Fixing errors is usually longest process of creating new thing/improving something visually in app or refactor the code b) AI created as usual interface: GroupRecord. As interface its rather useless, its hard to change mind of AI to change style. Even with prompt or copilot-instructions config it still prefers the old way. Lot of decisions is made by other places containing already some pattern c) prompted request is usually partially done even if it works, sometimes AI creates plan/queue but sometimes not d) sometimes fixing one thing brakes/modifying in worst case is long chain of changes. Usually if there is too many files to change its a moment when its good to think when to revert changes e) reverting changes with AI tools are really risky, better to make much more commits, but then its another question about amount of commits, and cooperation with team.
+Refactor of things like this with GPT5.1 could take forever, sometimes with not many chances of success after hours of waiting, correcting next errors,...
+
+- process of fixing earlier issues is like: a) code with errors. It could fix most of them by its own, a specially if there is permission granted to tsc/lint/unit tests commands, but not all are visible without using app. Allowing AI to run app can find some problems but probably faster way is to copy errors in the chat and seeing window with opened app while doing something else is really distracting
+  Fixing errors is usually longest process of creating new thing/improving something. Some materials are talking about Cursor having much less problems with code errors b) AI created not wanted interface: GroupRecord. As interface its rather useless, its hard to change mind of AI to change style. Even with correct prompt or copilot-instructions config it still prefers the old way. Lot of decisions is made by other places containing already some another code pattern c) prompted request is usually partially done. Sometimes AI creates plan/queue and sometimes not d) sometimes fixing one thing brakes/modifying in worst case is long chain of changes. Usually if there is too many files to change its a moment when its good to think when to revert changes e) reverting changes with AI Copilot build in tools is really risky, better to create much more commits before next AI job. Its another question about amount of commits, and cooperation with team.
 
 #### Security issues
 
