@@ -112,11 +112,8 @@
           v-for="g in childGroupsNoTasks"
           :key="g.id"
           class="child-group-btn"
-          role="button"
-          tabindex="0"
-          @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }"
         >
-          <GroupButton :group="g" />
+          <GroupButton :group="g" @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }" />
         </div>
       </div>
     </div>

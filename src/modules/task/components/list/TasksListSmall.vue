@@ -130,11 +130,8 @@
             :key="g.id"
             class="child-group-btn"
             :class="{ 'child-group-btn--active': isShortcutActive(g) }"
-            role="button"
-            tabindex="0"
-            @click="() => onShortcutClick(g)"
           >
-            <GroupButton :group="g" :selected="isShortcutActive(g)" />
+            <GroupButton :group="g" :selected="isShortcutActive(g)" @click="() => onShortcutClick(g)" />
           </div>
         </template>
 
@@ -145,11 +142,8 @@
             v-for="g in childGroupsNoTasks"
             :key="g.id"
             class="child-group-btn"
-            role="button"
-            tabindex="0"
-            @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }"
           >
-            <GroupButton :group="g" />
+            <GroupButton :group="g" @click="() => { try { CC.group.active.set(g); } catch (e) { void e; } }" />
           </div>
         </template>
       </div>
