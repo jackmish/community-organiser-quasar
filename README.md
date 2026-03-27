@@ -233,7 +233,7 @@ Refactor of things like this with GPT5.1 could take forever and instead of somet
 
 #### Security issues
 
-Its talking mostly about project installation. It usually ignores security issues and its very risky to use/create some connection features without code check.
+Its mostly talking about project installation. It usually ignores security issues and its very risky to use/create some connection features without code check.
 
 #### Conclusion about ChatGPT5.1 Mini
 
