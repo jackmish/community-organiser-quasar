@@ -459,7 +459,7 @@ async function onToggleDone(val: boolean) {
     const task = activeTask.value;
     if (!task) return;
     const date = task?.date || task?.eventDate || CC.task.time.currentDate.value || "";
-    const id = task.id || task._id || task.uuid;
+    const id = task.id;
     if (!id) return;
     await CC.task.status.toggleComplete(date, id);
   } catch (e) {

@@ -31,7 +31,7 @@ class TaskController {
   };
 
   readonly update = async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
-    this.mgr.updateTask(date, taskOrId as any, maybeUpdates);
+    this.mgr.updateTask(date, taskOrId, maybeUpdates);
     await saveData();
   };
 

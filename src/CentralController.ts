@@ -6,10 +6,12 @@ import { lazyStore } from 'src/modules/storage/controllers/lazyStore';
 import { registerAppService } from 'src/services/appService';
 
 class CentralController {
-  // Use `any` here to reflect the dynamic Pinia store shape at runtime
-  // and avoid excessive casting across the codebase.
-  public group: any = lazyStore(useGroupController as any);
-  public task: any = lazyStore(useTaskController as any);
+  public group: ReturnType<typeof useGroupController> = lazyStore<
+    ReturnType<typeof useGroupController>
+  >(useGroupController as any);
+  public task: ReturnType<typeof useTaskController> = lazyStore<
+    ReturnType<typeof useTaskController>
+  >(useTaskController as any);
   private _storage: ReturnType<typeof apiStorage.construct> | null = null;
 
   constructor() {}
@@ -18,7 +20,7 @@ class CentralController {
     if (this._storage) return this._storage;
     const g = useGroupController();
     const t = useTaskController();
-    this._storage = apiStorage.construct(g, t.time as any);
+    this._storage = apiStorage.construct(g, t.time);
     try {
       // lazy register app service so `saveData()` and other helpers can find it
       // keep silent on errors to match prior behavior

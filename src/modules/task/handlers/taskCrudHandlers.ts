@@ -2,7 +2,6 @@ import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
 import CC from 'src/CentralController';
 import { clampDateToMonth } from 'src/utils/dateUtils';
-const CCx: any = CC as any;
 
 /** Normalise a task payload's date fields in-place and return the safe target date. */
 function normalizeTaskDates(targetDate: string, taskPayload: any): string {
@@ -64,7 +63,7 @@ export function createTaskCrudHandlers(args: {
 
     let created: any = null;
     try {
-      created = await CCx.task.add(targetDate, taskData);
+      created = await CC.task.add(targetDate, taskData);
     } catch (err) {
       try {
         quasar.notify({ type: 'negative', message: 'Failed to save task', position: 'top' });
@@ -94,7 +93,7 @@ export function createTaskCrudHandlers(args: {
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
     const updatedPayload = { ...updatedTask };
     const targetDate = normalizeTaskDates(rawTargetDate, updatedPayload);
-    await CCx.task.update(targetDate, updatedPayload);
+    await CC.task.update(targetDate, updatedPayload);
     const updated = (allTasks.value || []).find((t) => t.id === updatedTask.id) || null;
     if (setTask) setTask(updated);
     else taskToEdit.value = updated;

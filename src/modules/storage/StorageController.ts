@@ -9,13 +9,30 @@ import { presentation } from 'src/modules/presentation/presentationRepository';
 import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskRepository';
 
+/** Minimal shape StorageController needs from the group Pinia store. */
+type ActiveGroupOption = { label: string; value: string | null } | null;
+interface GroupApiShape {
+  active?: { activeGroup?: { value: ActiveGroupOption } };
+  /** Legacy direct-ref fallback */
+  activeGroup?: { value: ActiveGroupOption };
+  list?: {
+    setGroups?: (arr: any[]) => void;
+    all?: { readonly value: any[] };
+  };
+}
+/** Minimal shape StorageController needs from the time repository object. */
+interface TimeApiShape {
+  days?: { value: Record<string, any> };
+  lastModified?: { value: string };
+}
+
 export class StorageController {
   isLoading = ref(false);
   private suppressPersist = true;
-  private groupApi: any;
-  private timeApi: any;
+  private groupApi: GroupApiShape | undefined;
+  private timeApi: TimeApiShape | undefined;
 
-  constructor(groupApi?: any, timeApi?: any) {
+  constructor(groupApi?: GroupApiShape, timeApi?: TimeApiShape) {
     this.groupApi = groupApi;
     this.timeApi = timeApi;
     try {
@@ -25,7 +42,7 @@ export class StorageController {
         typeof this.groupApi.active.activeGroup !== 'undefined'
       ) {
         watch(
-          () => this.groupApi.active.activeGroup.value,
+          () => this.groupApi?.active?.activeGroup?.value ?? null,
           async (val) => {
             try {
               if (this.suppressPersist) return;
@@ -315,7 +332,7 @@ export class StorageController {
   saveSettings = saveSettings;
 }
 
-export function construct(groupApi?: any, timeApi?: any) {
+export function construct(groupApi?: GroupApiShape, timeApi?: TimeApiShape) {
   return new StorageController(groupApi, timeApi);
 }
 
