@@ -4,7 +4,9 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 Too early development progress to be used by anyone other than the software developer (me),
 
-, however even now its very useful, more convenient than Google Calendar, or cant say any other organisers are better.
+, however even now its very useful, more convenient than Google Calendar, or cant say any other organizers are better.
+
+Prototype isn't finished yet and huge amount of refactor is waiting. Mostly i'm gathering some info about cheap model ChatGPT5.1 Mini and Cloude Sonnet 5.6 - working around VS Code/Github Copilot.
 
 ---
 
@@ -25,7 +27,7 @@ This will also be the basis for the so-called smart houses, for now only within 
 
 ---
 
-Second reason to create this app was to check what AI/Copilot would generate without any engineering tips and refactor it later. Refactor could be done with AI. This is also test ChatGPT5.1 Mini vs ClaudeSonnet 4.6 - which have different prices - using VS Code. I know Claude could be good for vibe code - a specially in programmer hands, but is ChatGPT5.1 Mini good enough?
+Second reason to create this app was to check what AI/Copilot would generate without any or small engineering tips.
 
 ## Name and ideology
 

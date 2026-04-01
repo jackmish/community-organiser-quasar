@@ -1,7 +1,19 @@
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
 import CC from 'src/CentralController';
+import { clampDateToMonth } from 'src/utils/dateUtils';
 const CCx: any = CC as any;
+
+/** Normalise a task payload's date fields in-place and return the safe target date. */
+function normalizeTaskDates(targetDate: string, taskPayload: any): string {
+  const safeTarget = clampDateToMonth(targetDate) ?? targetDate;
+  if (taskPayload) {
+    if (taskPayload.date) taskPayload.date = clampDateToMonth(taskPayload.date) ?? taskPayload.date;
+    if (taskPayload.eventDate)
+      taskPayload.eventDate = clampDateToMonth(taskPayload.eventDate) ?? taskPayload.eventDate;
+  }
+  return safeTarget;
+}
 
 export function createTaskCrudHandlers(args: {
   setCurrentDate: (d: string | null) => void;
@@ -41,13 +53,14 @@ export function createTaskCrudHandlers(args: {
 
     if (!taskPayload || !taskPayload.name) return;
 
-    const targetDate =
+    const rawTargetDate =
       (taskPayload && (taskPayload.date || taskPayload.eventDate)) || currentDate.value;
     const taskData: any = {
       ...taskPayload,
-      date: taskPayload?.date || taskPayload?.eventDate || targetDate,
+      date: taskPayload?.date || taskPayload?.eventDate || rawTargetDate,
       groupId: groupIdToUse,
     };
+    const targetDate = normalizeTaskDates(rawTargetDate, taskData);
 
     let created: any = null;
     try {
@@ -77,9 +90,10 @@ export function createTaskCrudHandlers(args: {
   const handleUpdateTask = async (updatedTask: any) => {
     if (!updatedTask || !updatedTask.id) return;
     const { id, ...rest } = updatedTask;
-    const targetDate =
+    const rawTargetDate =
       (updatedTask.date as string) || (updatedTask.eventDate as string) || currentDate.value;
     const updatedPayload = { ...updatedTask };
+    const targetDate = normalizeTaskDates(rawTargetDate, updatedPayload);
     await CCx.task.update(targetDate, updatedPayload);
     const updated = (allTasks.value || []).find((t) => t.id === updatedTask.id) || null;
     if (setTask) setTask(updated);
