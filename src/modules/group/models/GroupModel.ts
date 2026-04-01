@@ -13,9 +13,11 @@ export class GroupModel extends BaseModel {
   roles: RoleData[];
 
   constructor(data: Partial<GroupModel> & { id?: string; name?: string } = {}) {
-    const resolvedId = String(data.id ?? data.parent_id ?? '') || undefined;
+    // Only use data.id for the group's own identity — never fall back to parent_id,
+    // which is a relationship field, not an identity field.
     const superInit: { id?: string; createdAt?: string; updatedAt?: string } = {};
-    if (resolvedId !== undefined) superInit.id = resolvedId;
+    const ownId = data.id != null && String(data.id) !== '' ? String(data.id) : undefined;
+    if (ownId !== undefined) superInit.id = ownId;
     if (data.createdAt !== undefined) superInit.createdAt = data.createdAt;
     if (data.updatedAt !== undefined) superInit.updatedAt = data.updatedAt;
     super(superInit);
@@ -25,8 +27,11 @@ export class GroupModel extends BaseModel {
     this.shareSubgroups = data.shareSubgroups;
     this.hideTasksFromParent = data.hideTasksFromParent;
     this.icon = data.icon;
+    // Normalize parent relationship: accept both camelCase and snake_case from legacy data.
+    // `parentId` is canonical going forward.
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
-    this.parent_id = data.parent_id ?? null;
+    // Keep parent_id in sync with the canonical parentId field.
+    this.parent_id = this.parentId ?? null;
     this.roles = (data as any).roles ?? [];
   }
 
@@ -40,7 +45,8 @@ export class GroupModel extends BaseModel {
       hideTasksFromParent: this.hideTasksFromParent,
       icon: this.icon,
       parentId: this.parentId,
-      parent_id: this.parent_id ?? null,
+      // parent_id mirrors parentId for backward compatibility with older persisted data.
+      parent_id: this.parentId ?? null,
       roles: this.roles ?? [],
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

@@ -100,14 +100,14 @@ export function deleteGroup(
       const newParent = groupToDelete
         ? normalizeGroupId(groupToDelete.parentId ?? groupToDelete.parent_id ?? null)
         : null;
-      if (g.parentId !== undefined) {
-        if (newParent) g.parentId = newParent;
-        else delete g.parentId;
-      } else if (g.parent_id !== undefined) {
-        if (newParent) g.parent_id = newParent;
-        else delete g.parent_id;
+      // Always write to canonical `parentId`; keep `parent_id` in sync for
+      // backward compat with any persisted data that still checks it.
+      if (newParent) {
+        g.parentId = newParent;
+        g.parent_id = newParent;
       } else {
-        if (newParent) g.parentId = newParent;
+        delete g.parentId;
+        g.parent_id = null;
       }
     }
   });

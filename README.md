@@ -213,7 +213,9 @@ There is also thinking about SOLID/DRY, but at this point it would be good to ju
 
 ---
 
-#### Most common code problem
+#### Most common code problems
+
+Generally problems there are 2 kind of problems - general project logic which is very hard to fix - its a bit like making from old building totally different one, and there are problems smaller around functions/methods inside definitions. First group of problems are describing how project is easy to read, correct not confusing names, efficient structure, how easy to sustain/extend project later or I'm planning to make some API directly or not using Central Controller and maybe API name would be back somewhere - (not Rest API but rather plugin/development API). Second group of problems are affecting mostly performance, in most cases code looks fine but watching line by line i makes almost every next time new conclusion.
 
 There are so many problems/scenario with code like this:
 
@@ -233,7 +235,7 @@ Its not very serious problem in small apps, but it can grow with a project. Talk
 
 - it should rather add/extend some helper/repository/controller class method to do some finding operation. Probably whole function is useless, when it could be wrapped inside single function like CC.group.active.setById - or something similar. Only some validation/handlers connected to component actions should be inside this specific part of code.
 
-- Inside shared method of CC.group.active.set it would be nice to find any recommendation about some ORM/collection class but it doesn't happen without beginning programer organization plan. Laravel has built in collection/ORM - this time Quasar - doesn't have anything like this, its more frontend framework. There is a Pinia, but I thing except some dev tools its useless in this case, or maybe I don't know something yet. CC is organizing methods and memory in more simply way, avoiding array key calls, its rather self documenting - or would be after finishing refactor job.
+- Inside shared method of CC.group.active.set it would be nice to find any recommendation about some ORM/collection class but it doesn't happen without beginning programer organization plan. Laravel has built in collection/ORM - this time Quasar - doesn't have anything like this, its more frontend framework. There is a Pinia, but I thing except some dev tools its useless in this project a bit. I need to learn more about any other reasons, advantages of this solution. CC is organizing methods and memory in more simply way, avoiding array key calls, its rather self documenting - or would be after finishing refactor job.
 
 - function/method names: active.activate() - its not bad, a specially if AI is writing code, but maybe it would be easier to use make shared "interface/class" and make "active.set()" + setById() and it would single line activating group, and i've even skipped other lines setting active group.
 
@@ -267,13 +269,15 @@ If You don't want to pay more than 10$ monthly or reduce cost You can use both m
 
 ### Claude Sonnet 4.6 - model | VS Code | 1x - it means constant 10$/month + optionally with additional credits if limit reached. Still not very expansive option.
 
-My methodology for this project is to use cheap GPT5.1 or other better same cheap model, and refactor it after some stage of development. Last 2 times - just i've lost my patience before planned stage was finished and recent time with unit tests problems.
+My methodology for this project is to use cheap GPT5.1 or other better same cheap model, and refactor it after some stage of development. Plan was a bit different but i've lost my patience, i've begin some code changes before prototype was finished. Even months after start some refactor prototype isn't finished, refactor af far from complete.
 
-Only GPT5.1 mini was able to be good enough with VueJS emit's logic. I agree with AI its one of the most confusing thing around Vue Framework, but its a problem when you are maybe backend developer and need to fix something ASAP.
+Only GPT5.1 mini was able to be good enough with VueJS emit's logic, but in most cases props are working fine. I agree with AI its one of the most confusing thing around Vue Framework a specially when app is growing and components are moved in another place. Emit/props logic can be very inefficient, first i've made Central Controller for this (with other name then), and all around there was suggestion to use Pinia mostly for this problem. Global or local there is a lot of question all around Internet about this.
 
-Its not very bad tool for vibe code but 1 condition - patience, or alternatively compromise.
+Using primarily Claude without engineering does not guarantee quality, even if its better model. Agent configuration and good start could be the key as for all kind of AI models/agents, but in this case/experiment i'm thinking about making usable prototype and after it improve code quality.
 
-Using primarily Claude does not guarantee quality. It good tool for refactor, but structure/pattern decision really matters. Its not simple choice when AI is producing code, how make more clarity for AI engine? Thats also the question but probably project map is same good for AI engines as sitemap for Google old browsing engine.
+It can be good tool for refactor but it's rather weak without any guidance of programer or maybe greater AI learned around data with better quality. In most of graphic models sometimes more learned data means sometimes worse quality of image - when learning source was low quality.
+
+Probably it would be good advice to Github or Microsoft to create more specialized branches of AI or maybe its already done but I can't recognize the moment of switching.
 
 Claude Sonnet also would'nt fix unit tests after refactor, it still wants to create missing files. It likes to generate unit test but it does'nt think code needs to be refactored first - it's telling refactor was finished. I'll check unit tests later it's not so much important when i'm using this software and could do manual tests. Most frustrating errors are generated by the way of css unconnected things than code errors, which AI usually is fixing after some console typescript check/lint. Code quality could be more welcome, but unit tests are going to make code more "constant/persistent" a specially when automated test was'nt updated after code change, removed file etc.
 

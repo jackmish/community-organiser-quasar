@@ -6,6 +6,7 @@ import {
   getParentForActive,
   prepareGroupsForSave,
 } from '../../src/modules/group/managers/groupManager';
+import { GroupModel } from '../../src/modules/group/models/GroupModel';
 
 // ─── addGroup ─────────────────────────────────────────────────────────────────
 describe('addGroup', () => {
@@ -238,5 +239,73 @@ describe('GroupActive.goToParent', () => {
     const boundCall = () => ga.goToParent();
     expect(() => boundCall()).not.toThrow();
     expect(active.value?.value).toBe('p1');
+  });
+});
+
+// ─── GroupModel constructor & toJSON ─────────────────────────────────────────
+describe('GroupModel', () => {
+  it('does NOT use parent_id as the group own id (regression)', () => {
+    const g = new GroupModel({ parent_id: 'parent-123' });
+    // The group's own id must never be the parent's id.
+    expect(g.id).not.toBe('parent-123');
+    // A fresh UUID should have been generated instead.
+    expect(g.id).toBeTruthy();
+    expect(g.id.length).toBeGreaterThan(8);
+  });
+
+  it('uses data.id as own id even when parent_id is also present', () => {
+    const g = new GroupModel({ id: 'my-own-id', parent_id: 'parent-id' });
+    expect(g.id).toBe('my-own-id');
+  });
+
+  it('reads parentId from the camelCase field', () => {
+    const g = new GroupModel({ id: 'g1', parentId: 'parent-abc' });
+    expect(g.parentId).toBe('parent-abc');
+  });
+
+  it('reads parentId from the snake_case legacy field', () => {
+    const g = new GroupModel({ id: 'g1', parent_id: 'parent-xyz' });
+    expect(g.parentId).toBe('parent-xyz');
+  });
+
+  it('toJSON parent_id mirrors the canonical parentId', () => {
+    const g = new GroupModel({ id: 'g1', name: 'G', parentId: 'p1' });
+    expect(g.toJSON().parent_id).toBe('p1');
+  });
+
+  it('toJSON parent_id is null for a root group with no parentId', () => {
+    const g = new GroupModel({ id: 'g1', name: 'Root' });
+    expect(g.toJSON().parent_id).toBeNull();
+  });
+});
+
+// ─── deleteGroup parent promotion (canonical parentId) ────────────────────────
+describe('deleteGroup parent promotion', () => {
+  it('promotes a child that only has parentId (camelCase) to grandparent', () => {
+    const data: any = { groups: [], days: {} };
+    const grandparent = addGroup(data, { name: 'GP' });
+    const parent = addGroup(data, { name: 'Parent', parentId: grandparent.id });
+    const child = addGroup(data, { name: 'Child', parentId: parent.id });
+
+    deleteGroup(data, parent.id);
+
+    const found = data.groups.find((g: any) => g.id === child.id);
+    expect(found).toBeDefined();
+    // Child should now point to grandparent
+    expect(found.parentId).toBe(grandparent.id);
+    expect(found.parent_id).toBe(grandparent.id);
+  });
+
+  it('sets parentId to undefined/null when deleted group was a root group', () => {
+    const data: any = { groups: [], days: {} };
+    const root = addGroup(data, { name: 'Root' });
+    const child = addGroup(data, { name: 'Child', parentId: root.id });
+
+    deleteGroup(data, root.id);
+
+    const found = data.groups.find((g: any) => g.id === child.id);
+    expect(found).toBeDefined();
+    expect(found.parentId).toBeUndefined();
+    expect(found.parent_id).toBeNull();
   });
 });
