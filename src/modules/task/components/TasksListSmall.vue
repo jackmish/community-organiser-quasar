@@ -46,7 +46,7 @@
                   :key="t.id"
                   :item="t"
                   :selected-task-id="selectedTaskId"
-                  :active-group-id="activeGroup?.value?.value"
+                  :active-group-id="activeGroup?.value"
                   @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                   @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
                 />
@@ -85,7 +85,7 @@
               <TaskCardSmall
                 :item="item"
                 :selected-task-id="selectedTaskId"
-                :active-group-id="activeGroup?.value?.value"
+                :active-group-id="activeGroup?.value"
                 @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                 @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
               />

@@ -97,7 +97,7 @@ const nextEvents = computed(() => {
   // Gather tasks
   let allTasks: any[] = [];
     try {
-    allTasks = CC.task.list.all() || [];
+    allTasks = CC.task.list.items() || [];
   } catch (e) {
     const days = (CC.task.time.days && CC.task.time.days.value) || {};
     Object.keys(days).forEach((d) => {

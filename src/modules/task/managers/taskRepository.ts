@@ -111,7 +111,7 @@ export class TaskRepository {
     if (typeof taskOrId === 'string') {
       const id = taskOrId;
       const updates = maybeUpdates || {};
-      const existing = this.getAll().find((t) => String(t.id) === String(id));
+      const existing = this.getFlatList().find((t) => String(t.id) === String(id));
       if (!existing) throw new Error('Task not found');
       taskObj = { ...existing, ...updates, updatedAt: new Date().toISOString() } as Task;
     } else {
@@ -340,7 +340,7 @@ export class TaskRepository {
     });
   }
 
-  getAll(timeApi?: any): Task[] {
+  getFlatList(timeApi?: any): Task[] {
     try {
       const maybe = this.flatTasksRef.value;
       if (Array.isArray(maybe) && maybe.length > 0) return maybe;
@@ -378,7 +378,7 @@ export class TaskRepository {
           ? this.getDays()[day].tasks.slice()
           : []
       ) as Task[];
-      const all = this.getAll() || [];
+      const all = this.getFlatList() || [];
       const result: Task[] = [...dayTasks];
       for (const t of all) {
         try {
@@ -419,15 +419,15 @@ export class TaskRepository {
   }
 
   getTasksByCategory(c: Task['category']): Task[] {
-    return this.getAll().filter((t) => t.category === c);
+    return this.getFlatList().filter((t) => t.category === c);
   }
 
   getTasksByPriority(p: Task['priority']): Task[] {
-    return this.getAll().filter((t) => t.priority === p);
+    return this.getFlatList().filter((t) => t.priority === p);
   }
 
   getIncompleteTasks(): Task[] {
-    return this.getAll().filter((t) => Number(t.status_id) === 0);
+    return this.getFlatList().filter((t) => Number(t.status_id) === 0);
   }
 
   buildFlatTasksList(daysArg?: Record<string, any>): Task[] {
@@ -459,7 +459,7 @@ export class TaskRepository {
         if (!found) {
           try {
             found =
-              (this.getAll(this._currentTimeApi) || []).find((t) => String(t.id) === id) || null;
+              (this.getFlatList(this._currentTimeApi) || []).find((t) => String(t.id) === id) || null;
           } catch (e) {
             found = null;
           }
@@ -553,7 +553,7 @@ export const getTasksInRange = (startDate: string, endDate: string): Task[] =>
 export const getAllTasks = (): Task[] => _singleton.getAllTasks();
 export const listFromDays = (daysArg?: Record<string, any>): Task[] =>
   _singleton.listFromDays(daysArg);
-export const getAll = (timeApi?: any): Task[] => _singleton.getAll(timeApi);
+export const getFlatList = (timeApi?: any): Task[] => _singleton.getFlatList(timeApi);
 export const getTasksByCategory = (c: Task['category']): Task[] => _singleton.getTasksByCategory(c);
 export const getTasksByPriority = (p: Task['priority']): Task[] => _singleton.getTasksByPriority(p);
 export const getIncompleteTasks = (): Task[] => _singleton.getIncompleteTasks();

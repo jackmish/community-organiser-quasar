@@ -55,7 +55,7 @@ import { $text } from "src/modules/lang";
 async function onDoneClick(task: any) {
   try {
     const date = task?.date || task?.eventDate || "";
-    const id = task.id || task._id || task.uuid;
+    const id = task.id;
     const hasCycleDone =
       Array.isArray(task?.history) &&
       task.history.some((h: any) => h && h.type === "cycleDone" && h.date === date);

@@ -1,49 +1,49 @@
+import { Collection } from 'src/utils/Collection';
 import type { Task } from '../models/TaskModel';
 import type { TaskRepository } from '../managers/taskRepository';
 
-export class TaskList {
-  constructor(private readonly mgr: TaskRepository) {}
-
-  all() {
-    return this.mgr.getAll().slice();
+export class TaskList extends Collection<Task> {
+  constructor(private readonly taskRepo: TaskRepository) {
+    super();
   }
 
-  inRange(s: string, e: string) {
-    return this.mgr.getTasksInRange(s, e);
+  items(): Task[] {
+    return this.taskRepo.getFlatList();
   }
 
-  byCategory(c: Task['category']) {
-    return this.mgr.getTasksByCategory(c);
+  inRange(s: string, e: string): Task[] {
+    return this.taskRepo.getTasksInRange(s, e);
   }
 
-  byPriority(p: Task['priority']) {
-    return this.mgr.getTasksByPriority(p);
+  byCategory(c: Task['category']): Task[] {
+    return this.taskRepo.getTasksByCategory(c);
   }
 
-  incomplete() {
-    return this.mgr.getIncompleteTasks();
+  byPriority(p: Task['priority']): Task[] {
+    return this.taskRepo.getTasksByPriority(p);
   }
 
-  filter(fn: (t: Task) => boolean) {
-    return this.mgr.getAll().filter(fn);
+  incomplete(): Task[] {
+    return this.taskRepo.getIncompleteTasks();
   }
 
-  sort(compare?: (a: Task, b: Task) => number) {
-    return this.mgr
-      .getAll()
+  forDay(d: string): Task[] {
+    return this.taskRepo.getTasksForDay(String(d || ''));
+  }
+
+  /** Sort with an optional comparator; defaults to date → priority. */
+  override sort(compare?: (a: Task, b: Task) => number): Task[] {
+    return this.items()
       .slice()
       .sort(
         compare ??
-          ((a: Task, b: Task) =>
-            a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
+          ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
       );
   }
 
-  forDay(d: string) {
-    return this.mgr.getTasksForDay(String(d || ''));
-  }
-
-  aggregate<R>(fn: (acc: R, t: Task) => R, init: R) {
-    return this.mgr.getAll().reduce(fn, init);
+  /** All tasks belonging to a specific group. */
+  byGroup(groupId: string): Task[] {
+    return this.items().filter((t) => String(t.groupId ?? '') === String(groupId));
   }
 }
+

@@ -351,7 +351,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
       // that immediately so form bindings point to the same instance.
       let candidate: any = task;
       try {
-        const all = CC.task.list.all();
+        const all = CC.task.list.items();
         const found = (all || []).find((t: any) => String(t.id) === String(id));
         if (found) candidate = found;
       } catch (e) {
@@ -371,7 +371,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
           const dataId = cur?.getAttribute?.("data-task-id") || null;
           if (dataId) {
             try {
-              const all = CC.task.list.all();
+              const all = CC.task.list.items();
               const found2 = (all || []).find(
                 (t: any) => String(t.id) === String(dataId)
               );
@@ -433,7 +433,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
         CC.task.active.mode.value !== "edit"
       ) {
         try {
-          const all = CC.task.list.all();
+          const all = CC.task.list.items();
           const found = (all || []).find((t: any) => String(t.id) === String(id));
           if (found) {
             CC.task.active.setTask(found);
@@ -483,7 +483,7 @@ const hiddenGroupSummary = createHiddenGroupSummary(
 );
 
 // All tasks across days — used to render calendar events
-const allTasks = computed(() => CC.task.list.all());
+const allTasks = computed(() => CC.task.list.items());
 
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
@@ -581,8 +581,8 @@ watch(
           try {
             // Determine if the selected date has any tasks
             const all =
-              CC.task.list && typeof CC.task.list.all === "function"
-                ? CC.task.list.all()
+              CC.task.list && typeof CC.task.list.items === "function"
+                ? CC.task.list.items()
                 : [];
             const tasksOnDate = (all || []).filter((t: any) => {
               const d = t?.date || t?.eventDate || null;
@@ -1053,7 +1053,7 @@ const handleToggleStatus = async (task: any) => {
   try {
     if (!task) return;
     const date = task?.date || task?.eventDate || CC.task.time.currentDate.value || "";
-    const id = task.id || task._id || task.uuid;
+    const id = task.id;
     if (!id) return;
     await CC.task.status.toggleComplete(date, id);
   } catch (e) {

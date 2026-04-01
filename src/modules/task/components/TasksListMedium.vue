@@ -613,7 +613,7 @@ function handleTaskClick(task: any) {
 async function toggleStatus(task: any) {
   try {
     const date = task?.date || task?.eventDate || '';
-    await CC.task.status.toggleComplete(date, task.id || task._id || task.uuid);
+    await CC.task.status.toggleComplete(date, task.id);
   } catch (e) {
     // ignore
   }
