@@ -166,7 +166,7 @@ import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 // sample data is loaded by the presentation manager when requested
-import { presentation } from "src/modules/presentation/presentationManager";
+import { presentation } from "src/modules/presentation/presentationRepository";
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;

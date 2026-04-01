@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import * as groupManager from '../../managers/groupManager';
+import * as groupRepository from '../../managers/groupRepository';
 import type { Group } from '../GroupModel';
 import type { ActiveInterface } from 'src/types/ActiveInterface';
 
@@ -21,11 +21,11 @@ export class GroupActive<
     activeGroupRef: Ref<{ label: string; value: string | null } | null>,
   ) {
     this.activeGroup = activeGroupRef;
-    this.parent = groupManager.createParentComputed(groups as any, activeGroupRef as any);
+    this.parent = groupRepository.createParentComputed(groups as any, activeGroupRef as any);
   }
 
   goToParent() {
-    return groupManager.goToParent(this.groups, this.activeGroup);
+    return groupRepository.goToParent(this.groups, this.activeGroup);
   }
 
   selectAll() {

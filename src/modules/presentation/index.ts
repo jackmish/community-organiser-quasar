@@ -1,2 +1,2 @@
-export * from './presentationManager';
-export { presentation as default } from './presentationManager';
+export * from './presentationRepository';
+export { presentation as default } from './presentationRepository';

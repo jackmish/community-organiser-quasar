@@ -5,9 +5,9 @@ import {
   loadSettings,
   saveSettings,
 } from './backend/electron/electronBackend';
-import { presentation } from 'src/modules/presentation/presentationManager';
+import { presentation } from 'src/modules/presentation/presentationRepository';
 import { sampleData } from 'src/modules/presentation/sampleData';
-import * as taskService from 'src/modules/task/managers/taskManager';
+import * as taskService from 'src/modules/task/managers/taskRepository';
 
 export class StorageController {
   isLoading = ref(false);

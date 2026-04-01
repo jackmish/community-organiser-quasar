@@ -5,7 +5,7 @@ import {
   deleteGroup,
   getParentForActive,
   prepareGroupsForSave,
-} from '../../src/modules/group/managers/groupManager';
+} from '../../src/modules/group/managers/groupRepository';
 import { GroupModel } from '../../src/modules/group/models/GroupModel';
 
 // ─── addGroup ─────────────────────────────────────────────────────────────────

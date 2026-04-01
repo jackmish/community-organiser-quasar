@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from '../models/TaskModel';
-import type { TaskManager } from '../managers/taskManager';
+import type { TaskRepository } from '../managers/taskRepository';
 
 export type PreviewPayload = string | number | Task | null;
 
@@ -10,7 +10,7 @@ export class TaskActive {
   readonly mode = ref<'add' | 'edit' | 'preview'>('add');
 
   constructor(
-    private readonly mgr: TaskManager,
+    private readonly mgr: TaskRepository,
     taskRef?: Ref<Task | null>,
   ) {
     this.task = taskRef ?? ref<Task | null>(null);

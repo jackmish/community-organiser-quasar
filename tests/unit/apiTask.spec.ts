@@ -18,9 +18,9 @@ vi.mock('src/utils/storageUtils', () => ({
   saveData: vi.fn(async () => {}),
 }));
 
-vi.mock('src/modules/task/managers/taskManager', () => ({
-  // Must be a regular function (not arrow) so `new TaskManager(...)` works
-  TaskManager: vi.fn(function () {
+vi.mock('src/modules/task/managers/taskRepository', () => ({
+  // Must be a regular function (not arrow) so `new TaskRepository(...)` works
+  TaskRepository: vi.fn(function () {
     return {
       addTask: vi.fn((_date: string, data: any) => ({ ...data, id: 'new-id' })),
       updateTask: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock('src/modules/task/managers/taskManager', () => ({
   buildFlatTasksList: vi.fn(() => []),
 }));
 
-vi.mock('src/modules/task/managers/timeManager/timeManager', () => ({
+vi.mock('src/modules/task/managers/timeManager/timeRepository', () => ({
   construct: vi.fn(() => ({
     days: { value: {} },
     currentDate: { value: '' },

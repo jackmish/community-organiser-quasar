@@ -1,10 +1,10 @@
 import { getCycleType, occursOnDay } from '../utils/occursOnDay';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import * as SubtaskLineManager from './subtaskLine/subtaskLineManager';
+import * as SubtaskLineRepository from './subtaskLine/subtaskLineRepository';
 import { Task } from '../models/TaskModel';
 
-/** Minimal shape that TaskManager needs from the task store/API. */
+/** Minimal shape that TaskRepository needs from the task store/API. */
 export interface TaskTimeProvider {
   time?: any;
   /** Legacy: old ApiTask class exposed a `state` bag; kept optional for sub-managers. */
@@ -12,10 +12,10 @@ export interface TaskTimeProvider {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TaskManager
+// TaskRepository
 //
 // All state that was previously held as module-level mutable variables is now
-// owned by each TaskManager instance, making instances genuinely independent
+// owned by each TaskRepository instance, making instances genuinely independent
 // and unit-testable in isolation.
 //
 // A module-level singleton (`_singleton`) is created at the bottom and the
@@ -23,10 +23,10 @@ export interface TaskTimeProvider {
 // existing call site continues to work without modification.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class TaskManager {
-  // ── Public fields (SubtaskLineManager reads these) ────────────────────────
+export class TaskRepository {
+  // ── Public fields (SubtaskLineRepository reads these) ────────────────────────
   apiTask: TaskTimeProvider | undefined;
-  managers: { subtaskLine: ReturnType<typeof SubtaskLineManager.construct> };
+  managers: { subtaskLine: ReturnType<typeof SubtaskLineRepository.construct> };
 
   // ── Per-instance state (was module-level globals) ─────────────────────────
   /** Reactive flat list of all tasks — mirrors `days` in sorted order. */
@@ -58,7 +58,7 @@ export class TaskManager {
       // ignore
     }
     this.managers = {
-      subtaskLine: SubtaskLineManager.construct(this),
+      subtaskLine: SubtaskLineRepository.construct(this),
     };
   }
 
@@ -510,19 +510,19 @@ export class TaskManager {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Backwards-compatible alias: prefer `TaskManager`, keep `TaskService`
+// Backwards-compatible alias: prefer `TaskRepository`, keep `TaskService`
 // ─────────────────────────────────────────────────────────────────────────────
-export { TaskManager as TaskService };
+export { TaskRepository as TaskService };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-level singleton + re-exported free functions
 //
 // All the previously exported free functions are now thin delegates to the
 // singleton.  Every existing import/call-site (StorageController,
-// presentationManager, hiddenGroupSummary, tests) continues to work with
+// presentationRepository, hiddenGroupSummary, tests) continues to work with
 // zero changes.
 // ─────────────────────────────────────────────────────────────────────────────
-const _singleton = new TaskManager();
+const _singleton = new TaskRepository();
 
 /**
  * The singleton's reactive flat task list.

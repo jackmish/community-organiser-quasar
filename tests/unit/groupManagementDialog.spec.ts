@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import GroupManagementDialog from '../../src/modules/group/components/GroupManagementDialog.vue';
 import CC from '../../src/CentralController';
-import * as groupManager from '../../src/modules/group/managers/groupManager';
+import * as groupRepository from '../../src/modules/group/managers/groupRepository';
 import * as storageUtils from '../../src/utils/storageUtils';
 
 describe('GroupManagementDialog submit handling', () => {
@@ -58,13 +58,13 @@ describe('GroupManagementDialog submit handling', () => {
     expect(updateSpy).toHaveBeenCalledWith('g1', expect.objectContaining({ name: 'Edited' }));
   });
 
-  it('falls back to groupManager.updateGroup when CC.group.update is missing', async () => {
+  it('falls back to groupRepository.updateGroup when CC.group.update is missing', async () => {
     // temporarily remove update
     const orig = CC.group.update;
     try {
       // @ts-ignore
       CC.group.update = undefined;
-      const gmSpy = vi.spyOn(groupManager, 'updateGroup');
+      const gmSpy = vi.spyOn(groupRepository, 'updateGroup');
       const saveSpy = vi.spyOn(storageUtils, 'saveData');
 
       wrapper.vm.editingGroupId = 'g2';

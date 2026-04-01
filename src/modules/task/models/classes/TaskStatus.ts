@@ -1,9 +1,9 @@
-import type { TaskManager } from "../../managers/taskManager";
+import type { TaskRepository } from '../../managers/taskRepository';
 
 export class TaskStatus {
   constructor(
-    private readonly mgr: TaskManager,
-    private readonly persist: () => Promise<void>
+    private readonly mgr: TaskRepository,
+    private readonly persist: () => Promise<void>,
   ) {}
 
   async toggleComplete(date: string, id: string): Promise<void> {
@@ -15,9 +15,7 @@ export class TaskStatus {
     try {
       const activeTask = (this.mgr.apiTask as any)?.state?.activeTask;
       if (activeTask?.value && String(activeTask.value.id) === String(id)) {
-        const updated = this.mgr.flatTasks.value.find(
-          (t: any) => String(t.id) === String(id)
-        );
+        const updated = this.mgr.flatTasks.value.find((t: any) => String(t.id) === String(id));
         if (updated) activeTask.value = updated;
       }
     } catch (e) {

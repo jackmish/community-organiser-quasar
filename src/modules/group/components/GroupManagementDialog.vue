@@ -121,7 +121,7 @@ import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "src/components/theme";
 
 import CC from "src/CentralController";
-import * as groupManager from 'src/modules/group/managers/groupManager';
+import * as groupRepository from 'src/modules/group/managers/groupRepository';
 import { saveData } from 'src/utils/storageUtils';
 import GroupForm from "./GroupForm.vue";
 
@@ -438,7 +438,7 @@ async function handleGroupFormSubmit(payload: any) {
           } else {
             // last resort: try manager update on whatever was provided
             try {
-              groupManager.updateGroup(groupsList, id, updates);
+              groupRepository.updateGroup(groupsList, id, updates);
             } catch (err) {
               logger.error('add/update group failed (fallback)', err);
             }

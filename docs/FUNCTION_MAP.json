@@ -112,7 +112,7 @@
               "constructor(groupApi?)": "initialize state, time manager and TaskManager",
               "properties": {
                 "groupApi": "reference to group API",
-                "time": "time manager returned by timeManager.construct()",
+                "time": "time repository returned by timeRepository.construct()",
                 "state": "refs: activeTask, activeMode, parsedLines",
                 "mgr": "TaskManager instance"
               },

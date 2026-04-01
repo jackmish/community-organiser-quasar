@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 import type { OrganiserData } from '../../storage/backend/electron/electronBackend';
-import { getTasksInRange as getTasksInRangeService } from '../managers/taskManager';
+import { getTasksInRange as getTasksInRangeService } from '../managers/taskRepository';
 
 export function createHiddenGroupSummary(
   organiserData: Ref<OrganiserData>,

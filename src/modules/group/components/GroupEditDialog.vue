@@ -24,7 +24,7 @@ import { $text } from 'src/modules/lang';
 import CC from 'src/CentralController';
 import logger from 'src/utils/logger';
 import { saveData } from 'src/utils/storageUtils';
-import * as groupManager from 'src/modules/group/managers/groupManager';
+import * as groupRepository from 'src/modules/group/managers/groupRepository';
 import GroupForm from './GroupForm.vue';
 
 const props = defineProps<{
@@ -89,7 +89,7 @@ async function handleSubmit(payload: any) {
           Object.assign(found, updates);
           await saveData();
         } else {
-          try { groupManager.updateGroup(list, id, updates); } catch (e) { logger.error('updateGroup fallback failed', e); }
+          try { groupRepository.updateGroup(list, id, updates); } catch (e) { logger.error('updateGroup fallback failed', e); }
           try { await saveData(); } catch (e) { logger.error('saveData failed', e); }
         }
       }

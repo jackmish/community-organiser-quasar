@@ -1,10 +1,10 @@
 import { ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
-import type { TaskManager } from '../taskManager';
+import type { TaskRepository } from '../taskRepository';
 import { getCycleType } from '../../utils/occursOnDay';
 
-export class SubtaskLineManager {
+export class SubtaskLineRepository {
   parsedLines: Ref<
     Array<{
       uid: string;
@@ -24,7 +24,7 @@ export class SubtaskLineManager {
     | { time?: any; persist?: (date: string, taskObj: Task) => Promise<void> | void }
     | undefined = undefined;
 
-  constructor(taskManager: TaskManager) {
+  constructor(taskManager: TaskRepository) {
     let stateOrActiveTask: any = undefined;
     try {
       if (taskManager && typeof taskManager === 'object') {
@@ -439,13 +439,13 @@ export class SubtaskLineManager {
   }
 
   // Provide a compatibility factory
-  static construct(taskManager: TaskManager) {
-    return new SubtaskLineManager(taskManager);
+  static construct(taskManager: TaskRepository) {
+    return new SubtaskLineRepository(taskManager);
   }
 }
 
-export function construct(taskManager: TaskManager) {
-  return SubtaskLineManager.construct(taskManager);
+export function construct(taskManager: TaskRepository) {
+  return SubtaskLineRepository.construct(taskManager);
 }
 
 export default { construct };

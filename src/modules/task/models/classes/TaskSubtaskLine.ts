@@ -1,4 +1,4 @@
-import type { TaskManager } from '../../managers/taskManager';
+import type { TaskRepository } from '../../managers/taskRepository';
 import type { TaskActive } from './TaskActive';
 
 export class TaskSubtaskLine {
@@ -9,7 +9,7 @@ export class TaskSubtaskLine {
   }
 
   constructor(
-    private readonly mgr: TaskManager,
+    private readonly mgr: TaskRepository,
     private readonly active: TaskActive,
     private readonly persist: () => Promise<void>,
   ) {}

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { buildFlatTasksList } from 'src/modules/task/managers/taskManager';
+import { buildFlatTasksList } from 'src/modules/task/managers/taskRepository';
 
 export type PresentationMode = 'default' | 'test' | 'presentation';
 

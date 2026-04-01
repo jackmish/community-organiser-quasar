@@ -1,7 +1,7 @@
 import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { saveData } from 'src/utils/storageUtils';
-import * as groupManager from './managers/groupManager';
+import * as groupRepository from './managers/groupRepository';
 import { GroupList } from './models/classes/GroupList';
 import { GroupActive } from './models/classes/GroupActive';
 import type { Group } from './models/GroupModel';
@@ -13,18 +13,18 @@ class GroupController {
   readonly active = markRaw(new GroupActive<Group>(this.groups as any, this.activeGroupRef));
 
   async add(payload: any) {
-    const group = groupManager.addGroup(this.groups.value, payload);
+    const group = groupRepository.addGroup(this.groups.value, payload);
     await saveData();
     return group;
   }
 
   async update(groupId: string, updates: Partial<any>) {
-    groupManager.updateGroup(this.groups.value, groupId, updates);
+    groupRepository.updateGroup(this.groups.value, groupId, updates);
     await saveData();
   }
 
   async delete(groupId: string) {
-    const res = groupManager.deleteGroup(this.groups.value, groupId);
+    const res = groupRepository.deleteGroup(this.groups.value, groupId);
     await saveData();
     return res;
   }

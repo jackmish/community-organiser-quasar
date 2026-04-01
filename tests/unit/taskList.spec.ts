@@ -14,7 +14,7 @@ import { ref } from 'vue';
 import { Task } from '../../src/modules/task/models/TaskModel';
 
 // ─── Mock heavy external deps before importing modules that pull them in ────
-vi.mock('src/modules/presentation/presentationManager', () => ({
+vi.mock('src/modules/presentation/presentationRepository', () => ({
   presentation: { mode: { value: 'default' } },
 }));
 vi.mock('src/modules/presentation/sampleData', () => ({ sampleData: {} }));
@@ -41,7 +41,7 @@ import {
   getTasksInRange,
   getAllTasks,
   listFromDays,
-} from '../../src/modules/task/managers/taskManager';
+} from '../../src/modules/task/managers/taskRepository';
 import { createTaskComputed } from '../../src/modules/task/computed/computedTaskLists';
 import { construct as constructStorage } from '../../src/modules/storage/StorageController';
 

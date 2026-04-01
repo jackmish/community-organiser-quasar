@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import * as groupManager from '../../managers/groupManager';
+import * as groupRepository from '../../managers/groupRepository';
 import {
   getGroupsByParent as getGroupsByParentUtil,
   isVisibleForActive,
@@ -16,7 +16,7 @@ export class GroupList {
     private readonly activeGroup: Ref<{ label: string; value: string | null } | null>,
   ) {
     this.all = computed(() => groups.value || []);
-    this.tree = groupManager.createTreeComputed(groups as any);
+    this.tree = groupRepository.createTreeComputed(groups as any);
   }
 
   getGroupsByParent(parentId?: string) {
@@ -24,7 +24,7 @@ export class GroupList {
   }
 
   setGroups(arr: any[]) {
-    groupManager.setGroups(this.groups, arr);
+    groupRepository.setGroups(this.groups, arr);
   }
 
   isVisibleForActive(candidateId: any) {

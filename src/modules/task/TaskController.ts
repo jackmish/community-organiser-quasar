@@ -1,7 +1,7 @@
 import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { TaskManager } from './managers/taskManager';
-import * as timeManager from './managers/timeManager/timeManager';
+import { TaskRepository } from './managers/taskRepository';
+import * as timeRepository from './managers/timeManager/timeRepository';
 import { saveData } from 'src/utils/storageUtils';
 import type { Task } from './models/TaskModel';
 import { TaskActive } from './models/classes/TaskActive';
@@ -12,11 +12,13 @@ import { TaskStatus } from './models/classes/TaskStatus';
 export type { PreviewPayload } from './models/classes/TaskActive';
 
 class TaskController {
-  readonly time = markRaw(timeManager.construct());
+  readonly time = markRaw(timeRepository.construct());
 
   private readonly taskRef = ref<Task | null>(null);
 
-  readonly mgr = markRaw(new TaskManager({ time: this.time, state: { activeTask: this.taskRef } }));
+  readonly mgr = markRaw(
+    new TaskRepository({ time: this.time, state: { activeTask: this.taskRef } }),
+  );
   readonly active = markRaw(new TaskActive(this.mgr, this.taskRef));
   readonly list = markRaw(new TaskList(this.mgr));
   readonly subtaskLine = markRaw(new TaskSubtaskLine(this.mgr, this.active, saveData));

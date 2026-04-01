@@ -1,8 +1,8 @@
 import type { Task } from '../TaskModel';
-import type { TaskManager } from '../../managers/taskManager';
+import type { TaskRepository } from '../../managers/taskRepository';
 
 export class TaskList {
-  constructor(private readonly mgr: TaskManager) {}
+  constructor(private readonly mgr: TaskRepository) {}
 
   all() {
     return this.mgr.getAll().slice();
