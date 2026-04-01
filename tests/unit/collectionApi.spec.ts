@@ -52,7 +52,10 @@ describe('TaskList — collection helpers', () => {
     list = new TaskList(repo);
     // Seed: 3 tasks – two in group-A, one in group-B
     repo.addTask(TODAY, makeTask({ name: 'A1', groupId: 'group-A', priority: 'high' }));
-    repo.addTask(TODAY, makeTask({ name: 'A2', groupId: 'group-A', priority: 'low', status_id: 0 }));
+    repo.addTask(
+      TODAY,
+      makeTask({ name: 'A2', groupId: 'group-A', priority: 'low', status_id: 0 }),
+    );
     repo.addTask(TODAY, makeTask({ name: 'B1', groupId: 'group-B', priority: 'medium' }));
   });
 

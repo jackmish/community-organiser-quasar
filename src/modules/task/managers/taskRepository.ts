@@ -459,7 +459,8 @@ export class TaskRepository {
         if (!found) {
           try {
             found =
-              (this.getFlatList(this._currentTimeApi) || []).find((t) => String(t.id) === id) || null;
+              (this.getFlatList(this._currentTimeApi) || []).find((t) => String(t.id) === id) ||
+              null;
           } catch (e) {
             found = null;
           }

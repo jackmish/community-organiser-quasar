@@ -36,8 +36,7 @@ export class TaskList extends Collection<Task> {
     return this.items()
       .slice()
       .sort(
-        compare ??
-          ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
+        compare ?? ((a, b) => a.date.localeCompare(b.date) || a.priority.localeCompare(b.priority)),
       );
   }
 
@@ -46,4 +45,3 @@ export class TaskList extends Collection<Task> {
     return this.items().filter((t) => String(t.groupId ?? '') === String(groupId));
   }
 }
-
