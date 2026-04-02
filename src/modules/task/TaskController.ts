@@ -42,6 +42,6 @@ class TaskController {
   };
 }
 
-export const useTaskController = defineStore('task', () => new TaskController());
-
-export type ApiTask = ReturnType<typeof useTaskController>;
+export const TaskStoreController = defineStore('task', () => new TaskController());
+export type TaskControllerInstance = ReturnType<typeof TaskStoreController>;
+export type ApiTask = TaskControllerInstance; // legacy alias

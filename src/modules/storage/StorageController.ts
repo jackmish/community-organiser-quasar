@@ -1,11 +1,11 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import logger from '../../utils/logger';
 import {
   storage as backendStorage,
   loadSettings,
   saveSettings,
 } from './backend/electron/electronBackend';
-import { presentation } from 'src/modules/presentation/presentationRepository';
+import { isPresentationModeActive } from 'src/composables/usePresentationGuard';
 import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskRepository';
 
@@ -28,57 +28,22 @@ interface TimeApiShape {
 
 export class StorageController {
   isLoading = ref(false);
-  private suppressPersist = true;
   private groupApi: GroupApiShape | undefined;
   private timeApi: TimeApiShape | undefined;
 
   constructor(groupApi?: GroupApiShape, timeApi?: TimeApiShape) {
     this.groupApi = groupApi;
     this.timeApi = timeApi;
-    try {
-      if (
-        this.groupApi &&
-        this.groupApi.active &&
-        typeof this.groupApi.active.activeGroup !== 'undefined'
-      ) {
-        watch(
-          () => this.groupApi?.active?.activeGroup?.value ?? null,
-          async (val) => {
-            try {
-              if (this.suppressPersist) return;
-              const existing = (await loadSettings()) || {};
-              const payload = { ...existing, activeGroupId: val?.value ?? null };
-              await saveSettings(payload);
-            } catch (e) {
-              logger.error('[apiStorage] failed to persist activeGroup', e);
-            }
-          },
-          { immediate: true },
-        );
-      }
-    } catch (e) {
-      void e;
-    }
   }
 
   async loadData() {
-    this.suppressPersist = true;
     this.isLoading.value = true;
     logger.debug('apiStorage.loadData called');
     try {
       let data: any;
-      try {
-        const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
-        const sampleModeActive = modeVal === 'test' || modeVal === 'presentation';
-        if (sampleModeActive) {
-          logger.debug(
-            'apiStorage.loadData: loading sampleData because presentation.mode ===',
-            modeVal,
-          );
-          data = sampleData as any;
-        }
-      } catch (e) {
-        void e;
+      if (isPresentationModeActive()) {
+        logger.debug('apiStorage.loadData: loading sampleData (presentation/test mode)');
+        data = sampleData as any;
       }
       if (!data) data = await backendStorage.loadData();
 
@@ -220,20 +185,14 @@ export class StorageController {
       logger.error('apiStorage.loadData failed', err);
       throw err;
     } finally {
-      this.suppressPersist = false;
       this.isLoading.value = false;
     }
   }
 
   async saveData(data?: any) {
-    try {
-      const modeVal = presentation && presentation.mode ? presentation.mode.value : 'default';
-      if (modeVal === 'test' || modeVal === 'presentation') {
-        logger.debug('apiStorage.saveData blocked in presentation/test mode (', modeVal, ')');
-        return;
-      }
-    } catch (e) {
-      // ignore
+    if (isPresentationModeActive()) {
+      logger.debug('apiStorage.saveData: blocked in presentation/test mode');
+      return;
     }
     try {
       let payload = data;

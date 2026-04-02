@@ -70,11 +70,11 @@ vi.mock('src/modules/task/classes/TaskStatus', () => ({
 }));
 
 // Import after mocks
-import { useTaskController } from '../../src/modules/task/TaskController';
+import { TaskStoreController } from '../../src/modules/task/TaskController';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('useTaskController — methods exposed by Pinia setup controller', () => {
+describe('TaskStoreController — methods exposed by Pinia setup controller', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -82,17 +82,17 @@ describe('useTaskController — methods exposed by Pinia setup controller', () =
   // ── add ───────────────────────────────────────────────────────────────────
 
   it('add is a callable function on the Pinia store (not undefined)', () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     expect(typeof store.add).toBe('function');
   });
 
   it('add resolves without TypeError', async () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     await expect(store.add('2026-03-14', { name: 'Test' })).resolves.not.toThrow();
   });
 
   it('add returns the task object produced by mgr.addTask', async () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     const result = await store.add('2026-03-14', { name: 'New task' });
     // The mock addTask returns { ...data, id: 'new-id' }
     expect(result).toMatchObject({ name: 'New task', id: 'new-id' });
@@ -101,19 +101,19 @@ describe('useTaskController — methods exposed by Pinia setup controller', () =
   // ── update ────────────────────────────────────────────────────────────────
 
   it('update is a callable function on the Pinia store (not undefined)', () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     expect(typeof store.update).toBe('function');
   });
 
   it('update resolves without TypeError', async () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     await expect(
       store.update('2026-03-14', { id: 'x', name: 'Updated' } as any),
     ).resolves.not.toThrow();
   });
 
   it('update calls mgr.updateTask with the provided arguments', async () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     await store.update('2026-03-14', 'task-id', { name: 'Patched' });
     // mgr is markRaw — access through store internals via the mock:
     // just verifying no throw is sufficient here; mgr call is covered by taskManager tests
@@ -122,12 +122,12 @@ describe('useTaskController — methods exposed by Pinia setup controller', () =
   // ── delete ────────────────────────────────────────────────────────────────
 
   it('delete is a callable function on the Pinia store (not undefined)', () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     expect(typeof (store as any).delete).toBe('function');
   });
 
   it('delete resolves without TypeError', async () => {
-    const store = useTaskController();
+    const store = TaskStoreController();
     await expect((store as any).delete('2026-03-14', 'task-id')).resolves.not.toThrow();
   });
 
@@ -139,7 +139,7 @@ describe('useTaskController — methods exposed by Pinia setup controller', () =
     // Arrow-function class fields create own-enumerable properties.
     // We verify here using the store directly; hasOwnProperty covers
     // both the instance level and the Pinia-store proxy.
-    const store = useTaskController();
+    const store = TaskStoreController();
     const ownKeys = Object.keys(store);
     expect(ownKeys).toContain('add');
     expect(ownKeys).toContain('update');

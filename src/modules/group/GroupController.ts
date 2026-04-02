@@ -31,4 +31,5 @@ class GroupController {
   }
 }
 
-export const useGroupController = defineStore('group', () => new GroupController());
+export const GroupStoreController = defineStore('group', () => new GroupController());
+export type GroupControllerInstance = ReturnType<typeof GroupStoreController>;
