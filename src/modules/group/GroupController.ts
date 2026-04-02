@@ -1,4 +1,4 @@
-import { markRaw, ref } from 'vue';
+import { markRaw, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { saveData } from 'src/utils/storageUtils';
 import * as groupRepository from './managers/groupRepository';
@@ -6,6 +6,14 @@ import type { CreateGroupInput } from './managers/groupRepository';
 import { GroupList } from './models/classes/GroupList';
 import { GroupActive } from './models/classes/GroupActive';
 import type { Group } from './models/GroupModel';
+import type { Ref } from 'vue';
+import logger from 'src/utils/logger';
+
+interface SettingsStorage {
+  isLoading: Ref<boolean>;
+  loadSettings: () => Promise<Record<string, any> | null>;
+  saveSettings: (data: Record<string, any>) => Promise<void>;
+}
 
 class GroupController {
   readonly groups = ref<Group[]>([]);
@@ -28,6 +36,29 @@ class GroupController {
     const res = groupRepository.deleteGroup(this.groups.value, groupId);
     await saveData();
     return res;
+  }
+
+  /**
+   * Wire persistent side-effects for the group domain.
+   * Call once during app bootstrap after storage is ready.
+   */
+  initWatchers(storage: SettingsStorage): void {
+    try {
+      watch(
+        () => this.active.activeGroup.value ?? null,
+        async (newVal) => {
+          try {
+            if (storage.isLoading.value) return;
+            const existing = (await storage.loadSettings()) ?? {};
+            await storage.saveSettings({ ...existing, activeGroupId: newVal?.value ?? null });
+          } catch (e) {
+            logger.error('[GroupController] failed to persist activeGroup', e);
+          }
+        },
+      );
+    } catch (e) {
+      void e;
+    }
   }
 }
 

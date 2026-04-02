@@ -4,7 +4,6 @@ import { TaskStoreController } from 'src/modules/task/TaskController';
 import { GroupStoreController } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/storage/controllers/lazyStore';
 import { registerAppService } from 'src/services/appService';
-import { initGroupWatchers } from 'src/modules/group/groupWatchers';
 
 class CentralController {
   public group: ReturnType<typeof GroupStoreController> = lazyStore<
@@ -18,11 +17,12 @@ class CentralController {
   constructor() {}
 
   initControllers() {
+    // Chaos to refactor, but at least access like CC.task.list.items() works with this
     if (this._storage) return this._storage;
     const g = GroupStoreController();
     const t = TaskStoreController();
     this._storage = apiStorage.construct(g, t.time);
-    initGroupWatchers(g, this._storage);
+    g.initWatchers(this._storage);
     try {
       registerAppService('storage', this._storage);
     } catch (e) {
