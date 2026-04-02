@@ -2,20 +2,18 @@ import type { TaskRepository } from '../../managers/taskRepository';
 import type { TaskActive } from './TaskActive';
 
 export class TaskSubtaskLine {
-  // Delegate to the manager's parsedLines — it is watcher-backed and updates
-  // automatically whenever the active task's description changes.
   get parsedLines() {
-    return this.mgr.managers.subtaskLine.parsedLines;
+    return this.taskRepo.managers.subtaskLine.parsedLines;
   }
 
   constructor(
-    private readonly mgr: TaskRepository,
+    private readonly taskRepo: TaskRepository,
     private readonly active: TaskActive,
     private readonly persist: () => Promise<void>,
   ) {}
 
   async add(text: string) {
-    const res = await this.mgr.managers.subtaskLine.add(this.active.task.value, text);
+    const res = await this.taskRepo.managers.subtaskLine.add(this.active.task.value, text);
     try {
       if (res && res.newDesc) await this.persist();
     } catch (err) {
@@ -29,7 +27,7 @@ export class TaskSubtaskLine {
   }
 
   async toggleStatus(task: any, lineIndex: number) {
-    const res = await this.mgr.managers.subtaskLine.toggleStatus(task, lineIndex);
+    const res = await this.taskRepo.managers.subtaskLine.toggleStatus(task, lineIndex);
     if (res && res.newDesc) await this.persist();
     return res;
   }

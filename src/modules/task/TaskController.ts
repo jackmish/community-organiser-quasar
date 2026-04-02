@@ -16,27 +16,27 @@ class TaskController {
 
   private readonly taskRef = ref<Task | null>(null);
 
-  readonly mgr = markRaw(
+  readonly taskRepo = markRaw(
     new TaskRepository({ time: this.time, state: { activeTask: this.taskRef } }),
   );
-  readonly active = markRaw(new TaskActive(this.mgr, this.taskRef));
-  readonly list = markRaw(new TaskList(this.mgr));
-  readonly subtaskLine = markRaw(new TaskSubtaskLine(this.mgr, this.active, saveData));
-  readonly status = markRaw(new TaskStatus(this.mgr, saveData));
+  readonly active = markRaw(new TaskActive(this.taskRepo, this.taskRef));
+  readonly list = markRaw(new TaskList(this.taskRepo));
+  readonly subtaskLine = markRaw(new TaskSubtaskLine(this.taskRepo, this.active, saveData));
+  readonly status = markRaw(new TaskStatus(this.taskRepo, saveData));
 
   readonly add = async (date: string, taskData: any) => {
-    const t = this.mgr.addTask(date, taskData);
+    const t = this.taskRepo.addTask(date, taskData);
     await saveData();
     return t;
   };
 
   readonly update = async (date: string, taskOrId: Task | string, maybeUpdates?: any) => {
-    this.mgr.updateTask(date, taskOrId, maybeUpdates);
+    this.taskRepo.updateTask(date, taskOrId, maybeUpdates);
     await saveData();
   };
 
   readonly delete = async (date: string, id: string) => {
-    const removed = this.mgr.deleteTask(date, id);
+    const removed = this.taskRepo.deleteTask(date, id);
     await saveData();
     return removed;
   };

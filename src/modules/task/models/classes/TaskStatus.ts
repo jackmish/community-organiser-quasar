@@ -2,20 +2,17 @@ import type { TaskRepository } from '../../managers/taskRepository';
 
 export class TaskStatus {
   constructor(
-    private readonly mgr: TaskRepository,
+    private readonly taskRepo: TaskRepository,
     private readonly persist: () => Promise<void>,
   ) {}
 
   async toggleComplete(date: string, id: string): Promise<void> {
-    this.mgr.toggleTaskComplete(date, id);
+    this.taskRepo.toggleTaskComplete(date, id);
     await this.persist();
-    // toggleTaskComplete mutates the raw task object directly, bypassing Vue's
-    // reactive proxy set-trap.  Refresh activeTask.value so any computed that
-    // reads `activeTask.value.status_id` (e.g. `isDone` in TaskPreview) reacts.
     try {
-      const activeTask = (this.mgr.apiTask as any)?.state?.activeTask;
+      const activeTask = (this.taskRepo.apiTask as any)?.state?.activeTask;
       if (activeTask?.value && String(activeTask.value.id) === String(id)) {
-        const updated = this.mgr.flatTasks.value.find((t: any) => String(t.id) === String(id));
+        const updated = this.taskRepo.flatTasks.value.find((t: any) => String(t.id) === String(id));
         if (updated) activeTask.value = updated;
       }
     } catch (e) {
@@ -24,7 +21,7 @@ export class TaskStatus {
   }
 
   async undoCycleDone(date: string, id: string): Promise<boolean> {
-    const changed = this.mgr.undoCycleDone(date, id);
+    const changed = this.taskRepo.undoCycleDone(date, id);
     if (changed) await this.persist();
     return changed;
   }
