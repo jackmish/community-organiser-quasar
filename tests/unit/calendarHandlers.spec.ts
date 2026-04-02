@@ -1,7 +1,7 @@
 /**
  * calendarHandlers.spec.ts
  *
- * Unit tests for createCalendarHandlers:
+ * Unit tests for useCalendarHandlers:
  *  - handleCalendarDateSelect: guards click-block, updates newTask.eventDate, calls setCurrentDate
  *  - handleCalendarEdit: looked up by id, delegates to editTask
  *  - handleCalendarPreview: resolves polymorphic payload, sets task/mode, clears previewTask
@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
-import { createCalendarHandlers } from '../../src/modules/task/handlers/calendarHandlers';
+import { useCalendarHandlers } from '../../src/composables/useCalendarHandlers';
 
 function makeArgs(overrides: Record<string, any> = {}) {
   const isClickBlocked = ref(false);
@@ -39,11 +39,11 @@ function makeArgs(overrides: Record<string, any> = {}) {
   };
 }
 
-describe('createCalendarHandlers', () => {
+describe('useCalendarHandlers', () => {
   describe('handleCalendarDateSelect', () => {
     it('updates newTask.eventDate and calls setCurrentDate for a new date', () => {
       const args = makeArgs();
-      const { handleCalendarDateSelect } = createCalendarHandlers(args);
+      const { handleCalendarDateSelect } = useCalendarHandlers(args);
 
       handleCalendarDateSelect('2026-03-13');
 
@@ -54,7 +54,7 @@ describe('createCalendarHandlers', () => {
     it('briefly blocks clicks during the date selection', () => {
       vi.useFakeTimers();
       const args = makeArgs();
-      const { handleCalendarDateSelect } = createCalendarHandlers(args);
+      const { handleCalendarDateSelect } = useCalendarHandlers(args);
 
       handleCalendarDateSelect('2026-03-13');
       expect(args.isClickBlocked.value).toBe(true);
@@ -67,7 +67,7 @@ describe('createCalendarHandlers', () => {
     it('is a no-op when the click is already blocked', () => {
       const args = makeArgs();
       args.isClickBlocked.value = true;
-      const { handleCalendarDateSelect } = createCalendarHandlers(args);
+      const { handleCalendarDateSelect } = useCalendarHandlers(args);
 
       handleCalendarDateSelect('2026-03-13');
 
@@ -77,7 +77,7 @@ describe('createCalendarHandlers', () => {
     it('is a no-op when the same date is already set', () => {
       const args = makeArgs();
       args.newTask.value.eventDate = '2026-03-13';
-      const { handleCalendarDateSelect } = createCalendarHandlers(args);
+      const { handleCalendarDateSelect } = useCalendarHandlers(args);
 
       handleCalendarDateSelect('2026-03-13');
 
@@ -88,7 +88,7 @@ describe('createCalendarHandlers', () => {
   describe('handleCalendarEdit', () => {
     it('finds a task by id and calls editTask', () => {
       const args = makeArgs();
-      const { handleCalendarEdit } = createCalendarHandlers(args);
+      const { handleCalendarEdit } = useCalendarHandlers(args);
 
       handleCalendarEdit('1');
 
@@ -97,7 +97,7 @@ describe('createCalendarHandlers', () => {
 
     it('does nothing when taskId is null', () => {
       const args = makeArgs();
-      const { handleCalendarEdit } = createCalendarHandlers(args);
+      const { handleCalendarEdit } = useCalendarHandlers(args);
 
       handleCalendarEdit(null);
 
@@ -106,7 +106,7 @@ describe('createCalendarHandlers', () => {
 
     it('does nothing when task is not found', () => {
       const args = makeArgs();
-      const { handleCalendarEdit } = createCalendarHandlers(args);
+      const { handleCalendarEdit } = useCalendarHandlers(args);
 
       handleCalendarEdit('999');
 
@@ -117,7 +117,7 @@ describe('createCalendarHandlers', () => {
   describe('handleCalendarPreview', () => {
     it('resolves a string id payload and calls setTask', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview('1');
 
@@ -127,7 +127,7 @@ describe('createCalendarHandlers', () => {
 
     it('resolves an object payload with .id and merges occurrence date', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview({ id: '1', date: '2026-06-15' });
 
@@ -138,7 +138,7 @@ describe('createCalendarHandlers', () => {
 
     it('calls setCurrentDate with the task date', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview('1');
 
@@ -147,7 +147,7 @@ describe('createCalendarHandlers', () => {
 
     it('clears setPreviewTask after handling', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview('1');
 
@@ -156,7 +156,7 @@ describe('createCalendarHandlers', () => {
 
     it('falls back to editTask when setTask is not provided', () => {
       const args = makeArgs({ setTask: undefined });
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview('2');
 
@@ -165,7 +165,7 @@ describe('createCalendarHandlers', () => {
 
     it('does nothing for a null payload', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview(null);
 
@@ -175,7 +175,7 @@ describe('createCalendarHandlers', () => {
 
     it('does nothing when task is not found', () => {
       const args = makeArgs();
-      const { handleCalendarPreview } = createCalendarHandlers(args);
+      const { handleCalendarPreview } = useCalendarHandlers(args);
 
       handleCalendarPreview('999');
 

@@ -246,12 +246,12 @@ import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
 import { useGroupColor } from "src/composables/useGroupColor";
-import { createLineEventHandlers } from "src/modules/task/handlers/lineEventHandlers";
-import { createTaskUiHandlers } from "src/modules/task/handlers/taskUiHandlers";
+import { useLineEventHandlers } from "src/composables/useLineEventHandlers";
+import { useTaskUiHandlers } from "src/composables/useTaskUiHandlers";
 import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers";
-import { createCalendarHandlers } from "src/modules/task/handlers/calendarHandlers";
+import { useCalendarHandlers } from "src/composables/useCalendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
-import { createTaskCrudHandlers } from "src/modules/task/handlers/taskCrudHandlers";
+import { useTaskCrud } from "src/composables/useTaskCrud";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 
 // Use shared view composable for clock and time-diff helpers
@@ -507,10 +507,10 @@ const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // child line animation handlers (API handles the data changes)
-const { onLineCollapsed, onLineExpanded } = createLineEventHandlers();
+const { onLineCollapsed, onLineExpanded } = useLineEventHandlers();
 
 // task UI handlers moved to module
-const { setTaskToEdit, editTask, clearTaskToEdit } = createTaskUiHandlers({
+const { setTaskToEdit, editTask, clearTaskToEdit } = useTaskUiHandlers({
   activeTask: CC.task.active.task,
   activeMode: CC.task.active.mode,
   setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) =>
@@ -705,7 +705,7 @@ const {
   handleCalendarDateSelect,
   handleCalendarEdit,
   handleCalendarPreview,
-} = createCalendarHandlers({
+} = useCalendarHandlers({
   isClickBlocked,
   newTask,
   setCurrentDate: (d: string | null) => CC.task.time.setCurrentDate(d),
@@ -753,7 +753,7 @@ const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGrou
 );
 
 // Extract add/update handlers into a task CRUD module
-const { handleAddTask, handleUpdateTask } = createTaskCrudHandlers({
+const { handleAddTask, handleUpdateTask } = useTaskCrud({
   setCurrentDate: CC.task.time.setCurrentDate,
   activeGroup: CC.group.active.activeGroup,
   currentDate: CC.task.time.currentDate,

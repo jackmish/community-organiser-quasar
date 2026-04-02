@@ -25,7 +25,7 @@ vi.mock('src/CentralController', () => {
   return { default: mock, ...mock };
 });
 
-import { createTaskCrudHandlers } from '../../src/modules/task/handlers/taskCrudHandlers';
+import { useTaskCrud } from '../../src/composables/useTaskCrud';
 
 // ── A minimal class that mimics TaskActive ────────────────────────────────────
 class FakeActive {
@@ -52,7 +52,7 @@ function makeHandlers(active: FakeActive) {
   const task = { id: '1', name: 'Existing', date: '2026-03-12' };
   const allTasks = ref([task]);
   return {
-    handlers: createTaskCrudHandlers({
+    handlers: useTaskCrud({
       setCurrentDate: vi.fn(),
       activeGroup: ref({ value: 'g1' }),
       currentDate: ref('2026-03-12'),
@@ -65,7 +65,7 @@ function makeHandlers(active: FakeActive) {
   };
 }
 
-describe('createTaskCrudHandlers — class-based active (unbound-this regression)', () => {
+describe('useTaskCrud — class-based active (unbound-this regression)', () => {
   let active: FakeActive;
 
   beforeEach(() => {
@@ -111,7 +111,7 @@ describe('createTaskCrudHandlers — class-based active (unbound-this regression
     const taskNoDate = { id: '2', name: 'No date field', eventDate: '2026-05-01' };
     const allTasks = ref([taskNoDate]);
     const { handlers } = {
-      handlers: createTaskCrudHandlers({
+      handlers: useTaskCrud({
         setCurrentDate: vi.fn(),
         activeGroup: ref({ value: 'g1' }),
         currentDate: ref('2026-03-12'),
@@ -130,7 +130,7 @@ describe('createTaskCrudHandlers — class-based active (unbound-this regression
     const taskBare = { id: '3', name: 'Bare' };
     const allTasks = ref([taskBare]);
     const { handlers } = {
-      handlers: createTaskCrudHandlers({
+      handlers: useTaskCrud({
         setCurrentDate: vi.fn(),
         activeGroup: ref({ value: 'g1' }),
         currentDate: ref('2026-01-01'),
@@ -150,7 +150,7 @@ describe('createTaskCrudHandlers — class-based active (unbound-this regression
     const storedTask = { id: '1', name: 'Stored version', date: '2026-03-12', extra: 'yes' };
     const allTasks = ref([storedTask]);
     const { handlers } = {
-      handlers: createTaskCrudHandlers({
+      handlers: useTaskCrud({
         setCurrentDate: vi.fn(),
         activeGroup: ref({ value: 'g1' }),
         currentDate: ref('2026-03-12'),
