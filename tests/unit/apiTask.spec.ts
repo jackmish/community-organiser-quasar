@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 
-// ── Mock all heavy deps so the store instantiates cleanly in a test env ───────
+// â”€â”€ Mock all heavy deps so the store instantiates cleanly in a test env â”€â”€â”€â”€â”€â”€â”€
 vi.mock('src/utils/storageUtils', () => ({
   saveData: vi.fn(async () => {}),
 }));
@@ -25,12 +25,12 @@ vi.mock('src/modules/task/managers/taskRepository', () => ({
       addTask: vi.fn((_date: string, data: any) => ({ ...data, id: 'new-id' })),
       updateTask: vi.fn(),
       deleteTask: vi.fn(() => true),
-      setTimeApi: vi.fn(),
+      setTime: vi.fn(),
       getAll: vi.fn(() => []),
     };
   }),
   flatTasks: { value: [] },
-  setTimeApi: vi.fn(),
+  setTime: vi.fn(),
   addTask: vi.fn(),
   buildFlatTasksList: vi.fn(() => []),
 }));
@@ -72,14 +72,14 @@ vi.mock('src/modules/task/classes/TaskStatus', () => ({
 // Import after mocks
 import { TaskStoreController } from '../../src/modules/task/TaskController';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-describe('TaskStoreController — methods exposed by Pinia setup controller', () => {
+describe('TaskStoreController â€” methods exposed by Pinia setup controller', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
 
-  // ── add ───────────────────────────────────────────────────────────────────
+  // â”€â”€ add â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('add is a callable function on the Pinia store (not undefined)', () => {
     const store = TaskStoreController();
@@ -98,7 +98,7 @@ describe('TaskStoreController — methods exposed by Pinia setup controller', ()
     expect(result).toMatchObject({ name: 'New task', id: 'new-id' });
   });
 
-  // ── update ────────────────────────────────────────────────────────────────
+  // â”€â”€ update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('update is a callable function on the Pinia store (not undefined)', () => {
     const store = TaskStoreController();
@@ -115,11 +115,11 @@ describe('TaskStoreController — methods exposed by Pinia setup controller', ()
   it('update calls mgr.updateTask with the provided arguments', async () => {
     const store = TaskStoreController();
     await store.update('2026-03-14', 'task-id', { name: 'Patched' });
-    // mgr is markRaw — access through store internals via the mock:
+    // mgr is markRaw â€” access through store internals via the mock:
     // just verifying no throw is sufficient here; mgr call is covered by taskManager tests
   });
 
-  // ── delete ────────────────────────────────────────────────────────────────
+  // â”€â”€ delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('delete is a callable function on the Pinia store (not undefined)', () => {
     const store = TaskStoreController();
@@ -131,7 +131,7 @@ describe('TaskStoreController — methods exposed by Pinia setup controller', ()
     await expect((store as any).delete('2026-03-14', 'task-id')).resolves.not.toThrow();
   });
 
-  // ── Regression: methods are OWN properties, not prototype-only ───────────
+  // â”€â”€ Regression: methods are OWN properties, not prototype-only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('regression: add/update/delete are own properties (Pinia visibility)', () => {
     // If these were prototype methods, Pinia would not expose them and

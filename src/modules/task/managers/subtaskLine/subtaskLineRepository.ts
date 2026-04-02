@@ -28,9 +28,9 @@ export class SubtaskLineRepository {
     let stateOrActiveTask: any = undefined;
     try {
       if (taskManager && typeof taskManager === 'object') {
-        stateOrActiveTask = taskManager.apiTask && taskManager.apiTask.state;
+        stateOrActiveTask = taskManager.timeProvider && taskManager.timeProvider.state;
         this.opts = {
-          time: taskManager.apiTask && taskManager.apiTask.time,
+          time: taskManager.timeProvider && taskManager.timeProvider.time,
           persist: async (date: string, taskObj: Task) => {
             try {
               if (typeof taskManager.updateTask === 'function') {
@@ -90,7 +90,7 @@ export class SubtaskLineRepository {
     const t = title.trim();
     if (!t) return text;
     const pattern = new RegExp(
-      '^\\s*' + this.escapeRegExp(t) + '(?:\\s*[-:—\\|]+\\s*|\\s+|\\s*\\n\\s*)?',
+      '^\\s*' + this.escapeRegExp(t) + '(?:\\s*[-:â€”\\|]+\\s*|\\s+|\\s*\\n\\s*)?',
       'i',
     );
     return text.replace(pattern, '');
@@ -150,7 +150,7 @@ export class SubtaskLineRepository {
         html = `${idx}. ${html}`;
         return { uid, type: 'list', raw: ln, html, checked };
       }
-      const html = this.escapeHtml(text).replace(/-vv/g, '✅').replace(/\n/g, '<br/>');
+      const html = this.escapeHtml(text).replace(/-vv/g, 'âś…').replace(/\n/g, '<br/>');
       return { uid, type: 'text', raw: ln, html };
     });
   }

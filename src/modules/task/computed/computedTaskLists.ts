@@ -16,31 +16,31 @@ export function createTaskComputed(args: {
   currentDayData: Ref<{ tasks: Task[] }>;
   currentDate: Ref<string>;
   allTasks: Ref<Task[]>;
-  apiTask?: any;
-  apiGroup?: any;
+  task?: any;
+  group?: any;
 }) {
-  const { currentDayData, currentDate, allTasks, apiTask, apiGroup } = args;
+  const { currentDayData, currentDate, allTasks, task, group } = args;
 
-  // Derive helpers from provided APIs (prefer apiTask/apiGroup). Provide
+  // Derive helpers from provided APIs (prefer task/group). Provide
   // minimal safe fallbacks so this module remains usable in tests.
-  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined = apiTask?.list
-    ? (from: string, to: string) => apiTask.list.inRange(from, to)
+  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined = task?.list
+    ? (from: string, to: string) => task.list.inRange(from, to)
     : undefined;
 
-  const parseYmdLocal = apiTask?.helpers?.parseYmdLocal ?? parseYmdLocalDefault;
+  const parseYmdLocal = task?.helpers?.parseYmdLocal ?? parseYmdLocalDefault;
   const getTimeOffsetDaysForTask =
-    apiTask?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
+    task?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
 
-  const getCycleType = apiTask?.helpers?.getCycleType ?? utilGetCycleType;
-  const occursOnDay = apiTask?.helpers?.occursOnDay ?? utilOccursOnDay;
+  const getCycleType = task?.helpers?.getCycleType ?? utilGetCycleType;
+  const occursOnDay = task?.helpers?.occursOnDay ?? utilOccursOnDay;
 
-  const groups: Ref<any[]> = (apiGroup?.list?.all as Ref<any[]>) ?? ref([] as any[]);
-  const activeGroup: Ref<any> = (apiGroup?.active?.activeGroup as Ref<any>) ?? ref(null as any);
-  const getGroupsByParent = apiGroup?.list
-    ? (p?: string) => apiGroup.list.getGroupsByParent(p)
+  const groups: Ref<any[]> = (group?.list?.all as Ref<any[]>) ?? ref([] as any[]);
+  const activeGroup: Ref<any> = (group?.active?.activeGroup as Ref<any>) ?? ref(null as any);
+  const getGroupsByParent = group?.list
+    ? (p?: string) => group.list.getGroupsByParent(p)
     : (p?: string) => [] as any[];
-  const rawGroupIsVisible = apiGroup?.list
-    ? (candidateId: any) => apiGroup.list.isVisibleForActive(candidateId)
+  const rawGroupIsVisible = group?.list
+    ? (candidateId: any) => group.list.isVisibleForActive(candidateId)
     : undefined;
 
   // Normalize the group visibility helper so callers can always use a single-arg

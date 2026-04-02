@@ -10,7 +10,7 @@ export class TaskStatus {
     this.taskRepo.toggleTaskComplete(date, id);
     await this.persist();
     try {
-      const activeTask = (this.taskRepo.apiTask as any)?.state?.activeTask;
+      const activeTask = (this.taskRepo.timeProvider as any)?.state?.activeTask;
       if (activeTask?.value && String(activeTask.value.id) === String(id)) {
         const updated = this.taskRepo.flatTasks.value.find((t: any) => String(t.id) === String(id));
         if (updated) activeTask.value = updated;

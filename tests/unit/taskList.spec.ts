@@ -4,16 +4,16 @@
  * Tests that guard against tasks going missing from the task list.
  * Covers three layers:
  *
- *  1. taskManager  — addTask / getAll / buildFlatTasksList
- *  2. computedTaskLists — sortedTasks, tasksWithoutTime, group-filter
- *  3. apiStorage   — loadData days-map precedence (the Todo-visibility bug)
+ *  1. taskManager  â€” addTask / getAll / buildFlatTasksList
+ *  2. computedTaskLists â€” sortedTasks, tasksWithoutTime, group-filter
+ *  3. apiStorage   â€” loadData days-map precedence (the Todo-visibility bug)
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ref } from 'vue';
 import { Task } from '../../src/modules/task/models/TaskModel';
 
-// ─── Mock heavy external deps before importing modules that pull them in ────
+// â”€â”€â”€ Mock heavy external deps before importing modules that pull them in â”€â”€â”€â”€
 vi.mock('src/modules/presentation/presentationRepository', () => ({
   presentation: { mode: { value: 'default' } },
 }));
@@ -36,7 +36,7 @@ vi.mock('src/modules/storage/backend/electron/electronBackend', () => ({
 // Import after mocks are registered
 import {
   addTask,
-  setTimeApi,
+  setTime,
   flatTasks,
   getTasksInRange,
   getAllTasks,
@@ -45,9 +45,9 @@ import {
 import { createTaskComputed } from '../../src/modules/task/computed/computedTaskLists';
 import { construct as constructStorage } from '../../src/modules/storage/StorageController';
 
-// ────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Helpers
-// ────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TODAY = new Date().toISOString().split('T')[0] as string;
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -71,12 +71,12 @@ function makeDaysRef(initialDays: Record<string, any> = {}) {
   return days;
 }
 
-/** Reset taskManager module-level state via setTimeApi with a fresh days ref */
+/** Reset taskManager module-level state via setTime with a fresh days ref */
 function freshTimeApi(initialTasks: Task[] = [], date: string = TODAY) {
   const tasks = initialTasks.map((t) => ({ ...t }));
   const daysRef = makeDaysRef(tasks.length ? { [date]: { date, tasks, notes: '' } } : {});
   const timeApi = { days: daysRef, currentDate: ref(date), lastModified: ref('') };
-  setTimeApi(timeApi);
+  setTime(timeApi);
   // Rebuild flatTasks from the initial days
   const list = listFromDays(daysRef.value);
   flatTasks.value.splice(0, flatTasks.value.length, ...list);
@@ -84,9 +84,9 @@ function freshTimeApi(initialTasks: Task[] = [], date: string = TODAY) {
 }
 
 // ============================================================================
-// 1. taskManager — addTask / getAll / buildFlatTasksList
+// 1. taskManager â€” addTask / getAll / buildFlatTasksList
 // ============================================================================
-describe('taskManager — task list completeness', () => {
+describe('taskManager â€” task list completeness', () => {
   beforeEach(() => {
     freshTimeApi();
   });
@@ -108,7 +108,7 @@ describe('taskManager — task list completeness', () => {
     expect(flatTasks.value.some((t) => t.type_id === 'Replenish')).toBe(true);
   });
 
-  it('returns multiple tasks of different types — none are dropped', () => {
+  it('returns multiple tasks of different types â€” none are dropped', () => {
     addTask(TODAY, makeTask({ type_id: 'TimeEvent', name: 'Event' }) as any);
     addTask(TODAY, makeTask({ type_id: 'Todo', name: 'Todo A' }) as any);
     addTask(TODAY, makeTask({ type_id: 'Todo', name: 'Todo B' }) as any);
@@ -134,7 +134,7 @@ describe('taskManager — task list completeness', () => {
       [yesterday]: { date: yesterday, tasks: [t1], notes: '' },
       [TODAY]: { date: TODAY, tasks: [t2], notes: '' },
     });
-    setTimeApi({ days: daysRef, currentDate: ref(TODAY), lastModified: ref('') });
+    setTime({ days: daysRef, currentDate: ref(TODAY), lastModified: ref('') });
     const result = getTasksInRange('1970-01-01', '9999-12-31');
     expect(result.length).toBe(2);
     expect(result.some((t) => t.name === 'Old Todo')).toBe(true);
@@ -147,7 +147,7 @@ describe('taskManager — task list completeness', () => {
     const daysRef = makeDaysRef({
       [TODAY]: { date: TODAY, tasks: [withGroup, noGroup], notes: '' },
     });
-    setTimeApi({ days: daysRef, currentDate: ref(TODAY), lastModified: ref('') });
+    setTime({ days: daysRef, currentDate: ref(TODAY), lastModified: ref('') });
     const all = getAllTasks();
     expect(all.some((t) => t.name === 'Grouped')).toBe(true);
     expect(all.some((t) => t.name === 'No Group')).toBe(true);
@@ -155,9 +155,9 @@ describe('taskManager — task list completeness', () => {
 });
 
 // ============================================================================
-// 2. computedTaskLists — sortedTasks / tasksWithoutTime visibility
+// 2. computedTaskLists â€” sortedTasks / tasksWithoutTime visibility
 // ============================================================================
-describe('computedTaskLists — task list visibility', () => {
+describe('computedTaskLists â€” task list visibility', () => {
   it('sortedTasks includes tasks from currentDayData', () => {
     const tasks = [makeTask({ name: 'Task 1' }), makeTask({ name: 'Task 2' })];
     const { sortedTasks } = createTaskComputed({
@@ -233,7 +233,7 @@ describe('computedTaskLists — task list visibility', () => {
     const t1 = makeTask({ name: 'A', groupId: 'g1' });
     const t2 = makeTask({ name: 'B', groupId: 'g2' });
     const t3 = makeTask({ name: 'C', groupId: undefined });
-    const apiGroup = {
+    const group = {
       list: {
         all: ref([
           { id: 'g1', name: 'Group 1' },
@@ -248,7 +248,7 @@ describe('computedTaskLists — task list visibility', () => {
       currentDayData: ref({ tasks: [t1, t2, t3] }),
       currentDate: ref(TODAY),
       allTasks: ref([t1, t2, t3]),
-      apiGroup,
+      group,
     });
     expect(sortedTasks.value.length).toBe(3);
   });
@@ -256,7 +256,7 @@ describe('computedTaskLists — task list visibility', () => {
   it('group filter: tasks from another group are hidden when active group is set', () => {
     const visible = makeTask({ name: 'Visible', groupId: 'g1' });
     const hidden = makeTask({ name: 'Hidden', groupId: 'g2' });
-    const apiGroup = {
+    const group = {
       list: {
         all: ref([
           { id: 'g1', name: 'Active' },
@@ -272,7 +272,7 @@ describe('computedTaskLists — task list visibility', () => {
       currentDayData: ref({ tasks: [visible, hidden] }),
       currentDate: ref(TODAY),
       allTasks: ref([visible, hidden]),
-      apiGroup,
+      group,
     });
     expect(sortedTasks.value.some((t) => t.name === 'Visible')).toBe(true);
     expect(sortedTasks.value.some((t) => t.name === 'Hidden')).toBe(false);
@@ -287,7 +287,7 @@ describe('computedTaskLists — task list visibility', () => {
       date: '2025-01-01', // stored on a past date
       status_id: 1,
     });
-    const apiTask = {
+    const task = {
       list: { inRange: (_from: string, _to: string) => [oldTodo] },
       helpers: {},
     };
@@ -295,7 +295,7 @@ describe('computedTaskLists — task list visibility', () => {
       currentDayData: ref({ tasks: [] }), // NOT in current day
       currentDate: ref(TODAY),
       allTasks: ref([oldTodo]),
-      apiTask,
+      task,
     });
     expect(sortedTasks.value.some((t) => t.name === 'Old Todo injected today')).toBe(true);
   });
@@ -310,15 +310,15 @@ describe('computedTaskLists — task list visibility', () => {
       date: '2025-06-01',
       status_id: 1,
     });
-    const apiTask = {
+    const task = {
       list: { inRange: (_from: string, _to: string) => [todo] },
       helpers: {},
     };
     const { sortedTasks } = createTaskComputed({
-      currentDayData: ref({ tasks: [] }), // empty — Todo must come via injection
+      currentDayData: ref({ tasks: [] }), // empty â€” Todo must come via injection
       currentDate: ref(PAST_DATE), // viewing a non-today date
       allTasks: ref([todo]),
-      apiTask,
+      task,
     });
     expect(sortedTasks.value.some((t) => t.name === 'Todo on past date view')).toBe(true);
   });
@@ -332,7 +332,7 @@ describe('computedTaskLists — task list visibility', () => {
       date: '2025-06-01',
       status_id: 1,
     });
-    const apiTask = {
+    const task = {
       list: { inRange: (_from: string, _to: string) => [otherDayEvent] },
       helpers: {},
     };
@@ -340,7 +340,7 @@ describe('computedTaskLists — task list visibility', () => {
       currentDayData: ref({ tasks: [] }),
       currentDate: ref(PAST_DATE),
       allTasks: ref([otherDayEvent]),
-      apiTask,
+      task,
     });
     expect(sortedTasks.value.some((t) => t.name === 'Event on another day')).toBe(false);
   });
@@ -352,7 +352,7 @@ describe('computedTaskLists — task list visibility', () => {
       date: '2025-01-01',
       status_id: 0,
     });
-    const apiTask = {
+    const task = {
       list: { inRange: (_from: string, _to: string) => [doneTodo] },
       helpers: {},
     };
@@ -360,16 +360,16 @@ describe('computedTaskLists — task list visibility', () => {
       currentDayData: ref({ tasks: [] }),
       currentDate: ref(TODAY),
       allTasks: ref([doneTodo]),
-      apiTask,
+      task,
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Done injected Todo')).toBe(false);
   });
 });
 
 // ============================================================================
-// 3. apiStorage.loadData — data.days takes precedence over daysFromGroups
+// 3. apiStorage.loadData â€” data.days takes precedence over daysFromGroups
 // ============================================================================
-describe('apiStorage.loadData — task preservation', () => {
+describe('apiStorage.loadData â€” task preservation', () => {
   it('loads tasks from data.days when present, including Todos without groupId', async () => {
     const todoTask = makeTask({ type_id: 'Todo', name: 'Ungrouped Todo', groupId: undefined });
     const eventTask = makeTask({ type_id: 'TimeEvent', name: 'Event', groupId: 'g1' });
@@ -414,7 +414,7 @@ describe('apiStorage.loadData — task preservation', () => {
     const eventTask = makeTask({ type_id: 'TimeEvent', name: 'Event', groupId: 'g1' });
 
     const fakeData = {
-      // No `days` key — legacy format
+      // No `days` key â€” legacy format
       groups: [{ id: 'g1', name: 'Group 1', tasks: [{ ...eventTask, date: TODAY }] }],
       lastModified: new Date().toISOString(),
     };
@@ -479,9 +479,9 @@ describe('apiStorage.loadData — task preservation', () => {
 });
 
 // ============================================================================
-// 4. TimeEvent visibility — end-to-end scenarios
+// 4. TimeEvent visibility â€” end-to-end scenarios
 // ============================================================================
-describe('TimeEvent visibility — computedTaskLists scenarios', () => {
+describe('TimeEvent visibility â€” computedTaskLists scenarios', () => {
   const GROUP_ID = 'grp-1';
   const makeGroupApi = (activeGroupId: string | null = null) => ({
     list: {
@@ -508,7 +508,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithTime.value.some((t) => t.name === 'Morning meeting')).toBe(true);
   });
@@ -524,7 +524,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'All-day event')).toBe(true);
   });
@@ -539,7 +539,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Group event')).toBe(true);
   });
@@ -554,7 +554,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Other group event')).toBe(false);
     expect(tasksWithTime.value.some((t) => t.name === 'Other group event')).toBe(false);
@@ -574,7 +574,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [] }), // NOT in current day data
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Injected event')).toBe(true);
   });
@@ -592,14 +592,14 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Future event')).toBe(false);
     expect(tasksWithTime.value.some((t) => t.name === 'Future event')).toBe(false);
   });
 
   it('TimeEvent with eventTime appears on its own date when added via addTask flow', () => {
-    // Simulate the full addTask → currentDayData → tasksWithTime flow
+    // Simulate the full addTask â†’ currentDayData â†’ tasksWithTime flow
     const { daysRef, timeApi } = freshTimeApi([], TODAY);
     // Simulate adding a task to the days map (as addTask would do)
     if (!daysRef.value[TODAY]) daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
@@ -621,7 +621,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData,
       currentDate: ref(TODAY),
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithTime.value.some((t) => t.name === 'Timed event')).toBe(true);
   });
@@ -637,7 +637,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Ungrouped event')).toBe(false);
     expect(tasksWithTime.value.some((t) => t.name === 'Ungrouped event')).toBe(false);
@@ -654,7 +654,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: makeGroupApi(null), // null = "All Groups"
+      group: makeGroupApi(null), // null = "All Groups"
     });
     expect(tasksWithoutTime.value.some((t) => t.name === 'Ungrouped visible event')).toBe(true);
   });
@@ -671,7 +671,7 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
       currentDayData: ref({ tasks: [doneEvent] }),
       currentDate: ref(TODAY),
       allTasks: ref([doneEvent]),
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
     expect(tasksWithTime.value.some((t) => t.name === 'Done event')).toBe(false);
     expect(tasksWithoutTime.value.some((t) => t.name === 'Done event')).toBe(false);
@@ -679,9 +679,9 @@ describe('TimeEvent visibility — computedTaskLists scenarios', () => {
 });
 
 // ============================================================================
-// 5. TimeEvent reactivity — addTask mutates days, computed updates correctly
+// 5. TimeEvent reactivity â€” addTask mutates days, computed updates correctly
 // ============================================================================
-describe('TimeEvent reactivity — addTask + computed updates', () => {
+describe('TimeEvent reactivity â€” addTask + computed updates', () => {
   const GROUP_ID = 'grp-1';
   const makeGroupApi = (activeGroupId: string | null = null) => ({
     list: {
@@ -702,7 +702,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
   });
 
   it('tasksWithoutTime updates reactively after addTask on empty days', () => {
-    // Start with no tasks – currentDayData starts as empty
+    // Start with no tasks â€“ currentDayData starts as empty
     const { daysRef } = freshTimeApi([], TODAY);
     const currentDate = ref(TODAY);
 
@@ -719,7 +719,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       currentDayData,
       currentDate,
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
 
     // Before adding: no tasks
@@ -755,7 +755,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       currentDayData,
       currentDate,
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
 
     expect(tasksWithTime.value.length).toBe(0);
@@ -789,7 +789,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       currentDayData,
       currentDate,
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID),
+      group: makeGroupApi(GROUP_ID),
     });
 
     // Add a task for DATE2
@@ -827,7 +827,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
       currentDayData,
       currentDate,
       allTasks: allTasksRef,
-      apiGroup: makeGroupApi(GROUP_ID), // active group = GROUP_ID
+      group: makeGroupApi(GROUP_ID), // active group = GROUP_ID
     });
 
     daysRef.value[TODAY] = { date: TODAY, tasks: [], notes: '' };
@@ -850,7 +850,7 @@ describe('TimeEvent reactivity — addTask + computed updates', () => {
 // ============================================================================
 import { getCycleType } from '../../src/modules/task/utils/occursOnDay';
 
-describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
+describe('getCycleType regression â€” repeat:{} treated as non-cyclic', () => {
   it('returns null for repeat: null', () => {
     expect(getCycleType({ repeat: null })).toBeNull();
   });
@@ -859,7 +859,7 @@ describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
     expect(getCycleType({ name: 'No repeat' })).toBeNull();
   });
 
-  it('returns null for repeat: {} (empty object — the bug fix)', () => {
+  it('returns null for repeat: {} (empty object â€” the bug fix)', () => {
     // Previously returned 'dayWeek', causing tasks to be permanently filtered out
     expect(getCycleType({ repeat: {} })).toBeNull();
   });
@@ -875,7 +875,7 @@ describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
 
   it('task with repeat:{} is VISIBLE in tasksWithoutTime (the actual bug scenario)', () => {
     // This was the core bug: repeat:{} caused getCycleType to return 'dayWeek',
-    // making isCyclicNotOccurring return true → task removed from all lists.
+    // making isCyclicNotOccurring return true â†’ task removed from all lists.
     const GROUP_ID = 'grp-x';
     const event = makeTask({
       type_id: 'TimeEvent',
@@ -883,13 +883,13 @@ describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
       date: TODAY,
       eventDate: TODAY,
       groupId: GROUP_ID,
-      repeat: {} as any, // ← the problematic data shape
+      repeat: {} as any, // â† the problematic data shape
     });
     const { tasksWithoutTime } = createTaskComputed({
       currentDayData: ref({ tasks: [event] }),
       currentDate: ref(TODAY),
       allTasks: ref([event]),
-      apiGroup: {
+      group: {
         list: {
           all: ref([{ id: GROUP_ID, name: 'Test' }]),
           isVisibleForActive: () => true,
@@ -898,12 +898,12 @@ describe('getCycleType regression — repeat:{} treated as non-cyclic', () => {
         active: { activeGroup: ref({ label: 'Test', value: GROUP_ID }) },
       },
     });
-    // With the fix, task with repeat:{} is treated as non-cyclic → should be visible
+    // With the fix, task with repeat:{} is treated as non-cyclic â†’ should be visible
     expect(tasksWithoutTime.value.some((t) => t.name === 'Empty repeat event')).toBe(true);
   });
 });
 
-describe('buildFlatTasksList regression — flatTasks populated after loadData', () => {
+describe('buildFlatTasksList regression â€” flatTasks populated after loadData', () => {
   it('flatTasks is populated after buildFlatTasksList result is applied', () => {
     const t1 = makeTask({ name: 'Loaded event', type_id: 'TimeEvent' });
     const t2 = makeTask({ name: 'Loaded todo', type_id: 'Todo' });

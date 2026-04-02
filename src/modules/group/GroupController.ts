@@ -21,28 +21,29 @@ class GroupController {
   readonly list = markRaw(new GroupList(this.groups as any, this.activeGroupRef));
   readonly active = markRaw(new GroupActive<Group>(this.groups as any, this.activeGroupRef));
 
-  async add(payload: CreateGroupInput) {
+  add = async (payload: CreateGroupInput) => {
     const group = groupRepository.addGroup(this.groups.value, payload);
     await saveData();
     return group;
-  }
+  };
 
-  async update(groupId: string, updates: Partial<Omit<Group, 'id' | 'createdAt'>>) {
+  update = async (groupId: string, updates: Partial<Omit<Group, 'id' | 'createdAt'>>) => {
     groupRepository.updateGroup(this.groups.value, groupId, updates);
     await saveData();
-  }
+  };
 
-  async delete(groupId: string) {
+  delete = async (groupId: string) => {
     const res = groupRepository.deleteGroup(this.groups.value, groupId);
     await saveData();
     return res;
-  }
+  };
 
   /**
    * Wire persistent side-effects for the group domain.
    * Call once during app bootstrap after storage is ready.
+   * Arrow field so Pinia exposes it (prototype methods are stripped).
    */
-  initWatchers(storage: SettingsStorage): void {
+  initWatchers = (storage: SettingsStorage): void => {
     try {
       watch(
         () => this.active.activeGroup.value ?? null,
@@ -59,7 +60,7 @@ class GroupController {
     } catch (e) {
       void e;
     }
-  }
+  };
 }
 
 export const GroupStoreController = defineStore('group', () => new GroupController());

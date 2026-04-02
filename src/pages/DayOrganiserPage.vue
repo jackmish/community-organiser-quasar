@@ -731,8 +731,8 @@ const {
   currentDayData,
   currentDate: CC.task.time.currentDate,
   allTasks,
-  apiTask: CC.task,
-  apiGroup: CC.group,
+  task: CC.task,
+  group: CC.group,
 });
 
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed

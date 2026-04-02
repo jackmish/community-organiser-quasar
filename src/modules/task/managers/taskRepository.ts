@@ -7,11 +7,11 @@ import { Task } from '../models/TaskModel';
 /** Minimal shape that TaskRepository needs from the task store/API. */
 export interface TaskTimeProvider {
   time?: any;
-  /** Legacy: old ApiTask class exposed a `state` bag; kept optional for sub-managers. */
+  /** Legacy: old task state bag; kept optional for sub-managers. */
   state?: any;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // TaskRepository
 //
 // All state that was previously held as module-level mutable variables is now
@@ -21,22 +21,22 @@ export interface TaskTimeProvider {
 // A module-level singleton (`_singleton`) is created at the bottom and the
 // previously exported free functions become thin delegates to it, so every
 // existing call site continues to work without modification.
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class TaskRepository {
-  // ── Public fields (SubtaskLineRepository reads these) ────────────────────────
-  apiTask: TaskTimeProvider | undefined;
+  // â”€â”€ Public fields (SubtaskLineRepository reads these) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  timeProvider: TaskTimeProvider | undefined;
   managers: { subtaskLine: ReturnType<typeof SubtaskLineRepository.construct> };
 
-  // ── Per-instance state (was module-level globals) ─────────────────────────
-  /** Reactive flat list of all tasks — mirrors `days` in sorted order. */
+  // â”€â”€ Per-instance state (was module-level globals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /** Reactive flat list of all tasks â€” mirrors `days` in sorted order. */
   readonly flatTasksRef = ref<Task[]>([]);
 
   private _daysMap: Record<string, any> = {};
   private _daysRef: Ref<any> | undefined = undefined;
-  private _currentTimeApi: any = undefined;
+  private _time: any = undefined;
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -49,11 +49,11 @@ export class TaskRepository {
     }
   }
 
-  // ── Constructor ───────────────────────────────────────────────────────────
-  constructor(apiTask?: TaskTimeProvider) {
+  // â”€â”€ Constructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  constructor(timeProvider?: TaskTimeProvider) {
     try {
-      this.apiTask = apiTask;
-      this.setTimeApi(apiTask?.time);
+      this.timeProvider = timeProvider;
+      this.setTime(timeProvider?.time);
     } catch (e) {
       // ignore
     }
@@ -62,10 +62,10 @@ export class TaskRepository {
     };
   }
 
-  // ── State initialisation ──────────────────────────────────────────────────
-  setTimeApi(t: any): void {
+  // â”€â”€ State initialisation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  setTime(t: any): void {
     try {
-      this._currentTimeApi = t;
+      this._time = t;
       this._daysRef = t && t.days ? t.days : undefined;
       this._daysMap = t && t.days ? t.days.value : {};
     } catch (e) {
@@ -73,7 +73,7 @@ export class TaskRepository {
     }
   }
 
-  // ── Task mutations ────────────────────────────────────────────────────────
+  // â”€â”€ Task mutations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   addTask(date: string, taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Task {
     const now = new Date().toISOString();
     const payload: Partial<Task> = { ...taskData, createdAt: now, updatedAt: now };
@@ -304,7 +304,7 @@ export class TaskRepository {
     return false;
   }
 
-  // ── Query methods ─────────────────────────────────────────────────────────
+  // â”€â”€ Query methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   listFromDays(daysArg?: Record<string, any>): Task[] {
     const daysObj = daysArg || {};
     const out: Task[] = [];
@@ -340,14 +340,14 @@ export class TaskRepository {
     });
   }
 
-  getFlatList(timeApi?: any): Task[] {
+  getFlatList(time?: any): Task[] {
     try {
       const maybe = this.flatTasksRef.value;
       if (Array.isArray(maybe) && maybe.length > 0) return maybe;
     } catch (e) {
       // ignore
     }
-    const resolvedApi = timeApi ?? this._currentTimeApi;
+    const resolvedApi = time ?? this._time;
     if (resolvedApi && resolvedApi.days) return this.listFromDays(resolvedApi.days.value || {});
     return this.getAllTasks();
   }
@@ -458,9 +458,7 @@ export class TaskRepository {
 
         if (!found) {
           try {
-            found =
-              (this.getFlatList(this._currentTimeApi) || []).find((t) => String(t.id) === id) ||
-              null;
+            found = (this.getFlatList(this._time) || []).find((t) => String(t.id) === id) || null;
           } catch (e) {
             found = null;
           }
@@ -494,7 +492,7 @@ export class TaskRepository {
         return;
       }
 
-      // payload is a Task object — use as-is (generate id if missing)
+      // payload is a Task object â€” use as-is (generate id if missing)
       let taskObj = payload;
       if (!taskObj.id) taskObj = { ...taskObj, id: this.generateId() } as Task;
       activeTaskRef.value = taskObj;
@@ -510,19 +508,19 @@ export class TaskRepository {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Backwards-compatible alias: prefer `TaskRepository`, keep `TaskService`
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export { TaskRepository as TaskService };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Module-level singleton + re-exported free functions
 //
 // All the previously exported free functions are now thin delegates to the
 // singleton.  Every existing import/call-site (StorageController,
 // presentationRepository, hiddenGroupSummary, tests) continues to work with
 // zero changes.
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _singleton = new TaskRepository();
 
 /**
@@ -531,8 +529,8 @@ const _singleton = new TaskRepository();
  */
 export const flatTasks = _singleton.flatTasksRef;
 
-// ── Backward-compat free function re-exports ──────────────────────────────────
-export const setTimeApi = (t: any): void => _singleton.setTimeApi(t);
+// â”€â”€ Backward-compat free function re-exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export const setTime = (t: any): void => _singleton.setTime(t);
 export const addTask = (
   date: string,
   taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
@@ -541,8 +539,8 @@ export const updateTask = (
   date: string,
   taskOrId: Task | string,
   maybeUpdates?: any,
-  timeApi?: any,
-): void => _singleton.updateTask(date, taskOrId, maybeUpdates, timeApi);
+  time?: any,
+): void => _singleton.updateTask(date, taskOrId, maybeUpdates, time);
 export const deleteTask = (date: string, taskId: string): boolean =>
   _singleton.deleteTask(date, taskId);
 export const toggleTaskComplete = (date: string, taskId: string): void =>
@@ -554,7 +552,7 @@ export const getTasksInRange = (startDate: string, endDate: string): Task[] =>
 export const getAllTasks = (): Task[] => _singleton.getAllTasks();
 export const listFromDays = (daysArg?: Record<string, any>): Task[] =>
   _singleton.listFromDays(daysArg);
-export const getFlatList = (timeApi?: any): Task[] => _singleton.getFlatList(timeApi);
+export const getFlatList = (time?: any): Task[] => _singleton.getFlatList(time);
 export const getTasksByCategory = (c: Task['category']): Task[] => _singleton.getTasksByCategory(c);
 export const getTasksByPriority = (p: Task['priority']): Task[] => _singleton.getTasksByPriority(p);
 export const getIncompleteTasks = (): Task[] => _singleton.getIncompleteTasks();

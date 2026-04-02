@@ -11,7 +11,7 @@ import * as taskService from 'src/modules/task/managers/taskRepository';
 
 /** Minimal shape StorageController needs from the group Pinia store. */
 type ActiveGroupOption = { label: string; value: string | null } | null;
-interface GroupApiShape {
+interface GroupDeps {
   active?: { activeGroup?: { value: ActiveGroupOption } };
   /** Legacy direct-ref fallback */
   activeGroup?: { value: ActiveGroupOption };
@@ -21,28 +21,28 @@ interface GroupApiShape {
   };
 }
 /** Minimal shape StorageController needs from the time repository object. */
-interface TimeApiShape {
+interface TimeDeps {
   days?: { value: Record<string, any> };
   lastModified?: { value: string };
 }
 
 export class StorageController {
   isLoading = ref(false);
-  private groupApi: GroupApiShape | undefined;
-  private timeApi: TimeApiShape | undefined;
+  private group: GroupDeps | undefined;
+  private time: TimeDeps | undefined;
 
-  constructor(groupApi?: GroupApiShape, timeApi?: TimeApiShape) {
-    this.groupApi = groupApi;
-    this.timeApi = timeApi;
+  constructor(group?: GroupDeps, time?: TimeDeps) {
+    this.group = group;
+    this.time = time;
   }
 
   async loadData() {
     this.isLoading.value = true;
-    logger.debug('apiStorage.loadData called');
+    logger.debug('StorageController.loadData called');
     try {
       let data: any;
       if (isPresentationModeActive()) {
-        logger.debug('apiStorage.loadData: loading sampleData (presentation/test mode)');
+        logger.debug('StorageController.loadData: loading sampleData (presentation/test mode)');
         data = sampleData as any;
       }
       if (!data) data = await backendStorage.loadData();
@@ -78,14 +78,13 @@ export class StorageController {
               : {};
 
         try {
-          if (
-            this.groupApi &&
-            this.groupApi.list &&
-            typeof this.groupApi.list.setGroups === 'function'
-          ) {
-            this.groupApi.list.setGroups(rawGroups || []);
+          if (this.group && this.group.list && typeof this.group.list.setGroups === 'function') {
+            this.group.list.setGroups(rawGroups || []);
             try {
-              logger.debug('apiStorage.loadData: groups set, count=', (rawGroups || []).length);
+              logger.debug(
+                'StorageController.loadData: groups set, count=',
+                (rawGroups || []).length,
+              );
             } catch (e) {
               void e;
             }
@@ -94,20 +93,20 @@ export class StorageController {
               const defaultActive = (data && data.defaultActiveGroup) || null;
               if (defaultActive) {
                 const groupsList =
-                  this.groupApi && this.groupApi.list && this.groupApi.list.all
-                    ? this.groupApi.list.all.value
+                  this.group && this.group.list && this.group.list.all
+                    ? this.group.list.all.value
                     : [];
                 const found = (groupsList || []).find(
                   (g: any) => String(g.id) === String(defaultActive),
                 );
                 if (found) {
-                  if (this.groupApi.active && this.groupApi.active.activeGroup)
-                    this.groupApi.active.activeGroup.value = {
+                  if (this.group.active && this.group.active.activeGroup)
+                    this.group.active.activeGroup.value = {
                       label: found.name || String(found.id),
                       value: found.id,
                     };
-                  else if (this.groupApi.activeGroup)
-                    this.groupApi.activeGroup.value = {
+                  else if (this.group.activeGroup)
+                    this.group.activeGroup.value = {
                       label: found.name || String(found.id),
                       value: found.id,
                     };
@@ -122,16 +121,16 @@ export class StorageController {
         }
 
         try {
-          if (this.timeApi) {
-            if (this.timeApi.days) this.timeApi.days.value = finalDays;
-            if (this.timeApi.lastModified)
-              this.timeApi.lastModified.value = data.lastModified || new Date().toISOString();
+          if (this.time) {
+            if (this.time.days) this.time.days.value = finalDays;
+            if (this.time.lastModified)
+              this.time.lastModified.value = data.lastModified || new Date().toISOString();
             try {
               const loaded = taskService.buildFlatTasksList(finalDays || {});
               taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
               try {
                 logger.debug(
-                  'apiStorage.loadData: time.days populated, days=',
+                  'StorageController.loadData: time.days populated, days=',
                   Object.keys(finalDays || {}).length,
                 );
               } catch (e) {
@@ -149,24 +148,24 @@ export class StorageController {
       }
 
       try {
-        if (this.groupApi && typeof loadSettings === 'function') {
+        if (this.group && typeof loadSettings === 'function') {
           const settings = await loadSettings();
           const requestedId = settings?.activeGroupId ?? null;
           if (requestedId) {
             const groupsList =
-              (this.groupApi && this.groupApi.list && this.groupApi.list.all
-                ? this.groupApi.list.all.value
+              (this.group && this.group.list && this.group.list.all
+                ? this.group.list.all.value
                 : []) || [];
             const found = (groupsList || []).find((g: any) => String(g.id) === String(requestedId));
             if (found) {
               try {
-                if (this.groupApi.active && this.groupApi.active.activeGroup)
-                  this.groupApi.active.activeGroup.value = {
+                if (this.group.active && this.group.active.activeGroup)
+                  this.group.active.activeGroup.value = {
                     label: found.name || String(found.id),
                     value: found.id,
                   };
-                else if (this.groupApi.activeGroup)
-                  this.groupApi.activeGroup.value = {
+                else if (this.group.activeGroup)
+                  this.group.activeGroup.value = {
                     label: found.name || String(found.id),
                     value: found.id,
                   };
@@ -182,7 +181,7 @@ export class StorageController {
 
       return data;
     } catch (err) {
-      logger.error('apiStorage.loadData failed', err);
+      logger.error('StorageController.loadData failed', err);
       throw err;
     } finally {
       this.isLoading.value = false;
@@ -191,22 +190,20 @@ export class StorageController {
 
   async saveData(data?: any) {
     if (isPresentationModeActive()) {
-      logger.debug('apiStorage.saveData: blocked in presentation/test mode');
+      logger.debug('StorageController.saveData: blocked in presentation/test mode');
       return;
     }
     try {
       let payload = data;
       if (!payload) {
-        const days = this.timeApi && this.timeApi.days ? this.timeApi.days.value : {};
+        const days = this.time && this.time.days ? this.time.days.value : {};
         const lastModified =
-          this.timeApi && this.timeApi.lastModified
-            ? this.timeApi.lastModified.value
+          this.time && this.time.lastModified
+            ? this.time.lastModified.value
             : new Date().toISOString();
 
         const existingGroups =
-          this.groupApi && this.groupApi.list && this.groupApi.list.all
-            ? this.groupApi.list.all.value
-            : [];
+          this.group && this.group.list && this.group.list.all ? this.group.list.all.value : [];
         const groupsMap: Record<string, any> = {};
         for (const g of existingGroups || []) {
           try {
@@ -254,7 +251,7 @@ export class StorageController {
       }
       await backendStorage.saveData(payload);
     } catch (err) {
-      logger.error('apiStorage.saveData failed', err);
+      logger.error('StorageController.saveData failed', err);
       throw err;
     }
   }
@@ -263,7 +260,7 @@ export class StorageController {
     try {
       if (typeof backendStorage.exportToFile === 'function') backendStorage.exportToFile(data);
     } catch (err) {
-      logger.error('apiStorage.exportToFile failed', err);
+      logger.error('StorageController.exportToFile failed', err);
       throw err;
     }
   }
@@ -274,7 +271,7 @@ export class StorageController {
         return await backendStorage.importFromFile(file);
       throw new Error('importFromFile not implemented on backend');
     } catch (err) {
-      logger.error('apiStorage.importFromFile failed', err);
+      logger.error('StorageController.importFromFile failed', err);
       throw err;
     }
   }
@@ -291,8 +288,8 @@ export class StorageController {
   saveSettings = saveSettings;
 }
 
-export function construct(groupApi?: GroupApiShape, timeApi?: TimeApiShape) {
-  return new StorageController(groupApi, timeApi);
+export function construct(group?: GroupDeps, time?: TimeDeps) {
+  return new StorageController(group, time);
 }
 
-export type ApiStorageType = ReturnType<typeof construct>;
+export type StorageControllerInstance = ReturnType<typeof construct>;

@@ -1,5 +1,5 @@
 // Top-level controller root for the whole app.
-import * as apiStorage from 'src/modules/storage/StorageController';
+import * as StorageModule from 'src/modules/storage/StorageController';
 import { TaskStoreController } from 'src/modules/task/TaskController';
 import { GroupStoreController } from 'src/modules/group/GroupController';
 import { lazyStore } from 'src/modules/storage/controllers/lazyStore';
@@ -12,7 +12,7 @@ class CentralController {
   public task: ReturnType<typeof TaskStoreController> = lazyStore<
     ReturnType<typeof TaskStoreController>
   >(TaskStoreController as any);
-  private _storage: ReturnType<typeof apiStorage.construct> | null = null;
+  private _storage: ReturnType<typeof StorageModule.construct> | null = null;
 
   constructor() {}
 
@@ -21,7 +21,7 @@ class CentralController {
     if (this._storage) return this._storage;
     const g = GroupStoreController();
     const t = TaskStoreController();
-    this._storage = apiStorage.construct(g, t.time);
+    this._storage = StorageModule.construct(g, t.time);
     g.initWatchers(this._storage);
     try {
       registerAppService('storage', this._storage);
