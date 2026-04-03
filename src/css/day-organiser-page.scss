@@ -204,11 +204,18 @@
     left: 0;
     width: 100vw;
     bottom: 0;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
   }
   .fixed-right-panel .fixed-content {
     width: 100vw;
     max-width: 100vw;
+    max-height: none;
+    overflow: visible !important;
     box-sizing: border-box;
+  }
+  .fixed-right-panel .q-card {
+    overflow: visible !important;
   }
 }
 
