@@ -502,7 +502,8 @@ const showFirstRunDialog = ref(false);
 const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
-const panelHidden = ref(false);
+// Start hidden so the task list is the first thing users see on app launch
+const panelHidden = ref(true);
 const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
