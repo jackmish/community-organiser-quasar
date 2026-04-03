@@ -3,7 +3,7 @@ import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import type { Group } from "src/modules/group/models/GroupModel";
 import { useQuasar } from "quasar";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "../list/ReplenishmentList.vue";

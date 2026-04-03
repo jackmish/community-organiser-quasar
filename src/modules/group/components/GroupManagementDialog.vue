@@ -120,7 +120,7 @@ import { $text } from "src/modules/lang";
 import logger from "src/utils/logger";
 import { typeIcons, priorityIcons } from "src/components/theme";
 
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import * as groupRepository from 'src/modules/group/managers/groupRepository';
 import { saveData } from 'src/utils/storageUtils';
 import GroupForm from "./GroupForm.vue";

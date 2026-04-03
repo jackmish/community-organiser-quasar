@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
-import CC from 'src/CentralController';
+import CC from 'src/CCAccess';
 import logger from 'src/utils/logger';
 import { saveData } from 'src/utils/storageUtils';
 import * as groupRepository from 'src/modules/group/managers/groupRepository';

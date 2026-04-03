@@ -269,7 +269,7 @@ import {
   loadSavedLocale,
 } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,

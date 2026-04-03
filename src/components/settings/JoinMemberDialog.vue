@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
-import CC from 'src/CentralController';
+import CC from 'src/CCAccess';
 import { Role, computeRoleChanges } from 'src/modules/storage/sync/RoleModel';
 import type { RoleData, AccessRange, RolePrivilege, PrivilegeChange } from 'src/modules/storage/sync/RoleModel';
 import RoleEditDialog from './RoleEditDialog.vue';

@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 
 const stats = computed(
   () => CC.task.taskStats ?? { total: 0, done: 0, undone: 0, groupId: null }

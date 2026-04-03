@@ -1,6 +1,6 @@
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
-import CC from 'src/CentralController';
+import CC from 'src/CCAccess';
 import { clampDateToMonth } from 'src/utils/dateUtils';
 
 /** Normalise a task payload's date fields in-place and return the safe target date. */

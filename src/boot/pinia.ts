@@ -3,7 +3,7 @@ import { createPinia } from 'pinia';
 
 import { loadPluginsFromManifest } from 'src/plugins/pluginLoader';
 import { registerPlugins, getPiniaPlugins } from 'src/plugins/pluginRegistry';
-import CC from 'src/CentralController';
+import { CCReg } from 'src/CCAccess';
 
 export default boot(async ({ app }) => {
   // Load plugins from manifest — resolves IDs to bundled modules
@@ -17,5 +17,5 @@ export default boot(async ({ app }) => {
 
   app.use(pinia);
   // Eagerly construct all registered controllers and wire storage ports + lifecycle hooks.
-  CC.boot();
+  CCReg.boot();
 });

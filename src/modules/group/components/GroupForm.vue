@@ -434,7 +434,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import { $text } from "src/modules/lang";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import type { QTreeNode } from "quasar";
 
 const props = defineProps<{

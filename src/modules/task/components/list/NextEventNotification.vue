@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount, watch, nextTick } from "vue";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import {
   priorityColors,
   priorityTextColor,

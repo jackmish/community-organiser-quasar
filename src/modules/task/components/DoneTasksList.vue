@@ -49,7 +49,7 @@
 const props = defineProps<{
   doneTasks: any[];
 }>();
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
 
 async function onDoneClick(task: any) {

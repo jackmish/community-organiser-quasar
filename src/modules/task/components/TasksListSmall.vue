@@ -127,7 +127,7 @@ import ReplenishmentList from "./ReplenishmentList.vue";
 import HiddenGroupItem from "./HiddenGroupItem.vue";
 import TaskCardSmall from "./TaskCardSmall.vue";
 import GroupButton from "src/modules/group/components/GroupButton.vue";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{

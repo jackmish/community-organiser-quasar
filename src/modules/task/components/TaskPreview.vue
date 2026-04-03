@@ -247,7 +247,7 @@ import {
   formatDisplayDate,
   formatEventHoursDiff,
 } from "src/modules/task/utils/occursOnDay";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import type { Task } from "src/modules/task/models/TaskModel";
 
 const props = defineProps<{

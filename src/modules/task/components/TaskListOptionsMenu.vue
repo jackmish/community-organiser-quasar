@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { $text } from 'src/modules/lang';
-import CC from 'src/CentralController';
+import CC from 'src/CCAccess';
 
 defineProps<{
   textColor?: string;

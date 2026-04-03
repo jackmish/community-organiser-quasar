@@ -333,7 +333,7 @@ const openDeleteMenu = ref<string | null>(null);
 const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler } = useLongPress();
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
-import CC from 'src/CentralController';
+import CC from 'src/CCAccess';
 const groups = CC.group.list.all;
 const activeGroup = CC.group.active.activeGroup;
 import {

@@ -264,7 +264,7 @@ import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";

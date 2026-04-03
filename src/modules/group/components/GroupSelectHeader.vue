@@ -176,7 +176,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { $text } from "src/modules/lang";
-import CC from "src/CentralController";
+import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
 
