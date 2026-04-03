@@ -299,10 +299,8 @@
 
 .fixed-right-panel.panel-hidden {
   transform: translateY(calc(100% + 24px));
-  transition: transform 320ms ease-in-out;
 }
 .fixed-right-panel {
-  transition: transform 320ms ease-in-out;
 }
 .fixed-right-panel > .row {
   margin-bottom: -4px;
