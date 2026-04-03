@@ -546,6 +546,7 @@ function logIfUnrecognized(item: any) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -553,6 +554,7 @@ function logIfUnrecognized(item: any) {
 
 @media (max-width: 767px) {
   .shortcuts-scroll {
+    justify-content: flex-start;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
