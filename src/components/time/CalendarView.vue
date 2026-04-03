@@ -33,7 +33,7 @@
   </div>
   <div class="row items-center">
     <div class="col">
-      <div class="calendar-scroll-flip">
+      <div ref="scrollFlipEl" class="calendar-scroll-flip">
         <div ref="tableWrapper" class="calendar-table-wrapper">
         <table class="calendar-table">
           <thead>
@@ -468,6 +468,23 @@ const calendarViewDays = ref(42);
 
 // Minimal month edges collector: stores [firstCell, lastCell] for each month
 const tableWrapper = ref<HTMLElement | null>(null);
+const scrollFlipEl = ref<HTMLElement | null>(null);
+
+// Scroll the calendar so today (or the initial selectedDate) is at the left
+// edge of the viewport. Runs once on mount only.
+function scrollToDay(dateStr: string) {
+  try {
+    const container = scrollFlipEl.value;
+    const wrapper = tableWrapper.value;
+    if (!container || !wrapper) return;
+    const cell = wrapper.querySelector<HTMLElement>(`td[data-day="${dateStr}"]`);
+    if (!cell) return;
+    // offsetLeft is relative to the wrapper; container scrolls the wrapper
+    container.scrollLeft = cell.offsetLeft;
+  } catch (e) {
+    // ignore — non-critical
+  }
+}
 const monthEdges = ref<Array<[HTMLElement, HTMLElement]>>([]);
 
 function collectMonthEdges() {
@@ -498,6 +515,8 @@ onMounted(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
+    // Scroll calendar so today is at the left edge on initial load
+    scrollToDay(format(new Date(), "yyyy-MM-dd"));
   });
 });
 
