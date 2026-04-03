@@ -1,12 +1,12 @@
 /**
- * CentralController — wires the app's domain controllers and exports the access tree.
+ * CCAccess — wires the app's domain controllers and exports the access tree.
  *
  * Two exports:
  * ────────────
- *   CC     — typed access object  → import CC from 'src/CentralController'
- *   CCReg  — registry + boot      → import { CCReg } from 'src/CentralController'
+ *   CC     — typed access object  → import CC from 'src/CCAccess'
+ *   CCReg  — registry + boot      → import { CCReg } from 'src/CCAccess'
  *
- * Reading CC's shape here tells you exactly what's in the app.
+ * Reading the registrations here tells you exactly what domains are in the app.
  * Adding a new domain is ONE line:
  *
  *   .register('calendar', CalendarStoreController)

@@ -15,7 +15,7 @@
  *
  * External registration (from any module, before boot):
  * ──────────────────────────────────────────────────────
- *   import { CCReg } from 'src/CentralController';
+ *   import { CCReg } from 'src/CCAccess';
  *   CCReg.register('calendar', CalendarStoreController);
  *   // Access at runtime: CCReg.get('calendar')
  */

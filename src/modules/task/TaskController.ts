@@ -49,5 +49,3 @@ class TaskController implements Controllable {
 }
 
 export const TaskStoreController = defineStore('task', () => new TaskController());
-export type TaskControllerInstance = ReturnType<typeof TaskStoreController>;
-export type ApiTask = TaskControllerInstance; // legacy alias

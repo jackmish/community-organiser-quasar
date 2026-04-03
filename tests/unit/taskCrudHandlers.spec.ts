@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 
 // ── Mock CentralController so `api.task.update/add` don't hit real storage ───
-vi.mock('src/CentralController', () => {
+vi.mock('src/CCAccess', () => {
   const mock = {
     task: {
       add: vi.fn(async (_date: string, payload: any) => ({ ...payload, id: 'new-id' })),
@@ -25,6 +25,7 @@ vi.mock('src/CentralController', () => {
   return { default: mock, ...mock };
 });
 
+import CC from 'src/CCAccess';
 import { useTaskCrud } from '../../src/composables/useTaskCrud';
 
 // ── A minimal class that mimics TaskActive ────────────────────────────────────
@@ -101,7 +102,7 @@ describe('useTaskCrud — class-based active (unbound-this regression)', () => {
 
   it('handleUpdateTask: calls api.task.update with the task date and full payload', async () => {
     const { handlers, task } = makeHandlers(active);
-    const { task: apiMock } = await import('src/CentralController');
+    const apiMock = CC.task;
     await handlers.handleUpdateTask(task);
     expect(apiMock.update).toHaveBeenCalledWith('2026-03-12', expect.objectContaining({ id: '1' }));
   });
@@ -120,7 +121,7 @@ describe('useTaskCrud — class-based active (unbound-this regression)', () => {
         active: active2,
       }),
     };
-    const { task: apiMock } = await import('src/CentralController');
+    const apiMock = CC.task;
     await handlers.handleUpdateTask(taskNoDate);
     expect(apiMock.update).toHaveBeenCalledWith('2026-05-01', expect.objectContaining({ id: '2' }));
   });
@@ -139,7 +140,7 @@ describe('useTaskCrud — class-based active (unbound-this regression)', () => {
         active: active3,
       }),
     };
-    const { task: apiMock } = await import('src/CentralController');
+    const apiMock = CC.task;
     await handlers.handleUpdateTask(taskBare);
     expect(apiMock.update).toHaveBeenCalledWith('2026-01-01', expect.objectContaining({ id: '3' }));
   });
