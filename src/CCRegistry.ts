@@ -65,7 +65,9 @@ export class CCRegistry<TMap extends Record<string, Controllable> = Record<never
     if (!this._cache.has(k)) {
       const entry = this._registrations.find(([rk]) => rk === k);
       if (!entry)
-        throw new Error(`[CCRegistry] '${k}' is not registered. Did you call .register('${k}', ...)?`);
+        throw new Error(
+          `[CCRegistry] '${k}' is not registered. Did you call .register('${k}', ...)?`,
+        );
       this._cache.set(k, entry[1]());
     }
     return this._cache.get(k) as TMap[K];
