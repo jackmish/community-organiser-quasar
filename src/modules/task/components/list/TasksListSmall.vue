@@ -104,7 +104,7 @@
       </template>
     </div>
     <div
-      v-if="childGroupsNoTasks.length > 0 || shortcutGroups.length > 0"
+      v-if="shortcutGroups.length > 0 || (childGroupsNoTasks.length > 0 && !$q.screen.lt.md)"
       class="hidden-children-list__list q-pa-sm"
       aria-hidden="false"
     >
@@ -135,8 +135,8 @@
           </div>
         </template>
 
-        <!-- Subgroups section (right) -->
-        <template v-if="childGroupsNoTasks.length > 0">
+        <!-- Subgroups section (right) - hidden on mobile -->
+        <template v-if="childGroupsNoTasks.length > 0 && !$q.screen.lt.md">
           <span class="bottom-section-label">{{ activeGroupName }} subgroups:</span>
           <div
             v-for="g in childGroupsNoTasks"
@@ -153,6 +153,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from "vue";
+import { useQuasar } from "quasar";
 import { Task } from "src/modules/task/models/TaskModel";
 import ReplenishmentList from "../list/ReplenishmentList.vue";
 import HiddenGroupItem from "../element/HiddenGroupItem.vue";
@@ -160,6 +161,8 @@ import TaskCardSmall from "../element/TaskCardSmall.vue";
 import GroupButton from "src/modules/group/components/GroupButton.vue";
 import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
+
+const $q = useQuasar();
 
 const props = defineProps<{
   tasksWithTime: Task[];

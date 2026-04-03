@@ -187,6 +187,29 @@
     max-width: 100%;
     min-width: 0;
   }
+
+  /* Full-width page: remove horizontal padding so task card reaches screen edges */
+  .q-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+  }
+  .task-list-card {
+    border-radius: 0 !important;
+  }
+
+  /* Right panel slides up full-width on mobile */
+  .fixed-right-panel {
+    right: 0;
+    left: 0;
+    width: 100vw;
+    bottom: 0;
+  }
+  .fixed-right-panel .fixed-content {
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
 }
 
 /* Calendar styles moved into CalendarView.vue to avoid duplication */
