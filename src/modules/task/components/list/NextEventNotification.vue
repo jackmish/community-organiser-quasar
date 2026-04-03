@@ -371,17 +371,15 @@ function onClickEvent(ev: any) {
 }
 
 @media (max-width: 767px) {
-  /* Container sits inline in the toolbar flex row — clip horizontal overflow */
   .next-events-container {
     min-height: unset !important;
-    overflow: hidden !important;
+    overflow: visible;
     flex: 1;
     min-width: 0;
   }
-  /* Override absolute desktop positioning; scroll in place */
+  /* Collapsed: single-row horizontal scroll strip */
   .next-events-row,
-  .next-events-row.collapsed,
-  .next-events-row.expanded {
+  .next-events-row.collapsed {
     position: relative !important;
     right: unset !important;
     top: unset !important;
@@ -393,9 +391,23 @@ function onClickEvent(ev: any) {
     max-height: unset !important;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
-    padding-right: 40px;
     -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
     mask-image: linear-gradient(to right, black 75%, transparent 100%);
+  }
+  /* Expanded: fixed overlay panel below the header — escapes all clipping */
+  .next-events-row.expanded {
+    position: fixed !important;
+    top: 56px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    max-height: 60vh !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    z-index: 9000;
   }
   .next-events-row .next-event {
     scroll-snap-align: start;

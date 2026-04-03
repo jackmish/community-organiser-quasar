@@ -447,12 +447,6 @@ onUnmounted(() => {
   overflow: visible;
 }
 
-@media (max-width: 767px) {
-  .notification-wrapper {
-    overflow: hidden;
-  }
-}
-
 /* Ensure the select's background fills the parent but inner text is padded */
 .lang-select .q-field {
   background-clip: padding-box;
