@@ -184,7 +184,6 @@
 
 @media (max-width: 767px) {
   .replenish-column {
-    max-width: 100%;
     min-width: 0;
   }
 
@@ -198,7 +197,7 @@
     border-radius: 0 !important;
   }
 
-  /* Right panel slides up full-width on mobile */
+  /* Right panel: full-width, anchored to bottom, scrollable */
   .fixed-right-panel {
     right: 0;
     left: 0;
@@ -209,14 +208,24 @@
     padding-top: 36px;
   }
   .fixed-right-panel .fixed-content {
-    width: 100vw;
-    max-width: 100vw;
-    max-height: none;
+    width: 100%;
     overflow: visible !important;
     box-sizing: border-box;
   }
   .fixed-right-panel .q-card {
     overflow: visible !important;
+  }
+
+  /* Disable floating positioning: forms and preview always render inline in the panel */
+  .fixed-right-panel .fixed-content.floating,
+  .floating-preview-wrapper.floating {
+    position: relative !important;
+    top: unset !important;
+    left: unset !important;
+    right: unset !important;
+    bottom: unset !important;
+    width: 100% !important;
+    transform: none !important;
   }
 }
 
@@ -243,7 +252,7 @@
   display: block;
   box-sizing: border-box;
   width: 100%;
-  /* overflow-y: auto; */
+  overflow: visible;
   max-height: calc(100vh - 120px);
   -webkit-overflow-scrolling: touch;
   z-index: 999999;
@@ -286,6 +295,11 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
+}
+/* Quasar q-card sets overflow:hidden by default — override so the group bar
+   (position:absolute; top:-26px) and other overflowing elements remain visible */
+.fixed-right-panel .q-card {
+  overflow: visible !important;
 }
 .floating-preview-wrapper.floating {
   /* when floating, inline fixed styles are applied via computePreviewStyle */

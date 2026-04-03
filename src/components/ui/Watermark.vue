@@ -174,7 +174,7 @@ watch(
   align-items: flex-start;
   justify-content: flex-end;
   pointer-events: none; /* don't block interaction */
-  z-index: 999999999999999; /* top layer but below modal overlays if needed */
+  z-index: 999999999; /* top layer but below modal overlays if needed */
   top: 0;
   /* z-index: 0; */
 }
@@ -226,5 +226,4 @@ watch(
 .co21-watermark-text {
   z-index: 1;
 }
-
 </style>
