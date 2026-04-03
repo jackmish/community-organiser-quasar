@@ -33,7 +33,8 @@
   </div>
   <div class="row items-center">
     <div class="col">
-      <div ref="tableWrapper" class="calendar-table-wrapper">
+      <div class="calendar-scroll-flip">
+        <div ref="tableWrapper" class="calendar-table-wrapper">
         <table class="calendar-table">
           <thead>
             <tr>
@@ -201,6 +202,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
