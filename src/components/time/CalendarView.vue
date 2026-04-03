@@ -2,30 +2,32 @@
   <div>
     <!-- Quick Date Buttons and Next button (moved to top) -->
     <div class="top-row row items-center">
-      <div class="col text-right">
-        <q-btn
-          unelevated
-          size="md"
-          color="blue"
-          text-color="white"
-          @click="setEventDateToToday"
-          class="text-weight-bold today-jump-btn"
-        >
-          {{ $text("ui.today") }}
-        </q-btn>
-        <q-btn
-          v-for="(month, index) in nextSixMonths"
-          :key="month.value"
-          unelevated
-          size="md"
-          @click="jumpToMonth(month.value)"
-          class="text-weight-bold"
-          :style="{ fontSize: '16px', backgroundColor: buttonColors[index], color: 'white' }"
-        >
-          {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
-            month.label.toUpperCase()
-          }}{{ index === 0 ? " " + month.value.slice(0, 4) : "" }}
-        </q-btn>
+      <div class="col">
+        <div class="calendar-month-btns">
+          <q-btn
+            unelevated
+            size="md"
+            color="blue"
+            text-color="white"
+            @click="setEventDateToToday"
+            class="text-weight-bold today-jump-btn"
+          >
+            {{ $text("ui.today") }}
+          </q-btn>
+          <q-btn
+            v-for="(month, index) in nextSixMonths"
+            :key="month.value"
+            unelevated
+            size="md"
+            @click="jumpToMonth(month.value)"
+            class="text-weight-bold"
+            :style="{ fontSize: '16px', backgroundColor: buttonColors[index], color: 'white' }"
+          >
+            {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
+              month.label.toUpperCase()
+            }}{{ index === 0 ? " " + month.value.slice(0, 4) : "" }}
+          </q-btn>
+        </div>
       </div>
     </div>
   </div>
