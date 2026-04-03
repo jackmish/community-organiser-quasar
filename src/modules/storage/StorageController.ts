@@ -11,7 +11,7 @@ import * as taskService from 'src/modules/task/managers/taskRepository';
 
 /** Minimal shape StorageController needs from the group Pinia store. */
 type ActiveGroupOption = { label: string; value: string | null } | null;
-interface GroupDeps {
+export interface GroupDeps {
   active?: { activeGroup?: { value: ActiveGroupOption } };
   /** Legacy direct-ref fallback */
   activeGroup?: { value: ActiveGroupOption };
@@ -21,19 +21,31 @@ interface GroupDeps {
   };
 }
 /** Minimal shape StorageController needs from the time repository object. */
-interface TimeDeps {
+export interface TimeDeps {
   days?: { value: Record<string, any> };
   lastModified?: { value: string };
 }
+
+/**
+ * Discriminated union for the port-based registration API.
+ * Each domain controller calls CC.storage.connect() with its own slice
+ * instead of passing deps through the constructor.
+ */
+export type StoragePort = { kind: 'group'; data: GroupDeps } | { kind: 'time'; data: TimeDeps };
 
 export class StorageController {
   isLoading = ref(false);
   private group: GroupDeps | undefined;
   private time: TimeDeps | undefined;
 
-  constructor(group?: GroupDeps, time?: TimeDeps) {
-    this.group = group;
-    this.time = time;
+  /**
+   * Connect a domain controller's data slice.
+   * Called by CC.boot() for each registered controller before any
+   * onStorageReady hooks run. Replaces constructor injection.
+   */
+  connect(port: StoragePort): void {
+    if (port.kind === 'group') this.group = port.data;
+    else if (port.kind === 'time') this.time = port.data;
   }
 
   async loadData() {
@@ -289,7 +301,10 @@ export class StorageController {
 }
 
 export function construct(group?: GroupDeps, time?: TimeDeps) {
-  return new StorageController(group, time);
+  const ctrl = new StorageController();
+  if (group) ctrl.connect({ kind: 'group', data: group });
+  if (time) ctrl.connect({ kind: 'time', data: time });
+  return ctrl;
 }
 
 export type StorageControllerInstance = ReturnType<typeof construct>;

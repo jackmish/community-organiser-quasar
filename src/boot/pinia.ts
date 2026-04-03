@@ -16,7 +16,6 @@ export default boot(async ({ app }) => {
   getPiniaPlugins().forEach((p) => pinia.use(p));
 
   app.use(pinia);
-  // Eagerly construct the storage module so `saveData()` can always resolve
-  // `app('storage')` – even before any component first accesses `api.storage`.
-  CC.initControllers();
+  // Eagerly construct all registered controllers and wire storage ports + lifecycle hooks.
+  CC.boot();
 });

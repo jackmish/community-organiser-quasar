@@ -6,20 +6,21 @@ import type { CreateGroupInput } from './managers/groupRepository';
 import { GroupList } from './models/classes/GroupList';
 import { GroupActive } from './models/classes/GroupActive';
 import type { Group } from './models/GroupModel';
-import type { Ref } from 'vue';
 import logger from 'src/utils/logger';
+import type { Controllable } from 'src/types/Controllable';
+import type { StorageController, StoragePort } from 'src/modules/storage/StorageController';
 
-interface SettingsStorage {
-  isLoading: Ref<boolean>;
-  loadSettings: () => Promise<Record<string, any> | null>;
-  saveSettings: (data: Record<string, any>) => Promise<void>;
-}
-
-class GroupController {
+class GroupController implements Controllable {
+  readonly controllerName = 'group' as const;
   readonly groups = ref<Group[]>([]);
   readonly activeGroupRef = ref<{ label: string; value: string | null } | null>(null);
   readonly list = markRaw(new GroupList(this.groups as any, this.activeGroupRef));
   readonly active = markRaw(new GroupActive<Group>(this.groups as any, this.activeGroupRef));
+
+  storagePort = (): StoragePort => ({
+    kind: 'group',
+    data: { active: this.active, list: this.list },
+  });
 
   add = async (payload: CreateGroupInput) => {
     const group = groupRepository.addGroup(this.groups.value, payload);
@@ -40,10 +41,10 @@ class GroupController {
 
   /**
    * Wire persistent side-effects for the group domain.
-   * Call once during app bootstrap after storage is ready.
+   * Called automatically by CC.boot() after all storage ports are connected.
    * Arrow field so Pinia exposes it (prototype methods are stripped).
    */
-  initWatchers = (storage: SettingsStorage): void => {
+  onStorageReady = (storage: StorageController): void => {
     try {
       watch(
         () => this.active.activeGroup.value ?? null,

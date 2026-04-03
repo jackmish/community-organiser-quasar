@@ -8,10 +8,13 @@ import { TaskActive } from './models/classes/TaskActive';
 import { TaskList } from './models/classes/TaskList';
 import { TaskSubtaskLine } from './models/classes/TaskSubtaskLine';
 import { TaskStatus } from './models/classes/TaskStatus';
+import type { Controllable } from 'src/types/Controllable';
+import type { StoragePort } from 'src/modules/storage/StorageController';
 
 export type { PreviewPayload } from './models/classes/TaskActive';
 
-class TaskController {
+class TaskController implements Controllable {
+  readonly controllerName = 'task' as const;
   readonly time = markRaw(timeRepository.construct());
 
   private readonly taskRef = ref<Task | null>(null);
@@ -23,6 +26,9 @@ class TaskController {
   readonly list = markRaw(new TaskList(this.taskRepo));
   readonly subtaskLine = markRaw(new TaskSubtaskLine(this.taskRepo, this.active, saveData));
   readonly status = markRaw(new TaskStatus(this.taskRepo, saveData));
+
+  /** Expose the time slice to StorageController via the CC registry. */
+  readonly storagePort = (): StoragePort => ({ kind: 'time', data: this.time });
 
   readonly add = async (date: string, taskData: any) => {
     const t = this.taskRepo.addTask(date, taskData);
