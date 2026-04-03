@@ -397,7 +397,7 @@ function onClickEvent(ev: any) {
   /* Expanded: fixed overlay panel below the header — escapes all clipping */
   .next-events-row.expanded {
     position: fixed !important;
-    top: 56px !important;
+    top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
