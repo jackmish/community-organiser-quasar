@@ -108,21 +108,8 @@
       class="hidden-children-list__list q-pa-sm"
       aria-hidden="false"
     >
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-          width: 100%;
-          padding-right: 60px;
-          box-sizing: border-box;
-        "
-      >
-        <!-- Push everything to the right -->
-        <span style="flex: 1" />
-
-        <!-- Shortcuts section (left of subgroups) -->
+      <div class="shortcuts-scroll">
+        <!-- Shortcuts section -->
         <template v-if="shortcutGroups.length > 0">
           <span class="bottom-section-label">Shortcuts:</span>
           <div
@@ -552,5 +539,33 @@ function logIfUnrecognized(item: any) {
   white-space: nowrap;
   letter-spacing: 0.3px;
   align-self: center;
+}
+
+/* Shortcuts row: wraps on desktop, scrolls horizontally on mobile */
+.shortcuts-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .shortcuts-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+    padding-right: 24px;
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+  .shortcuts-scroll > .child-group-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
 }
 </style>
