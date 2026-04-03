@@ -13,33 +13,20 @@
             />
           </div>
 
-          <div
-            class="q-ml-md"
-            style="
-              display: flex;
-              align-items: center;
-              flex: 1;
-              justify-content: flex-end;
-              min-width: 0;
-              gap: 12px;
-              overflow: visible;
-              position: relative;
-            "
-          >
-            <div style="flex: 1; min-width: 0; display: flex; justify-content: flex-end">
-              <NextEventNotification style="min-width: 0; width: 100%" />
-            </div>
-            <div style="margin-left: 12px; display: inline-block">
-              <q-btn
-                flat
-                dense
-                round
-                icon="menu"
-                color="primary"
-                text-color="white"
-                style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
-                title="Menu"
-              >
+          <div class="notification-wrapper">
+            <NextEventNotification style="min-width: 0; width: 100%" />
+          </div>
+          <div style="margin-left: auto; display: inline-block">
+            <q-btn
+              flat
+              dense
+              round
+              icon="menu"
+              color="primary"
+              text-color="white"
+              style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
+              title="Menu"
+            >
                 <q-menu
                   v-model="menuOpen"
                   anchor="bottom right"
@@ -128,7 +115,6 @@
                 </q-menu>
               </q-btn>
             </div>
-          </div>
         </q-toolbar-title>
 
         <AppConfigDialog v-model="showConfigDialog" />
@@ -136,6 +122,7 @@
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
+
     </q-header>
 
     <q-page-container>
@@ -450,6 +437,20 @@ onUnmounted(() => {
   padding-left: 0 !important;
   padding-right: 0 !important;
   box-sizing: border-box;
+}
+
+.notification-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+@media (max-width: 767px) {
+  .notification-wrapper {
+    overflow: hidden;
+  }
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */
