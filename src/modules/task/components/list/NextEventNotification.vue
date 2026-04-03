@@ -401,7 +401,9 @@ function onClickEvent(ev: any) {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    flex-wrap: unset !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     max-height: 60vh !important;
@@ -409,9 +411,20 @@ function onClickEvent(ev: any) {
     mask-image: none !important;
     z-index: 9000;
   }
+  /* Toggle button spans both columns so it stays at top-right */
+  .next-events-row.expanded .next-events-toggle {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
   .next-events-row .next-event {
     scroll-snap-align: start;
     flex-shrink: 0;
+  }
+  .next-events-row.expanded .next-event {
+    width: 100%;
+    max-width: unset;
+    box-sizing: border-box;
   }
 }
 .next-event-title {
