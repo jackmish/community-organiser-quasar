@@ -442,6 +442,77 @@ export class SubtaskLineRepository {
     return this.removeAndPersist(task, lineIndex);
   }
 
+  async update(task: any, lineIndex: number, newText: string) {
+    return this.updateAndPersist(task, lineIndex, newText);
+  }
+
+  private updateCompute(task: any, lineIndex: number, newText: string) {
+    try {
+      if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
+        return null;
+      const lines = (task.description || '').split(/\r?\n/);
+      if (lineIndex < 0 || lineIndex >= lines.length) return null;
+      const ln = lines[lineIndex] ?? '';
+      const dashMatch = ln.match(/^(\s*-\s*)(\[[xX]\]\s*|\[\s*\]\s*)?(.*)$/);
+      const numMatch = ln.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*|\[\s*\]\s*)?(.*)$/);
+      if (dashMatch) {
+        const prefix = dashMatch[1];
+        const marker = dashMatch[2] ?? '';
+        lines[lineIndex] = `${prefix}${marker}${newText.trim()}`;
+      } else if (numMatch) {
+        const prefix = numMatch[1];
+        const marker = numMatch[2] ?? '';
+        lines[lineIndex] = `${prefix}${marker}${newText.trim()}`;
+      } else {
+        // plain text line — just replace
+        lines[lineIndex] = newText.trim();
+      }
+      return { newDesc: lines.join('\n') };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private async updateAndPersist(task: any, lineIndex: number, newText: string) {
+    const res = this.updateCompute(task, lineIndex, newText);
+    if (res && res.newDesc !== undefined && typeof this.opts?.persist === 'function') {
+      try {
+        const isCyclic = Boolean(getCycleType(task));
+        const targetDate = !isCyclic
+          ? task.date ||
+            task.eventDate ||
+            (this.opts?.time && this.opts.time.currentDate ? this.opts.time.currentDate.value : '')
+          : this.opts?.time && this.opts.time.currentDate
+            ? this.opts.time.currentDate.value
+            : '';
+        const merged: Task = {
+          ...(task as Task),
+          description: res.newDesc,
+          updatedAt: new Date().toISOString(),
+        };
+        try {
+          if (
+            this.activeTask &&
+            this.activeTask.value &&
+            String(this.activeTask.value.id) === String(merged.id)
+          ) {
+            this.activeTask.value.description = merged.description;
+            this.activeTask.value.updatedAt = merged.updatedAt;
+          }
+        } catch (e) {
+          // ignore
+        }
+        const persist = this.opts?.persist;
+        if (typeof persist === 'function') {
+          await Promise.resolve(persist(targetDate, merged));
+        }
+      } catch (e) {
+        // ignore persistence failures
+      }
+    }
+    return res;
+  }
+
   private removeCompute(task: any, lineIndex: number) {
     try {
       if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')

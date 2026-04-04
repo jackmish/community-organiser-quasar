@@ -45,4 +45,22 @@ export class TaskSubtaskLine {
     }
     return res;
   }
+
+  async update(lineIndex: number, newText: string) {
+    const res = await this.taskRepo.managers.subtaskLine.update(
+      this.active.task.value,
+      lineIndex,
+      newText,
+    );
+    try {
+      if (res && res.newDesc !== undefined) await this.persist();
+    } catch (err) {
+      try {
+        console.error('subtaskLine.update: failed to save data', err);
+      } catch (e) {
+        void e;
+      }
+    }
+    return res;
+  }
 }

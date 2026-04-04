@@ -217,7 +217,44 @@
                     props.animatingLines && props.animatingLines.includes(Number(idx)),
                 }"
               >
+                <!-- Inline edit mode -->
+                <div
+                  v-if="editingLineIdx === Number(idx)"
+                  class="subtask-edit-row"
+                  @click.stop
+                >
+                  <q-input
+                    dense
+                    outlined
+                    v-model="editingLineText"
+                    class="subtask-edit-input"
+                    @keydown.enter.prevent="confirmEdit(Number(idx))"
+                    @keydown.esc.prevent="cancelEdit"
+                    autofocus
+                  />
+                  <q-btn
+                    dense
+                    unelevated
+                    size="sm"
+                    color="positive"
+                    icon="check"
+                    title="Save"
+                    @click.stop="confirmEdit(Number(idx))"
+                  />
+                  <q-btn
+                    dense
+                    flat
+                    round
+                    size="sm"
+                    icon="close"
+                    color="grey-6"
+                    title="Cancel"
+                    @click.stop="cancelEdit"
+                  />
+                </div>
+                <!-- Normal view -->
                 <q-item
+                  v-else
                   clickable
                   :class="[{ highlighted: line.highlighted }, 'q-pa-none']"
                   @click.stop="
@@ -260,6 +297,17 @@
                       />
                     </template>
                     <template v-else>
+                      <q-btn
+                        dense
+                        flat
+                        round
+                        size="sm"
+                        icon="edit"
+                        color="grey-5"
+                        class="edit-subtask-btn"
+                        title="Edit subtask"
+                        @click.stop="requestEdit(Number(idx), line.raw)"
+                      />
                       <q-btn
                         dense
                         flat
@@ -432,6 +480,36 @@ function confirmRemove(idx: number) {
   void CC.task.subtaskLine.remove(idx);
 }
 
+// Edit subtask line inline
+const editingLineIdx = ref<number | null>(null);
+const editingLineText = ref('');
+
+function extractLineText(raw: string): string {
+  const dm = raw.match(/^(\s*-\s*)(\[[xX]\]\s*|\[\s*\]\s*)?(.*)$/);
+  if (dm) return (dm[3] ?? '').trim();
+  const nm = raw.match(/^(\s*\d+[.)]\s*)(\[[xX]\]\s*|\[\s*\]\s*)?(.*)$/);
+  if (nm) return (nm[3] ?? '').trim();
+  return raw.trim();
+}
+
+function requestEdit(idx: number, raw: string) {
+  pendingRemoveIdx.value = null;
+  if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+  editingLineIdx.value = idx;
+  editingLineText.value = extractLineText(raw);
+}
+
+function cancelEdit() {
+  editingLineIdx.value = null;
+  editingLineText.value = '';
+}
+
+function confirmEdit(idx: number) {
+  const text = editingLineText.value.trim();
+  if (text) void CC.task.subtaskLine.update(idx, text);
+  cancelEdit();
+}
+
 // Delete task with inline confirmation
 const pendingDelete = ref(false);
 let pendingDeleteTimer: ReturnType<typeof setTimeout> | null = null;
@@ -454,6 +532,7 @@ function confirmDelete() {
 onBeforeUnmount(() => {
   if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
   if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
+  cancelEdit();
 });
 
 // preview card style: 8px blue border to match AddTaskForm style
@@ -790,6 +869,21 @@ function buildHtmlFromParsed(
   display: flex;
   align-items: center;
   padding-left: 6px;
+}
+.subtask-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+.subtask-edit-input {
+  flex: 1;
+}
+.edit-subtask-btn {
+  opacity: 1;
+}
+.q-item:hover .edit-subtask-btn {
+  opacity: 1;
 }
 /* Highlighted list item visual */
 .task-preview .q-item.highlighted {
