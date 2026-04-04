@@ -355,11 +355,23 @@ $sep-color: $primary;
 .pagination-range-options {
   z-index: 2;
 }
-.pagination-range-options .row > * {
+.visible-days-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   background: rgba(25, 118, 210, 1);
   color: white;
-  padding: 15px 15px;
+  padding: 10px 16px;
+  border-radius: 6px;
 }
-.pagination-range-options .visible-days-bg .q-option-group {
+.visible-days-label {
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.visible-days-control .q-option-group {
   margin: 0;
+}
+.visible-days-control .q-radio__label {
+  color: white;
 }

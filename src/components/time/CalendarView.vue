@@ -208,23 +208,22 @@
   </div>
   <!-- Prev button and visible days per page option (moved to bottom) -->
   <div class="bottom-row row q-mb-md items-center">
-    <div class="col pagination-range-options visible-days-bg">
-      <div class="row items-center q-gutter-md">
-        <div class="text-subtitle2">{{ $text("ui.visible_days") }}</div>
-        <div class="">
-          <q-option-group
-            v-model="calendarViewDays"
-            :options="[
-              { label: $text('ui.visible_days_14'), value: 14 },
-              { label: $text('ui.visible_days_42'), value: 42 },
-              { label: $text('ui.visible_days_3months'), value: 84 },
-            ]"
-            color="primary"
-            inline
-            dense
-            size="xs"
-          />
-        </div>
+    <div class="col pagination-range-options">
+      <div class="visible-days-control">
+        <span class="visible-days-label text-subtitle2">{{ $text("ui.visible_days") }}</span>
+        <q-option-group
+          v-model="calendarViewDays"
+          type="radio"
+          :options="[
+            { label: $text('ui.visible_days_14'), value: 14 },
+            { label: $text('ui.visible_days_42'), value: 42 },
+            { label: $text('ui.visible_days_3months'), value: 84 },
+          ]"
+          color="white"
+          inline
+          dense
+          size="sm"
+        />
       </div>
     </div>
     <div class="col text-right">
