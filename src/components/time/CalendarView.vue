@@ -21,7 +21,11 @@
             size="md"
             @click="jumpToMonth(month.value)"
             class="text-weight-bold"
-            :style="{ fontSize: '16px', backgroundColor: buttonColors[index], color: 'white' }"
+            :style="{
+              fontSize: '16px',
+              backgroundColor: buttonColors[index],
+              color: 'white',
+            }"
           >
             {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
               month.label.toUpperCase()
@@ -35,173 +39,182 @@
     <div class="col">
       <div ref="scrollFlipEl" class="calendar-scroll-flip">
         <div ref="tableWrapper" class="calendar-table-wrapper">
-        <table class="calendar-table">
-          <thead>
-            <tr>
-              <th
-                v-for="day in calendarCurrentWeek"
-                :key="'header-' + day"
-                class="text-center text-weight-bold text-caption"
-              >
-                {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][parseDay(day).getDay()] }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(week, weekIndex) in allCalendarWeeks"
-              :key="'week-' + weekIndex"
-              :class="{
-                'new-month-week': shouldWeekHaveMargin(week, weekIndex, allCalendarWeeks),
-              }"
-            >
-              <td
-                v-for="(day, index) in week"
-                :key="day"
-                :class="['calendar-cell', { 'calendar-today-column': index === todayColumnIndex }]"
-                :data-day="day"
-                :data-month="String(parseDay(day).getMonth() + 1).padStart(2, '0')"
-              >
-                <div
-                  :class="{
-                    'new-month-start': isNewMonthStart(
-                      day,
-                      week,
-                      weekIndex,
-                      allCalendarWeeks
-                    ),
-                    'month-start': true,
-                  }"
+          <table class="calendar-table">
+            <thead>
+              <tr>
+                <th
+                  v-for="day in calendarCurrentWeek"
+                  :key="'header-' + day"
+                  class="text-center text-weight-bold text-caption"
                 >
-                  <Watermark
-                    v-if="
-                      shouldShowMonth(day, index, week, weekIndex === 0) ||
-                      shouldShowYear(day, index, week, weekIndex === 0)
-                    "
-                    :label="
-                      getMonthAbbr(day, index, week) +
-                      (shouldShowYear(day, index, week, weekIndex === 0) ||
-                      new Date(day).getFullYear() !== new Date().getFullYear()
-                        ? ' ' + new Date(day).getFullYear()
-                        : '')
-                    "
-                    :background="`blur(60px) ${getOverlayColorForMonth(day)}`"
-                    color="#00000085"
-                    justifyContent="flex-start"
-                    class="calendar-month-label-above"
-                    size="small"
-                  />
-                  <div v-else class="calendar-month-label-above"></div>
-                </div>
-                <q-btn
-                  size="sm"
-                  @pointerdown="onDayPointerDown($event, day)"
-                  @pointerup="onDayPointerUp($event)"
-                  @pointercancel="cancelLongPressDay"
-                  @pointerleave="cancelLongPressDay"
-                  @click="onDayClick($event, day)"
-                  @contextmenu="handleDateSelect($event, day, true)"
-                  :title="
-                    parseDay(day).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                    })
-                  "
+                  {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][parseDay(day).getDay()] }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(week, weekIndex) in allCalendarWeeks"
+                :key="'week-' + weekIndex"
+                :class="{
+                  'new-month-week': shouldWeekHaveMargin(
+                    week,
+                    weekIndex,
+                    allCalendarWeeks
+                  ),
+                }"
+              >
+                <td
+                  v-for="(day, index) in week"
+                  :key="day"
                   :class="[
-                    'calendar-day-btn',
-                    { 'first-day-of-month': isFirstDayOfMonth(day) },
-                    {
-                      'after-first-in-row': isAfterFirstInRow(day, week),
-                    },
-                    { 'calendar-weekend': isWeekend(day) },
-                    { 'calendar-holiday': !!getHoliday(day) },
-                    { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
-                    { 'calendar-selected': day === selectedDate },
-                    {
-                      'calendar-past':
-                        day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
-                    },
+                    'calendar-cell',
+                    { 'calendar-today-column': index === todayColumnIndex },
                   ]"
+                  :data-day="day"
+                  :data-month="String(parseDay(day).getMonth() + 1).padStart(2, '0')"
                 >
-                  <div class="calendar-day-content">
-                    <div class="calendar-top">
-                      <div class="calendar-day-row">
-                        <div class="calendar-day-number">
-                          {{ parseDay(day).getDate() }}
-                        </div>
-                        <div v-if="getWeekLabel(day)" class="calendar-week-inline">
-                          {{ getWeekLabel(day) }}
-                        </div>
-                      </div>
-
-                      <div
-                        v-if="day === format(new Date(), 'yyyy-MM-dd')"
-                        class="calendar-today-label calendar-green-label"
-                      >
-                        {{ $text("ui.today") }}
-                      </div>
-                      <div
-                        v-else-if="day === format(addDays(new Date(), -1), 'yyyy-MM-dd')"
-                        class="calendar-today-label"
-                      >
-                        {{ $text("ui.yesterday") }}
-                      </div>
-                      <div
-                        v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
-                        class="calendar-today-label calendar-gray-label"
-                      >
-                        {{ $text("ui.tomorrow") }}
-                      </div>
-                      <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
-                        {{
-                          holidayDisplayLang && holidayDisplayLang.startsWith("en")
-                            ? getHoliday(day)?.name
-                            : getHoliday(day)?.localName
-                        }}
-                      </div>
-                    </div>
-                    <!-- Render events for this day (including cyclic repeats) -->
-                    <div class="calendar-events">
-                      <template v-if="props.tasks && props.tasks.length">
-                        <div
-                          v-for="ev in getEventsForDay(day)"
-                          :key="ev.id + '-' + (ev.eventTime || '')"
-                          class="calendar-event-pill q-pa-xs"
-                          :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
-                          :style="{
-                            backgroundColor: themePriorityColors[ev.priority] || '#888',
-                            color: themePriorityTextColor
-                              ? themePriorityTextColor(ev.priority)
-                              : '#fff',
-                          }"
-                        >
-                          <span
-                            class="event-time"
-                            v-if="ev.eventTime"
-                            @pointerdown="() => startLongPress(ev)"
-                            @pointerup="() => onEventPointerUp(ev)"
-                            @pointercancel="cancelLongPress"
-                            @pointerleave="cancelLongPress"
-                          >
-                            {{ ev.eventTime }}
-                          </span>
-                          <span
-                            class="event-title"
-                            @pointerdown="() => startLongPress(ev)"
-                            @pointerup="() => onEventPointerUp(ev)"
-                            @pointercancel="cancelLongPress"
-                            @pointerleave="cancelLongPress"
-                          >
-                            {{ ev.name }}
-                          </span>
-                        </div>
-                      </template>
-                    </div>
+                  <div
+                    :class="{
+                      'new-month-start': isNewMonthStart(
+                        day,
+                        week,
+                        weekIndex,
+                        allCalendarWeeks
+                      ),
+                      'month-start': true,
+                    }"
+                  >
+                    <Watermark
+                      v-if="
+                        shouldShowMonth(day, index, week, weekIndex === 0) ||
+                        shouldShowYear(day, index, week, weekIndex === 0)
+                      "
+                      :label="
+                        getMonthAbbr(day, index, week) +
+                        (shouldShowYear(day, index, week, weekIndex === 0) ||
+                        new Date(day).getFullYear() !== new Date().getFullYear()
+                          ? ' ' + new Date(day).getFullYear()
+                          : '')
+                      "
+                      :background="`blur(60px) ${getOverlayColorForMonth(day)}`"
+                      color="#00000085"
+                      justifyContent="flex-start"
+                      class="calendar-month-label-above"
+                      size="small"
+                    />
+                    <div v-else class="calendar-month-label-above"></div>
                   </div>
-                </q-btn>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                  <q-btn
+                    size="sm"
+                    @pointerdown="onDayPointerDown($event, day)"
+                    @pointerup="onDayPointerUp($event)"
+                    @pointercancel="cancelLongPressDay"
+                    @pointerleave="cancelLongPressDay"
+                    @click="onDayClick($event, day)"
+                    @contextmenu="handleDateSelect($event, day, true)"
+                    :title="
+                      parseDay(day).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                      })
+                    "
+                    :class="[
+                      'calendar-day-btn',
+                      { 'first-day-of-month': isFirstDayOfMonth(day) },
+                      {
+                        'after-first-in-row': isAfterFirstInRow(day, week),
+                      },
+                      { 'calendar-weekend': isWeekend(day) },
+                      { 'calendar-holiday': !!getHoliday(day) },
+                      { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
+                      { 'calendar-selected': day === selectedDate },
+                      {
+                        'calendar-past':
+                          day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
+                      },
+                    ]"
+                  >
+                    <div class="calendar-day-content">
+                      <div class="calendar-top">
+                        <div class="calendar-day-row">
+                          <div class="calendar-day-number">
+                            {{ parseDay(day).getDate() }}
+                          </div>
+                          <div v-if="getWeekLabel(day)" class="calendar-week-inline">
+                            {{ getWeekLabel(day) }}
+                          </div>
+                        </div>
+
+                        <div
+                          v-if="day === format(new Date(), 'yyyy-MM-dd')"
+                          class="calendar-today-label calendar-green-label"
+                        >
+                          {{ $text("ui.today") }}
+                        </div>
+                        <div
+                          v-else-if="
+                            day === format(addDays(new Date(), -1), 'yyyy-MM-dd')
+                          "
+                          class="calendar-today-label"
+                        >
+                          {{ $text("ui.yesterday") }}
+                        </div>
+                        <div
+                          v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
+                          class="calendar-today-label calendar-gray-label"
+                        >
+                          {{ $text("ui.tomorrow") }}
+                        </div>
+                        <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
+                          {{
+                            holidayDisplayLang && holidayDisplayLang.startsWith("en")
+                              ? getHoliday(day)?.name
+                              : getHoliday(day)?.localName
+                          }}
+                        </div>
+                      </div>
+                      <!-- Render events for this day (including cyclic repeats) -->
+                      <div class="calendar-events">
+                        <template v-if="props.tasks && props.tasks.length">
+                          <div
+                            v-for="ev in getEventsForDay(day)"
+                            :key="ev.id + '-' + (ev.eventTime || '')"
+                            class="calendar-event-pill q-pa-xs"
+                            :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
+                            :style="{
+                              backgroundColor: themePriorityColors[ev.priority] || '#888',
+                              color: themePriorityTextColor
+                                ? themePriorityTextColor(ev.priority)
+                                : '#fff',
+                            }"
+                          >
+                            <span
+                              class="event-time"
+                              v-if="ev.eventTime"
+                              @pointerdown="() => startLongPress(ev)"
+                              @pointerup="() => onEventPointerUp(ev)"
+                              @pointercancel="cancelLongPress"
+                              @pointerleave="cancelLongPress"
+                            >
+                              {{ ev.eventTime }}
+                            </span>
+                            <span
+                              class="event-title"
+                              @pointerdown="() => startLongPress(ev)"
+                              @pointerup="() => onEventPointerUp(ev)"
+                              @pointercancel="cancelLongPress"
+                              @pointerleave="cancelLongPress"
+                            >
+                              {{ ev.name }}
+                            </span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </q-btn>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -210,7 +223,9 @@
   <div class="bottom-row row q-mb-md items-center">
     <div class="col pagination-range-options">
       <div class="visible-days-control">
-        <span class="visible-days-label text-subtitle2">{{ $text("ui.visible_days") }}</span>
+        <span class="visible-days-label text-subtitle2">{{
+          $text("ui.visible_days")
+        }}</span>
         <q-option-group
           v-model="calendarViewDays"
           type="radio"
@@ -572,6 +587,9 @@ function createOverlaysFromEdges() {
     const cells = Array.from(
       row.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
     );
+    const rowRect = row.getBoundingClientRect();
+    const rowTop = rowRect.top - tableRect.top;
+    const rowHeight = Math.max(0, rowRect.height) + 1; // +1 creates border overlap - with blend effect.
     for (let i = 0; i < cells.length; ) {
       const cell = cells[i]!;
       const month = (cell.dataset?.month ?? "01").toString().padStart(2, "0");
@@ -586,9 +604,9 @@ function createOverlaysFromEdges() {
       const firstRect = cell.getBoundingClientRect();
       const lastRect = cells[j - 1]!.getBoundingClientRect();
       const left = Math.round(firstRect.left - tableRect.left);
-      const top = Math.round(firstRect.top - tableRect.top);
+      const top = rowTop;
       const width = Math.max(0, Math.round(lastRect.right - firstRect.left));
-      const height = Math.max(0, Math.round(firstRect.height));
+      const height = rowHeight;
 
       if (!monthSegments.has(month)) monthSegments.set(month, []);
       monthSegments.get(month)!.push({
