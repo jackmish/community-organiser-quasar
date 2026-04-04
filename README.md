@@ -217,13 +217,15 @@ There is also thinking about SOLID/DRY, but at this point it would be good to ju
 
 #### Most common code problems
 
-Generally problems there are 3 kind of problems:
+Generally there are 4 kinds of problems:
 
 1. General project logic which is very hard to fix - its a bit like making from old building totally different one, and there are problems smaller around functions/methods inside definitions. First group of problems are describing how project is easy to read, correct not confusing names, efficient structure, how easy to sustain/extend project later or I'm planning to make some API directly or not using Central Controller and maybe API name would be back somewhere - (not Rest API but rather plugin/development API).
 
 2. Second group of problems are affecting mostly performance, in most cases code looks fine but watching line by line i makes almost every next time new conclusion.
 
-3. Third group is a talk about how app should work. Claude or GPT5.1 could generally easily generate memory leaks without human help. One of the cases is no validation for date. 32nd day in the month and created task/event could disappear by mistake. I've reverted single condition but by the way i've recovered 4 another tasks with problems - probably test tasks but still problem wasn't solved instantly after happening. Good practices like unit tests, validations from beginning are not strong point of vibe coding without any recommendation of user/programmer/vibe coder. Also forcing user to write correct date should be validated after create/update events, there is strong possibility that missing tasks could be fixed every time app starts or is updated. I don't want to check if AI would recommend special tool for data recover or not. There is a lot of guessing how AI will solve the problem.
+3. Third group is a talk about how app should work - not only user experience. Claude or GPT5.1 could generally easily generate memory leaks without human instructions. One of the cases is no validation for date. 32nd day in the month and created task/event could disappear by mistake. I've reverted single condition but by the way i've recovered 4 another tasks with problems - probably test tasks but still problem wasn't solved instantly after happening. Good practices like unit tests, validations from beginning are not strong point of vibe coding without any recommendation of user/programmer/vibe coder. Also forcing user to write correct date should be validated after create/update events, there is strong possibility that missing tasks could be fixed every time app starts or is updated. I don't want to check if AI would recommend special tool for data recover or not. There is a lot of guessing how AI will solve the problem.
+
+4. Even with image input in VSCode, GPT or Claude can struggle with many problems with graphic/css changes, fixes. Without any suggestions they will kill styles, only GIT can revert changes correctly. It creates very fast typical base solutions... but untypical could be only fixed only by living front-end developer. In many cases instead of talking with GPT its better to set transparency of background/color by yourself - its much faster.
 
 ---
 
