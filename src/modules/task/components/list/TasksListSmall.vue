@@ -47,6 +47,7 @@
                   :item="t"
                   :selected-task-id="selectedTaskId"
                   :active-group-id="activeGroup?.value"
+                  :size-variant="listSizeVariant"
                   @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                   @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
                 />
@@ -86,6 +87,7 @@
                 :item="item"
                 :selected-task-id="selectedTaskId"
                 :active-group-id="activeGroup?.value"
+                :size-variant="listSizeVariant"
                 @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
                 @task-context="(tItem, rect) => $emit('task-context', tItem, rect)"
               />
@@ -148,6 +150,7 @@ import TaskCardSmall from "../element/TaskCardSmall.vue";
 import GroupButton from "src/modules/group/components/GroupButton.vue";
 import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
+import { resolveTaskListSizeVariant } from "src/components/theme";
 
 const $q = useQuasar();
 
@@ -341,6 +344,22 @@ const mergedTasks = computed(() => {
 
   return out;
 });
+
+/**
+ * Number of non-Replenish task items in the current list.
+ * Replenish cards are intentionally excluded — they should not affect density.
+ */
+const nonReplenishCount = computed(() =>
+  mergedTasks.value.filter(
+    (it: any) => !it.__isReplenish && !it.__isHiddenGroup && !it.__isGroup,
+  ).length,
+);
+
+/**
+ * 'large' (0-3 tasks) | 'medium' (4-6) | 'small' (7+).
+ * Drives card density and the inline subtask preview in large mode.
+ */
+const listSizeVariant = computed(() => resolveTaskListSizeVariant(nonReplenishCount.value));
 
 watch(mergedTasks, (list) => {
   try {

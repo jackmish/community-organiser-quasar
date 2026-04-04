@@ -90,6 +90,11 @@
             <span style="white-space: pre-line">{{ getEventHoursDisplay(item) }}</span>
           </q-item-label>
         </div>
+        <!-- large mode: show pending subtasks inline -->
+        <TaskSubtaskMiniList
+          v-if="sizeVariant === 'large' && isTodoType(item) && Number(item.status_id) !== 0"
+          :task="item"
+        />
       </div>
     </q-item-section>
   </q-item>
@@ -97,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, toRef } from "vue";
+import TaskSubtaskMiniList from "./TaskSubtaskMiniList.vue";
 import { useLongPress } from "src/composables/useLongPress";
 import CC from "src/CCAccess";
 import {
@@ -115,6 +121,8 @@ const props = defineProps<{
   item: any;
   selectedTaskId: string | null;
   activeGroupId?: any;
+  /** Controls density / extra features of the card. 'large' shows inline pending subtasks. */
+  sizeVariant?: 'large' | 'medium' | 'small';
 }>();
 const emit = defineEmits<{
   (e: "task-click", t: any, rect?: DOMRect | null): void;

@@ -126,6 +126,25 @@ export const monthColors: Record<string, string> = {
   '12': '#ce93d8',
 };
 
+// ── Task-list density settings ────────────────────────────────────────────────
+// Upper inclusive bounds for each size tier (non-Replenish active tasks).
+// large:  0 – 3  tasks → spacious cards with inline subtask preview
+// medium: 4 – 6  tasks → default view
+// small:  7 – 9+ tasks → compact view (currently same as default)
+export const taskListSizeRanges: Readonly<{ large: number; medium: number; small: number }> = {
+  large: 3,
+  medium: 6,
+  small: 9,
+};
+
+export function resolveTaskListSizeVariant(
+  nonReplenishCount: number,
+): 'large' | 'medium' | 'small' {
+  if (nonReplenishCount <= taskListSizeRanges.large) return 'large';
+  if (nonReplenishCount <= taskListSizeRanges.medium) return 'medium';
+  return 'small';
+}
+
 // Overlay color chooser used for calendar overlays and jump-button alignment.
 export function getOverlayColorForMonth(monthLike: string | number | Date): string {
   const overlayColorArray = [
