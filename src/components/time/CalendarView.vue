@@ -655,9 +655,12 @@ function createOverlaysFromEdges() {
         backgroundSize: `cover`,
         backgroundPosition: `center center`,
         backgroundRepeat: "no-repeat",
-        opacity: "1",
+
         pointerEvents: "none",
-        mixBlendMode: "multiply",
+        // opacity: "1",
+        // mixBlendMode: "multiply",
+        opacity: "0.6",
+        mixBlendMode: "lighten",
         zIndex: String(Math.max(0, Number(z) + 1)),
       } as any);
       wrapper.prepend(div);
