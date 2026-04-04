@@ -804,7 +804,9 @@ const {
       // These are attached to <body> so they appear "outside" the panel even when
       // triggered by UI inside the panel (e.g. the group selector q-menu).
       if (target && (target as Element).closest) {
-        if ((target as Element).closest('.q-menu, .q-dialog, .q-popup-proxy, .q-tooltip')) {
+        if (
+          (target as Element).closest(".q-menu, .q-dialog, .q-popup-proxy, .q-tooltip")
+        ) {
           return true;
         }
       }
