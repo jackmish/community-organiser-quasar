@@ -132,9 +132,9 @@ export const monthColors: Record<string, string> = {
 // medium: 4 – 6  tasks → default view
 // small:  7 – 9+ tasks → compact view (currently same as default)
 export const taskListSizeRanges: Readonly<{ large: number; medium: number; small: number }> = {
-  large: 3,
-  medium: 6,
-  small: 9,
+  large: 6,
+  medium: 12,
+  small: 18,
 };
 
 export function resolveTaskListSizeVariant(
