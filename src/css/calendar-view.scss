@@ -198,6 +198,10 @@ $sep-color: $primary;
   /* optional */
 }
 
+.calendar-today-column {
+  background-color: rgba(25, 118, 210, 0.6);
+}
+
 .calendar-events {
   margin-top: auto;
   display: flex;

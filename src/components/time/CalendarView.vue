@@ -58,7 +58,7 @@
               <td
                 v-for="(day, index) in week"
                 :key="day"
-                class="calendar-cell"
+                :class="['calendar-cell', { 'calendar-today-column': index === todayColumnIndex }]"
                 :data-day="day"
                 :data-month="String(parseDay(day).getMonth() + 1).padStart(2, '0')"
               >
@@ -1265,6 +1265,9 @@ const allCalendarWeeks = computed(() => {
   );
   return result;
 });
+
+// Column index (0=Mon … 6=Sun) that contains today — used to tint the whole column
+const todayColumnIndex = computed(() => (new Date().getDay() + 6) % 7);
 
 const nextSixMonths = computed(() => {
   const currentDate = new Date();
