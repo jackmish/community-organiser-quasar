@@ -90,9 +90,9 @@
             <span style="white-space: pre-line">{{ getEventHoursDisplay(item) }}</span>
           </q-item-label>
         </div>
-        <!-- large mode: show pending subtasks inline -->
+        <!-- large mode: show pending subtasks inline (all types except Replenish) -->
         <TaskSubtaskMiniList
-          v-if="sizeVariant === 'large' && isTodoType(item) && Number(item.status_id) !== 0"
+          v-if="sizeVariant === 'large' && !item.__isReplenish && String(item.type || item.type_id || '').toLowerCase() !== 'replenish' && Number(item.status_id) !== 0"
           :task="item"
         />
       </div>
