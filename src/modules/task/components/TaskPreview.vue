@@ -161,7 +161,7 @@
             rows="1"
             placeholder="Quick add subtask"
             v-model="quickSubtask"
-            @keyup.enter="addQuickSubtask"
+            @keydown.enter.prevent="addQuickSubtask"
             style="flex: 1; min-height: 40px"
           />
           <q-btn
@@ -339,7 +339,7 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: string | 
 }
 
 function addQuickSubtask() {
-  const text = quickSubtask.value;
+  const text = quickSubtask.value.trim();
   // Delegate insertion and persistence to the task API which will trim/validate input.
   void CC.task.subtaskLine.add(text);
   quickSubtask.value = "";
