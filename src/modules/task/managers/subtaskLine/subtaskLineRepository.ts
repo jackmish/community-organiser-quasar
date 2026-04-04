@@ -438,6 +438,63 @@ export class SubtaskLineRepository {
     return this.toggleStatusAndPersist(task, lineIndex);
   }
 
+  async remove(task: any, lineIndex: number) {
+    return this.removeAndPersist(task, lineIndex);
+  }
+
+  private removeCompute(task: any, lineIndex: number) {
+    try {
+      if (typeof lineIndex !== 'number' || !task || typeof task.description !== 'string')
+        return null;
+      const lines = (task.description || '').split(/\r?\n/);
+      if (lineIndex < 0 || lineIndex >= lines.length) return null;
+      lines.splice(lineIndex, 1);
+      return { newDesc: lines.join('\n') };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private async removeAndPersist(task: any, lineIndex: number) {
+    const res = this.removeCompute(task, lineIndex);
+    if (res && res.newDesc !== undefined && typeof this.opts?.persist === 'function') {
+      try {
+        const isCyclic = Boolean(getCycleType(task));
+        const targetDate = !isCyclic
+          ? task.date ||
+            task.eventDate ||
+            (this.opts?.time && this.opts.time.currentDate ? this.opts.time.currentDate.value : '')
+          : this.opts?.time && this.opts.time.currentDate
+            ? this.opts.time.currentDate.value
+            : '';
+        const merged: Task = {
+          ...(task as Task),
+          description: res.newDesc,
+          updatedAt: new Date().toISOString(),
+        };
+        try {
+          if (
+            this.activeTask &&
+            this.activeTask.value &&
+            String(this.activeTask.value.id) === String(merged.id)
+          ) {
+            this.activeTask.value.description = merged.description;
+            this.activeTask.value.updatedAt = merged.updatedAt;
+          }
+        } catch (e) {
+          // ignore
+        }
+        const persist = this.opts?.persist;
+        if (typeof persist === 'function') {
+          await Promise.resolve(persist(targetDate, merged));
+        }
+      } catch (e) {
+        // ignore persistence failures
+      }
+    }
+    return res;
+  }
+
   // Provide a compatibility factory
   static construct(taskManager: TaskRepository) {
     return new SubtaskLineRepository(taskManager);

@@ -31,4 +31,18 @@ export class TaskSubtaskLine {
     if (res && res.newDesc) await this.persist();
     return res;
   }
+
+  async remove(lineIndex: number) {
+    const res = await this.taskRepo.managers.subtaskLine.remove(this.active.task.value, lineIndex);
+    try {
+      if (res && res.newDesc !== undefined) await this.persist();
+    } catch (err) {
+      try {
+        console.error('subtaskLine.remove: failed to save data', err);
+      } catch (e) {
+        void e;
+      }
+    }
+    return res;
+  }
 }

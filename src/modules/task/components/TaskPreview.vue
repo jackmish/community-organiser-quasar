@@ -207,17 +207,52 @@
                   <q-item-section>
                     <div v-html="line.html"></div>
                   </q-item-section>
-                  <q-item-section side class="highlight-section">
-                    <q-btn
-                      dense
-                      flat
-                      round
-                      size="sm"
-                      class="highlight-btn"
-                      :icon="highlightIcon"
-                      :color="line.highlighted ? 'amber' : 'grey-6'"
-                      @click.stop="toggleHighlight(Number(idx))"
-                    />
+                  <q-item-section side class="highlight-section" style="flex-direction: row; gap: 2px; align-items: center;">
+                    <template v-if="pendingRemoveIdx === Number(idx)">
+                      <q-btn
+                        dense
+                        unelevated
+                        size="sm"
+                        color="negative"
+                        icon="check"
+                        title="Confirm remove"
+                        class="confirm-remove-btn"
+                        @click.stop="confirmRemove(Number(idx))"
+                      />
+                      <q-btn
+                        dense
+                        flat
+                        round
+                        size="sm"
+                        icon="close"
+                        color="grey-5"
+                        title="Cancel"
+                        @click.stop="pendingRemoveIdx = null"
+                      />
+                    </template>
+                    <template v-else>
+                      <q-btn
+                        dense
+                        flat
+                        round
+                        size="sm"
+                        class="highlight-btn"
+                        :icon="highlightIcon"
+                        :color="line.highlighted ? 'amber' : 'grey-6'"
+                        @click.stop="toggleHighlight(Number(idx))"
+                      />
+                      <q-btn
+                        dense
+                        flat
+                        round
+                        size="sm"
+                        icon="delete"
+                        color="grey-5"
+                        class="remove-subtask-btn"
+                        title="Remove subtask"
+                        @click.stop="requestRemove(Number(idx))"
+                      />
+                    </template>
                   </q-item-section>
                 </q-item>
               </div>
@@ -231,7 +266,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRaw, ref, nextTick, watch } from "vue";
+import { computed, toRaw, ref, nextTick, watch, onBeforeUnmount } from "vue";
 import { $text } from "src/modules/lang";
 import type { ComponentPublicInstance } from "vue";
 import logger from "src/utils/logger";
@@ -348,6 +383,28 @@ function addQuickSubtask() {
     // parent will re-render after API updates
   });
 }
+
+// Remove subtask with inline confirmation
+const pendingRemoveIdx = ref<number | null>(null);
+let pendingRemoveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function requestRemove(idx: number) {
+  pendingRemoveIdx.value = idx;
+  if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+  pendingRemoveTimer = setTimeout(() => {
+    pendingRemoveIdx.value = null;
+  }, 2500);
+}
+
+function confirmRemove(idx: number) {
+  if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+  pendingRemoveIdx.value = null;
+  void CC.task.subtaskLine.remove(idx);
+}
+
+onBeforeUnmount(() => {
+  if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+});
 
 // preview card style: 8px blue border to match AddTaskForm style
 const previewCardStyle = computed(() => ({
