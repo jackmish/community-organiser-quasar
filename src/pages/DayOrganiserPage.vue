@@ -169,6 +169,7 @@
             }
           "
           @close="clearTaskToEdit"
+          @delete-task="handleDeleteTask"
           @update-task="(t) => handleUpdateTask(t)"
           :fixed="previewFloating"
         />

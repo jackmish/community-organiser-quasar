@@ -24,6 +24,35 @@
             :label="$text('action.edit')"
             @click.stop="$emit('edit')"
           />
+          <template v-if="pendingDelete">
+            <q-btn
+              dense
+              unelevated
+              color="negative"
+              icon="check"
+              title="Confirm delete"
+              @click.stop="confirmDelete"
+            />
+            <q-btn
+              dense
+              flat
+              round
+              icon="close"
+              color="grey-7"
+              title="Cancel"
+              @click.stop="pendingDelete = false"
+            />
+          </template>
+          <q-btn
+            v-else
+            dense
+            flat
+            round
+            icon="delete"
+            color="negative"
+            title="Delete task"
+            @click.stop="requestDelete"
+          />
           <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
         </div>
       </div>
@@ -299,6 +328,7 @@ const emit = defineEmits([
   "close",
   "toggle-status",
   "update-task",
+  "delete-task",
   "line-collapsed",
   "line-expanded",
 ]);
@@ -402,8 +432,28 @@ function confirmRemove(idx: number) {
   void CC.task.subtaskLine.remove(idx);
 }
 
+// Delete task with inline confirmation
+const pendingDelete = ref(false);
+let pendingDeleteTimer: ReturnType<typeof setTimeout> | null = null;
+
+function requestDelete() {
+  pendingDelete.value = true;
+  if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
+  pendingDeleteTimer = setTimeout(() => {
+    pendingDelete.value = false;
+  }, 2500);
+}
+
+function confirmDelete() {
+  if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
+  pendingDelete.value = false;
+  const t = activeTask.value;
+  emit('delete-task', { id: t?.id, date: (t as any)?.date || (t as any)?.eventDate || '' });
+}
+
 onBeforeUnmount(() => {
   if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+  if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
 });
 
 // preview card style: 8px blue border to match AddTaskForm style
