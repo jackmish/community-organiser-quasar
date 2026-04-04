@@ -25,7 +25,7 @@
               color="primary"
               text-color="white"
               style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
-              title="Menu"
+              :title="$text('ui.menu')"
             >
                 <q-menu
                   v-model="menuOpen"
@@ -61,7 +61,7 @@
                           <template v-slot:no-option>
                             <q-item>
                               <q-item-section class="text-grey"
-                                >No results</q-item-section
+                                >{{ $text('ui.no_results') }}</q-item-section
                               >
                             </q-item>
                           </template>

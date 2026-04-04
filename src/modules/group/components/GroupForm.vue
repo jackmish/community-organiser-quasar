@@ -85,7 +85,7 @@
               color="primary"
               @click="resetIcon"
               style="padding: 6px 10px"
-              >Reset Icon</q-btn
+              >{{ $text('action.reset_icon') }}</q-btn
             >
           </div>
         </div>
@@ -93,7 +93,7 @@
         <q-input
           v-model="localColor"
           class="gm-color-field"
-          label="Color (hex)"
+          :label="$text('label.color_hex')"
           outlined
           dense
           style="width: 160px; overflow: visible"
@@ -166,7 +166,7 @@
                         padding: 6px 10px;
                       "
                       ><div style="display: flex; align-items: center; gap: 8px">
-                        <span>Custom…</span>
+                        <span>{{ $text('action.custom') }}</span>
                         <div
                           :style="{
                             width: '18px',
@@ -183,7 +183,7 @@
                       color="negative"
                       @click="resetColor"
                       style="padding: 6px 10px"
-                      >Reset</q-btn
+                      >{{ $text('action.reset') }}</q-btn
                     >
                   </div>
                 </div>
@@ -216,7 +216,7 @@
         <q-input
           v-model="localTextColor"
           class="gm-color-field"
-          label="Text color (hex)"
+          :label="$text('label.text_color_hex')"
           outlined
           dense
           style="width: 160px; margin-left: 8px; overflow: visible"
@@ -282,7 +282,7 @@
                       color="primary"
                       @click="openTextCustom"
                       style="padding: 6px 10px"
-                      >Custom…</q-btn
+                      >{{ $text('action.custom') }}</q-btn
                     >
                     <q-btn
                       dense
@@ -290,7 +290,7 @@
                       color="negative"
                       @click="resetTextColor"
                       style="padding: 6px 10px"
-                      >Reset</q-btn
+                      >{{ $text('action.reset') }}</q-btn
                     >
                   </div>
                 </div>

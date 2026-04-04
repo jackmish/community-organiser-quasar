@@ -231,7 +231,7 @@
       <q-btn
         unelevated
         icon="chevron_left"
-        label="Prev"
+        :label="$text('ui.prev')"
         color="primary"
         text-color="white"
         @click="previousCalendarWeeks"
@@ -242,7 +242,7 @@
       <q-btn
         unelevated
         icon-right="chevron_right"
-        label="Next"
+        :label="$text('ui.next')"
         color="primary"
         text-color="white"
         @click="nextCalendarWeeks"

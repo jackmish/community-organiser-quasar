@@ -140,7 +140,7 @@
           flat
           dense
           round
-          title="Go to parent group"
+          :title="$text('ui.go_to_parent_group')"
           @click.stop.prevent="() => CC.group.active.goToParent()"
           :style="{
             border:

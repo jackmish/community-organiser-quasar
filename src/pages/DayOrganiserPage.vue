@@ -92,7 +92,7 @@
             class="list-add-btn"
             color="positive"
             unelevated
-            aria-label="Add task"
+            :aria-label="$text('ui.add_new_task')"
             @click="onListAdd"
           >
             <q-icon name="add" />

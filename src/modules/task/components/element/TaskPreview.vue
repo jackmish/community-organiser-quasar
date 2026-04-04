@@ -30,7 +30,7 @@
               unelevated
               color="negative"
               icon="check"
-              title="Confirm delete"
+              :title="$text('confirm.delete')"
               @click.stop="confirmDelete"
             />
             <q-btn
@@ -39,7 +39,7 @@
               round
               icon="close"
               color="grey-7"
-              title="Cancel"
+              :title="$text('action.cancel')"
               @click.stop="pendingDelete = false"
             />
           </template>
@@ -50,7 +50,7 @@
             round
             icon="delete"
             color="negative"
-            title="Delete task"
+            :title="$text('action.delete_task')"
             @click.stop="requestDelete"
           />
           <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
@@ -188,7 +188,7 @@
             type="textarea"
             autosize
             rows="1"
-            placeholder="Quick add subtask"
+            :placeholder="$text('label.quick_add_subtask')"
             v-model="quickSubtask"
             @keydown.enter.prevent="addQuickSubtask"
             style="flex: 1; min-height: 40px"
@@ -201,7 +201,7 @@
             :icon="highlightIcon"
             :color="quickSubtaskStar ? 'amber' : undefined"
             @click.stop="quickSubtaskStar = !quickSubtaskStar"
-            :title="quickSubtaskStar ? 'Pinned' : 'Pin'"
+            :title="quickSubtaskStar ? $text('label.pinned') : $text('action.pin')"
           />
           <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
         </div>
@@ -238,7 +238,7 @@
                     size="sm"
                     color="positive"
                     icon="check"
-                    title="Save"
+                    :title="$text('action.save')"
                     @click.stop="confirmEdit(Number(idx))"
                   />
                   <q-btn
@@ -248,7 +248,7 @@
                     size="sm"
                     icon="close"
                     color="grey-6"
-                    title="Cancel"
+                    :title="$text('action.cancel')"
                     @click.stop="cancelEdit"
                   />
                 </div>
@@ -281,7 +281,7 @@
                         size="sm"
                         color="negative"
                         icon="check"
-                        title="Confirm remove"
+                        :title="$text('action.confirm_remove')"
                         class="confirm-remove-btn"
                         @click.stop="confirmRemove(Number(idx))"
                       />
@@ -292,7 +292,7 @@
                         size="sm"
                         icon="close"
                         color="grey-5"
-                        title="Cancel"
+                        :title="$text('action.cancel')"
                         @click.stop="pendingRemoveIdx = null"
                       />
                     </template>
@@ -305,7 +305,7 @@
                         icon="edit"
                         color="grey-5"
                         class="edit-subtask-btn"
-                        title="Edit subtask"
+                        :title="$text('action.edit_subtask')"
                         @click.stop="requestEdit(Number(idx), line.raw)"
                       />
                       <q-btn
@@ -326,7 +326,7 @@
                         icon="delete"
                         color="grey-5"
                         class="remove-subtask-btn"
-                        title="Remove subtask"
+                        :title="$text('action.remove_subtask')"
                         @click.stop="requestRemove(Number(idx))"
                       />
                     </template>

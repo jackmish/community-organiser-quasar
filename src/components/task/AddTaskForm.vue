@@ -1092,7 +1092,7 @@ function onSubmit(event: Event) {
                         class="row items-center q-mb-xs"
                         style="gap: 8px; align-items: center"
                       >
-                        <div class="text-caption text-grey-7">Date</div>
+                        <div class="text-caption text-grey-7">{{ $text('label.date') }}</div>
 
                         <div class="col-auto">
                           <q-btn-toggle
@@ -1178,7 +1178,7 @@ function onSubmit(event: Event) {
                           </div>
                           <q-input
                             type="number"
-                            label="Cycle (days)"
+                            :label="$text('label.cycle_days')"
                             dense
                             outlined
                             v-model.number="repeatIntervalDays"
@@ -1451,7 +1451,7 @@ function onSubmit(event: Event) {
                         class="q-pa-sm col"
                         style="position: relative"
                       >
-                        <div class="text-caption text-grey-7 q-mb-xs">Replenish</div>
+                        <div class="text-caption text-grey-7 q-mb-xs">{{ $text('label.replenish') }}</div>
                         <q-input
                           ref="replenishInput"
                           v-model="replenishQuery"
@@ -1665,7 +1665,7 @@ function onSubmit(event: Event) {
                 <!-- Priority and Type column to the right of date/time -->
                 <div class="col-3 col-md-3 col-sm-3 col-xs-3">
                   <q-card class="q-pa-sm">
-                    <div class="text-caption text-grey-7 q-mb-xs">Task type</div>
+                    <div class="text-caption text-grey-7 q-mb-xs">{{ $text('label.task_type') }}</div>
                     <div class="column">
                       <q-btn
                         v-for="opt in typeOptions"

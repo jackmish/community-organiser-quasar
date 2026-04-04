@@ -3,9 +3,9 @@
     <q-card style="min-width: 720px; max-width: 900px">
       <q-card-section>
         <div class="row items-center" style="gap: 12px">
-          <div class="text-h6">Manage Groups</div>
+          <div class="text-h6">{{ $text('ui.manage_groups') }}</div>
           <div style="margin-left: auto; display: flex; gap: 6px; align-items: center">
-            Privilage Mode:
+            {{ $text('ui.privilege_mode') }}
             <q-btn
               dense
               :flat="privilegeMode !== 'preview'"
