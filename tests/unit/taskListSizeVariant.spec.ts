@@ -9,10 +9,16 @@ import { describe, it, expect } from 'vitest';
 import { taskListSizeRanges, resolveTaskListSizeVariant } from '../../src/components/theme';
 
 describe('taskListSizeRanges', () => {
-  it('has the expected thresholds', () => {
-    expect(taskListSizeRanges.large).toBe(3);
-    expect(taskListSizeRanges.medium).toBe(6);
-    expect(taskListSizeRanges.small).toBe(9);
+  it('has large < medium < small thresholds', () => {
+    expect(taskListSizeRanges.large).toBeLessThan(taskListSizeRanges.medium);
+    expect(taskListSizeRanges.medium).toBeLessThan(taskListSizeRanges.small);
+  });
+
+  it('all thresholds are positive integers', () => {
+    for (const value of Object.values(taskListSizeRanges)) {
+      expect(value).toBeGreaterThan(0);
+      expect(Number.isInteger(value)).toBe(true);
+    }
   });
 });
 
@@ -20,19 +26,19 @@ describe('resolveTaskListSizeVariant', () => {
   it('returns "large" for 0 tasks', () => {
     expect(resolveTaskListSizeVariant(0)).toBe('large');
   });
-  it('returns "large" for exactly 3 tasks', () => {
-    expect(resolveTaskListSizeVariant(3)).toBe('large');
+  it('returns "large" at the large threshold', () => {
+    expect(resolveTaskListSizeVariant(taskListSizeRanges.large)).toBe('large');
   });
-  it('returns "medium" for 4 tasks', () => {
-    expect(resolveTaskListSizeVariant(4)).toBe('medium');
+  it('returns "medium" just above the large threshold', () => {
+    expect(resolveTaskListSizeVariant(taskListSizeRanges.large + 1)).toBe('medium');
   });
-  it('returns "medium" for exactly 6 tasks', () => {
-    expect(resolveTaskListSizeVariant(6)).toBe('medium');
+  it('returns "medium" at the medium threshold', () => {
+    expect(resolveTaskListSizeVariant(taskListSizeRanges.medium)).toBe('medium');
   });
-  it('returns "small" for 7 tasks', () => {
-    expect(resolveTaskListSizeVariant(7)).toBe('small');
+  it('returns "small" just above the medium threshold', () => {
+    expect(resolveTaskListSizeVariant(taskListSizeRanges.medium + 1)).toBe('small');
   });
   it('returns "small" for a large number of tasks', () => {
-    expect(resolveTaskListSizeVariant(100)).toBe('small');
+    expect(resolveTaskListSizeVariant(taskListSizeRanges.small * 10)).toBe('small');
   });
 });

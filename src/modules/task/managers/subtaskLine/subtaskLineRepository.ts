@@ -124,7 +124,7 @@ export class SubtaskLineRepository {
     return lines.map((ln, lineIndex) => {
       const uid = newUids[lineIndex] ?? `line-${this.uidCounter++}`;
       let text = ln;
-      if (lineIndex === 0 && this.activeTask.value?.name) {
+      if (lineIndex === 0 && this.activeTask.value?.name && !/^\s*[-*+\d]/.test(ln)) {
         text = this.stripTitleFrom(text, this.activeTask.value.name);
       }
       const dashMatch = text.match(/^\s*-\s*(.*)$/);
