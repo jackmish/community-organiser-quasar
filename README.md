@@ -227,6 +227,8 @@ Generally there are 4 kinds of problems:
 
 4. Even with image input in VSCode, GPT or Claude can struggle with many problems with graphic/css changes, fixes. Without any suggestions they will kill styles, only GIT can revert changes correctly. It creates very fast typical base solutions... but untypical could be only fixed only by living front-end developer. In many cases instead of talking with GPT its better to set transparency of background/color by yourself - its much faster.
 
+5. As in previous point there are lot of things user is changing manually and AI is treating user changes as mistakes. Its annoying if change was done but task sometimes is about another thing - so without suspicious change, checking step by step it could be annoying cooperation. Last time i've found theme was changed but task was about auto-generation of the title. In the theme all my manual changes were reverted i'm not sure even when, but since last commit. Git tools are really helpful tu summary code changes, a specially when its not large task between commits.
+
 ---
 
 ##### Back to point 1, its really hard to find good core naming/pattern structure for application

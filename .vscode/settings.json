@@ -6,6 +6,7 @@
   "editor.codeActionsOnSave": ["source.fixAll.eslint"],
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
   "typescript.tsdk": "node_modules/typescript/lib",
+  "python.terminal.activateEnvironment": false,
   "chat.tools.terminal.autoApprove": {
     "npx vue-tsc": true,
     "npx tsc": true
