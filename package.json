@@ -17,6 +17,7 @@
     "dev": "quasar dev",
     "electron": "quasar dev -m electron",
     "android": "quasar build -m capacitor -T android",
+    "android-debug": "quasar build -m capacitor -T android --debug",
     "build": "quasar build",
     "build:electron": "quasar build -m electron",
     "postinstall": "quasar prepare"
