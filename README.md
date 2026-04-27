@@ -311,6 +311,14 @@ Claude makes many similar mistakes - long list of errors but not so long as GPT5
 
 After refactor of some content once again task list was empty - without TODO task type, missing css button borders, and still I don't think refactor was good enough, I need to schedule some AI instructions to create important tests. Still code requires some improvements, a specially i cant love this chaos of exports, but at least files are smaller now. Singletons are ok but AI definition of everything is mostly plain object without type. It usually recommends interfaces for things which would be not redefined with some replacement/other case of usage. It made short API files so much longer and inconvenient to read.
 
+### CURSOR
+
+Probably conclusion would be the same as in every YT comparison between Copilot vs Cursor. Cursor is much more efficient way to use power of online AI. Maybe i'm not talking directly about this project but it has much greater value/price ratio (as for now). Its also VSCode - some fork of it - so maybe not much difference except - lvl of AI integration inside IDE. I'm working with auto mode so even its hard to tell which model is used but it's very obvious that it just is doing its job, maybe it has separate models for each coding solution - but cant tell now. You pay more but much less time you're wasting for everything. I cant tell now much about it, and even chat isn't too much talkative when he is not asked about it - as i like.
+
+Installation of AndroidSDK and JDK and other things was long process with Copilot even if it was installed at second coding machine. With Cursor it was much smoother process.
+
+There are default things which are not convenient, but they are not totally bad - have some other advantages.
+
 --- OLD NOTES:
 
 Why this project didn't go as smoothly as the Laravel project:
