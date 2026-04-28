@@ -489,9 +489,11 @@ function logIfUnrecognized(item: any) {
 }
 
 @media (max-width: 767px) {
+  .task-list,
   .task-list.with-preview {
-    /* Keep stable card sizing on mobile when opening/closing preview/form. */
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
 
