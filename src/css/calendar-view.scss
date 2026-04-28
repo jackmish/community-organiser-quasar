@@ -259,15 +259,15 @@ $sep-color: $primary;
 /* ── Mobile-only: horizontal scroll for the calendar grid ─────────────────────
    Simple overflow-x scroll — avoids scaleY tricks that break bg transparency.
    --------------------------------------------------------------------------- */
-.calendar-scroll-flip {
-  /* no effect on desktop */
-}
 
 @media (max-width: 767px) {
   .calendar-scroll-flip {
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    touch-action: auto;
   }
   .calendar-scroll-flip .calendar-table-wrapper {
     min-width: 560px;
