@@ -204,13 +204,21 @@
     width: 100vw;
     bottom: 0;
     max-height: calc(100vh - 56px);
-    overflow-y: auto;
+    overflow: visible;
     padding-top: 36px;
   }
   .fixed-right-panel .fixed-content {
     width: 100%;
+    max-height: none;
     overflow: visible !important;
     box-sizing: border-box;
+  }
+  .fixed-right-panel .fixed-content > .task-preview,
+  .fixed-right-panel .fixed-content > .floating-preview-wrapper {
+    max-height: calc(100vh - 72px);
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+    -webkit-overflow-scrolling: touch;
   }
   .fixed-right-panel .q-card {
     overflow: visible !important;
@@ -288,6 +296,23 @@
   border-radius: 8px;
   border-bottom-left-radius: 0px;
   border-bottom-right-radius: 0px;
+}
+
+.fixed-right-panel .fixed-content > .panel-close-btn {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  transform: translateY(-100%);
+  margin: 0 !important;
+  z-index: 2201;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  color: #fff !important;
+  background: #356 !important;
+  border-radius: 8px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 /* Ensure the inner wrapper and forms provide full width/height in the fixed panel */

@@ -144,12 +144,22 @@
         :style="previewFloating ? computePreviewStyle(previewRect) : {}"
       >
         <q-btn
-          v-if="!panelHidden"
+          v-if="!panelHidden && !$q.screen.lt.md"
           unelevated
           color="dark"
           class="panel-toggle-btn"
           :label="$text('ui.hide')"
           icon="keyboard_arrow_down"
+          @click="panelHidden = true"
+        />
+        <q-btn
+          v-if="!panelHidden && $q.screen.lt.md"
+          round
+          dense
+          unelevated
+          color="dark"
+          class="panel-close-btn"
+          icon="close"
           @click="panelHidden = true"
         />
 
