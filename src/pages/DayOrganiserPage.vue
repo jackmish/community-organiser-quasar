@@ -1213,6 +1213,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 767px) {
+  .list-add-btn {
+    display: none !important;
+  }
+
   .task-header-row {
     justify-content: space-between;
     flex-wrap: nowrap;
