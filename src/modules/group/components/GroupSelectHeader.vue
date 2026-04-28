@@ -19,7 +19,7 @@
           justify-content: center;
         "
       >
-        <div style="min-width: 220px">
+        <div class="group-select-holder">
           <q-btn
             unelevated
             dense
@@ -58,7 +58,7 @@
                   white-space: nowrap;
                 "
               >
-                {{ selectedOption?.label ?? $text("ui.all_groups") }}
+                {{ displayedSelectedLabel }}
               </span>
             </div>
             <q-icon
@@ -166,7 +166,7 @@
       </div>
     </template>
     <template v-else>
-      <div style="min-width: 220px; height: 38px; display: flex; align-items: center">
+      <div class="group-select-holder group-select-holder--skeleton">
         <q-skeleton type="rect" style="width: 100%; height: 100%" />
       </div>
     </template>
@@ -175,10 +175,13 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useQuasar } from "quasar";
 import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
+
+const $q = useQuasar();
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";
@@ -279,6 +282,12 @@ const selectedOption = computed(() => {
   } catch (e) {
     return null;
   }
+});
+
+const displayedSelectedLabel = computed(() => {
+  const label = String(selectedOption.value?.label ?? $text("ui.all_groups"));
+  if (!$q.screen.lt.md) return label;
+  return label.slice(0, 4);
 });
 
 //converting api tree into q-tree
@@ -426,4 +435,30 @@ function isNodeShortcut(node: any) {
 
 </script>
 
-<style scoped></style>
+<style scoped>
+.group-select-holder {
+  min-width: 220px;
+}
+
+.group-select-holder--skeleton {
+  height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .group-select-holder {
+    min-width: 96px;
+  }
+
+  :deep(.group-select--header) {
+    min-height: 28px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  :deep(.group-select--header .q-btn__content) {
+    gap: 4px !important;
+  }
+}
+</style>

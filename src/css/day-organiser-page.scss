@@ -367,6 +367,11 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
 
   .task-list-card {
     border-radius: 0 !important;
+
+    > .q-card__section:first-child {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
   }
 
   .mobile-panel-backdrop {
@@ -388,8 +393,8 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     padding-top: 36px;
-    padding-left: 6px;
-    padding-right: 6px;
+    padding-left: 0;
+    padding-right: 0;
     box-sizing: border-box;
 
     .fixed-content {
@@ -403,17 +408,28 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
         overflow-y: auto !important;
         overflow-x: visible !important;
         -webkit-overflow-scrolling: touch;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: 0 !important;
       }
 
       > .floating-preview-wrapper {
         max-height: none !important;
         overflow: visible !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
 
         > .add-task-card > .q-card__section {
           max-height: calc(100vh - 72px);
           overflow-y: auto !important;
           overflow-x: visible !important;
           -webkit-overflow-scrolling: touch;
+        }
+
+        > .add-task-card {
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+          border-radius: 0 !important;
         }
       }
 
@@ -437,5 +453,18 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
     bottom: unset !important;
     width: 100% !important;
     transform: none !important;
+  }
+
+  .task-list-header {
+    padding: 6px 8px;
+
+    .group-select-wrapper {
+      gap: 4px;
+
+      .q-field {
+        min-width: 0;
+        max-width: 52vw;
+      }
+    }
   }
 }

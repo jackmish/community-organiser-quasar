@@ -1214,15 +1214,31 @@ onMounted(async () => {
 
 @media (max-width: 767px) {
   .task-header-row {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
   }
 
-  .task-header-date-nav,
-  .task-header-group-select {
+  .task-header-date-nav {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-wrap: nowrap;
     justify-content: center;
-    width: 100%;
+    gap: 2px !important;
+
+    .text-weight-bold {
+      font-size: 0.92rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+  }
+
+  .task-header-group-select {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    width: auto;
   }
 }
 </style>
