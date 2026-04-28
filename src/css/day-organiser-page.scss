@@ -1,4 +1,11 @@
-/* Styles extracted from DayOrganiserPage.vue */
+/* Styles for DayOrganiserPage */
+
+$primary: #1976d2;
+$primary-dark: #0d47a1;
+$panel-btn: #356;
+$panel-show: #579;
+$hidden-bg: #f2f2f2;
+$mobile-overlay: rgba(11, 111, 222, 0.7);
 
 .selected-task {
   border: 2px solid var(--q-primary, #1976d2);
@@ -8,18 +15,20 @@
 }
 
 .task-card {
-  // min-width: 280px;
-  // max-width: 360px;
   flex: 0 0 320px;
 }
 
 .task-list-card {
-  background-color: #0d47a1;
+  background-color: $primary-dark;
+
+  .task-list-header .date-black {
+    color: #bbdefb !important;
+  }
 }
 
 .task-list-header {
-  color: #ffffff;
-  background-color: #1976d2;
+  color: #fff;
+  background-color: $primary;
   padding: 8px 12px;
   border-radius: 8px;
   display: flex;
@@ -29,95 +38,76 @@
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
 
-.task-list-header .group-select-wrapper {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 100%;
-  margin-right: 0;
-}
+  > .row.items-center.justify-between,
+  .row.items-center.justify-between {
+    width: 100%;
+    margin-top: 0 !important;
+    align-items: center !important;
+  }
 
-.task-list-header .group-select-wrapper .q-field {
-  min-width: 220px;
-  max-width: 320px;
-  height: 36px !important;
-  display: flex !important;
-  align-items: center !important;
-}
+  .q-btn,
+  .q-btn .q-icon {
+    color: #fff !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
 
-.task-list-header .row.items-center.justify-between {
-  margin-top: 0 !important;
-  align-items: center !important;
-  width: 100%;
-}
+  .text-weight-bold {
+    color: #fff;
+  }
 
-.task-list-header .group-select-wrapper .q-field,
-.task-list-header .group-select-wrapper .q-btn {
-  margin-top: 0 !important;
-  align-self: center !important;
-}
-
-.task-list-header .group-select-wrapper .q-field__control {
-  display: flex !important;
-  align-items: center !important;
-  height: 100% !important;
-  padding-top: 0 !important;
-
-  .hidden-children-list__list {
+  .group-select-wrapper {
+    margin-left: auto;
+    margin-right: 0;
     display: flex;
-    flex-wrap: wrap;
-    /* use gap for spacing between summaries (row-gap column-gap) */
-    gap: 16px 20px;
-    padding: 0;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+
+    .q-field {
+      min-width: 220px;
+      max-width: 320px;
+      height: 36px !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+
+    .q-field,
+    .q-btn {
+      margin-top: 0 !important;
+      align-self: center !important;
+    }
+
+    .q-field__control {
+      display: flex !important;
+      align-items: center !important;
+      height: 100% !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    .q-field__label {
+      display: none !important;
+    }
+
+    input,
+    textarea,
+    .q-select__input {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
   }
-
-  .hidden-children-list .task-card {
-    // min-width: 280px;
-    // max-width: 360px;
-    flex: 0 0 320px;
-  }
-  padding-bottom: 0 !important;
-}
-
-.task-list-header > .row.items-center.justify-between {
-  width: 100%;
-}
-
-.task-list-header .group-select-wrapper .q-field__label {
-  display: none !important;
-}
-
-.task-list-header .group-select-wrapper input,
-.task-list-header .group-select-wrapper textarea,
-.task-list-header .group-select-wrapper .q-select__input {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-.task-list-header .q-btn,
-.task-list-header .q-btn .q-icon {
-  color: #ffffff !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.task-list-card .task-list-header .date-black {
-  color: #bbdefb !important;
-}
-
-.task-list-header .text-weight-bold {
-  color: #ffffff;
 }
 
 .time-diff-white {
-  color: #ffffff !important;
+  color: #fff !important;
 }
+
 .time-diff-lightblue {
   color: #bbdefb !important;
 }
+
 .time-diff-default {
   color: rgba(255, 255, 255, 0.85) !important;
 }
@@ -128,6 +118,7 @@
   gap: 8px;
   margin-top: 8px;
 }
+
 .replenish-item {
   cursor: pointer;
   border-radius: 6px;
@@ -137,10 +128,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 }
 
-.task-card,
-.replenish-item {
+.task-card {
   position: relative;
 }
 
@@ -172,9 +163,11 @@
 .tasks-row {
   align-items: flex-start;
 }
+
 .tasks-column {
   flex: 1 1 0;
 }
+
 .replenish-column {
   flex: 0 0 auto;
   width: auto;
@@ -182,22 +175,208 @@
   min-width: 220px;
 }
 
+.fixed-right-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 999999999999;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: flex-end;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  max-height: calc(100vh - 32px);
+
+  &.panel-hidden {
+    transform: translateY(calc(100% + 24px));
+  }
+
+  > .row {
+    margin-bottom: -4px;
+  }
+
+  .fixed-content {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: visible;
+    max-height: calc(100vh - 120px);
+    -webkit-overflow-scrolling: touch;
+    z-index: 999999;
+
+    &:not(.floating) {
+      position: relative;
+    }
+
+    > .panel-toggle-btn,
+    > .panel-close-btn {
+      position: absolute;
+      top: 0;
+      right: 8px;
+      transform: translateY(-100%);
+      margin: 0 !important;
+      color: #fff !important;
+      background: $panel-btn !important;
+      border-radius: 8px;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    > .panel-toggle-btn {
+      z-index: 2200;
+      padding: 10px 14px;
+      font-weight: 600;
+    }
+
+    > .panel-close-btn {
+      z-index: 2201;
+      width: 34px;
+      height: 34px;
+      min-height: 34px;
+    }
+  }
+
+  .q-card {
+    overflow: visible !important;
+  }
+}
+
+.floating-preview-wrapper {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible !important;
+}
+
+.panel-show-btn {
+  position: fixed;
+  right: 50px;
+  bottom: 0;
+  z-index: 1800;
+  padding: 10px 16px;
+  background: $panel-show !important;
+  color: #fff !important;
+  border-radius: 10px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  font-weight: 600;
+}
+
+.floating-add-btn {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 9999999999 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.hidden-children-list__list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 16px 20px !important;
+  align-items: center !important;
+
+  .task-card.hidden-group-item,
+  .task-card.hidden-group-item.q-item,
+  .task-card.hidden-group-item.q-item--clickable {
+    background-color: $hidden-bg !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    padding: 0 !important;
+    border-top-left-radius: 999px !important;
+    border-bottom-left-radius: 999px !important;
+    border-top-right-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+  }
+
+  > .grouped-item,
+  > .grouped-item.card,
+  > .grouped-item.card.q-pa-sm,
+  > .q-item.task-card.hidden-group-item,
+  > .task-card.hidden-group-item {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .grouped-item[class*='q-pa-'],
+  .grouped-item[class*='q-pa'] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .task-card.hidden-group-item {
+    .q-item__section,
+    .q-item__label,
+    .q-item__content {
+      background: transparent !important;
+    }
+  }
+
+  .hidden-group-item .q-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+}
+
+.task-card.hidden-group-item,
+.hidden-group-item,
+.hidden-group-item.q-item,
+.hidden-group-item.q-item--clickable,
+.task-card.hidden-group-item.q-pa-sm,
+.task-card.hidden-group-item.q-link,
+.q-item.task-card.hidden-group-item {
+  background-color: $hidden-bg !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border-top-left-radius: 999px !important;
+  border-bottom-left-radius: 999px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+.hidden-group-item {
+  .q-item__section,
+  .q-item__label,
+  .q-item__content {
+    background: transparent !important;
+  }
+}
+
 @media (max-width: 767px) {
   .replenish-column {
     min-width: 0;
   }
 
-  /* Full-width page: remove horizontal padding so task card reaches screen edges */
   .q-page {
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 0 !important;
   }
+
   .task-list-card {
     border-radius: 0 !important;
   }
 
-  /* Right panel: full-width, anchored to bottom, scrollable */
+  .mobile-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: $mobile-overlay;
+    z-index: 1200;
+    pointer-events: auto;
+  }
+
   .fixed-right-panel {
     z-index: 1201;
     right: 0;
@@ -212,42 +391,44 @@
     padding-left: 6px;
     padding-right: 6px;
     box-sizing: border-box;
-  }
-  .mobile-panel-backdrop {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(11, 111, 222, 0.7);
-    z-index: 1200;
-    pointer-events: auto;
-  }
-  .fixed-right-panel .fixed-content {
-    width: 100%;
-    max-height: none;
-    overflow: visible !important;
-    box-sizing: border-box;
-  }
-  .fixed-right-panel .fixed-content > .task-preview {
-    max-height: calc(100vh - 72px);
-    overflow-y: auto !important;
-    overflow-x: visible !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  .fixed-right-panel .fixed-content > .floating-preview-wrapper {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  .fixed-right-panel .fixed-content > .floating-preview-wrapper > .add-task-card > .q-card__section {
-    max-height: calc(100vh - 72px);
-    overflow-y: auto !important;
-    overflow-x: visible !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  .fixed-right-panel .q-card {
-    overflow: visible !important;
+
+    .fixed-content {
+      width: 100%;
+      max-height: none;
+      overflow: visible !important;
+      box-sizing: border-box;
+
+      > .task-preview {
+        max-height: calc(100vh - 72px);
+        overflow-y: auto !important;
+        overflow-x: visible !important;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      > .floating-preview-wrapper {
+        max-height: none !important;
+        overflow: visible !important;
+
+        > .add-task-card > .q-card__section {
+          max-height: calc(100vh - 72px);
+          overflow-y: auto !important;
+          overflow-x: visible !important;
+          -webkit-overflow-scrolling: touch;
+        }
+      }
+
+      &.floating {
+        position: relative !important;
+        top: unset !important;
+        left: unset !important;
+        right: unset !important;
+        bottom: unset !important;
+        width: 100% !important;
+        transform: none !important;
+      }
+    }
   }
 
-  /* Disable floating positioning: forms and preview always render inline in the panel */
-  .fixed-right-panel .fixed-content.floating,
   .floating-preview-wrapper.floating {
     position: relative !important;
     top: unset !important;
@@ -258,218 +439,3 @@
     transform: none !important;
   }
 }
-
-/* Calendar styles moved into CalendarView.vue to avoid duplication */
-
-.fixed-right-panel {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 999999999999;
-  display: flex;
-  flex-direction: column;
-  gap: 0px;
-  align-items: flex-end;
-  border-bottom-right-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  max-height: calc(100vh - 32px);
-}
-.fixed-right-panel .fixed-content {
-  /* allow content to size naturally; do not enforce a min-width here */
-  /* Base layout for the content; do NOT force positioning here so inline
-     `position: fixed` applied when floating can take effect. */
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  overflow: visible;
-  max-height: calc(100vh - 120px);
-  -webkit-overflow-scrolling: touch;
-  z-index: 999999;
-}
-
-/* Establish a positioned ancestor only when the content is NOT floating. */
-.fixed-right-panel .fixed-content:not(.floating) {
-  position: relative;
-}
-
-/* Note: positioning for `.panel-toggle-btn` is handled relative to
-   `.fixed-content` to avoid forcing absolute layout during floating.
-   Avoid global absolute fallback which broke floating placement. */
-
-/* When the toggle button is placed inside .fixed-content, position it relative
-   to that container so it appears attached to the panel even when the panel is
-   not floated. This selector overrides the broader rule above because
-   .fixed-content is now positioned. */
-.fixed-right-panel .fixed-content > .panel-toggle-btn {
-  /* Anchor the toggle to the top-right of .fixed-content and position it
-     slightly above the form so it appears 'above' the panel's top edge. */
-  position: absolute;
-  top: 0;
-  transform: translateY(-100%);
-  right: 8px;
-  margin: 0 !important;
-  z-index: 2200;
-  /* Restore original visual appearance without altering dimensions */
-  padding: 10px 14px;
-  font-weight: 600;
-  color: #fff !important;
-  background: #356 !important;
-  border-radius: 8px;
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
-}
-
-.fixed-right-panel .fixed-content > .panel-close-btn {
-  position: absolute;
-  top: 0;
-  right: 8px;
-  transform: translateY(-100%);
-  margin: 0 !important;
-  z-index: 2201;
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
-  color: #fff !important;
-  background: #356 !important;
-  border-radius: 8px;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-/* Ensure the inner wrapper and forms provide full width/height in the fixed panel */
-.floating-preview-wrapper {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: visible !important;
-}
-/* Quasar q-card sets overflow:hidden by default — override so the group bar
-   (position:absolute; top:-26px) and other overflowing elements remain visible */
-.fixed-right-panel .q-card {
-  overflow: visible !important;
-}
-
-.panel-show-btn {
-  position: fixed;
-  right: 50px;
-  bottom: 0px;
-  z-index: 1800;
-  padding: 10px 16px;
-  background: #579 !important;
-  color: #fff !important;
-  border-radius: 10px;
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
-  font-weight: 600;
-}
-
-.fixed-right-panel.panel-hidden {
-  transform: translateY(calc(100% + 24px));
-}
-
-.fixed-right-panel > .row {
-  margin-bottom: -4px;
-}
-.floating-add-btn {
-  position: fixed;
-  right: 0px;
-  bottom: 0px;
-  z-index: 9999999999 !important;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  border-bottom-right-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-}
-
-/* Ensure hidden-group summary items (q-item wrappers) keep a visible background
-   even when Quasar applies its own q-item styles. Target multiple class
-   combinations to be robust against class ordering. */
-.hidden-children-list__list .task-card.hidden-group-item,
-.hidden-children-list__list .task-card.hidden-group-item.q-item,
-.hidden-children-list__list .task-card.hidden-group-item.q-item--clickable {
-  /* light gray background, no extra padding; left side pill-shaped */
-  background-color: #f2f2f2 !important;
-  background-image: none !important;
-  border: none !important;
-  padding: 0 !important;
-  border-top-left-radius: 999px !important;
-  border-bottom-left-radius: 999px !important;
-  border-top-right-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
-  box-shadow: none !important;
-  color: inherit !important;
-}
-
-/* Top-level hidden children list: ensure it's a flex container so `gap` works
-   reliably, and remove horizontal padding from child summary items so gaps
-   reflect spacing between items rather than internal padding. */
-.hidden-children-list__list {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 16px 20px !important; /* row-gap then column-gap */
-  align-items: center !important;
-}
-
-.hidden-children-list__list > .grouped-item,
-.hidden-children-list__list > .grouped-item.card,
-.hidden-children-list__list > .grouped-item.card.q-pa-sm,
-.hidden-children-list__list > .q-item.task-card.hidden-group-item,
-.hidden-children-list__list > .task-card.hidden-group-item {
-  /* Remove Quasar padding utilities which can be present in various class orders */
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* Catch grouped items that include any q-pa-* utility class (e.g. q-pa-sm) */
-.hidden-children-list__list .grouped-item[class*='q-pa-'],
-.hidden-children-list__list .grouped-item[class*='q-pa'] {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* Make sure inner q-item sections don't override the wrapper background */
-.hidden-children-list__list .task-card.hidden-group-item .q-item__section,
-.hidden-children-list__list .task-card.hidden-group-item .q-item__label,
-.hidden-children-list__list .task-card.hidden-group-item .q-item__content {
-  background: transparent !important;
-}
-
-/* Enforce avatar sizing for hidden-group summary */
-.hidden-children-list__list .hidden-group-item .q-avatar {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
-}
-
-/* Broad fallback: ensure hidden-group items show background when placed
-   outside of `.hidden-children-list__list`. This covers various Quasar
-   class combinations applied to q-item elements. */
-.task-card.hidden-group-item,
-.hidden-group-item,
-.hidden-group-item.q-item,
-.hidden-group-item.q-item--clickable,
-.task-card.hidden-group-item.q-pa-sm,
-.task-card.hidden-group-item.q-link,
-.q-item.task-card.hidden-group-item {
-  background-color: #f2f2f2 !important;
-  background-image: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  border-top-left-radius: 999px !important;
-  border-bottom-left-radius: 999px !important;
-  border-top-right-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
-  color: inherit !important;
-}
-
-/* Ensure internal q-item sections don't paint over the wrapper background */
-.hidden-group-item .q-item__section,
-.hidden-group-item .q-item__label,
-.hidden-group-item .q-item__content {
-  background: transparent !important;
-}
-
-/* spacing is handled by the parent `gap` on .hidden-children-list__list */
