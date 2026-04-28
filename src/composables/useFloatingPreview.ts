@@ -174,8 +174,13 @@ export function useFloatingPreview(opts?: {
     } catch (e) {
       void e;
     }
-    previewRect.value = rect ?? null;
-    previewFloating.value = !!rect;
+    // Mobile-only guard: keep floating fully disabled in state (not only via CSS),
+    // so dependent classes/conditions do not flip unexpectedly on small screens.
+    const isMobileViewport = (window.innerWidth || document.documentElement.clientWidth) <= 767;
+    const effectiveRect = isMobileViewport ? null : rect ?? null;
+
+    previewRect.value = effectiveRect;
+    previewFloating.value = !!effectiveRect;
     preferBelow.value = !!options?.forceBelow;
     if (!previewFloating.value) preferBelow.value = false;
   }

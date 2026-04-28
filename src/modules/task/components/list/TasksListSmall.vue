@@ -488,6 +488,13 @@ function logIfUnrecognized(item: any) {
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) !important;
 }
 
+@media (max-width: 767px) {
+  .task-list.with-preview {
+    /* Keep stable card sizing on mobile when opening/closing preview/form. */
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  }
+}
+
 /* bottom-right add button */
 .add-task-btn {
   position: absolute;
