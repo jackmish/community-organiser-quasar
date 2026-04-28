@@ -293,7 +293,7 @@ const itemStyle = (task: any) => {
   return {
     backgroundColor: bg,
     color,
-    borderLeft: `4px solid ${typeColor}`,
+    // borderLeft: `4px solid ${typeColor}`,
     boxShadow: `0 10px 30px ${shadow}`,
   } as Record<string, string>;
 };

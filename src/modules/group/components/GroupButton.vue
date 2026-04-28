@@ -103,10 +103,19 @@ const round = props.round ?? false;
   border-radius: 6px;
   padding: 2px 6px !important;
   font-size: 0.88rem;
-  min-height: 24px;
+  min-height: 20px;
   display: inline-flex;
   align-items: center;
+  @media screen and (max-width: 767px) {
+    max-height: 24px;
+    font-size: 0.78rem;
+    padding: 0px 6px !important;
+  }
 }
+.group-button.q-focus-helper{
+    display: none !important;
+
+  }
 .label-text {
   max-width: 160px;
   overflow: hidden;

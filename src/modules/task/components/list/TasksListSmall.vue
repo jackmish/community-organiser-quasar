@@ -518,6 +518,11 @@ function logIfUnrecognized(item: any) {
   left: 8px;
   z-index: 1;
   box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.4);
+  background-color: none !important;
+  border-radius: 8px;
+  @media screen and (max-width: 767px) {
+    top: -16px;
+  }
 }
 .group-divider {
   position: absolute;
