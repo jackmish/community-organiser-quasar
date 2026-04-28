@@ -281,6 +281,9 @@ export function useFloatingPreview(opts?: {
 
   function onDocClick(e: MouseEvent) {
     try {
+      // Outside-click hiding is only relevant while a floating panel is active.
+      // On mobile (floating disabled) this must not hide the fixed panel.
+      if (!previewFloating.value) return;
       try {
         if (focusInsideWrapper.value) return;
       } catch (err) {

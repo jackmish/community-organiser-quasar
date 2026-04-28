@@ -319,6 +319,8 @@ Installation of AndroidSDK and JDK and other things was long process with Copilo
 
 There are default things which are not convenient, but they are not totally bad - have some other advantages.
 
+Its doing similar mistakes with CSS/Styles, probably not a best choice. Its maybe difficult to check how expansive it is - how it uses its limits, a specially with automatic mode and different project sizes. There is some summary of usage inside Cursor website dashboard. When result is accurate - ok, but if it fails? Today's record is: 1,1 mln tokens 0,32 USD in single prompt. Minimal value was many times 0.03 USD below about 80k tokens. After paying for pro version prompts are in "included" instead of generating some currency value.
+
 --- OLD NOTES:
 
 Why this project didn't go as smoothly as the Laravel project:

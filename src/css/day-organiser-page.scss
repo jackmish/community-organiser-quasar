@@ -199,13 +199,26 @@
 
   /* Right panel: full-width, anchored to bottom, scrollable */
   .fixed-right-panel {
+    z-index: 1201;
     right: 0;
     left: 0;
     width: 100vw;
     bottom: 0;
     max-height: calc(100vh - 56px);
     overflow: visible;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
     padding-top: 36px;
+    padding-left: 6px;
+    padding-right: 6px;
+    box-sizing: border-box;
+  }
+  .mobile-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(11, 111, 222, 0.7);
+    z-index: 1200;
+    pointer-events: auto;
   }
   .fixed-right-panel .fixed-content {
     width: 100%;

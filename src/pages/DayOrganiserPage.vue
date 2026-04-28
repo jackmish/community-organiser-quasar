@@ -137,6 +137,11 @@
       @import="handleImportFile"
     />
 
+    <div
+      v-if="!panelHidden && $q.screen.lt.md"
+      class="mobile-panel-backdrop"
+      @click="panelHidden = true"
+    ></div>
     <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
       <div
         class="fixed-content"
