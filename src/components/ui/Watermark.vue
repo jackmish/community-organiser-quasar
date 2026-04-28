@@ -1,17 +1,8 @@
 <template>
-  <div
-    v-if="resolveLabel()"
-    ref="rootEl"
-    :class="['co21-watermark', `co21-watermark--${resolveSize()}`]"
-    :title="resolveLabel()"
-    :style="{ justifyContent: resolveJustify() }"
-  >
-    <div
-      v-if="resolveBackgroundStyle()"
-      ref="bgEl"
-      class="co21-watermark-bg"
-      :style="bgFinalStyle || resolveBackgroundStyle()"
-    ></div>
+  <div v-if="resolveLabel()" ref="rootEl" :class="['co21-watermark', `co21-watermark--${resolveSize()}`]"
+    :title="resolveLabel()" :style="{ justifyContent: resolveJustify() }">
+    <div v-if="resolveBackgroundStyle()" ref="bgEl" class="co21-watermark-bg"
+      :style="bgFinalStyle || resolveBackgroundStyle()"></div>
     <div ref="textEl" class="co21-watermark-text" :style="{ color: resolveTextColor() }">
       {{ resolveLabel() }}
     </div>
@@ -169,12 +160,15 @@ watch(
 <style scoped>
 .co21-watermark {
   position: absolute;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  inset: 0;
+  /* top:0; right:0; bottom:0; left:0 */
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  pointer-events: none; /* don't block interaction */
-  z-index: 999999999; /* top layer but below modal overlays if needed */
+  pointer-events: none;
+  /* don't block interaction */
+  z-index: 999999999;
+  /* top layer but below modal overlays if needed */
   top: 0;
   /* z-index: 0; */
 }
@@ -185,44 +179,65 @@ watch(
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
-  font-size: 95px; /* subtle, scales with viewport */
+  font-size: 95px;
+  /* subtle, scales with viewport */
   line-height: 1;
   user-select: none;
   /* transform: rotate(0deg); */
   letter-spacing: 0.12em;
   text-align: center;
-  mix-blend-mode: multiply; /* subtly darken background where text overlaps */
+  mix-blend-mode: multiply;
+  /* subtly darken background where text overlaps */
 }
+
 .co21-watermark-text {
   position: relative;
   padding: 6px 10px;
 }
+
 .co21-watermark-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: 6px;
-  mix-blend-mode: normal; /* ensure background uses default blending */
+  mix-blend-mode: normal;
+  /* ensure background uses default blending */
 }
 
 /* Size variants */
 .co21-watermark--small .co21-watermark-text {
   font-size: 16px;
+
+  @media (max-width: 767px) {
+    font-size: 12px;
+
+  }
 }
+
+@media (max-width: 767px) {
+  .co21-watermark--small .co21-watermark-bg {
+    opacity: 0.5;
+  }
+}
+
 .co21-watermark--medium .co21-watermark-text {
   font-size: 40px;
 }
+
 .co21-watermark--large {
   .co21-watermark-text {
     font-size: 75px;
   }
+
   @media (max-width: 1200px) {
     display: none !important;
   }
 }
+
 .co21-watermark {
   overflow: visible;
 }
+
 .co21-watermark-text {
   z-index: 1;
 }

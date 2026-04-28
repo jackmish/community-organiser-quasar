@@ -10,5 +10,8 @@
   "chat.tools.terminal.autoApprove": {
     "npx vue-tsc": true,
     "npx tsc": true
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "Vue.volar"
   }
 }

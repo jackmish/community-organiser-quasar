@@ -245,7 +245,7 @@ $sep-color: $primary;
   opacity: 0.06;
   right: 10px;
   position: absolute;
-  top: 4px;
+  // top: 4px;
 }
 
 .month-start {
@@ -253,6 +253,10 @@ $sep-color: $primary;
   top: -32px;
   .co21-watermark-text {
     font-size: 25px !important;
+  }
+  @media (max-width: 767px) {
+    top: -20px;
+    left: -4px;
   }
 }
 
@@ -272,6 +276,9 @@ $sep-color: $primary;
   .calendar-scroll-flip .calendar-table-wrapper {
     min-width: 560px;
     display: block;
+  }
+  .calendar-cell {
+    padding: 5px 0px;
   }
 }
 

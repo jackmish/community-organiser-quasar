@@ -88,7 +88,7 @@ const btnStyle = computed(() => {
     const border = props.group?.color
       ? darkenHex(props.group.color, 0.35)
       : "transparent";
-    return `background-color: ${base} !important; border:1px solid ${border}; padding: 2px 8px; min-height: 24px; display: inline-flex; align-items: center; gap: 8px; background-image: none !important; box-shadow: none !important;`;
+    return `background-color: ${base} !important; border:1px solid ${border}; padding: 2px 8px; min-height: 24px; display: inline-flex; align-items: center;  background-image: none !important; box-shadow: none !important;`;
   } catch (e) {
     return "";
   }
