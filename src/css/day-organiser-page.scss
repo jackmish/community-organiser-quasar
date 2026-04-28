@@ -226,8 +226,17 @@
     overflow: visible !important;
     box-sizing: border-box;
   }
-  .fixed-right-panel .fixed-content > .task-preview,
+  .fixed-right-panel .fixed-content > .task-preview {
+    max-height: calc(100vh - 72px);
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+    -webkit-overflow-scrolling: touch;
+  }
   .fixed-right-panel .fixed-content > .floating-preview-wrapper {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .fixed-right-panel .fixed-content > .floating-preview-wrapper > .add-task-card > .q-card__section {
     max-height: calc(100vh - 72px);
     overflow-y: auto !important;
     overflow-x: visible !important;
@@ -333,14 +342,12 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
+  overflow: visible !important;
 }
 /* Quasar q-card sets overflow:hidden by default — override so the group bar
    (position:absolute; top:-26px) and other overflowing elements remain visible */
 .fixed-right-panel .q-card {
   overflow: visible !important;
-}
-.floating-preview-wrapper.floating {
-  /* when floating, inline fixed styles are applied via computePreviewStyle */
 }
 
 .panel-show-btn {
@@ -360,8 +367,7 @@
 .fixed-right-panel.panel-hidden {
   transform: translateY(calc(100% + 24px));
 }
-.fixed-right-panel {
-}
+
 .fixed-right-panel > .row {
   margin-bottom: -4px;
 }
