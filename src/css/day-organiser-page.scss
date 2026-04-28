@@ -46,8 +46,8 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
     align-items: center !important;
   }
 
-  .q-btn,
-  .q-btn .q-icon {
+  .q-btn:not(.group-select--header),
+  .q-btn:not(.group-select--header) .q-icon {
     color: #fff !important;
     background: transparent !important;
     box-shadow: none !important;

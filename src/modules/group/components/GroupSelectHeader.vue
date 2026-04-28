@@ -1,74 +1,54 @@
 <template>
-  <div
-    style="
+  <div style="
       display: flex;
       align-items: center;
       gap: 8px;
       width: 100%;
       justify-content: flex-end;
-    "
-  >
+    ">
     <template v-if="optionsReady">
       <!-- Middle: select + parent -->
-      <div
-        style="
+      <div style="
           display: flex;
           align-items: center;
           gap: 8px;
           flex: 1;
           justify-content: center;
-        "
-      >
+        ">
         <div class="group-select-holder">
-          <q-btn
-            unelevated
-            dense
-            outline
-            class="group-select--header"
-            @click.stop.prevent="menuOpen = !menuOpen"
+          <q-btn unelevated dense class="group-select--header" @click.stop.prevent="menuOpen = !menuOpen"
             :style="{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              color: getBtnTextColor(selectedOption) || 'inherit',
-              border: '1px solid ' + (getBtnBorderColor(selectedOption) || 'transparent'),
+              color: getBtnBgColor(selectedOption) || 'inherit',
+              backgroundColor: getBtnTextColor(selectedOption) || 'transparent',
+              border: '2px solid ' + (getBtnTextColor(selectedOption) || 'transparent'),
               boxShadow: 'none !important',
-            }"
-          >
+            }">
             <div style="display: flex; align-items: center; gap: 8px; flex: 1">
-              <q-icon
-                :name="selectedOption?.icon || 'folder_open'"
-                :style="
-                  'color: ' +
-                  (getBtnTextColor(selectedOption) || 'inherit') +
-                  ' !important; fill: ' +
-                  (getBtnTextColor(selectedOption) || 'inherit') +
-                  ' !important; stroke: ' +
-                  (getBtnTextColor(selectedOption) || 'inherit') +
-                  ' !important;'
-                "
-              />
-              <span
-                :style="{ color: getBtnTextColor(selectedOption) || 'inherit' }"
-                style="
+              <q-icon :name="selectedOption?.icon || 'folder_open'" :style="'color: ' +
+                (getBtnBgColor(selectedOption) || 'inherit') +
+                ' !important; fill: ' +
+                (getBtnBgColor(selectedOption) || 'inherit') +
+                ' !important; stroke: ' +
+                (getBtnBgColor(selectedOption) || 'inherit') +
+                ' !important;'
+                " />
+              <span :style="{ color: getBtnBgColor(selectedOption) || 'inherit' }" style="
                   max-width: 140px;
                   overflow: hidden;
                   text-overflow: ellipsis;
                   white-space: nowrap;
-                "
-              >
+                ">
                 {{ displayedSelectedLabel }}
               </span>
             </div>
-            <q-icon
-              name="arrow_drop_down"
-              :style="
-                'color: ' +
-                (getBtnTextColor(selectedOption) || 'inherit') +
-                ' !important;'
-              "
-            />
+            <q-icon name="arrow_drop_down" :style="'color: ' +
+              (getBtnBgColor(selectedOption) || 'inherit') +
+              ' !important;'
+              " />
           </q-btn>
 
           <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
@@ -84,39 +64,20 @@
             <q-separator />
 
             <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
-              <q-tree
-                :nodes="treeNodes"
-                node-key="id"
-                default-expand-all
-                :selected="selectedKeyArray"
-                @update:selected="onTreeSelect"
-              >
+              <q-tree :nodes="treeNodes" node-key="id" default-expand-all :selected="selectedKeyArray"
+                @update:selected="onTreeSelect">
                 <template #default-header="prop">
                   <div class="row items-center full-width">
-                    <q-icon
-                      :name="prop.node.icon || 'folder'"
-                      class="q-mr-sm"
-                      :style="{ color: prop.node.color }"
-                    />
+                    <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
                     <span>{{ prop.node.label }}</span>
                     <q-space />
-                    <span
-                      v-if="isNodeShortcut(prop.node)"
-                      flat
-                      dense
-                      style="
+                    <span v-if="isNodeShortcut(prop.node)" flat dense style="
                         display: flex;
                         align-items: center;
                         gap: 8px;
                         text-transform: none;
-                      "
-                      class="q-ml-sm"
-                      @click.stop.prevent="activateTreeShortcut(prop.node)"
-                    >
-                      <q-icon
-                        :name="prop.node.icon || 'folder'"
-                        :style="{ color: prop.node.color }"
-                      />
+                      " class="q-ml-sm" @click.stop.prevent="activateTreeShortcut(prop.node)">
+                      <q-icon :name="prop.node.icon || 'folder'" :style="{ color: prop.node.color }" />
 
                       <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
                     </span>
@@ -135,27 +96,16 @@
           </q-menu>
         </div>
 
-        <q-btn
-          v-if="parentButtonVisible"
-          flat
-          dense
-          round
-          :title="$text('ui.go_to_parent_group')"
-          @click.stop.prevent="() => CC.group.active.goToParent()"
-          :style="{
+        <q-btn v-if="parentButtonVisible && !$q.screen.lt.md" flat dense round :title="$text('ui.go_to_parent_group')"
+          @click.stop.prevent="() => CC.group.active.goToParent()" :style="{
             border:
               '1px solid ' + (getBtnBorderColor(parentGroup?.value) || 'transparent'),
             background: 'transparent',
-          }"
-        >
-          <q-icon
-            name="arrow_upward"
-            :style="
-              'color: ' +
-              (getBtnTextColor(parentGroup?.value) || 'inherit') +
-              ' !important;'
-            "
-          />
+          }">
+          <q-icon name="arrow_upward" :style="'color: ' +
+            (getBtnTextColor(parentGroup?.value) || 'inherit') +
+            ' !important;'
+            " />
           <q-tooltip v-if="parentName">Go to parent: {{ parentName }}</q-tooltip>
         </q-btn>
       </div>
@@ -193,6 +143,11 @@ function getBtnBorderColor(g: any) {
   const base = g.color || null;
   if (base) return darkenHex(base, 0.35);
   return getBtnTextColor(g) || "transparent";
+}
+
+function getBtnBgColor(g: any) {
+  if (!g) return "inherit";
+  return g.color || "inherit";
 }
 
 const groups = CC.group.list.all;
