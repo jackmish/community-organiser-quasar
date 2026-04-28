@@ -18,11 +18,8 @@
           <q-card class="task-list-card" :style="cardStyle">
             <q-card-section>
               <div class="text-h6 task-list-header" :style="headerStyle">
-                <div
-                  class="row items-center justify-between"
-                  style="align-items: center; margin-top: 6px; justify-content: flex-end"
-                >
-                  <div class="row items-center" style="gap: 8px">
+                <div class="row items-center task-header-row" >
+                  <div class="row items-center task-header-date-nav" style="gap: 8px">
                     <q-btn flat dense round @click="CC.task.time.prevDay">
                       <q-icon
                         name="chevron_left"
@@ -47,6 +44,7 @@
                   </div>
                   <!-- Insert today's full date/time near the task list header (swapped from main header) -->
                   <div
+                    class="task-header-group-select"
                     style="
                       display: flex;
                       align-items: center;
@@ -1192,6 +1190,25 @@ onMounted(async () => {
 }
 .list-add-btn .q-icon {
   color: #fff !important;
+}
+
+.task-header-row {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767px) {
+  .task-header-row {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .task-header-date-nav,
+  .task-header-group-select {
+    justify-content: center;
+    width: 100%;
+  }
 }
 </style>
 
