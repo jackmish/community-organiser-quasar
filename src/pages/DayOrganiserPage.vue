@@ -140,7 +140,8 @@
     <div
       v-if="!panelHidden && $q.screen.lt.md"
       class="mobile-panel-backdrop"
-      @click="panelHidden = true"
+      @click.stop="dismissMobileBackdrop"
+      @pointerup.stop="dismissMobileBackdrop"
     ></div>
     <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
       <div
@@ -518,6 +519,12 @@ const openDeleteMenu = ref<string | null>(null);
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
 // Start hidden so the task list is the first thing users see on app launch
 const panelHidden = ref(true);
+
+/** Close overlay; both click and pointerup — Electron trackpad sometimes only fires one. */
+function dismissMobileBackdrop() {
+  panelHidden.value = true;
+}
+
 const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);

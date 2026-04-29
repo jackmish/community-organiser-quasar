@@ -380,6 +380,22 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
     background-color: $mobile-overlay;
     z-index: 1200;
     pointer-events: auto;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Let taps/clicks on empty shell pass through to .mobile-panel-backdrop below (Electron trackpad vs mouse). */
+  .fixed-right-panel:not(.panel-hidden) {
+    pointer-events: none;
+
+    .fixed-content {
+      pointer-events: none;
+    }
+
+    .fixed-content > * {
+      pointer-events: auto;
+    }
   }
 
   .fixed-right-panel {
