@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
+import { dayOfMonthFromYmdString } from 'src/modules/task/utils/occursOnDay';
 
 /**
  * Encapsulates all state and logic for the repeat/cycle section of the task form.
@@ -168,8 +169,13 @@ export function useRepeatSchedule(options?: {
       try {
         const ev = (rep.eventDate as string) || task.eventDate || task.date || null;
         if (ev) {
-          const d = new Date(ev);
-          if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+          const head = String(ev).split('T')[0] ?? '';
+          const fromStr = dayOfMonthFromYmdString(head);
+          if (fromStr != null) everyNDayOfMonth.value = fromStr;
+          else {
+            const d = new Date(ev);
+            if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+          }
         }
       } catch {
         // ignore

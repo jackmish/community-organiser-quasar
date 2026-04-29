@@ -12,6 +12,20 @@ export function parseYmdLocal(s: string | undefined | null): Date | null {
   return new Date(y, m - 1, d);
 }
 
+/**
+ * Day-of-month (1–31) from a YYYY-MM-DD string as written, without `Date` overflow.
+ * e.g. `2025-04-31` → 31 (monthly "nth" intent); `Date` would roll to May 1 instead.
+ */
+export function dayOfMonthFromYmdString(s: string | undefined | null): number | null {
+  if (!s || typeof s !== 'string') return null;
+  const datePart = (s.indexOf('T') !== -1 ? (s.split('T')[0] ?? s) : s).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!m) return null;
+  const d = Number(m[3]);
+  if (!Number.isFinite(d) || d < 1 || d > 31) return null;
+  return d;
+}
+
 export function formatDisplayDate(date: string) {
   try {
     const parsed = parseYmdLocal(date) || (date ? new Date(date) : null);
@@ -132,9 +146,11 @@ export function occursOnDay(task: any, day: string): boolean {
       const seed =
         (typeof evPart === 'string' ? parseYmdLocal(evPart) : null) ||
         (evPart instanceof Date ? evPart : new Date(String(evPart)));
-      // If the seed specifies a day that doesn't exist in the target month
-      // (e.g. 31st) treat the occurrence as the last day of the target month.
-      const desiredDay = seed.getDate();
+      if (!seed || isNaN(seed.getTime())) return false;
+      // Prefer the written DD in YYYY-MM-DD so values like 2025-04-31 keep intent 31;
+      // parseYmdLocal / Date overflow would turn that into the 1st of the next month.
+      const fromString = typeof evPart === 'string' ? dayOfMonthFromYmdString(evPart) : null;
+      const desiredDay = fromString ?? seed.getDate();
       const year = target.getFullYear();
       const month = target.getMonth();
       const daysInTargetMonth = new Date(year, month + 1, 0).getDate();

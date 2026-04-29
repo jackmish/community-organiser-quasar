@@ -21,6 +21,7 @@ import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
 import { hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
+import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -589,8 +590,13 @@ watch(
           val.date ||
           null;
         if (savedEv) {
-          const ds = new Date(savedEv as string);
-          if (!isNaN(ds.getTime())) everyNDayOfMonth.value = ds.getDate();
+          const head = String(savedEv).split("T")[0] ?? "";
+          const fromStr = dayOfMonthFromYmdString(head);
+          if (fromStr != null) everyNDayOfMonth.value = fromStr;
+          else {
+            const ds = new Date(savedEv as string);
+            if (!isNaN(ds.getTime())) everyNDayOfMonth.value = ds.getDate();
+          }
         }
       } catch (e) {
         // ignore
@@ -600,8 +606,13 @@ watch(
         if (repeatCycleType.value === "nth" && !everyNDayOfMonth.value) {
           const ev = localNewTask.value.eventDate || props.selectedDate || null;
           if (ev) {
-            const d = new Date(ev);
-            if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+            const head = String(ev).split("T")[0] ?? "";
+            const fromStr = dayOfMonthFromYmdString(head);
+            if (fromStr != null) everyNDayOfMonth.value = fromStr;
+            else {
+              const d = new Date(ev);
+              if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+            }
           }
         }
       } catch (e) {

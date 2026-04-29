@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseYmdLocal,
+  dayOfMonthFromYmdString,
   formatEventHoursDiff,
   getCycleType,
   getRepeatDays,
@@ -33,6 +34,27 @@ describe('parseYmdLocal', () => {
 
   it('returns null for a non-date string', () => {
     expect(parseYmdLocal('not-a-date')).toBeNull();
+  });
+});
+
+// ─── dayOfMonthFromYmdString ──────────────────────────────────────────────────
+describe('dayOfMonthFromYmdString', () => {
+  it('returns the written day even when that calendar date is invalid (monthly nth intent)', () => {
+    expect(dayOfMonthFromYmdString('2026-04-31')).toBe(31);
+  });
+
+  it('returns the day for valid YYYY-MM-DD', () => {
+    expect(dayOfMonthFromYmdString('2026-04-30')).toBe(30);
+  });
+
+  it('reads date part before T in ISO datetime strings', () => {
+    expect(dayOfMonthFromYmdString('2026-04-31T12:00:00')).toBe(31);
+  });
+
+  it('returns null for malformed input', () => {
+    expect(dayOfMonthFromYmdString('')).toBeNull();
+    expect(dayOfMonthFromYmdString(null)).toBeNull();
+    expect(dayOfMonthFromYmdString('not-a-date')).toBeNull();
   });
 });
 
@@ -160,6 +182,14 @@ describe('occursOnDay', () => {
     const task = { repeat: { cycleType: 'month', eventDate: '2026-01-31' } };
     expect(occursOnDay(task, '2026-02-28')).toBe(true);
     expect(occursOnDay(task, '2026-02-27')).toBe(false);
+  });
+
+  it('month: nth intent 31 from invalid literal date string clamps to last day (not day 1)', () => {
+    // Stored like buildRepeatPayload: April has no 31st; written DD must stay 31 for clamp logic
+    const task = { repeat: { cycleType: 'month', eventDate: '2026-04-31' } };
+    expect(occursOnDay(task, '2026-04-30')).toBe(true);
+    expect(occursOnDay(task, '2026-04-01')).toBe(false);
+    expect(occursOnDay(task, '2026-05-01')).toBe(false);
   });
 
   // ── yearly cycle ──────────────────────────────────────────────────────────
