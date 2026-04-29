@@ -18,6 +18,8 @@
   "action.preview": "Podgląd",
   "label.auto_year": "Automatyczny rok",
   "label.nth_day": "Dzień N-tego",
+  "label.nth_scope_monthly": "Co miesiąc",
+  "label.nth_scope_annual": "Co rok",
   "action.check_all": "Zaznacz wszystko",
   "action.clear": "Wyczyść",
   "label.day": "Dzień",

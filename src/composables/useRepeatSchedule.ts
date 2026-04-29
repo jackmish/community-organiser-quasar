@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
-import { dayOfMonthFromYmdString } from 'src/modules/task/utils/occursOnDay';
+import { dayOfMonthFromYmdString, monthFromYmdString } from 'src/modules/task/utils/occursOnDay';
 
 /**
  * Encapsulates all state and logic for the repeat/cycle section of the task form.
@@ -35,6 +35,10 @@ export function useRepeatSchedule(options?: {
 
   const repeatDays = ref<string[]>([]);
   const everyNDayOfMonth = ref<number | null>(null);
+  /** Nth-day repeat: every month vs same calendar date once per year (stored as cycleType month vs year). */
+  const nthRepeatScope = ref<'monthly' | 'annual'>('monthly');
+  /** Calendar month 1–12 for annual nth mode (repeat on day X of this month each year). */
+  const nthRepeatMonth = ref<number | null>(null);
   const repeatIntervalDays = ref<number | null>(null);
 
   function checkAllDays() {
@@ -90,6 +94,8 @@ export function useRepeatSchedule(options?: {
     repeatDays.value = [];
     repeatIntervalDays.value = null;
     everyNDayOfMonth.value = null;
+    nthRepeatScope.value = 'monthly';
+    nthRepeatMonth.value = null;
   }
 
   /**
@@ -125,16 +131,33 @@ export function useRepeatSchedule(options?: {
         repeatObj.eventDate = eventDate || null;
       }
     } else if (repeatCycleType.value === 'nth') {
-      outCycle = 'month';
       try {
         const parts = (eventDate || '').split('-');
         if (parts.length === 3 && everyNDayOfMonth.value) {
-          parts[2] = String(everyNDayOfMonth.value).padStart(2, '0');
-          repeatObj.eventDate = parts.join('-');
+          const y = parts[0];
+          const dayStr = String(everyNDayOfMonth.value).padStart(2, '0');
+          if (nthRepeatScope.value === 'annual') {
+            outCycle = 'year';
+            const rawM =
+              nthRepeatMonth.value != null &&
+              !Number.isNaN(Number(nthRepeatMonth.value)) &&
+              nthRepeatMonth.value >= 1 &&
+              nthRepeatMonth.value <= 12
+                ? Math.floor(Number(nthRepeatMonth.value))
+                : Number(parts[1]);
+            const mo = Math.min(12, Math.max(1, rawM || Number(parts[1]) || 1));
+            repeatObj.eventDate = `${y}-${String(mo).padStart(2, '0')}-${dayStr}`;
+          } else {
+            outCycle = 'month';
+            parts[2] = dayStr;
+            repeatObj.eventDate = parts.join('-');
+          }
         } else {
+          outCycle = nthRepeatScope.value === 'annual' ? 'year' : 'month';
           repeatObj.eventDate = eventDate || null;
         }
       } catch {
+        outCycle = nthRepeatScope.value === 'annual' ? 'year' : 'month';
         repeatObj.eventDate = eventDate || null;
       }
     } else {
@@ -166,6 +189,8 @@ export function useRepeatSchedule(options?: {
 
     if (incomingCycle === 'month') {
       repeatCycleType.value = 'nth';
+      nthRepeatScope.value = 'monthly';
+      nthRepeatMonth.value = null;
       try {
         const ev = (rep.eventDate as string) || task.eventDate || task.date || null;
         if (ev) {
@@ -180,7 +205,26 @@ export function useRepeatSchedule(options?: {
       } catch {
         // ignore
       }
-    } else if (incomingCycle === 'other' || incomingCycle === 'year') {
+    } else if (incomingCycle === 'year') {
+      repeatCycleType.value = 'nth';
+      nthRepeatScope.value = 'annual';
+      try {
+        const ev = (rep.eventDate as string) || task.eventDate || task.date || null;
+        if (ev) {
+          const head = String(ev).split('T')[0] ?? '';
+          const fromStr = dayOfMonthFromYmdString(head);
+          if (fromStr != null) everyNDayOfMonth.value = fromStr;
+          else {
+            const d = new Date(ev);
+            if (!isNaN(d.getTime())) everyNDayOfMonth.value = d.getDate();
+          }
+          const mo = monthFromYmdString(head);
+          if (mo != null) nthRepeatMonth.value = mo;
+        }
+      } catch {
+        // ignore
+      }
+    } else if (incomingCycle === 'other') {
       repeatCycleType.value = 'interval';
       if (typeof rep.intervalDays === 'number') repeatIntervalDays.value = rep.intervalDays;
     } else {
@@ -201,6 +245,8 @@ export function useRepeatSchedule(options?: {
     weekDayOptions,
     repeatDays,
     everyNDayOfMonth,
+    nthRepeatScope,
+    nthRepeatMonth,
     repeatIntervalDays,
     checkAllDays,
     clearDays,

@@ -18,6 +18,8 @@
   "action.preview": "Preview",
   "label.auto_year": "Auto Year",
   "label.nth_day": "Nth day",
+  "label.nth_scope_monthly": "Monthly",
+  "label.nth_scope_annual": "Annual",
   "action.check_all": "Check all",
   "action.clear": "Clear",
   "label.day": "Day",

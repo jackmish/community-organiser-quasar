@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseYmdLocal,
   dayOfMonthFromYmdString,
+  monthFromYmdString,
   formatEventHoursDiff,
   getCycleType,
   getRepeatDays,
@@ -55,6 +56,14 @@ describe('dayOfMonthFromYmdString', () => {
     expect(dayOfMonthFromYmdString('')).toBeNull();
     expect(dayOfMonthFromYmdString(null)).toBeNull();
     expect(dayOfMonthFromYmdString('not-a-date')).toBeNull();
+  });
+});
+
+// ─── monthFromYmdString ───────────────────────────────────────────────────────
+describe('monthFromYmdString', () => {
+  it('returns calendar month 1–12 from YYYY-MM-DD', () => {
+    expect(monthFromYmdString('2026-04-15')).toBe(4);
+    expect(monthFromYmdString('2026-12-01')).toBe(12);
   });
 });
 
@@ -198,6 +207,13 @@ describe('occursOnDay', () => {
     expect(occursOnDay(task, '2026-07-04')).toBe(true);
     expect(occursOnDay(task, '2026-07-05')).toBe(false);
     expect(occursOnDay(task, '2026-08-04')).toBe(false);
+  });
+
+  it('year: clamps nth day when literal date is invalid (same month only)', () => {
+    const task = { repeat: { cycleType: 'year', eventDate: '2024-04-31' } };
+    expect(occursOnDay(task, '2026-04-30')).toBe(true);
+    expect(occursOnDay(task, '2026-04-01')).toBe(false);
+    expect(occursOnDay(task, '2026-05-01')).toBe(false);
   });
 
   // ── interval (other) cycle ────────────────────────────────────────────────

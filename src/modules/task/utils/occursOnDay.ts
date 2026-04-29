@@ -26,6 +26,17 @@ export function dayOfMonthFromYmdString(s: string | undefined | null): number | 
   return d;
 }
 
+/** Calendar month 1–12 from YYYY-MM-DD as written (same string rules as dayOfMonthFromYmdString). */
+export function monthFromYmdString(s: string | undefined | null): number | null {
+  if (!s || typeof s !== 'string') return null;
+  const datePart = (s.indexOf('T') !== -1 ? (s.split('T')[0] ?? s) : s).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!m) return null;
+  const mo = Number(m[2]);
+  if (!Number.isFinite(mo) || mo < 1 || mo > 12) return null;
+  return mo;
+}
+
 export function formatDisplayDate(date: string) {
   try {
     const parsed = parseYmdLocal(date) || (date ? new Date(date) : null);
@@ -167,7 +178,19 @@ export function occursOnDay(task: any, day: string): boolean {
       const seed =
         (typeof evPart === 'string' ? parseYmdLocal(evPart) : null) ||
         (evPart instanceof Date ? evPart : new Date(String(evPart)));
-      return seed.getDate() === target.getDate() && seed.getMonth() === target.getMonth();
+      if (!seed || isNaN(seed.getTime())) return false;
+      const fromStringDay =
+        typeof evPart === 'string' ? dayOfMonthFromYmdString(evPart) : null;
+      const fromStringMonth =
+        typeof evPart === 'string' ? monthFromYmdString(evPart) : null;
+      const desiredDay = fromStringDay ?? seed.getDate();
+      const desiredMonth = fromStringMonth ?? seed.getMonth() + 1;
+      const y = target.getFullYear();
+      const m = target.getMonth();
+      if (m + 1 !== desiredMonth) return false;
+      const daysInTargetMonth = new Date(y, m + 1, 0).getDate();
+      const effectiveDay = Math.min(desiredDay, daysInTargetMonth);
+      return effectiveDay === target.getDate();
     }
 
     // Interval-based cycles (stored as 'other') use an interval in days

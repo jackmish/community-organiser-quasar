@@ -183,6 +183,8 @@ const {
   weekDayOptions,
   repeatDays,
   everyNDayOfMonth,
+  nthRepeatScope,
+  nthRepeatMonth,
   repeatIntervalDays,
   checkAllDays,
   clearDays,
@@ -445,6 +447,26 @@ const {
   eventDateMonth,
   eventDateDay,
 } = useEventDateTime(localNewTask);
+
+const nthScopeOptions = computed(() => [
+  { label: $text("label.nth_scope_monthly"), value: "monthly" as const },
+  { label: $text("label.nth_scope_annual"), value: "annual" as const },
+]);
+
+watch(nthRepeatScope, (v) => {
+  if (v === "annual") {
+    const m = Number(eventDateMonth.value);
+    const cur = nthRepeatMonth.value;
+    if (
+      cur == null ||
+      Number.isNaN(Number(cur)) ||
+      Number(cur) < 1 ||
+      Number(cur) > 12
+    ) {
+      if (!Number.isNaN(m) && m >= 1 && m <= 12) nthRepeatMonth.value = m;
+    }
+  }
+});
 
 // Use centralized replenish color sets from theme
 const replenishColorSets = themeReplenishColorSets;
@@ -1142,29 +1164,73 @@ function onSubmit(event: Event) {
                           />
                         </div>
                         <div v-if="repeatCycleType === 'nth'" class="q-mb-sm">
-                          <q-input
-                            type="number"
-                            :label="$text('label.nth_day')"
-                            dense
-                            outlined
-                            v-model.number="everyNDayOfMonth"
-                            min="1"
-                            max="31"
-                            style="max-width: 120px"
-                            placeholder="10"
-                            @focus="
-                              (e: Event) =>
-                                (e.target as HTMLInputElement)?.select &&
-                                (e.target as HTMLInputElement).select()
-                            "
-                            @click="
-                              (e: Event) =>
-                                (e.target as HTMLInputElement)?.select &&
-                                (e.target as HTMLInputElement).select()
-                            "
-                          />
+                          <div
+                            class="row items-end q-col-gutter-sm"
+                            style="flex-wrap: wrap"
+                          >
+                            <div class="col-auto">
+                              <q-input
+                                type="number"
+                                :label="$text('label.nth_day')"
+                                dense
+                                outlined
+                                v-model.number="everyNDayOfMonth"
+                                min="1"
+                                max="31"
+                                style="max-width: 120px"
+                                placeholder="10"
+                                @focus="
+                                  (e: Event) =>
+                                    (e.target as HTMLInputElement)?.select &&
+                                    (e.target as HTMLInputElement).select()
+                                "
+                                @click="
+                                  (e: Event) =>
+                                    (e.target as HTMLInputElement)?.select &&
+                                    (e.target as HTMLInputElement).select()
+                                "
+                              />
+                            </div>
+                            <div class="col-auto">
+                              <q-btn-toggle
+                                v-model="nthRepeatScope"
+                                :options="nthScopeOptions"
+                                dense
+                                inline
+                                rounded
+                                class="time-toggle"
+                              />
+                            </div>
+                            <div v-if="nthRepeatScope === 'annual'" class="col-auto">
+                              <q-input
+                                type="number"
+                                :label="$text('label.month')"
+                                dense
+                                outlined
+                                v-model.number="nthRepeatMonth"
+                                min="1"
+                                max="12"
+                                style="max-width: 100px"
+                                @focus="
+                                  (e: Event) =>
+                                    (e.target as HTMLInputElement)?.select &&
+                                    (e.target as HTMLInputElement).select()
+                                "
+                              />
+                            </div>
+                          </div>
                           <div v-if="everyNDayOfMonth" class="text-caption q-mb-xs">
-                            <template v-if="everyNDayOfMonth >= 29">
+                            <template v-if="nthRepeatScope === 'annual'">
+                              <template v-if="nthRepeatMonth">
+                                Repeats every year in month {{ nthRepeatMonth }} on day
+                                {{ everyNDayOfMonth }} (uses the last day of the month when
+                                that day doesn't exist).
+                              </template>
+                              <template v-else>
+                                Set month (1–12) for the yearly repeat.
+                              </template>
+                            </template>
+                            <template v-else-if="everyNDayOfMonth >= 29">
                               Repeats every month on day {{ everyNDayOfMonth }} (uses the
                               last day of the month when that day doesn't exist).
                             </template>
