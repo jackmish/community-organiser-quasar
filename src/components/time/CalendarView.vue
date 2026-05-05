@@ -27,9 +27,7 @@
               color: 'white',
             }"
           >
-            {{ String(new Date(month.value).getMonth() + 1).padStart(2, "0") }}.{{
-              month.label.toUpperCase()
-            }}{{ index === 0 ? " " + month.value.slice(0, 4) : "" }}
+            {{ formatMonthButtonLabel(month.value, { includeYear: index === 0 }) }}
           </q-btn>
         </div>
       </div>
@@ -288,7 +286,11 @@ import {
 } from "src/modules/lang";
 import { useLongPress } from "src/composables/useLongPress";
 import CC from "src/CCAccess";
-import { occursOnDay, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
+import {
+  occursOnDay,
+  parseYmdLocal,
+  formatMonthButtonLabel,
+} from "src/modules/task/utils/occursOnDay";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -1296,7 +1298,6 @@ const nextSixMonths = computed(() => {
   for (let i = 1; i <= 6; i++) {
     const futureDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
     months.push({
-      label: futureDate.toLocaleDateString("en-US", { month: "short" }),
       value: format(futureDate, "yyyy-MM-dd"),
     });
   }
@@ -1469,7 +1470,9 @@ function shouldShowYear(
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {
-  const monthName = format(parseDay(day), "MMMM");
+  const monthName = new Intl.DateTimeFormat(getLanguage() || "en", {
+    month: "long",
+  }).format(parseDay(day));
 
   // !!! Removed prefix in comment - it's visually clearer with watermark component, but i can change my mind later if needed
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
@@ -1505,7 +1508,9 @@ function weekHasMonthStart(week: string[]) {
 function getWeekWatermarkLabel(week: string[]) {
   const first = week.find((d) => parseDay(d).getDate() === 1);
   if (!first) return "";
-  return format(parseDay(first), "MMMM");
+  return new Intl.DateTimeFormat(getLanguage() || "en", {
+    month: "long",
+  }).format(parseDay(first));
 }
 
 function isFirstDayOfMonth(day: string) {

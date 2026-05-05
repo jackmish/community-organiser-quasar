@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { $text, getLanguage } from 'src/modules/lang';
 
 // Local YYYY-MM-DD parser to avoid timezone shifts when creating Dates
 export function parseYmdLocal(s: string | undefined | null): Date | null {
@@ -37,7 +38,16 @@ export function monthFromYmdString(s: string | undefined | null): number | null 
   return mo;
 }
 
-export function formatDisplayDate(date: string) {
+export function formatDisplayDate(
+  date: string,
+  opts?: {
+    monthStyle?: 'numeric' | 'short';
+    weekdayStyle?: 'long' | 'short';
+    uppercaseDate?: boolean;
+    uppercaseWeekday?: boolean;
+    uppercaseRelative?: boolean;
+  },
+) {
   try {
     const parsed = parseYmdLocal(date) || (date ? new Date(date) : null);
     if (!parsed || isNaN(parsed.getTime())) return date || '';
@@ -47,12 +57,71 @@ export function formatDisplayDate(date: string) {
     const evMid = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
     const msPerDay = 1000 * 60 * 60 * 24;
     const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / msPerDay);
-    if (diffDays === 0) return `TODAY, ${format(parsed, 'dd.MM.yyyy')}`;
-    if (diffDays === 1) return `TOMORROW, ${format(parsed, 'dd.MM.yyyy')}`;
-    return format(parsed, 'EEEE, dd.MM.yyyy');
+    const locale = getLanguage() || 'en';
+    const datePart = formatDatePart(parsed, locale, opts);
+
+    if (diffDays === 0) {
+      const label = transformCase($text('date.today'), opts?.uppercaseRelative ?? false);
+      return `${label}, ${datePart}`;
+    }
+    if (diffDays === 1) {
+      const label = transformCase($text('date.tomorrow'), opts?.uppercaseRelative ?? false);
+      return `${label}, ${datePart}`;
+    }
+
+    const weekday = new Intl.DateTimeFormat(locale, {
+      weekday: opts?.weekdayStyle ?? 'long',
+    }).format(parsed);
+    const dayPart = transformCase(weekday, opts?.uppercaseWeekday ?? false);
+    return `${dayPart}, ${datePart}`;
   } catch (e) {
     return date || '';
   }
+}
+
+export function formatMonthButtonLabel(
+  dateInput: string | Date,
+  opts?: { includeYear?: boolean; uppercaseMonth?: boolean },
+): string {
+  const parsed =
+    dateInput instanceof Date
+      ? dateInput
+      : parseYmdLocal(dateInput) || new Date(String(dateInput));
+  if (!parsed || isNaN(parsed.getTime())) return String(dateInput || '');
+
+  const locale = getLanguage() || 'en';
+  const monthNum = String(parsed.getMonth() + 1).padStart(2, '0');
+  const monthRaw = new Intl.DateTimeFormat(locale, { month: 'short' }).format(parsed);
+  const month = transformCase(monthRaw.replace(/\./g, ''), opts?.uppercaseMonth ?? true);
+  const year = String(parsed.getFullYear());
+  return opts?.includeYear ? `${monthNum}.${month} ${year}` : `${monthNum}.${month}`;
+}
+
+function formatDatePart(
+  date: Date,
+  locale: string,
+  opts?: { monthStyle?: 'numeric' | 'short'; uppercaseDate?: boolean },
+): string {
+  if ((opts?.monthStyle ?? 'numeric') === 'numeric') {
+    return format(date, 'dd.MM.yyyy');
+  }
+
+  const dtf = new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+  const parts = dtf.formatToParts(date);
+  const day = parts.find((p) => p.type === 'day')?.value ?? format(date, 'dd');
+  const monthRaw = parts.find((p) => p.type === 'month')?.value ?? format(date, 'MMM');
+  const year = parts.find((p) => p.type === 'year')?.value ?? format(date, 'yyyy');
+  const month = monthRaw.replace(/\./g, '');
+  const out = `${day}.${month}.${year}`;
+  return transformCase(out, opts?.uppercaseDate ?? true);
+}
+
+function transformCase(v: string, upper: boolean): string {
+  return upper ? String(v || '').toUpperCase() : String(v || '');
 }
 
 export function formatEventHoursDiff(dateStr: string, timeStr: string, now = new Date()) {
