@@ -205,7 +205,7 @@
             :initial-task="CC.task.active.task.value"
             :mode="CC.task.active.mode.value"
             @update:mode="(v) => CC.task.active.setMode(v)"
-            @add-task="handleAddTask"
+            @add-task="handleAddTaskFromForm"
             @update-task="handleUpdateTask"
             @delete-task="handleDeleteTask"
             @toggle-status="handleToggleStatus"
@@ -818,6 +818,21 @@ const { handleAddTask, handleUpdateTask } = useTaskCrud({
   quasar: $q,
   active: CC.task.active,
 });
+
+const handleAddTaskFromForm = async (taskPayload: any, opts?: { preview?: boolean }) => {
+  const shouldPreview = $q.screen.lt.md ? false : Boolean(opts?.preview);
+  await handleAddTask(taskPayload, { preview: shouldPreview });
+
+  // Mobile flow: after creating task, close the creation panel instead of opening preview.
+  if ($q.screen.lt.md) {
+    try {
+      setPreviewFloating(null);
+    } catch (e) {
+      void e;
+    }
+    panelHidden.value = true;
+  }
+};
 
 const handleDeleteTask = async (payload: any) => {
   try {
