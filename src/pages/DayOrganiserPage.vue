@@ -33,7 +33,7 @@
                         getTimeDiffClass(CC.task.time.currentDate.value),
                       ]"
                       :style="'color: ' + headerStyle.color + ' !important;'"
-                      >{{ formatDateOnly(CC.task.time.currentDate.value) }}</span
+                      >{{ formatHeaderDate(CC.task.time.currentDate.value) }}</span
                     >
                     <q-btn flat dense round @click="CC.task.time.nextDay">
                       <q-icon
@@ -243,6 +243,7 @@
 
 <script setup lang="ts">
 import { todayString } from "src/utils/dateUtils";
+import { format } from "date-fns";
 import { createImportHandler } from "src/modules/storage/handlers/importHandlers";
 import { useDayRollover } from "src/composables/useDayRollover";
 
@@ -275,7 +276,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
-import { $text } from "src/modules/lang";
+import { $text, getLanguage } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
@@ -761,6 +762,40 @@ const {
 
 // Return weekday and compact date (e.g., "Tuesday, 23.12.2025")
 const formatDateOnly = (date: string) => formatDisplayDate(date);
+
+const formatHeaderDate = (date: string): string => {
+  if (!$q.screen.lt.md) return formatDateOnly(date);
+  const parsed = parseYmdString(date);
+  if (!parsed) return "";
+
+  const nowDate = new Date();
+  const todayMid = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+  const targetMid = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const diffDays = Math.round((targetMid.getTime() - todayMid.getTime()) / 86400000);
+
+  const lang = String(getLanguage() || "en").toLowerCase();
+  const isPolish = lang === "pl";
+  const datePart = format(parsed, "dd.MMM.yyyy").toUpperCase();
+  if (diffDays === 0) return `${isPolish ? "DZŚ" : "NOW"}, ${datePart}`;
+  if (diffDays === 1) return `${isPolish ? "JTR" : "TMR"}, ${datePart}`;
+
+  const locale = isPolish ? "pl-PL" : "en-US";
+  const shortWeekday = new Intl.DateTimeFormat(locale, { weekday: "short" }).format(parsed);
+  const dayPart = shortWeekday.replace(".", "").toUpperCase().slice(0, 3);
+  return `${dayPart}, ${datePart}`;
+};
+
+function parseYmdString(date: string): Date | null {
+  if (!date || typeof date !== "string") return null;
+  const parts = date.split("-");
+  if (parts.length < 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const result = new Date(year, month - 1, day);
+  return Number.isNaN(result.getTime()) ? null : result;
+}
 
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return "Unknown";
