@@ -4,13 +4,28 @@
     class="q-pa-sm q-mb-md"
     style="background: transparent; border-radius: 8px"
   >
-    <div class="row items-center" style="gap: 8px">
-      <q-icon name="check" color="grey-7" />
-      <div class="text-subtitle2">
-        <strong>{{ $text("action.done") }}</strong>
-      </div>
-    </div>
-    <div class="q-mt-sm done-items-grid">
+    <q-btn
+      unelevated
+      dense
+      no-caps
+      class="done-toggle-btn"
+      @click="isExpanded = !isExpanded"
+    >
+      <template #default>
+        <div class="row items-center full-width justify-between" style="gap: 8px">
+          <div class="row items-center" style="gap: 8px">
+            <q-icon name="check" color="grey-7" />
+            <div class="text-subtitle2">
+              <strong>{{ $text("action.done") }} ({{ doneCount }})</strong>
+            </div>
+          </div>
+          <div class="text-subtitle2">
+            <q-icon :name="isExpanded ? 'expand_less' : 'expand_more'" color="grey-7" />
+          </div>
+        </div>
+      </template>
+    </q-btn>
+    <div v-if="isExpanded" class="q-mt-sm done-items-grid">
       <div
         v-for="d in props.doneTasks"
         :key="d.id"
@@ -48,11 +63,16 @@
 
 <script setup lang="ts">
 // Props + emits
+import { computed, ref } from "vue";
+
 const props = defineProps<{
   doneTasks: any[];
 }>();
 import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
+
+const isExpanded = ref(false);
+const doneCount = computed(() => (props.doneTasks || []).length);
 
 async function onDoneClick(task: any) {
   try {
@@ -232,6 +252,14 @@ const getContrastColor = (hex: string) => {
   border-radius: 6px;
   padding: 6px 8px;
   width: 100%;
+}
+
+.done-toggle-btn {
+  width: 100%;
+  justify-content: flex-start;
+  background: #eceff1 !important;
+  color: #263238 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .done-items-grid {
