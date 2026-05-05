@@ -24,7 +24,7 @@
             :style="{
               fontSize: '16px',
               backgroundColor: buttonColors[index],
-              color: 'white',
+              color: buttonTextColors[index],
             }"
           >
             {{ formatMonthButtonLabel(month.value, { includeYear: index === 0 }) }}
@@ -94,7 +94,7 @@
                           ? ' ' + new Date(day).getFullYear()
                           : '')
                       "
-                      :background="`blur(60px) ${getOverlayColorForMonth(day)}`"
+                      :background="`blur(60px) ${getOverlayColorForMonth(day)[0]}`"
                       color="#00000085"
                       justifyContent="flex-start"
                       class="calendar-month-label-above"
@@ -643,7 +643,7 @@ function createOverlaysFromEdges() {
       if ((seg as any).endCol !== undefined)
         div.dataset.endCol = String((seg as any).endCol);
       // compute overlay color using shared helper
-      const overlayColor = getOverlayColorForMonth(month);
+      const [overlayColor] = getOverlayColorForMonth(month);
       Object.assign(div.style, {
         position: "absolute",
         top: `${seg.top}px`,
@@ -1307,7 +1307,10 @@ const nextSixMonths = computed(() => {
 
 // Button colors derived from getOverlayColorForMonth so they match calendar overlays
 const buttonColors = computed(() =>
-  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value))
+  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value)[0])
+);
+const buttonTextColors = computed(() =>
+  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value)[1])
 );
 
 function previousCalendarWeeks() {

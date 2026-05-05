@@ -146,15 +146,17 @@ export function resolveTaskListSizeVariant(
 }
 
 // Overlay color chooser used for calendar overlays and jump-button alignment.
-export function getOverlayColorForMonth(monthLike: string | number | Date): string {
-  const overlayColorArray = [
-    '#4caff0',
-    '#25c6c7',
-    '#ff9800',
-    '#9c27b0',
-    '#009688',
-    '#e91e63',
-    '#3f51b5',
+export function getOverlayColorForMonth(
+  monthLike: string | number | Date,
+): [bg: string, color: string] {
+  const overlayColorArray: Array<string | [string, string]> = [
+    ['#4cfff0', '#fff'],
+    ['#9ff800', '#000'],
+    ['#ff9800', '#fff'],
+    ['#9c27b0', '#fff'],
+    ['#009688', '#fff'],
+    ['#e91e63', '#fff'],
+    ['#3f51b5', '#fff'],
   ];
 
   let monthNum: number;
@@ -176,9 +178,10 @@ export function getOverlayColorForMonth(monthLike: string | number | Date): stri
   const offset = (monthNum - todayMonth + 12) % 12;
 
   if (offset >= 0 && offset < overlayColorArray.length) {
-    return overlayColorArray[offset] ?? overlayColorArray[0] ?? '#1976d2';
+    const entry = overlayColorArray[offset] ?? overlayColorArray[0] ?? ['#1976d2', '#fff'];
+    return Array.isArray(entry) ? [entry[0], entry[1] ?? '#fff'] : [entry, '#fff'];
   }
 
   const key = String(monthNum).padStart(2, '0');
-  return monthColors[key] ?? '#1976d2';
+  return [monthColors[key] ?? '#1976d2', '#fff'];
 }
