@@ -141,7 +141,7 @@
       v-if="$q.screen.lt.md"
       :model-value="!panelHidden"
       @update:model-value="(open) => { panelHidden = !open }"
-      position="bottom"
+      position="top"
       full-width
       class="day-organiser-task-panel-dialog"
     >
