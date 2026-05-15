@@ -1571,7 +1571,7 @@ function onSubmit(event: Event) {
                     </div>
                     <div v-else>
                       <q-input
-                        v-if="!isReplenish"
+                        v-if="!(isReplenish && mode === 'add')"
                         ref="descriptionInput"
                         :model-value="localNewTask.description"
                         :label="$text('label.description')"
