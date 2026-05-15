@@ -377,9 +377,8 @@ $hidden-bg: #f2f2f2;
   .day-organiser-task-panel-dialog {
     .q-dialog__inner {
       padding: 0;
-      padding-top: 34px;
-      align-items: flex-start;
-      justify-content: flex-start;
+      align-items: flex-end;
+      justify-content: flex-end;
     }
 
     /* Task panel should NOT inherit the “white-on-blue dialog” theme intended
@@ -444,7 +443,7 @@ $hidden-bg: #f2f2f2;
   .fixed-right-panel--mobile-dialog {
     position: relative;
     width: 100%;
-    max-height: calc(100vh - 34px);
+    max-height: 92vh;
     overflow: visible;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;

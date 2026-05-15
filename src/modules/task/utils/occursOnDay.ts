@@ -38,6 +38,32 @@ export function monthFromYmdString(s: string | undefined | null): number | null 
   return mo;
 }
 
+function limitChars(value: string, max: number): string {
+  if (max <= 0) return '';
+  return [...String(value || '')].slice(0, max).join('');
+}
+
+function resolveRelativeLabel(
+  textKey: string,
+  opts?: { uppercase?: boolean; maxLength?: number },
+): string {
+  const uppercase = opts?.uppercase ?? false;
+  const maxLength = opts?.maxLength;
+  if (maxLength == null) {
+    return transformCase($text(textKey), uppercase);
+  }
+
+  const shortKey = `${textKey}_short`;
+  const shortText = $text(shortKey);
+  const longText = $text(textKey);
+  const useShort =
+    shortText !== shortKey.split('.').pop()?.replace(/_/g, ' ') &&
+    shortText.length > 0 &&
+    shortText.length <= maxLength;
+  const raw = useShort ? shortText : longText;
+  return transformCase(limitChars(raw, maxLength), uppercase);
+}
+
 export function formatDisplayDate(
   date: string,
   opts?: {
@@ -46,6 +72,7 @@ export function formatDisplayDate(
     uppercaseDate?: boolean;
     uppercaseWeekday?: boolean;
     uppercaseRelative?: boolean;
+    relativeMaxLength?: number;
   },
 ) {
   try {
@@ -59,20 +86,31 @@ export function formatDisplayDate(
     const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / msPerDay);
     const locale = getLanguage() || 'en';
     const datePart = formatDatePart(parsed, locale, opts);
+    const relativeOpts: { uppercase?: boolean; maxLength?: number } = {
+      uppercase: opts?.uppercaseRelative ?? false,
+    };
+    if (opts?.relativeMaxLength != null) {
+      relativeOpts.maxLength = opts.relativeMaxLength;
+    }
+    const weekdayStyle =
+      opts?.relativeMaxLength != null ? 'short' : (opts?.weekdayStyle ?? 'long');
 
     if (diffDays === 0) {
-      const label = transformCase($text('date.today'), opts?.uppercaseRelative ?? false);
+      const label = resolveRelativeLabel('date.today', relativeOpts);
       return `${label}, ${datePart}`;
     }
     if (diffDays === 1) {
-      const label = transformCase($text('date.tomorrow'), opts?.uppercaseRelative ?? false);
+      const label = resolveRelativeLabel('date.tomorrow', relativeOpts);
       return `${label}, ${datePart}`;
     }
 
     const weekday = new Intl.DateTimeFormat(locale, {
-      weekday: opts?.weekdayStyle ?? 'long',
+      weekday: weekdayStyle,
     }).format(parsed);
-    const dayPart = transformCase(weekday, opts?.uppercaseWeekday ?? false);
+    let dayPart = transformCase(weekday, opts?.uppercaseWeekday ?? false);
+    if (opts?.relativeMaxLength != null) {
+      dayPart = limitChars(dayPart, opts.relativeMaxLength);
+    }
     return `${dayPart}, ${datePart}`;
   } catch (e) {
     return date || '';

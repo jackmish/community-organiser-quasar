@@ -141,7 +141,7 @@
       v-if="$q.screen.lt.md"
       :model-value="!panelHidden"
       @update:model-value="(open) => { panelHidden = !open }"
-      position="top"
+      position="bottom"
       full-width
       class="day-organiser-task-panel-dialog"
     >
@@ -704,6 +704,12 @@ const formatHeaderDate = (date: string): string =>
     uppercaseDate: true,
     uppercaseWeekday: true,
     uppercaseRelative: true,
+    ...($q.screen.lt.md
+      ? {
+          relativeMaxLength: 4,
+          weekdayStyle: "short" as const,
+        }
+      : {}),
   });
 
 const getGroupName = (groupId?: string): string => {
