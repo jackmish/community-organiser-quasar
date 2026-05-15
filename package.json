@@ -1,6 +1,6 @@
 {
   "name": "community-organiser-quasar",
-  "version": "0.4",
+  "version": "0.5",
   "description": "Organise small organisations like your child's kindergarten society, small accounting, less stressfull automated reminders, family life or just own matters",
   "productName": "CO21 - Community Organiser",
   "author": "Jacek Miszczuk",
@@ -16,8 +16,8 @@
     "test:e2e": "playwright test",
     "dev": "quasar dev",
     "electron": "quasar dev -m electron",
-    "android": "quasar build -m capacitor -T android",
-    "android-debug": "quasar build -m capacitor -T android --debug",
+    "android-build": "quasar build -m capacitor -T android",
+    "android": "quasar build -m capacitor -T android --debug",
     "build": "quasar build",
     "build:electron": "quasar build -m electron",
     "postinstall": "quasar prepare"

@@ -384,20 +384,30 @@ $hidden-bg: #f2f2f2;
 
     /* Task panel should NOT inherit the “white-on-blue dialog” theme intended
        for group/settings dialogs. Force the AddTaskForm palette back on. */
-    .q-card {
-      background-color: var(--co21-task-card-bg, transparent) !important;
+    .add-task-card {
+      background-color: var(--co21-task-card-bg, #ffffff) !important;
       color: #212121 !important;
     }
 
-    .q-card-section,
-    .q-card-actions {
+    .task-preview {
+      background-color: #ffffff !important;
+      color: #212121 !important;
+    }
+
+    .add-task-card .q-card-section,
+    .add-task-card .q-card-actions,
+    .task-preview .q-card-section,
+    .task-preview .q-card-actions {
       background-color: transparent !important;
       color: inherit !important;
     }
 
-    .q-card ::v-deep input,
-    .q-card ::v-deep textarea,
-    .q-card ::v-deep .q-select__input {
+    .add-task-card ::v-deep input,
+    .add-task-card ::v-deep textarea,
+    .add-task-card ::v-deep .q-select__input,
+    .task-preview ::v-deep input,
+    .task-preview ::v-deep textarea,
+    .task-preview ::v-deep .q-select__input {
       color: #212121 !important;
       -webkit-text-fill-color: #212121 !important;
       caret-color: #212121 !important;
@@ -405,21 +415,25 @@ $hidden-bg: #f2f2f2;
       box-shadow: none !important;
     }
 
-    .q-card ::v-deep input::placeholder,
-    .q-card ::v-deep textarea::placeholder,
-    .q-card ::v-deep .q-select__input::placeholder {
+    .add-task-card ::v-deep input::placeholder,
+    .add-task-card ::v-deep textarea::placeholder,
+    .add-task-card ::v-deep .q-select__input::placeholder,
+    .task-preview ::v-deep input::placeholder,
+    .task-preview ::v-deep textarea::placeholder {
       color: rgba(0, 0, 0, 0.45) !important;
       -webkit-text-fill-color: rgba(0, 0, 0, 0.45) !important;
     }
 
     /* Quasar native field text */
-    .q-field__native {
+    .add-task-card .q-field__native,
+    .task-preview .q-field__native {
       color: #212121 !important;
       -webkit-text-fill-color: #212121 !important;
     }
 
     /* Prevent global dialog rule from forcing a blue field background */
-    .q-card .q-field,
+    .add-task-card .q-field,
+    .task-preview .q-field,
     .q-dialog__inner .q-field {
       background: transparent !important;
       color: inherit !important;
