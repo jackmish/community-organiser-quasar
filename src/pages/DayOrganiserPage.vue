@@ -20,7 +20,13 @@
               <div class="text-h6 task-list-header" :style="headerStyle">
                 <div class="row items-center task-header-row" >
                   <div class="row items-center no-wrap task-header-date-nav">
-                    <q-btn flat dense round @click="CC.task.time.prevDay">
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      class="task-header-date-btn"
+                      @click="CC.task.time.prevDay"
+                    >
                       <q-icon
                         name="chevron_left"
                         :style="'color: ' + headerStyle.color + ' !important;'"
@@ -35,7 +41,13 @@
                       :style="'color: ' + headerStyle.color + ' !important;'"
                       >{{ formatHeaderDate(CC.task.time.currentDate.value) }}</span
                     >
-                    <q-btn flat dense round @click="CC.task.time.nextDay">
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      class="task-header-date-btn"
+                      @click="CC.task.time.nextDay"
+                    >
                       <q-icon
                         name="chevron_right"
                         :style="'color: ' + headerStyle.color + ' !important;'"
@@ -1208,15 +1220,28 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-/* Tighter space between chevrons and date label (margin/gap only — no font changes). */
+/* Tighter space between chevrons and date label (margin/padding only — no font changes). */
 .task-header-date-nav {
-  gap: 0;
+  gap: 4px;
+}
 
-  :deep(.q-btn) {
-    margin: 0;
-    min-width: 0;
-    padding: 0 2px;
-  }
+.task-header-date-nav .task-header-date-btn {
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+}
+
+.task-header-date-nav .task-header-date-btn :deep(.q-btn__wrapper) {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 2px !important;
+}
+
+.task-header-date-nav .task-header-date-btn :deep(.q-btn__content) {
+  padding: 0 !important;
 }
 
 @media (max-width: 767px) {
