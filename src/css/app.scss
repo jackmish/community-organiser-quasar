@@ -32,6 +32,16 @@ main {
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner {
   background-color: $menu-bg-opacity !important;
 }
+
+/* Dialogs open/close instantly (no slide/fade; bottom position used to add slide-up). */
+.q-dialog__backdrop,
+.q-dialog__inner,
+.q-dialog__inner > div,
+.q-dialog [class*='q-transition--'][class*='-enter-active'],
+.q-dialog [class*='q-transition--'][class*='-leave-active'] {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}
 .fullscreen {
   z-index: 9999999000;
 }

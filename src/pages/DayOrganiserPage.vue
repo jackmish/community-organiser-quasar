@@ -155,6 +155,7 @@
       @update:model-value="(open) => { panelHidden = !open }"
       position="bottom"
       full-width
+      :transition-duration="0"
       class="day-organiser-task-panel-dialog"
     >
       <div class="fixed-right-panel fixed-right-panel--mobile-dialog">
