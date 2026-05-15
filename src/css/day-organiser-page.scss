@@ -5,7 +5,6 @@ $primary-dark: #0d47a1;
 $panel-btn: #356;
 $panel-show: #579;
 $hidden-bg: #f2f2f2;
-$mobile-overlay: rgba(11, 111, 222, 0.7);
 
 .selected-task {
   border: 2px solid var(--q-primary, #1976d2);
@@ -374,38 +373,62 @@ $mobile-overlay: rgba(11, 111, 222, 0.7);
     }
   }
 
-  .mobile-panel-backdrop {
-    position: fixed;
-    inset: 0;
-    background-color: $mobile-overlay;
-    z-index: 1200;
-    pointer-events: auto;
-    touch-action: manipulation;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Let taps/clicks on empty shell pass through to .mobile-panel-backdrop below (Electron trackpad vs mouse). */
-  .fixed-right-panel:not(.panel-hidden) {
-    pointer-events: none;
-
-    .fixed-content {
-      pointer-events: none;
+  /* Mobile task panel: Quasar q-dialog supplies q-dialog__backdrop (same as group dialogs). */
+  .day-organiser-task-panel-dialog {
+    .q-dialog__inner {
+      padding: 0;
+      align-items: flex-end;
     }
 
-    .fixed-content > * {
-      pointer-events: auto;
+    /* Task panel should NOT inherit the “white-on-blue dialog” theme intended
+       for group/settings dialogs. Force the AddTaskForm palette back on. */
+    .q-card {
+      background-color: var(--co21-task-card-bg, transparent) !important;
+      color: #212121 !important;
+    }
+
+    .q-card-section,
+    .q-card-actions {
+      background-color: transparent !important;
+      color: inherit !important;
+    }
+
+    .q-card ::v-deep input,
+    .q-card ::v-deep textarea,
+    .q-card ::v-deep .q-select__input {
+      color: #212121 !important;
+      -webkit-text-fill-color: #212121 !important;
+      caret-color: #212121 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .q-card ::v-deep input::placeholder,
+    .q-card ::v-deep textarea::placeholder,
+    .q-card ::v-deep .q-select__input::placeholder {
+      color: rgba(0, 0, 0, 0.45) !important;
+      -webkit-text-fill-color: rgba(0, 0, 0, 0.45) !important;
+    }
+
+    /* Quasar native field text */
+    .q-field__native {
+      color: #212121 !important;
+      -webkit-text-fill-color: #212121 !important;
+    }
+
+    /* Prevent global dialog rule from forcing a blue field background */
+    .q-card .q-field,
+    .q-dialog__inner .q-field {
+      background: transparent !important;
+      color: inherit !important;
+      -webkit-text-fill-color: inherit !important;
     }
   }
 
-  .fixed-right-panel {
-    z-index: 1201;
-    right: 0;
-    left: 0;
-    top: 34px;
-    width: 100vw;
-    bottom: auto;
-    max-height: 100vh;
+  .fixed-right-panel--mobile-dialog {
+    position: relative;
+    width: 100%;
+    max-height: 92vh;
     overflow: visible;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;

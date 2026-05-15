@@ -28,7 +28,8 @@ main {
   color: #000 !important;
 }
 //Background around popups/menus/dialogs (e.g. dimmed backdrop)
-.q-dialog__inner {
+// Exclude the DayOrganiser task panel: it has its own card colors/fonts.
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner {
   background-color: $menu-bg-opacity !important;
 }
 .fullscreen {
@@ -57,21 +58,22 @@ main {
 }
 
 /* Dialog/card areas use primary + white text */
-.q-dialog .q-card,
-.q-dialog .q-card-section,
-.q-dialog .q-card-actions {
+// Exclude the DayOrganiser task panel: allow AddTaskForm `:style` to apply.
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card-section,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card-actions {
   background-color: $menu-bg !important;
   color: #ffffff !important;
 }
 
 /* Consolidated input/select/button/icon overrides for popups/menus/dialogs */
 /* Targets native inputs, textareas and Quasar select/input internals across the popup/dialog/header contexts. */
-.q-dialog .q-card ::v-deep input,
-.q-dialog .q-card ::v-deep textarea,
-.q-dialog .q-card ::v-deep .q-select__input,
-.q-dialog__inner ::v-deep input,
-.q-dialog__inner ::v-deep textarea,
-.q-dialog__inner ::v-deep .q-select__input,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep input,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep textarea,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-select__input,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep input,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep textarea,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-select__input,
 .q-menu ::v-deep input,
 .q-menu ::v-deep textarea,
 .q-menu ::v-deep .q-select__input,
@@ -88,12 +90,12 @@ main {
 }
 
 /* Placeholders */
-.q-dialog .q-card ::v-deep input::placeholder,
-.q-dialog .q-card ::v-deep textarea::placeholder,
-.q-dialog .q-card ::v-deep .q-select__input::placeholder,
-.q-dialog__inner ::v-deep input::placeholder,
-.q-dialog__inner ::v-deep textarea::placeholder,
-.q-dialog__inner ::v-deep .q-select__input::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep input::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep textarea::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-select__input::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep input::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep textarea::placeholder,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-select__input::placeholder,
 .q-menu ::v-deep input::placeholder,
 .q-menu ::v-deep textarea::placeholder,
 .q-menu ::v-deep .q-select__input::placeholder,
@@ -104,10 +106,10 @@ main {
 }
 
 /* Prefix/suffix and icons */
-.q-dialog .q-card ::v-deep .q-field__prefix,
-.q-dialog .q-card ::v-deep .q-field__suffix,
-.q-dialog__inner ::v-deep .q-field__prefix,
-.q-dialog__inner ::v-deep .q-field__suffix,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__prefix,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__suffix,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__prefix,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__suffix,
 .q-menu ::v-deep .q-field__prefix,
 .q-menu ::v-deep .q-field__suffix,
 .q-select__popup ::v-deep .q-field__prefix,
@@ -118,10 +120,10 @@ main {
 }
 
 /* Remove heavy borders/shadows from controls; draw borders centrally below */
-body .q-dialog .q-card ::v-deep .q-field__control,
-body .q-dialog ::v-deep input,
-body .q-dialog ::v-deep textarea,
-body .q-dialog ::v-deep .q-select__input,
+body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__control,
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input,
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep textarea,
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep .q-select__input,
 body .q-select ::v-deep .q-field__control,
 .group-select--header ::v-deep .q-field__control,
 .group-select--header ::v-deep .q-select__control {
@@ -131,9 +133,9 @@ body .q-select ::v-deep .q-field__control,
 }
 
 /* Specific high-precedence fixes observed in DevTools */
-body .q-dialog ::v-deep .q-select__focus-target,
-body .q-dialog ::v-deep input.q-select__focus-target,
-body .q-dialog ::v-deep input[type="color"] {
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep .q-select__focus-target,
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input.q-select__focus-target,
+body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input[type="color"] {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
@@ -148,7 +150,7 @@ body .q-dialog ::v-deep input[type="color"] {
   -webkit-text-fill-color: #ffffff !important;
 }
 
-.q-dialog .q-field__native {
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field__native {
   color: #fff !important;
 }
 
@@ -193,8 +195,8 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 /* Do NOT touch .q-menu or .q-select__popup (expanded options) */
 html body .q-select .q-field,
 html body .group-select--header .q-field,
-html body .q-dialog .q-card .q-field,
-html body .q-dialog__inner .q-field,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field,
 .q-select:not(.use-default) {
   background: #26b !important;
   color: #ffffff !important;
@@ -206,8 +208,8 @@ html body .q-dialog__inner .q-field,
 html body .group-select--header input::placeholder,
 html body .group-select--header textarea::placeholder,
 html body .group-select--header .q-select__input::placeholder,
-html body .q-dialog .q-card input::placeholder,
-html body .q-dialog .q-card textarea::placeholder {
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card input::placeholder,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card textarea::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 

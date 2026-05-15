@@ -290,12 +290,22 @@ const cardStyle = computed(() => {
   if (isReplenish.value) {
     const bg = "#f5efe6"; // latte-like light beige
     const accent = "#c9a676";
-    return { backgroundColor: bg, border: `8px solid ${accent}` };
+    return {
+      backgroundColor: bg,
+      // Exposed for CSS overrides inside the mobile q-dialog theme.
+      // (SCSS sets background-color with !important, so the inline style alone can get overridden.)
+      "--co21-task-card-bg": bg,
+      border: `8px solid ${accent}`,
+    };
   }
   const bg =
     props.mode === "add" ? "#e8f5e9" : props.mode === "edit" ? "#fff3e0" : "#ffffff";
   const accent = modeAccentColor.value || "#000000";
-  return { backgroundColor: bg, border: `8px solid ${accent}` };
+  return {
+    backgroundColor: bg,
+    "--co21-task-card-bg": bg,
+    border: `8px solid ${accent}`,
+  };
 });
 
 // Watermark icon depending on mode/type

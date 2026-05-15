@@ -97,7 +97,7 @@ yarn install
 
 ### Development
 
-#### Start the Electron desktop app
+#### Start the Electron desktop app (it would be migrated to Tauri)
 
 ```bash
 npm run electron

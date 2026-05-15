@@ -137,84 +137,24 @@
       @import="handleImportFile"
     />
 
-    <div
-      v-if="!panelHidden && $q.screen.lt.md"
-      class="mobile-panel-backdrop"
-      @click.stop="dismissMobileBackdrop"
-      @pointerup.stop="dismissMobileBackdrop"
-    ></div>
-    <div :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]">
-      <div
-        class="fixed-content"
-        :class="{ floating: previewFloating }"
-        :style="previewFloating ? computePreviewStyle(previewRect) : {}"
-      >
-        <q-btn
-          v-if="!panelHidden && !$q.screen.lt.md"
-          unelevated
-          color="dark"
-          class="panel-toggle-btn"
-          :label="$text('ui.hide')"
-          icon="keyboard_arrow_down"
-          @click="panelHidden = true"
-        />
-        <q-btn
-          v-if="!panelHidden && $q.screen.lt.md"
-          round
-          dense
-          unelevated
-          color="dark"
-          class="panel-close-btn"
-          icon="close"
-          @click="panelHidden = true"
-        />
-
-        <!-- Single TaskPreview instance: toggles between floating and fixed placement -->
-        <TaskPreview
-          v-if="CC.task.active.mode.value === 'preview' && CC.task.active.task.value"
-          :task="CC.task.active.task.value"
-          :group-name="getGroupName(CC.task.active.task.value.groupId)"
-          :animating-lines="animatingLines"
-          @line-collapsed="onLineCollapsed"
-          @line-expanded="onLineExpanded"
-          @edit="
-            () => {
-              CC.task.active.mode.value = 'edit';
-            }
-          "
-          @close="clearTaskToEdit"
-          @delete-task="handleDeleteTask"
-          @update-task="(t) => handleUpdateTask(t)"
-          :fixed="previewFloating"
-        />
-
-        <div
-          class="floating-preview-wrapper"
-          :class="{ floating: previewFloating }"
-          v-if="
-            CC.task.active.mode.value === 'add' || CC.task.active.mode.value === 'edit'
-          "
-        >
-          <AddTaskForm
-            :filtered-parent-options="filteredParentOptions"
-            :active-group="CC.group.active.activeGroup.value"
-            :show-calendar="false"
-            :selected-date="newTask.eventDate"
-            :all-tasks="allTasks"
-            :replenish-tasks="replenishTasks"
-            :initial-task="CC.task.active.task.value"
-            :mode="CC.task.active.mode.value"
-            @update:mode="(v) => CC.task.active.setMode(v)"
-            @add-task="handleAddTaskFromForm"
-            @update-task="handleUpdateTask"
-            @delete-task="handleDeleteTask"
-            @toggle-status="handleToggleStatus"
-            @cancel-edit="() => clearTaskToEdit()"
-            @calendar-date-select="handleCalendarDateSelect"
-            @filter-parent-tasks="filterParentTasks"
-          />
-        </div>
+    <q-dialog
+      v-if="$q.screen.lt.md"
+      :model-value="!panelHidden"
+      @update:model-value="(open) => { panelHidden = !open }"
+      position="bottom"
+      full-width
+      class="day-organiser-task-panel-dialog"
+    >
+      <div class="fixed-right-panel fixed-right-panel--mobile-dialog">
+        <DayOrganiserTaskPanelContent />
       </div>
+    </q-dialog>
+
+    <div
+      v-else
+      :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]"
+    >
+      <DayOrganiserTaskPanelContent />
     </div>
 
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
@@ -246,8 +186,9 @@ import { todayString } from "src/utils/dateUtils";
 import { createImportHandler } from "src/modules/storage/handlers/importHandlers";
 import { useDayRollover } from "src/composables/useDayRollover";
 
-import AddTaskForm from "src/modules/task/components/element/AddTaskForm.vue";
 import Watermark from "src/components/ui/Watermark.vue";
+import DayOrganiserTaskPanelContent from "src/pages/components/DayOrganiserTaskPanelContent.vue";
+import { dayOrganiserPanelKey, type DayOrganiserPanelContext } from "src/pages/dayOrganiserPanelKey";
 
 import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
@@ -256,7 +197,6 @@ import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
-import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
@@ -274,7 +214,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide } from "vue";
 import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
@@ -519,11 +459,6 @@ const openDeleteMenu = ref<string | null>(null);
 // when true the fixed panel is moved off-screen (hidden) and only the show button is visible
 // Start hidden so the task list is the first thing users see on app launch
 const panelHidden = ref(true);
-
-/** Close overlay; both click and pointerup — Electron trackpad sometimes only fires one. */
-function dismissMobileBackdrop() {
-  panelHidden.value = true;
-}
 
 const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
 const reloadKey = ref(0);
@@ -1108,6 +1043,30 @@ const handleToggleStatus = async (task: any) => {
     // ignore
   }
 };
+
+provide(dayOrganiserPanelKey, {
+  panelHidden,
+  previewFloating,
+  previewRect,
+  computePreviewStyle,
+  filteredParentOptions,
+  allTasks,
+  replenishTasks,
+  newTask,
+  animatingLines,
+  onLineCollapsed,
+  onLineExpanded,
+  getGroupName,
+  clearTaskToEdit,
+  handleDeleteTask: (payload) => void handleDeleteTask(payload),
+  handleUpdateTask: (task) => void handleUpdateTask(task),
+  handleAddTaskFromForm: (taskPayload, opts) =>
+    void handleAddTaskFromForm(taskPayload, opts),
+  handleToggleStatus: (task) => void handleToggleStatus(task),
+  handleCalendarDateSelect,
+  filterParentTasks,
+  CC,
+} as DayOrganiserPanelContext);
 
 // `toggleStatus` delegates to the task API; child components call the API directly now.
 
