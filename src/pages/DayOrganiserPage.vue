@@ -19,7 +19,7 @@
             <q-card-section>
               <div class="text-h6 task-list-header" :style="headerStyle">
                 <div class="row items-center task-header-row" >
-                  <div class="row items-center task-header-date-nav" style="gap: 8px">
+                  <div class="row items-center no-wrap task-header-date-nav">
                     <q-btn flat dense round @click="CC.task.time.prevDay">
                       <q-icon
                         name="chevron_left"
@@ -1208,6 +1208,17 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+/* Tighter space between chevrons and date label (margin/gap only — no font changes). */
+.task-header-date-nav {
+  gap: 0;
+
+  :deep(.q-btn) {
+    margin: 0;
+    min-width: 0;
+    padding: 0 2px;
+  }
+}
+
 @media (max-width: 767px) {
   .list-add-btn {
     display: none !important;
@@ -1223,9 +1234,7 @@ onMounted(async () => {
   .task-header-date-nav {
     flex: 1 1 0;
     min-width: 0;
-    flex-wrap: nowrap;
     justify-content: center;
-    gap: 2px !important;
 
     .text-weight-bold {
       font-size: 0.92rem;
