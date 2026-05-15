@@ -442,10 +442,19 @@ $hidden-bg: #f2f2f2;
     box-sizing: border-box;
 
     .fixed-content {
+      position: relative;
       width: 100%;
       max-height: none;
       overflow: visible !important;
       box-sizing: border-box;
+
+      > .panel-close-btn {
+        top: 0px !important;
+        right: 0px !important;
+        transform: none !important;
+        border-radius: 0px !important;
+        border-bottom-left-radius: 12px !important;
+      }
 
       > .task-preview {
         max-height: calc(100vh - 44px);
@@ -474,6 +483,16 @@ $hidden-bg: #f2f2f2;
           margin-left: 0 !important;
           margin-right: 0 !important;
           border-radius: 0 !important;
+        }
+
+        .add-task-group-bar {
+          top: -16px !important;
+          left: -20px !important;
+
+          .group-select-chip {
+            border-radius: 0px !important;
+            border-bottom-right-radius: 12px !important;
+          }
         }
       }
 
