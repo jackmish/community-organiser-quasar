@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
-import { $text, getLanguage } from 'src/modules/lang';
+import { formatAppMonthShort, formatAppWeekday } from 'src/modules/lang/dateFormat';
+import { $text } from 'src/modules/lang';
 
 // Local YYYY-MM-DD parser to avoid timezone shifts when creating Dates
 export function parseYmdLocal(s: string | undefined | null): Date | null {
@@ -84,8 +85,7 @@ export function formatDisplayDate(
     const evMid = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
     const msPerDay = 1000 * 60 * 60 * 24;
     const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / msPerDay);
-    const locale = getLanguage() || 'en';
-    const datePart = formatDatePart(parsed, locale, opts);
+    const datePart = formatDatePart(parsed, opts);
     const relativeOpts: { uppercase?: boolean; maxLength?: number } = {
       uppercase: opts?.uppercaseRelative ?? false,
     };
@@ -104,10 +104,10 @@ export function formatDisplayDate(
       return `${label}, ${datePart}`;
     }
 
-    const weekday = new Intl.DateTimeFormat(locale, {
-      weekday: weekdayStyle,
-    }).format(parsed);
-    let dayPart = transformCase(weekday, opts?.uppercaseWeekday ?? false);
+    let dayPart = transformCase(
+      formatAppWeekday(parsed, weekdayStyle),
+      opts?.uppercaseWeekday ?? false,
+    );
     if (opts?.relativeMaxLength != null) {
       dayPart = limitChars(dayPart, opts.relativeMaxLength);
     }
@@ -127,33 +127,23 @@ export function formatMonthButtonLabel(
       : parseYmdLocal(dateInput) || new Date(String(dateInput));
   if (!parsed || isNaN(parsed.getTime())) return String(dateInput || '');
 
-  const locale = getLanguage() || 'en';
   const monthNum = String(parsed.getMonth() + 1).padStart(2, '0');
-  const monthRaw = new Intl.DateTimeFormat(locale, { month: 'short' }).format(parsed);
-  const month = transformCase(monthRaw.replace(/\./g, ''), opts?.uppercaseMonth ?? true);
+  const month = transformCase(formatAppMonthShort(parsed), opts?.uppercaseMonth ?? true);
   const year = String(parsed.getFullYear());
   return opts?.includeYear ? `${monthNum}.${month} ${year}` : `${monthNum}.${month}`;
 }
 
 function formatDatePart(
   date: Date,
-  locale: string,
   opts?: { monthStyle?: 'numeric' | 'short'; uppercaseDate?: boolean },
 ): string {
   if ((opts?.monthStyle ?? 'numeric') === 'numeric') {
     return format(date, 'dd.MM.yyyy');
   }
 
-  const dtf = new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-  const parts = dtf.formatToParts(date);
-  const day = parts.find((p) => p.type === 'day')?.value ?? format(date, 'dd');
-  const monthRaw = parts.find((p) => p.type === 'month')?.value ?? format(date, 'MMM');
-  const year = parts.find((p) => p.type === 'year')?.value ?? format(date, 'yyyy');
-  const month = monthRaw.replace(/\./g, '');
+  const day = format(date, 'dd');
+  const month = formatAppMonthShort(date);
+  const year = format(date, 'yyyy');
   const out = `${day}.${month}.${year}`;
   return transformCase(out, opts?.uppercaseDate ?? true);
 }

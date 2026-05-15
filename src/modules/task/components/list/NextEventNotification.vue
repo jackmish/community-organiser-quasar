@@ -49,6 +49,9 @@ import {
   priorityDefinitions,
   typeIcons,
 } from "src/components/theme";
+import { $text } from "src/modules/lang";
+import { formatAppWeekday } from "src/modules/lang/dateFormat";
+import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import { occursOnDay, getCycleType } from "src/modules/task/utils/occursOnDay";
 
 // Bind to the new namespaced APIs instead of destructuring the (undefined) result
@@ -69,12 +72,12 @@ function formatDateLabel(dateStr?: string) {
   const evMid = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
   const diffMs = evMid.getTime() - todayMid.getTime();
   const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  if (days === 0) return "Today";
-  if (days === 1) return "Tomorrow";
+  if (days === 0) return $text("date.today");
+  if (days === 1) return $text("date.tomorrow");
   if (days > 1 && days <= 6) {
-    return dt.toLocaleDateString(undefined, { weekday: "long" });
+    return formatAppWeekday(dt, "long");
   }
-  return dt.toLocaleDateString();
+  return formatDisplayDate(dateStr);
 }
 
 // occursOnDay and repeat helpers moved to ../utils/occursOnDay

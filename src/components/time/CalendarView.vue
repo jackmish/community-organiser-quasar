@@ -110,11 +110,7 @@
                     @pointerleave="cancelLongPressDay"
                     @click="onDayClick($event, day)"
                     @contextmenu="handleDateSelect($event, day, true)"
-                    :title="
-                      parseDay(day).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                      })
-                    "
+                    :title="formatAppWeekday(parseDay(day), 'long')"
                     :class="[
                       'calendar-day-btn',
                       { 'first-day-of-month': isFirstDayOfMonth(day) },
@@ -284,6 +280,7 @@ import {
   getCountryCode,
   loadSavedLocale,
 } from "src/modules/lang";
+import { formatAppMonthLong, formatAppWeekday } from "src/modules/lang/dateFormat";
 import { useLongPress } from "src/composables/useLongPress";
 import CC from "src/CCAccess";
 import {
@@ -1473,9 +1470,7 @@ function shouldShowYear(
 }
 
 function getMonthAbbr(day: string, index: number, week: string[]) {
-  const monthName = new Intl.DateTimeFormat(getLanguage() || "en", {
-    month: "long",
-  }).format(parseDay(day));
+  const monthName = formatAppMonthLong(parseDay(day));
 
   // !!! Removed prefix in comment - it's visually clearer with watermark component, but i can change my mind later if needed
   // Add "..." prefix if this is not the first day of the month and it's the first occurrence
@@ -1511,9 +1506,7 @@ function weekHasMonthStart(week: string[]) {
 function getWeekWatermarkLabel(week: string[]) {
   const first = week.find((d) => parseDay(d).getDate() === 1);
   if (!first) return "";
-  return new Intl.DateTimeFormat(getLanguage() || "en", {
-    month: "long",
-  }).format(parseDay(first));
+  return formatAppMonthLong(parseDay(first));
 }
 
 function isFirstDayOfMonth(day: string) {

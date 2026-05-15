@@ -340,7 +340,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { $text } from "src/modules/lang";
 
 import { useLongPress } from "src/composables/useLongPress";
 import ReplenishmentList from "./ReplenishmentList.vue";
@@ -380,6 +379,8 @@ import {
   typeIcons,
   highlightIcon,
 } from "src/components/theme";
+import { $text } from "src/modules/lang";
+import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import {
   formatDisplayDate,
   formatEventHoursDiff,
@@ -530,10 +531,11 @@ const getEventHoursDisplay = (task: any) => {
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
         let rel = "";
-        if (diffDays === 0) rel = "Today";
-        else if (diffDays === 1) rel = "Tomorrow";
-        else if (diffDays > 1) rel = `In ${diffDays}days`;
-        else rel = `${Math.abs(diffDays)} days ago`;
+        if (diffDays === 0) rel = $text("date.today");
+        else if (diffDays === 1) rel = $text("date.tomorrow");
+        else if (diffDays > 1)
+          rel = $text("date.in_days").replace("{n}", String(diffDays));
+        else rel = $text("date.days_ago").replace("{n}", String(Math.abs(diffDays)));
 
         const shortDate = formatShortDate(dateStr);
         if (timeStr) {
@@ -557,10 +559,10 @@ const getEventHoursDisplay = (task: any) => {
         const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const evMid = new Date(evD.getFullYear(), evD.getMonth(), evD.getDate());
         const diffDays = Math.round((evMid.getTime() - todayMid.getTime()) / 86400000);
-        if (diffDays === 0) return `Today | ${timeStr}`;
-        if (diffDays === 1) return `Tomorrow | ${timeStr}`;
+        if (diffDays === 0) return `${$text("date.today")} | ${timeStr}`;
+        if (diffDays === 1) return `${$text("date.tomorrow")} | ${timeStr}`;
         if (diffDays > 1 && diffDays <= 6)
-          return `${evD.toLocaleDateString(undefined, { weekday: "long" })} | ${timeStr}`;
+          return `${formatAppWeekday(evD, "long")} | ${timeStr}`;
       }
     } catch (e) {
       // fall back to short date formatting
@@ -576,9 +578,9 @@ const getEventHoursDisplay = (task: any) => {
   const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dateMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((dateMid.getTime() - todayMid.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays === -1) return "Yesterday";
+  if (diffDays === 0) return $text("date.today");
+  if (diffDays === 1) return $text("date.tomorrow");
+  if (diffDays === -1) return $text("date.yesterday");
   return formatDisplayDate(dateStr);
 };
 

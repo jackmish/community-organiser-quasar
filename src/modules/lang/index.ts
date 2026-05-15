@@ -60,6 +60,16 @@ export async function detectAndSetLocale(): Promise<{
 export function getLanguage(): string {
   return currentLocale.split('-')[0] || 'en';
 }
+
+/** Full BCP-47 locale tag (e.g. `pl-PL`) for Intl and date formatting. */
+export function getLocale(): string {
+  return currentLocale || 'en-US';
+}
+
+export function hasText(key: string): boolean {
+  if (!key) return false;
+  return key in (dict.value || {});
+}
 export function getText(key: string): string {
   if (!key) return '';
   const d = dict.value || {};

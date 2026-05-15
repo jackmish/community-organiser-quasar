@@ -114,6 +114,7 @@ import {
 } from "src/components/theme";
 import { hexToRgba, getContrastColor } from "src/utils/colorUtils";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
+import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { $text } from "src/modules/lang";
 
@@ -222,7 +223,7 @@ const getEventHoursDisplay = (task: any) => {
         if (diffDays === 0) return `${$text("date.today")} | ${timeStr}`;
         if (diffDays === 1) return `${$text("date.tomorrow")} | ${timeStr}`;
         if (diffDays > 1 && diffDays <= 6)
-          return `${evD.toLocaleDateString(undefined, { weekday: "long" })} | ${timeStr}`;
+          return `${formatAppWeekday(evD, "long")} | ${timeStr}`;
       }
     } catch (e) {
       void e;

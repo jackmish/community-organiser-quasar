@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
-import { $text, getLanguage } from "src/modules/lang";
+import { $text } from "src/modules/lang";
+import { formatAppMonthLong } from "src/modules/lang/dateFormat";
 import type { Group } from "src/modules/group/models/GroupModel";
 import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
@@ -704,9 +705,8 @@ function formatTitleDate(dateStr: string): string {
   try {
     const parsed = parseYmdLocal(dateStr);
     if (!parsed) return dateStr;
-    const locale = getLanguage() || "en";
     const day = parsed.getDate();
-    const month = new Intl.DateTimeFormat(locale, { month: "long" }).format(parsed);
+    const month = formatAppMonthLong(parsed);
     // Capitalize first letter of month (some locales return lowercase)
     const monthCap = month.charAt(0).toUpperCase() + month.slice(1);
     return `${day}.${monthCap}`;
