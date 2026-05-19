@@ -35,19 +35,25 @@
   </div>
   <div class="row items-center">
     <div class="col">
-      <div class="calendar-days-frame">
-        <div ref="scrollFlipEl" class="calendar-scroll-flip">
-          <div ref="tableWrapper" class="calendar-table-wrapper">
-            <table class="calendar-table">
+      <div ref="scrollFlipEl" class="calendar-scroll-flip">
+        <div ref="tableWrapper" class="calendar-table-wrapper">
+          <table class="calendar-table">
             <thead>
               <tr>
+                <th class="calendar-nav-col-head" scope="col" aria-hidden="true" />
                 <th
-                  v-for="day in calendarCurrentWeek"
+                  v-for="(day, dayHeaderIndex) in calendarCurrentWeek"
                   :key="'header-' + day"
-                  class="text-center text-weight-bold text-caption"
+                  class="text-center text-weight-bold text-caption calendar-weekday-th"
+                  :class="{
+                    'calendar-weekday-th--alt': dayHeaderIndex % 2 === 1,
+                    'calendar-weekend-th': isWeekend(day),
+                  }"
+                  scope="col"
                 >
                   {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][parseDay(day).getDay()] }}
                 </th>
+                <th class="calendar-nav-col-head" scope="col" aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
@@ -62,6 +68,20 @@
                   ),
                 }"
               >
+                <td class="calendar-nav-col calendar-nav-col--before">
+                  <q-btn
+                    v-if="weekIndex === 0"
+                    unelevated
+                    dense
+                    color="primary"
+                    text-color="white"
+                    icon="chevron_left"
+                    :aria-label="$text('ui.prev')"
+                    :title="$text('ui.prev')"
+                    class="calendar-nav-arrow calendar-nav-arrow--prev"
+                    @click="previousCalendarWeeks"
+                  />
+                </td>
                 <td
                   v-for="(day, index) in week"
                   :key="day"
@@ -207,37 +227,24 @@
                     </div>
                   </q-btn>
                 </td>
+                <td class="calendar-nav-col calendar-nav-col--after">
+                  <q-btn
+                    v-if="weekIndex === allCalendarWeeks.length - 1"
+                    unelevated
+                    dense
+                    color="primary"
+                    text-color="white"
+                    icon="chevron_right"
+                    :aria-label="$text('ui.next')"
+                    :title="$text('ui.next')"
+                    class="calendar-nav-arrow calendar-nav-arrow--next"
+                    @click="nextCalendarWeeks"
+                  />
+                </td>
               </tr>
             </tbody>
-            </table>
-          </div>
+          </table>
         </div>
-        <q-btn
-          unelevated
-          round
-          dense
-          size="sm"
-          color="primary"
-          text-color="white"
-          icon="chevron_left"
-          :aria-label="$text('ui.prev')"
-          :title="$text('ui.prev')"
-          class="calendar-nav-overlay calendar-nav-overlay--prev"
-          @click="previousCalendarWeeks"
-        />
-        <q-btn
-          unelevated
-          round
-          dense
-          size="sm"
-          color="primary"
-          text-color="white"
-          icon="chevron_right"
-          :aria-label="$text('ui.next')"
-          :title="$text('ui.next')"
-          class="calendar-nav-overlay calendar-nav-overlay--next"
-          @click="nextCalendarWeeks"
-        />
       </div>
     </div>
   </div>
@@ -574,8 +581,6 @@ function createOverlaysFromEdges() {
   const rows = Array.from(
     wrapper.querySelectorAll<HTMLTableRowElement>("table.calendar-table tbody tr")
   );
-  const tableWidth = Math.max(0, Math.round(wrapper.clientWidth || tableRect.width));
-  const tableHeight = Math.max(0, Math.round(wrapper.clientHeight || tableRect.height));
 
   if (getComputedStyle(wrapper).position === "static")
     wrapper.style.position = "relative";
@@ -636,12 +641,10 @@ function createOverlaysFromEdges() {
     }
   }
 
-  // Create one overlay per month segment (few per month)
-  const todayMonth = new Date().getMonth() + 1; // 1-12
-  // overlay color selection is provided by `getOverlayColorForMonth` in theme
+  // Create one overlay per month segment (few per month).
+  // Overlay color comes from `getOverlayColorForMonth` (no per-month JPG background).
 
   for (const [month, segments] of monthSegments.entries()) {
-    const url = `/images/months/bg_${month}.jpg`;
     for (const seg of segments) {
       const div = document.createElement("div");
       div.className = "co21-month-overlay";
@@ -653,7 +656,6 @@ function createOverlaysFromEdges() {
         div.dataset.startCol = String((seg as any).startCol);
       if ((seg as any).endCol !== undefined)
         div.dataset.endCol = String((seg as any).endCol);
-      // compute overlay color using shared helper
       const [overlayColor] = getOverlayColorForMonth(month);
       Object.assign(div.style, {
         position: "absolute",
@@ -661,160 +663,110 @@ function createOverlaysFromEdges() {
         left: `${seg.left}px`,
         width: `${seg.width}px`,
         height: `${seg.height}px`,
-        // backgroundImage: `url(${url})`,
         backgroundColor: overlayColor,
-        //Note: "#1976d2", looks very good as bg
-        // initial: center the image in each overlay (first-solution behavior)
-        backgroundSize: `cover`,
-        backgroundPosition: `center center`,
-        backgroundRepeat: "no-repeat",
-
         pointerEvents: "none",
-        // opacity: "1",
-        // mixBlendMode: "multiply",
         opacity: "0.6",
         mixBlendMode: "lighten",
         zIndex: String(Math.max(0, Number(z) + 1)),
       } as any);
       wrapper.prepend(div);
     }
-    // preload and compute cover-scale so all segments align like `background-size: cover`
-    const img = new Image();
-    img.onload = () => {
+
+    const overlays = Array.from(
+      wrapper.querySelectorAll<HTMLDivElement>(
+        `.co21-month-overlay[data-month="${month}"]`
+      )
+    );
+    for (const o of overlays) {
+      const segTop = Number(o.dataset.top || "0");
+      const segHeight = Math.max(0, Math.round(o.getBoundingClientRect().height));
+      const segRow = Number(o.dataset.row ?? -1);
+      const segStart = Number(o.dataset.startCol ?? -1);
+      const segEnd = Number(o.dataset.endCol ?? -1);
+
       try {
-        const iw = img.naturalWidth || img.width;
-        const ih = img.naturalHeight || img.height;
-        if (!iw || !ih) return;
+        const sepThickness = 4;
 
-        // scale image to behave like `background-size: cover` for the whole table
-        const scale = Math.max(tableWidth / iw, tableHeight / ih);
-        const scaledW = Math.round(iw * scale);
-        const scaledH = Math.round(ih * scale);
+        const createHSep = (leftPx: number, topPx: number, widthPx: number) => {
+          const s = document.createElement("div");
+          s.className = "co21-month-separator";
+          Object.assign(s.style, {
+            position: "absolute",
+            left: `${Math.max(0, Math.round(leftPx))}px`,
+            top: `${Math.max(0, Math.round(topPx))}px`,
+            width: `${Math.max(0, Math.round(widthPx))}px`,
+            height: `${sepThickness}px`,
+            backgroundColor: "#1976d2",
+            pointerEvents: "none",
+            zIndex: "9999",
+            boxShadow: "0 0 6px rgba(0,0,0,0.12)",
+          } as any);
+          wrapper.appendChild(s);
+        };
 
-        // when an image is cover-scaled and centered, its top-left is offset by
-        // half of the extra dimension. Compute those offsets so each segment can
-        // position the scaled image consistently.
-        const offsetX = Math.round((scaledW - tableWidth) / 2);
-        const offsetY = Math.round((scaledH - tableHeight) / 2);
-
-        const overlays = Array.from(
-          wrapper.querySelectorAll<HTMLDivElement>(
-            `.co21-month-overlay[data-month="${month}"]`
-          )
-        );
-        for (const o of overlays) {
-          const segLeft = Number(o.dataset.left || "0");
-          const segTop = Number(o.dataset.top || "0");
-          const segHeight = Math.max(0, Math.round(o.getBoundingClientRect().height));
-          const segRow = Number(o.dataset.row ?? -1);
-          const segStart = Number(o.dataset.startCol ?? -1);
-          const segEnd = Number(o.dataset.endCol ?? -1);
-
-          // position the scaled image so segments line up as if the whole table
-          // were painted with a single cover-centered background image
-          const posX = -offsetX - segLeft;
-          const posY = -offsetY - segTop;
-
-          o.style.backgroundSize = `${scaledW}px ${scaledH}px`;
-          o.style.backgroundPosition = `${posX}px ${posY}px`;
-
-          // Horizontal separators: create per-column fragment separators
-          // where the row above or below has different month values. This
-          // avoids splitting days inside the same month.
-          try {
-            const sepThickness = 4;
-
-            // helper to create a separator fragment
-            const createHSep = (leftPx: number, topPx: number, widthPx: number) => {
-              const s = document.createElement("div");
-              s.className = "co21-month-separator";
-              Object.assign(s.style, {
-                position: "absolute",
-                left: `${Math.max(0, Math.round(leftPx))}px`,
-                top: `${Math.max(0, Math.round(topPx))}px`,
-                width: `${Math.max(0, Math.round(widthPx))}px`,
-                height: `${sepThickness}px`,
-                backgroundColor: "#1976d2",
-                pointerEvents: "none",
-                zIndex: "9999",
-                boxShadow: "0 0 6px rgba(0,0,0,0.12)",
-              } as any);
-              wrapper.appendChild(s);
-            };
-
-            // check above row for differences and draw top separators only
-            if (segRow > 0) {
-              const aboveRow = rows[segRow - 1]!;
-              const aboveCells = Array.from(
-                aboveRow.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
-              );
-              let runStart = -1;
-              for (let c = segStart; c <= segEnd; c++) {
-                const aboveMonth = aboveCells[c]
-                  ? aboveCells[c]!.dataset.month ?? ""
-                  : "";
-                const differs = aboveMonth !== month;
-                if (differs && runStart === -1) runStart = c;
-                if (!differs && runStart !== -1) {
-                  const leftRect = aboveCells[runStart]!.getBoundingClientRect();
-                  const rightRect = aboveCells[c - 1]!.getBoundingClientRect();
-                  const leftPx = Math.round(leftRect.left - tableRect.left);
-                  const widthPx = Math.round(rightRect.right - leftRect.left);
-                  createHSep(leftPx, segTop, widthPx);
-                  runStart = -1;
-                }
-              }
-              if (runStart !== -1) {
-                const leftRect = aboveCells[runStart]!.getBoundingClientRect();
-                const rightRect = aboveCells[segEnd]!.getBoundingClientRect();
-                const leftPx = Math.round(leftRect.left - tableRect.left);
-                const widthPx = Math.round(rightRect.right - leftRect.left);
-                createHSep(leftPx, segTop, widthPx);
-              }
+        if (segRow > 0) {
+          const aboveRow = rows[segRow - 1]!;
+          const aboveCells = Array.from(
+            aboveRow.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
+          );
+          let runStart = -1;
+          for (let c = segStart; c <= segEnd; c++) {
+            const aboveMonth = aboveCells[c]
+              ? aboveCells[c]!.dataset.month ?? ""
+              : "";
+            const differs = aboveMonth !== month;
+            if (differs && runStart === -1) runStart = c;
+            if (!differs && runStart !== -1) {
+              const leftRect = aboveCells[runStart]!.getBoundingClientRect();
+              const rightRect = aboveCells[c - 1]!.getBoundingClientRect();
+              const leftPx = Math.round(leftRect.left - tableRect.left);
+              const widthPx = Math.round(rightRect.right - leftRect.left);
+              createHSep(leftPx, segTop, widthPx);
+              runStart = -1;
             }
+          }
+          if (runStart !== -1) {
+            const leftRect = aboveCells[runStart]!.getBoundingClientRect();
+            const rightRect = aboveCells[segEnd]!.getBoundingClientRect();
+            const leftPx = Math.round(leftRect.left - tableRect.left);
+            const widthPx = Math.round(rightRect.right - leftRect.left);
+            createHSep(leftPx, segTop, widthPx);
+          }
+        }
 
-            // check below row for differences and draw bottom separators
-            if (segRow >= 0 && segRow < rows.length - 1) {
-              const belowRow = rows[segRow + 1]!;
-              const belowCells = Array.from(
-                belowRow.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
-              );
-              let runStart = -1;
-              for (let c = segStart; c <= segEnd; c++) {
-                const belowMonth = belowCells[c]
-                  ? belowCells[c]!.dataset.month ?? ""
-                  : "";
-                const differs = belowMonth !== month;
-                if (differs && runStart === -1) runStart = c;
-                if (!differs && runStart !== -1) {
-                  const leftRect = belowCells[runStart]!.getBoundingClientRect();
-                  const rightRect = belowCells[c - 1]!.getBoundingClientRect();
-                  const leftPx = Math.round(leftRect.left - tableRect.left);
-                  const widthPx = Math.round(rightRect.right - leftRect.left);
-                  createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
-                  runStart = -1;
-                }
-              }
-              if (runStart !== -1) {
-                const leftRect = belowCells[runStart]!.getBoundingClientRect();
-                const rightRect = belowCells[segEnd]!.getBoundingClientRect();
-                const leftPx = Math.round(leftRect.left - tableRect.left);
-                const widthPx = Math.round(rightRect.right - leftRect.left);
-                createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
-              }
+        if (segRow >= 0 && segRow < rows.length - 1) {
+          const belowRow = rows[segRow + 1]!;
+          const belowCells = Array.from(
+            belowRow.querySelectorAll<HTMLTableCellElement>("td.calendar-cell")
+          );
+          let runStart = -1;
+          for (let c = segStart; c <= segEnd; c++) {
+            const belowMonth = belowCells[c]
+              ? belowCells[c]!.dataset.month ?? ""
+              : "";
+            const differs = belowMonth !== month;
+            if (differs && runStart === -1) runStart = c;
+            if (!differs && runStart !== -1) {
+              const leftRect = belowCells[runStart]!.getBoundingClientRect();
+              const rightRect = belowCells[c - 1]!.getBoundingClientRect();
+              const leftPx = Math.round(leftRect.left - tableRect.left);
+              const widthPx = Math.round(rightRect.right - leftRect.left);
+              createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
+              runStart = -1;
             }
-          } catch (e) {
-            // ignore per-segment separator creation
+          }
+          if (runStart !== -1) {
+            const leftRect = belowCells[runStart]!.getBoundingClientRect();
+            const rightRect = belowCells[segEnd]!.getBoundingClientRect();
+            const leftPx = Math.round(leftRect.left - tableRect.left);
+            const widthPx = Math.round(rightRect.right - leftRect.left);
+            createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
           }
         }
       } catch (e) {
-        // ignore
+        // ignore per-segment separator creation
       }
-    };
-    img.onerror = () => {
-      console.warn(`month image not found: ${url}`);
-    };
-    img.src = url;
+    }
   }
 
   // Draw segmented vertical separators per-row at boundaries where the

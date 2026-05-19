@@ -18,35 +18,63 @@ $sep-color: $primary;
   position: relative;
 }
 
-/* Compact prev/next overlaid on the calendar grid (position absolute) */
-.calendar-days-frame {
-  position: relative;
+/* Before/after nav columns: square controls, no cell padding/margin */
+.calendar-nav-col-head {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  border: none !important;
+  background: transparent !important;
+  box-sizing: border-box;
 }
 
-.calendar-nav-overlay {
-  position: absolute;
-  z-index: 20;
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
+.calendar-nav-col {
   padding: 0 !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  margin: 0 !important;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  border: none !important;
+  box-sizing: border-box;
+  background: transparent;
+  text-align: center;
+
+  &.calendar-nav-col--before {
+    vertical-align: top;
+  }
+
+  &.calendar-nav-col--after {
+    vertical-align: bottom;
+  }
+}
+
+.calendar-nav-arrow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 
   :deep(.q-icon) {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 
-  &.calendar-nav-overlay--prev {
-    /* Slightly above thead so it reads as “above Monday” */
-    top: -4px;
-    left: 2px;
+  :deep(.q-btn__wrapper) {
+    padding: 0 !important;
+    min-height: 0 !important;
   }
 
-  &.calendar-nav-overlay--next {
-    /* Bottom-right: snug to last row / viewport edge */
-    bottom: 2px;
-    right: 2px;
+  :deep(.q-btn__content) {
+    padding: 0 !important;
   }
 }
 
@@ -54,27 +82,27 @@ $sep-color: $primary;
   width: 100%;
   border-collapse: collapse;
 
-  th {
+  th.calendar-weekday-th {
     padding: 8px 4px;
     text-align: center;
     border-left: 1px dashed #bbb;
     border-right: 1px dashed #bbb;
     background: #eeeeeeee;
-    &:nth-of-type(2n) {
-      background: #ffffffee;
-    }
-    &:nth-of-type(6n) {
-      background: #5bf !important;
-    }
-    &:nth-of-type(7n) {
-      background: #5bf !important;
-    }
+  }
+
+  th.calendar-weekday-th--alt {
+    background: #ffffffee;
+  }
+
+  th.calendar-weekend-th {
+    background: #5bf !important;
   }
 
   th:first-child,
   td:first-child {
     border-left: none !important;
   }
+
   th:last-child,
   td:last-child {
     border-right: none !important;
@@ -297,7 +325,7 @@ $sep-color: $primary;
     touch-action: auto;
   }
   .calendar-scroll-flip .calendar-table-wrapper {
-    min-width: 560px;
+    min-width: 624px; /* 7 day cols + 2×32px nav gutter vs former 560px */
     display: block;
   }
   .calendar-cell {
