@@ -1,4 +1,11 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import {
+  startLanPairingServer,
+  stopLanPairingServer,
+  resolveLanPairing,
+  setLanPairingMainWindowProvider,
+  isLanPairingListening,
+} from './lanPairingServer';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -127,6 +134,8 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = undefined;
   });
+
+  setLanPairingMainWindowProvider(() => mainWindow);
 }
 
 // Handle IPC requests

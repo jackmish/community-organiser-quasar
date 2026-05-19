@@ -1,0 +1,316 @@
+/**
+ * Minimal HTTP server for LAN device pairing (Electron main process only).
+ */
+import http from 'node:http';
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
+import type { BrowserWindow } from 'electron';
+import { Notification } from 'electron';
+import logger from 'src/utils/logger';
+
+import { CO21_LAN_API_PREFIX, CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
+
+export type LanIdentityPublic = {
+  deviceId: string;
+  deviceName: string;
+  appVersion: string;
+};
+
+type Pending = {
+  token: string;
+  remoteDeviceId: string;
+  remoteName: string;
+  remoteAppVersion: string;
+  remoteAddress: string;
+  createdAt: number;
+  status: 'pending' | 'accepted' | 'rejected';
+};
+
+const PENDING_TTL_MS = 5 * 60 * 1000;
+
+let server: http.Server | null = null;
+let identity: LanIdentityPublic | null = null;
+const pendings = new Map<string, Pending>();
+let getMainWindow: () => BrowserWindow | undefined = () => undefined;
+let pruneTimer: ReturnType<typeof setInterval> | null = null;
+
+function corsHeaders(): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+function sendJson(res: http.ServerResponse, code: number, body: unknown): void {
+  const json = JSON.stringify(body);
+  res.writeHead(code, {
+    'Content-Type': 'application/json; charset=utf-8',
+    ...corsHeaders(),
+    'Content-Length': Buffer.byteLength(json, 'utf8'),
+  });
+  res.end(json);
+}
+
+function normalizeClientIp(raw: string | undefined): string {
+  if (!raw) return '';
+  let s = String(raw);
+  if (s.startsWith('::ffff:')) s = s.slice(7);
+  return s;
+}
+
+export function getLanIPv4Addresses(): string[] {
+  const nets = os.networkInterfaces();
+  const out: string[] = [];
+  for (const key of Object.keys(nets)) {
+    for (const ni of nets[key] ?? []) {
+      if (ni.family === 'IPv4' && !ni.internal) out.push(ni.address);
+    }
+  }
+  return out;
+}
+
+function prunePendings(): void {
+  const now = Date.now();
+  for (const [token, p] of pendings) {
+    if (p.status === 'pending' && now - p.createdAt > PENDING_TTL_MS) {
+      pendings.delete(token);
+    }
+  }
+}
+
+function notifyRenderer(detail: Record<string, unknown>): void {
+  const win = getMainWindow();
+  try {
+    win?.webContents.send('lan:pairing-pending', detail);
+  } catch (e) {
+    logger.warn('[lanPairingServer] webContents.send failed', e);
+  }
+}
+
+function showSystemNotification(
+  title: string,
+  body: string,
+  onClickDetail: Record<string, unknown>,
+): void {
+  try {
+    if (!Notification.isSupported()) return;
+    const n = new Notification({ title, body });
+    n.on('click', () => {
+      const win = getMainWindow();
+      if (win) {
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
+      notifyRenderer(onClickDetail);
+    });
+    n.show();
+  } catch (e) {
+    logger.warn('[lanPairingServer] Notification.show failed', e);
+  }
+}
+
+async function readBody(req: http.IncomingMessage): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+function handlePairRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  remoteAddr: string,
+): void {
+  void (async () => {
+    if (!identity) {
+      sendJson(res, 503, { error: 'server_not_ready' });
+      return;
+    }
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const remoteDeviceId = typeof parsed.deviceId === 'string' ? parsed.deviceId : '';
+    const remoteName =
+      typeof parsed.deviceName === 'string' ? parsed.deviceName : 'Unknown device';
+    const remoteAppVersion =
+      typeof parsed.appVersion === 'string' ? parsed.appVersion : '';
+    if (!remoteDeviceId) {
+      sendJson(res, 400, { error: 'missing_deviceId' });
+      return;
+    }
+
+    const token = randomUUID();
+    const pending: Pending = {
+      token,
+      remoteDeviceId,
+      remoteName,
+      remoteAppVersion,
+      remoteAddress: normalizeClientIp(remoteAddr),
+      createdAt: Date.now(),
+      status: 'pending',
+    };
+    pendings.set(token, pending);
+
+    const detail = {
+      token,
+      remoteDeviceId,
+      remoteName,
+      remoteAppVersion,
+      remoteAddress: pending.remoteAddress,
+    };
+    notifyRenderer(detail);
+    showSystemNotification(
+      'CO21 — LAN pairing',
+      `${remoteName} is asking to register with this computer.`,
+      detail,
+    );
+
+    sendJson(res, 200, {
+      token,
+      statusUrl: `${CO21_LAN_API_PREFIX}/pair/status/${token}`,
+    });
+  })();
+}
+
+function handlePairStatus(res: http.ServerResponse, token: string): void {
+  const p = pendings.get(token);
+  if (!p) {
+    sendJson(res, 200, { status: 'unknown' });
+    return;
+  }
+  if (p.status === 'pending') {
+    sendJson(res, 200, { status: 'pending' });
+    return;
+  }
+  if (p.status === 'rejected') {
+    pendings.delete(token);
+    sendJson(res, 200, { status: 'rejected' });
+    return;
+  }
+  // accepted
+  if (!identity) {
+    sendJson(res, 200, { status: 'unknown' });
+    return;
+  }
+  const peer = {
+    deviceId: identity.deviceId,
+    deviceName: identity.deviceName,
+    appVersion: identity.appVersion,
+    lanAddresses: getLanIPv4Addresses(),
+  };
+  pendings.delete(token);
+  sendJson(res, 200, { status: 'accepted', peer });
+}
+
+export function setLanPairingMainWindowProvider(fn: () => BrowserWindow | undefined): void {
+  getMainWindow = fn;
+}
+
+export function startLanPairingServer(
+  id: LanIdentityPublic,
+): Promise<{ port: number; addresses: string[] }> {
+  return new Promise((resolve, reject) => {
+    stopLanPairingServer();
+    identity = { ...id };
+
+    server = http.createServer((req, res) => {
+      try {
+        if (!req.url) {
+          sendJson(res, 400, { error: 'bad_request' });
+          return;
+        }
+        const pathOnly = req.url.split('?')[0] || '';
+
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, corsHeaders());
+          res.end();
+          return;
+        }
+
+        if (req.method === 'GET' && pathOnly === `${CO21_LAN_API_PREFIX}/info`) {
+          if (!identity) {
+            sendJson(res, 503, { error: 'not_ready' });
+            return;
+          }
+          sendJson(res, 200, {
+            deviceId: identity.deviceId,
+            deviceName: identity.deviceName,
+            appVersion: identity.appVersion,
+          });
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/pair/request`) {
+          const ra = normalizeClientIp(req.socket.remoteAddress);
+          handlePairRequest(req, res, ra);
+          return;
+        }
+
+        if (req.method === 'GET' && pathOnly.startsWith(`${CO21_LAN_API_PREFIX}/pair/status/`)) {
+          const token = pathOnly.slice(`${CO21_LAN_API_PREFIX}/pair/status/`.length);
+          handlePairStatus(res, token);
+          return;
+        }
+
+        sendJson(res, 404, { error: 'not_found' });
+      } catch (e) {
+        logger.error('[lanPairingServer] request error', e);
+        sendJson(res, 500, { error: 'internal' });
+      }
+    });
+
+    server.once('error', (err: NodeJS.ErrnoException) => {
+      logger.error('[lanPairingServer] listen error', err);
+      server = null;
+      identity = null;
+      reject(err);
+    });
+
+    server.listen(CO21_LAN_PAIRING_PORT, '0.0.0.0', () => {
+      pruneTimer = setInterval(prunePendings, 60_000);
+      resolve({ port: CO21_LAN_PAIRING_PORT, addresses: getLanIPv4Addresses() });
+    });
+  });
+}
+
+export function stopLanPairingServer(): void {
+  if (pruneTimer) {
+    clearInterval(pruneTimer);
+    pruneTimer = null;
+  }
+  pendings.clear();
+  identity = null;
+  if (server) {
+    try {
+      server.close();
+    } catch {
+      /* ignore */
+    }
+    server = null;
+  }
+}
+
+export function resolveLanPairing(token: string, accept: boolean): boolean {
+  const p = pendings.get(token);
+  if (!p || p.status !== 'pending') return false;
+  p.status = accept ? 'accepted' : 'rejected';
+  return true;
+}
+
+export function isLanPairingListening(): boolean {
+  return !!server;
+}
