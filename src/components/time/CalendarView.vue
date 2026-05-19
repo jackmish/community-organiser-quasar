@@ -35,9 +35,10 @@
   </div>
   <div class="row items-center">
     <div class="col">
-      <div ref="scrollFlipEl" class="calendar-scroll-flip">
-        <div ref="tableWrapper" class="calendar-table-wrapper">
-          <table class="calendar-table">
+      <div class="calendar-days-frame">
+        <div ref="scrollFlipEl" class="calendar-scroll-flip">
+          <div ref="tableWrapper" class="calendar-table-wrapper">
+            <table class="calendar-table">
             <thead>
               <tr>
                 <th
@@ -208,12 +209,39 @@
                 </td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
+        <q-btn
+          unelevated
+          round
+          dense
+          size="sm"
+          color="primary"
+          text-color="white"
+          icon="chevron_left"
+          :aria-label="$text('ui.prev')"
+          :title="$text('ui.prev')"
+          class="calendar-nav-overlay calendar-nav-overlay--prev"
+          @click="previousCalendarWeeks"
+        />
+        <q-btn
+          unelevated
+          round
+          dense
+          size="sm"
+          color="primary"
+          text-color="white"
+          icon="chevron_right"
+          :aria-label="$text('ui.next')"
+          :title="$text('ui.next')"
+          class="calendar-nav-overlay calendar-nav-overlay--next"
+          @click="nextCalendarWeeks"
+        />
       </div>
     </div>
   </div>
-  <!-- Prev button and visible days per page option (moved to bottom) -->
+  <!-- Visible days per page -->
   <div class="bottom-row row q-mb-md items-center">
     <div class="col pagination-range-options">
       <div class="visible-days-control">
@@ -234,29 +262,6 @@
           size="sm"
         />
       </div>
-    </div>
-    <div class="col text-right">
-      <q-btn
-        unelevated
-        icon="chevron_left"
-        :label="$text('ui.prev')"
-        color="primary"
-        text-color="white"
-        @click="previousCalendarWeeks"
-        size="md"
-        class="calendar-nav-btn"
-        style="margin-right: 8px"
-      />
-      <q-btn
-        unelevated
-        icon-right="chevron_right"
-        :label="$text('ui.next')"
-        color="primary"
-        text-color="white"
-        @click="nextCalendarWeeks"
-        size="md"
-        class="calendar-nav-btn"
-      />
     </div>
   </div>
 </template>
