@@ -75,12 +75,19 @@
                     dense
                     color="primary"
                     text-color="white"
-                    icon="chevron_left"
-                    :aria-label="$text('ui.prev')"
-                    :title="$text('ui.prev')"
+                    :aria-label="`${$text('ui.prev')}: ${calendarNavPrevRange.from}, ${calendarNavPrevRange.to}`"
+                    :title="`${$text('ui.prev')}: ${calendarNavPrevRange.from} — ${calendarNavPrevRange.to}`"
                     class="calendar-nav-arrow calendar-nav-arrow--prev"
                     @click="previousCalendarWeeks"
-                  />
+                  >
+                    <div class="calendar-nav-arrow-body items-center">
+                      <q-icon name="chevron_left" class="calendar-nav-arrow-icon" />
+                      <span class="calendar-nav-range">
+                        <span class="calendar-nav-range-line">{{ calendarNavPrevRange.from }}</span>
+                        <span class="calendar-nav-range-line">{{ calendarNavPrevRange.to }}</span>
+                      </span>
+                    </div>
+                  </q-btn>
                 </td>
                 <td
                   v-for="(day, index) in week"
@@ -234,12 +241,19 @@
                     dense
                     color="primary"
                     text-color="white"
-                    icon="chevron_right"
-                    :aria-label="$text('ui.next')"
-                    :title="$text('ui.next')"
+                    :aria-label="`${$text('ui.next')}: ${calendarNavNextRange.from}, ${calendarNavNextRange.to}`"
+                    :title="`${$text('ui.next')}: ${calendarNavNextRange.from} — ${calendarNavNextRange.to}`"
                     class="calendar-nav-arrow calendar-nav-arrow--next"
                     @click="nextCalendarWeeks"
-                  />
+                  >
+                    <div class="calendar-nav-arrow-body items-center">
+                      <span class="calendar-nav-range">
+                        <span class="calendar-nav-range-line">{{ calendarNavNextRange.from }}</span>
+                        <span class="calendar-nav-range-line">{{ calendarNavNextRange.to }}</span>
+                      </span>
+                      <q-icon name="chevron_right" class="calendar-nav-arrow-icon" />
+                    </div>
+                  </q-btn>
                 </td>
               </tr>
             </tbody>
@@ -290,9 +304,14 @@ import {
   detectAndSetLocale,
   getLanguage,
   getCountryCode,
+  getLocale,
   loadSavedLocale,
 } from "src/modules/lang";
-import { formatAppMonthLong, formatAppWeekday } from "src/modules/lang/dateFormat";
+import {
+  formatAppMonthLong,
+  formatAppMonthShort,
+  formatAppWeekday,
+} from "src/modules/lang/dateFormat";
 import { useLongPress } from "src/composables/useLongPress";
 import CC from "src/CCAccess";
 import {
@@ -1250,6 +1269,28 @@ const allCalendarWeeks = computed(() => {
   );
   return result;
 });
+
+/** One endpoint like `18.Maj` using app month short names (locale-aware). */
+function formatNavRangeDay(d: Date): string {
+  const raw = formatAppMonthShort(d);
+  const month =
+    raw.length > 0 ? raw.charAt(0).toLocaleUpperCase(getLocale()) + raw.slice(1) : raw;
+  return `${d.getDate()}.${month}`;
+}
+
+function navRangeLineLabels(shiftCalendarBaseByDays: number): { from: string; to: string } {
+  const span = calendarViewDays.value;
+  const shifted = addDays(calendarBaseDate.value, shiftCalendarBaseByDays);
+  const rangeStart = startOfWeek(shifted, { weekStartsOn: 1 });
+  const rangeEnd = addDays(rangeStart, span - 1);
+  return { from: formatNavRangeDay(rangeStart), to: formatNavRangeDay(rangeEnd) };
+}
+
+/** Start / end dates for the window after tapping Prev (two display lines). */
+const calendarNavPrevRange = computed(() => navRangeLineLabels(-calendarViewDays.value));
+
+/** Start / end dates for the window after tapping Next. */
+const calendarNavNextRange = computed(() => navRangeLineLabels(calendarViewDays.value));
 
 // Column index (0=Mon … 6=Sun) that contains today — used to tint the whole column
 const todayColumnIndex = computed(() => (new Date().getDay() + 6) % 7);

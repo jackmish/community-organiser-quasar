@@ -18,13 +18,15 @@ $sep-color: $primary;
   position: relative;
 }
 
-/* Before/after nav columns: square controls, no cell padding/margin */
+/* Before/after nav columns: range label + larger chevron */
+$calendar-nav-col-width: 122px;
+
 .calendar-nav-col-head {
   padding: 0 !important;
   margin: 0 !important;
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
+  width: $calendar-nav-col-width;
+  min-width: $calendar-nav-col-width;
+  max-width: $calendar-nav-col-width;
   border: none !important;
   background: transparent !important;
   box-sizing: border-box;
@@ -33,9 +35,9 @@ $sep-color: $primary;
 .calendar-nav-col {
   padding: 0 !important;
   margin: 0 !important;
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
+  width: $calendar-nav-col-width;
+  min-width: $calendar-nav-col-width;
+  max-width: $calendar-nav-col-width;
   border: none !important;
   box-sizing: border-box;
   background: transparent;
@@ -53,29 +55,60 @@ $sep-color: $primary;
 .calendar-nav-arrow {
   position: relative;
   display: inline-flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   margin: 0 !important;
-  padding: 0 !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
+  padding: 2px 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-
-  :deep(.q-icon) {
-    font-size: 1.1rem;
-  }
 
   :deep(.q-btn__wrapper) {
     padding: 0 !important;
     min-height: 0 !important;
+    width: 100%;
   }
 
   :deep(.q-btn__content) {
     padding: 0 !important;
+    width: 100%;
   }
+}
+
+.calendar-nav-arrow-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.calendar-nav-arrow-icon {
+  font-size: 2rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
+.calendar-nav-range {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 2px;
+  width: 100%;
+}
+
+.calendar-nav-range-line {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .calendar-table {
@@ -325,7 +358,7 @@ $sep-color: $primary;
     touch-action: auto;
   }
   .calendar-scroll-flip .calendar-table-wrapper {
-    min-width: 624px; /* 7 day cols + 2×32px nav gutter vs former 560px */
+    min-width: 804px; /* 7 day cols + 2× nav col (122px) vs former 624px */
     display: block;
   }
   .calendar-cell {
