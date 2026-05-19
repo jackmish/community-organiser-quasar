@@ -39,7 +39,12 @@
                       <q-item-section>Bluetooth</q-item-section>
                     </q-item>
 
-                    <q-item class="inactive" aria-disabled="true" style="padding: 8px 12px">
+                    <q-item
+                      clickable
+                      role="button"
+                      @click="createDevice('LAN')"
+                      style="padding: 8px 12px; cursor: pointer"
+                    >
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="wifi" />
                       </q-item-section>
@@ -64,6 +69,9 @@
                   <div class="col">
                     {{ d.name }}
                     <span class="text-caption text-grey-7 q-ml-sm">({{ d.type }})</span>
+                    <span v-if="d.lanHost" class="text-caption text-grey-6 q-ml-sm block">
+                      {{ d.lanHost }}
+                    </span>
                   </div>
                   <div class="col-auto">
                     <q-btn dense flat label="Connect" color="primary" @click="connectDevice(d)" />
@@ -224,6 +232,11 @@
       />
     </q-card>
     <BluetoothScanModal v-model:modelValue="showScanModal" @connect="onDeviceSelected" />
+    <LanPairingModal
+      v-model="showLanPairingModal"
+      :own-device-name="ownDeviceName"
+      @paired="onLanPairedFromModal"
+    />
   </q-dialog>
 </template>
 
@@ -231,7 +244,9 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useQuasar, Notify } from 'quasar';
 import logger from 'src/utils/logger';
+import { jsonStringField } from 'src/modules/lan/lanPairingClient';
 import BluetoothScanModal from './BluetoothScanModal.vue';
+import LanPairingModal from './LanPairingModal.vue';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -241,7 +256,7 @@ const dialogVisible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-const devices = ref<Array<{ id: string; name: string; type?: string }>>([]);
+const devices = ref<Array<{ id: string; name: string; type?: string; lanHost?: string }>>([]);
 const addMenu = ref(false);
 const addBtn = ref<any>(null);
 const addMenuStyle = ref<Record<string, string>>({
@@ -255,6 +270,11 @@ function createDevice(type: string) {
   // For Bluetooth, open the scanner modal so user can choose a device
   if (type === 'Bluetooth') {
     showScanModal.value = true;
+    addMenu.value = false;
+    return;
+  }
+  if (type === 'LAN') {
+    showLanPairingModal.value = true;
     addMenu.value = false;
     return;
   }
@@ -302,6 +322,7 @@ function close() {
 // Scan modal handling
 const $q = useQuasar();
 const showScanModal = ref(false);
+const showLanPairingModal = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 const ownDeviceName = ref<string>('');
 
@@ -374,6 +395,21 @@ async function loadSettings() {
       if (typeof data.autoBackupMinutes === 'number')
         autoBackupMinutes.value = data.autoBackupMinutes;
       if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
+      if (Array.isArray(data.devices)) {
+        devices.value = data.devices.map((d: Record<string, unknown>) => {
+          const id = jsonStringField(d.id, '');
+          const row: { id: string; name: string; type?: string; lanHost?: string } = {
+            id,
+            name: jsonStringField(d.name, id),
+            type: jsonStringField(d.type, 'LAN'),
+          };
+          const lh = jsonStringField(d.lanHost, '');
+          if (lh) {
+            row.lanHost = lh;
+          }
+          return row;
+        });
+      }
     }
   } catch (e) {
     logger.error('loadSettings failed', e);
@@ -423,6 +459,12 @@ async function saveSettings() {
       autoBackupEnabled: !!autoBackupEnabled.value,
       autoBackupHours: Number(autoBackupHours.value || 0),
       autoBackupMinutes: Number(autoBackupMinutes.value || 0),
+      devices: devices.value.map((d) => ({
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        ...(d.lanHost ? { lanHost: d.lanHost } : {}),
+      })),
     };
     if (lastAutoBackup.value) payload.lastAutoBackup = lastAutoBackup.value;
     await api.writeJsonFile(settingsFile, payload);
@@ -433,6 +475,7 @@ async function saveSettings() {
 
 onMounted(() => {
   loadSettings();
+  window.addEventListener('co21-lan-pair-accepted', onLanPairAcceptedWindow as EventListener);
   // start periodic check for automatic backups
   autoTimerId.value = setInterval(() => {
     now.value = Date.now();
@@ -441,12 +484,58 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('co21-lan-pair-accepted', onLanPairAcceptedWindow as EventListener);
   if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 
-watch(ownDeviceName, (val) => {
-  void saveSettings();
-});
+function onLanPairedFromModal(payload: {
+  id: string;
+  name: string;
+  type: string;
+  lanHost: string;
+}) {
+  if (!devices.value.some((d) => d.id === payload.id)) {
+    const row: { id: string; name: string; type?: string; lanHost?: string } = {
+      id: payload.id,
+      name: payload.name,
+      type: payload.type,
+    };
+    if (payload.lanHost) {
+      row.lanHost = payload.lanHost;
+    }
+    devices.value = [...devices.value, row];
+  }
+  notify('positive', `Added ${payload.name}`);
+}
+
+function onLanPairAcceptedWindow(ev: Event) {
+  const ce = ev as CustomEvent<{
+    remoteDeviceId?: string;
+    remoteName?: string;
+    remoteAddress?: string;
+  }>;
+  const d = ce.detail;
+  if (!d?.remoteDeviceId) return;
+  if (devices.value.some((x) => x.id === d.remoteDeviceId)) return;
+  const row: { id: string; name: string; type?: string; lanHost?: string } = {
+    id: d.remoteDeviceId,
+    name: String(d.remoteName || d.remoteDeviceId),
+    type: 'LAN',
+  };
+  if (d.remoteAddress) {
+    row.lanHost = d.remoteAddress;
+  }
+  devices.value = [...devices.value, row];
+  notify('positive', `Added ${d.remoteName || 'device'} (LAN)`);
+}
+
+watch(
+  devices,
+  () => {
+    void saveSettings();
+  },
+  { deep: true },
+);
 watch([autoBackupEnabled, autoBackupHours, autoBackupMinutes], () => {
   void saveSettings();
 });

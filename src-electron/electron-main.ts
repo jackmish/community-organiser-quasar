@@ -5,7 +5,10 @@ import {
   resolveLanPairing,
   setLanPairingMainWindowProvider,
   isLanPairingListening,
+  getLanIPv4Addresses,
+  type LanIdentityPublic,
 } from './lanPairingServer';
+import { CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -143,6 +146,32 @@ ipcMain.handle('get-app-data-path', () => {
   return app.getPath('userData');
 });
 
+ipcMain.handle('lan:start-server', async (_evt, identity: LanIdentityPublic) => {
+  try {
+    const r = await startLanPairingServer(identity);
+    return { ok: true as const, port: r.port, addresses: r.addresses };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('lan:stop-server', () => {
+  stopLanPairingServer();
+  return { ok: true as const };
+});
+
+ipcMain.handle('lan:resolve-pair', (_evt, payload: { token: string; accept: boolean }) => {
+  const ok = resolveLanPairing(payload.token, payload.accept);
+  return { ok };
+});
+
+ipcMain.handle('lan:status', () => ({
+  listening: isLanPairingListening(),
+  port: CO21_LAN_PAIRING_PORT,
+  addresses: getLanIPv4Addresses(),
+}));
+
 // Synchronous handler so preload can obtain the package version before renderer starts
 // (removed) synchronous IPC handler — preload should not need to synchronously query main
 
@@ -234,6 +263,10 @@ ipcMain.handle(
 );
 
 app.whenReady().then(createWindow);
+
+app.on('before-quit', () => {
+  stopLanPairingServer();
+});
 
 app.on('window-all-closed', () => {
   if (platform !== 'darwin') {

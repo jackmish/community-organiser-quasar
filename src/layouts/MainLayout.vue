@@ -14,6 +14,19 @@
           </div>
 
           <div class="notification-wrapper">
+            <q-banner
+              v-if="lanPairBanner && !showLanPairConfirm"
+              dense
+              class="lan-pair-banner text-white cursor-pointer q-mr-sm"
+              rounded
+              @click="showLanPairConfirm = true"
+            >
+              <template #avatar>
+                <q-icon name="wifi" color="white" size="sm" />
+              </template>
+              <div class="text-weight-medium">LAN pairing</div>
+              <div class="text-caption">{{ lanPairBanner.remoteName }} wants to connect</div>
+            </q-banner>
             <NextEventNotification style="min-width: 0; width: 100%" />
           </div>
           <div style="margin-left: auto; display: inline-block">
@@ -119,6 +132,10 @@
 
         <AppConfigDialog v-model="showConfigDialog" />
         <ConnectionsDialog v-model="showConnectionsDialog" />
+        <LanPairingConfirmDialog
+          v-model="showLanPairConfirm"
+          :pending="lanPairBanner"
+        />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
@@ -151,9 +168,12 @@ import CC from "src/CCAccess";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
+import LanPairingConfirmDialog from "src/components/settings/LanPairingConfirmDialog.vue";
+import type { LanPendingDetail } from "src/modules/lan/lanPairingUi";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
+import { jsonStringField } from "src/modules/lan/lanPairingClient";
 
 const isOnline = ref(false);
 let checkInterval: number | undefined;
@@ -161,6 +181,9 @@ const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const showDebugDialog = ref(false);
+const lanPairBanner = ref<LanPendingDetail | null>(null);
+const showLanPairConfirm = ref(false);
+let removeLanPairingListener: (() => void) | null = null;
 const menuOpen = ref(false);
 const selectedLanguage = ref("en-US");
 const langSelect = ref<any>(null);
@@ -197,6 +220,28 @@ let headerManageHandler: any = null;
 const router = useRouter();
 const route = useRoute();
 const appVersion = ref<string>(pkg?.version || "unknown");
+
+watch(showLanPairConfirm, (open) => {
+  if (!open) {
+    lanPairBanner.value = null;
+  }
+});
+
+function onLanPairingPending(detail: Record<string, unknown>): void {
+  const token = typeof detail.token === "string" ? detail.token : "";
+  if (!token) return;
+  lanPairBanner.value = {
+    token,
+    remoteDeviceId: jsonStringField(detail.remoteDeviceId, ""),
+    remoteName: jsonStringField(detail.remoteName, "Device"),
+    ...(typeof detail.remoteAppVersion === "string" && detail.remoteAppVersion
+      ? { remoteAppVersion: detail.remoteAppVersion }
+      : {}),
+    ...(typeof detail.remoteAddress === "string" && detail.remoteAddress
+      ? { remoteAddress: detail.remoteAddress }
+      : {}),
+  };
+}
 
 const now = ref(new Date());
 let clockTimer: any = null;
@@ -275,6 +320,20 @@ onMounted(async () => {
     window.addEventListener("group:manage-request", headerManageHandler as EventListener);
     // Pull injected app version (set by main process) if available
     // appVersion is populated from preload; nothing else required
+    try {
+      const elan = (
+        window as unknown as {
+          electronLan?: {
+            onPairingPending?: (cb: (d: Record<string, unknown>) => void) => () => void;
+          };
+        }
+      ).electronLan;
+      if (elan?.onPairingPending) {
+        removeLanPairingListener = elan.onPairingPending(onLanPairingPending);
+      }
+    } catch {
+      /* ignore */
+    }
   } catch (e) {
     // ignore
   }
@@ -424,6 +483,10 @@ onUnmounted(() => {
   } catch (e) {
     // ignore
   }
+  if (removeLanPairingListener) {
+    removeLanPairingListener();
+    removeLanPairingListener = null;
+  }
   // no-op: no version listeners registered
 });
 
@@ -445,6 +508,12 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   overflow: visible;
+}
+
+.lan-pair-banner {
+  background: #1b5e20 !important;
+  max-width: 280px;
+  flex-shrink: 0;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */

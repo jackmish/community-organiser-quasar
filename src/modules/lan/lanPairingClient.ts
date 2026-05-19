@@ -29,7 +29,7 @@ async function parseJson(res: Response): Promise<unknown> {
 }
 
 /** String for JSON fields — never uses Object stringification (@typescript-eslint/no-base-to-string). */
-function jsonStringField(v: unknown, fallback: string): string {
+export function jsonStringField(v: unknown, fallback: string): string {
   if (typeof v === 'string') return v.length ? v : fallback;
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   if (typeof v === 'boolean') return v ? 'true' : 'false';

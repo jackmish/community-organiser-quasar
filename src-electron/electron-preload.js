@@ -271,3 +271,21 @@ contextBridge.exposeInMainWorld('electronBLE', {
     }
   },
 });
+
+contextBridge.exposeInMainWorld('electronLan', {
+  startServer: (identity) => ipcRenderer.invoke('lan:start-server', identity),
+  stopServer: () => ipcRenderer.invoke('lan:stop-server'),
+  status: () => ipcRenderer.invoke('lan:status'),
+  resolvePair: (token, accept) => ipcRenderer.invoke('lan:resolve-pair', { token, accept }),
+  onPairingPending: (callback) => {
+    const fn = (_e, detail) => {
+      try {
+        callback(detail);
+      } catch (err) {
+        console.error('electronLan onPairingPending callback', err);
+      }
+    };
+    ipcRenderer.on('lan:pairing-pending', fn);
+    return () => ipcRenderer.removeListener('lan:pairing-pending', fn);
+  },
+});
