@@ -277,6 +277,7 @@ contextBridge.exposeInMainWorld('electronLan', {
   stopServer: () => ipcRenderer.invoke('lan:stop-server'),
   status: () => ipcRenderer.invoke('lan:status'),
   resolvePair: (token, accept) => ipcRenderer.invoke('lan:resolve-pair', { token, accept }),
+  browseCo21: (opts) => ipcRenderer.invoke('lan:browse-co21', opts),
   onPairingPending: (callback) => {
     const fn = (_e, detail) => {
       try {

@@ -17,7 +17,12 @@
           @update:model-value="onToggleListen"
         />
         <div v-if="listenOn && serverAddrs.length" class="q-mt-sm text-body2">
-          <div class="text-weight-medium">Use this address on your phone:</div>
+          <div class="text-weight-medium">This PC on your Wi‑Fi (Bonjour / .local):</div>
+          <div class="text-caption text-grey-7 q-mb-xs">
+            Other devices can search for “CO21” computers — no IP typing needed when discovery
+            works.
+          </div>
+          <div class="text-weight-medium">Or enter an address manually:</div>
           <div v-for="a in serverAddrs" :key="a" class="text-primary">{{ a }}:{{ port }}</div>
         </div>
         <div v-else-if="listenError" class="text-negative q-mt-sm text-caption">{{ listenError }}</div>
@@ -26,12 +31,49 @@
       <q-separator v-if="hasElectronLan" />
 
       <q-card-section>
+        <div class="text-subtitle2 q-mb-sm">Discover on Wi‑Fi (Bonjour / .local)</div>
+        <q-btn
+          outline
+          color="primary"
+          class="full-width"
+          label="Search for CO21 computers"
+          :loading="browseBusy"
+          :disable="!hasElectronLan"
+          @click="browseNetwork"
+        />
+        <div v-if="!hasElectronLan" class="text-caption text-grey-7 q-mt-xs">
+          Automatic discovery runs in the desktop (Electron) app. On phone builds, enter the PC
+          address below or scan a QR code when we add one.
+        </div>
+        <div v-if="browseError" class="text-negative text-caption q-mt-sm">{{ browseError }}</div>
+        <q-list v-if="discovered.length" bordered separator class="rounded-borders q-mt-sm">
+          <q-item
+            v-for="(d, idx) in discovered"
+            :key="d.fqdn + idx"
+            clickable
+            v-ripple
+            @click="pickDiscovered(d)"
+          >
+            <q-item-section>
+              <q-item-label>{{ d.displayName }}</q-item-label>
+              <q-item-label caption>{{ d.connectHost }}:{{ d.port }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-icon name="chevron_right" color="grey-6" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
         <div class="text-subtitle2 q-mb-sm">From this device — pair with a PC</div>
         <q-input
           v-model="pcHost"
           dense
           outlined
-          label="PC IP address (e.g. 192.168.1.10)"
+          label="PC hostname or IP (e.g. Jacks-PC.local or 192.168.1.10)"
           class="q-mb-sm"
         />
         <q-btn
@@ -61,6 +103,7 @@ import {
   lanPostPairRequest,
   lanPollUntilResolved,
 } from 'src/modules/lan/lanPairingClient';
+import type { Co21DiscoveredHost } from 'src/modules/lan/lanPairingDiscovery';
 import logger from 'src/utils/logger';
 
 const props = defineProps<{
@@ -81,7 +124,8 @@ const port = CO21_LAN_PAIRING_PORT;
 const hasElectronLan = computed(
   () =>
     typeof window !== 'undefined' &&
-    !!(window as unknown as { electronLan?: { startServer?: unknown } }).electronLan?.startServer,
+    !!(window as unknown as { electronLan?: { startServer?: unknown; browseCo21?: unknown } })
+      .electronLan?.startServer,
 );
 
 const listenOn = ref(false);
@@ -93,6 +137,10 @@ const pairBusy = ref(false);
 const pairHint = ref('');
 const pairHintClass = ref('text-grey-7');
 
+const browseBusy = ref(false);
+const browseError = ref('');
+const discovered = ref<Co21DiscoveredHost[]>([]);
+
 watch(
   () => props.modelValue,
   async (open) => {
@@ -102,6 +150,8 @@ watch(
       }
       pcHost.value = '';
       pairHint.value = '';
+      discovered.value = [];
+      browseError.value = '';
       return;
     }
     if (hasElectronLan.value) {
@@ -165,6 +215,45 @@ async function onToggleListen(v: boolean) {
   } catch (e: unknown) {
     listenOn.value = false;
     listenError.value = e instanceof Error ? e.message : String(e);
+  }
+}
+
+function pickDiscovered(d: Co21DiscoveredHost) {
+  pcHost.value = d.connectHost;
+  pairHint.value = `Selected “${d.displayName}”. Tap “Request pairing” below.`;
+  pairHintClass.value = 'text-grey-7';
+}
+
+async function browseNetwork() {
+  browseError.value = '';
+  discovered.value = [];
+  browseBusy.value = true;
+  try {
+    const elan = (window as unknown as {
+      electronLan?: { browseCo21?: (o: Record<string, unknown>) => Promise<unknown> };
+    }).electronLan;
+    if (!elan?.browseCo21) {
+      browseError.value = 'Discovery is not available in this build.';
+      return;
+    }
+    const myId = await deviceId.get();
+    const res = (await elan.browseCo21({
+      timeoutMs: 5000,
+      excludeDeviceId: myId,
+    })) as { ok?: boolean; devices?: Co21DiscoveredHost[]; error?: string };
+    if (!res?.ok) {
+      browseError.value = res?.error || 'Search failed.';
+      return;
+    }
+    discovered.value = Array.isArray(res.devices) ? res.devices : [];
+    if (!discovered.value.length) {
+      browseError.value =
+        'No CO21 computers found. Check that the PC has “Accept pairing” on and the same Wi‑Fi.';
+    }
+  } catch (e: unknown) {
+    browseError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    browseBusy.value = false;
   }
 }
 

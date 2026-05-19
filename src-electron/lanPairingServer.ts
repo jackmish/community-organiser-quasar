@@ -9,6 +9,7 @@ import { Notification } from 'electron';
 import logger from 'src/utils/logger';
 
 import { CO21_LAN_API_PREFIX, CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
+import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
 
 export type LanIdentityPublic = {
   deviceId: string;
@@ -277,17 +278,26 @@ export function startLanPairingServer(
       logger.error('[lanPairingServer] listen error', err);
       server = null;
       identity = null;
+      stopCo21MdnsAdvertise();
       reject(err);
     });
 
     server.listen(CO21_LAN_PAIRING_PORT, '0.0.0.0', () => {
       pruneTimer = setInterval(prunePendings, 60_000);
+      try {
+        if (identity) {
+          startCo21MdnsAdvertise(identity, CO21_LAN_PAIRING_PORT);
+        }
+      } catch (e) {
+        logger.warn('[lanPairingServer] mDNS advertise failed (LAN HTTP still works)', e);
+      }
       resolve({ port: CO21_LAN_PAIRING_PORT, addresses: getLanIPv4Addresses() });
     });
   });
 }
 
 export function stopLanPairingServer(): void {
+  stopCo21MdnsAdvertise();
   if (pruneTimer) {
     clearInterval(pruneTimer);
     pruneTimer = null;

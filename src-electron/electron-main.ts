@@ -9,6 +9,7 @@ import {
   type LanIdentityPublic,
 } from './lanPairingServer';
 import { CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
+import { browseCo21Organisers, destroyBonjour } from './lanMdns';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -172,6 +173,25 @@ ipcMain.handle('lan:status', () => ({
   addresses: getLanIPv4Addresses(),
 }));
 
+ipcMain.handle(
+  'lan:browse-co21',
+  async (_evt, opts?: { timeoutMs?: number; excludeDeviceId?: string }) => {
+    try {
+      const q: { timeoutMs: number; excludeDeviceId?: string } = {
+        timeoutMs: typeof opts?.timeoutMs === 'number' ? opts.timeoutMs : 4000,
+      };
+      if (typeof opts?.excludeDeviceId === 'string') {
+        q.excludeDeviceId = opts.excludeDeviceId;
+      }
+      const devices = await browseCo21Organisers(q);
+      return { ok: true as const, devices };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg, devices: [] };
+    }
+  },
+);
+
 // Synchronous handler so preload can obtain the package version before renderer starts
 // (removed) synchronous IPC handler — preload should not need to synchronously query main
 
@@ -266,6 +286,7 @@ app.whenReady().then(createWindow);
 
 app.on('before-quit', () => {
   stopLanPairingServer();
+  destroyBonjour();
 });
 
 app.on('window-all-closed', () => {
