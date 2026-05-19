@@ -483,8 +483,9 @@ const calendarViewDays = ref(42);
 const tableWrapper = ref<HTMLElement | null>(null);
 const scrollFlipEl = ref<HTMLElement | null>(null);
 
-// Scroll the calendar so today (or the initial selectedDate) is at the left
-// edge of the viewport. Runs once on mount only.
+// Scroll so the target day is in view with the previous calendar day visible
+// to the left when possible (avoids pinning today flush to the viewport edge).
+// Runs once on mount only.
 function scrollToDay(dateStr: string) {
   try {
     const container = scrollFlipEl.value;
@@ -492,8 +493,16 @@ function scrollToDay(dateStr: string) {
     if (!container || !wrapper) return;
     const cell = wrapper.querySelector<HTMLElement>(`td[data-day="${dateStr}"]`);
     if (!cell) return;
+    let scrollTarget = cell.offsetLeft;
+    const base = parseYmdLocal(dateStr);
+    if (base) {
+      const prevStr = format(addDays(base, -1), "yyyy-MM-dd");
+      const prevCell = wrapper.querySelector<HTMLElement>(`td[data-day="${prevStr}"]`);
+      if (prevCell) scrollTarget = prevCell.offsetLeft;
+      else scrollTarget = Math.max(0, cell.offsetLeft - cell.offsetWidth);
+    }
     // offsetLeft is relative to the wrapper; container scrolls the wrapper
-    container.scrollLeft = cell.offsetLeft;
+    container.scrollLeft = scrollTarget;
   } catch (e) {
     // ignore — non-critical
   }
@@ -528,7 +537,7 @@ onMounted(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
-    // Scroll calendar so today is at the left edge on initial load
+    // Initial scroll: show today with previous day visible when in range
     scrollToDay(format(new Date(), "yyyy-MM-dd"));
   });
 });
