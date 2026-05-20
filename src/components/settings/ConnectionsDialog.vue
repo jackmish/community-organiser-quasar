@@ -81,141 +81,155 @@
               </q-item-section>
             </q-item>
           </div>
-          <div class="q-mt-md">
-            <div class="text-subtitle2 q-mb-sm">Backup</div>
-            <div class="row items-center q-gutter-sm">
-              <div class="col">
-                Make manual backup, merge current state with data from file, or totally replace
-                current data with data from file
-              </div>
-              <div
-                class="col-auto"
-                style="
-                  display: flex;
-                  flex-direction: column;
-                  align-items: flex-end;
-                  justify-content: center;
-                "
-              >
-                <div style="display: flex; align-items: center">
-                  <q-btn
-                    dense
-                    unelevated
-                    color="primary"
-                    label="Export"
-                    class="q-mr-sm"
-                    @click="exportWithPicker"
-                  />
-                  <q-btn
-                    dense
-                    outline
-                    color="secondary"
-                    label="Merge"
-                    class="q-mr-sm"
-                    @click="triggerImport"
-                  />
-                  <q-btn
-                    dense
-                    unelevated
-                    color="negative"
-                    label="Override"
-                    class="q-ml-sm"
-                    @click="overrideBackup"
-                  />
+          <q-expansion-item
+            class="connections-backup-expansion q-mt-md"
+            expand-separator
+            icon="backup"
+            label="Backup"
+            caption="Export, merge, override, and automatic local backup"
+          >
+            <div class="q-pt-sm">
+              <div class="row items-center q-gutter-sm">
+                <div class="col">
+                  Make manual backup, merge current state with data from file, or totally replace
+                  current data with data from file
                 </div>
                 <div
-                  v-if="exportState !== 'idle'"
-                  style="margin-top: 6px; width: 100%; text-align: left"
+                  class="col-auto"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    justify-content: center;
+                  "
                 >
-                  <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
-                    <q-spinner v-if="exportState === 'exporting'" size="18" />
-                    <q-icon
-                      v-else-if="exportState === 'done'"
-                      name="check"
-                      color="positive"
-                      size="18"
+                  <div style="display: flex; align-items: center">
+                    <q-btn
+                      dense
+                      unelevated
+                      color="primary"
+                      label="Export"
+                      class="q-mr-sm"
+                      @click="exportWithPicker"
                     />
-                    <q-icon
-                      v-else-if="exportState === 'error'"
-                      name="error"
+                    <q-btn
+                      dense
+                      outline
+                      color="secondary"
+                      label="Merge"
+                      class="q-mr-sm"
+                      @click="triggerImport"
+                    />
+                    <q-btn
+                      dense
+                      unelevated
                       color="negative"
-                      size="18"
+                      label="Override"
+                      class="q-ml-sm"
+                      @click="overrideBackup"
                     />
-                    <span>{{ exportMessage }}</span>
+                  </div>
+                  <div
+                    v-if="exportState !== 'idle'"
+                    style="margin-top: 6px; width: 100%; text-align: left"
+                  >
+                    <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
+                      <q-spinner v-if="exportState === 'exporting'" size="18" />
+                      <q-icon
+                        v-else-if="exportState === 'done'"
+                        name="check"
+                        color="positive"
+                        size="18"
+                      />
+                      <q-icon
+                        v-else-if="exportState === 'error'"
+                        name="error"
+                        color="negative"
+                        size="18"
+                      />
+                      <span>{{ exportMessage }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="q-mt-md">
+                <div class="row items-center q-gutter-sm">
+                  <div class="col">
+                    Automatic local backup
+
+                    <q-toggle
+                      class="q-ml-sm"
+                      dense
+                      v-model="autoBackupEnabled"
+                      @update:model-value="onAutoToggle"
+                    />
+                  </div>
+                </div>
+                <div v-if="autoBackupEnabled" class="q-mt-sm">
+                  <div class="row items-center q-gutter-sm">
+                    <div class="col-auto">Hours</div>
+                    <div class="col-auto" style="width: 80px">
+                      <q-input dense type="number" v-model.number="autoBackupHours" min="0" />
+                    </div>
+                    <div class="col-auto">Minutes</div>
+                    <div class="col-auto" style="width: 80px">
+                      <q-input dense type="number" v-model.number="autoBackupMinutes" min="0" />
+                    </div>
+                    <div class="col text-caption q-ml-md">
+                      Minimum: 1min. Default: 1h. Last automatic backup:
+                      <strong>{{ formattedLastAutoBackup }}</strong> | Next backup:
+                      <strong>{{ nextInText }}</strong>
+                    </div>
+                  </div>
+                  <div class="q-mt-xs text-caption text-white">
+                    <div></div>
+                    <div></div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="q-mt-md">
-            <div class="row items-center q-gutter-sm">
-              <div class="col">
-                Automatic local backup
-
-                <q-toggle
-                  class="q-ml-sm"
-                  dense
-                  v-model="autoBackupEnabled"
-                  @update:model-value="onAutoToggle"
-                />
-              </div>
-            </div>
-            <div v-if="autoBackupEnabled" class="q-mt-sm">
+          </q-expansion-item>
+          <q-expansion-item
+            class="connections-internet-expansion q-mt-md"
+            expand-separator
+            icon="cloud"
+            label="Internet services"
+            caption="External APIs used by the app"
+          >
+            <div class="q-pt-sm">
               <div class="row items-center q-gutter-sm">
-                <div class="col-auto">Hours</div>
-                <div class="col-auto" style="width: 80px">
-                  <q-input dense type="number" v-model.number="autoBackupHours" min="0" />
+                <div class="col text-white">
+                  <div
+                    class="text-caption text-white q-mt-xs"
+                    style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                  >
+                    App is downloading data from following services/APIs:
+                  </div>
+                  <div class="text-caption text-white q-mt-xs">
+                    <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.35; color: inherit">
+                      <li>
+                        https://date.nager.at/api/v3/PublicHolidays/{year}/PL — public holidays
+                        (country code PL). Once data is downloaded, it is stored locally on device.
+                      </li>
+                      <li>
+                        https://www.google.com/favicon.ico — detect Internet connection status -
+                        method will be changed, as for now it just works.
+                      </li>
+                    </ul>
+                  </div>
                 </div>
-                <div class="col-auto">Minutes</div>
-                <div class="col-auto" style="width: 80px">
-                  <q-input dense type="number" v-model.number="autoBackupMinutes" min="0" />
+                <div class="col-auto">
+                  <q-btn
+                    dense
+                    outline
+                    color="primary"
+                    label="Manage"
+                    @click="() => notify('info', 'Internet settings not implemented')"
+                  />
                 </div>
-                <div class="col text-caption q-ml-md">
-                  Minimum: 1min. Default: 1h. Last automatic backup:
-                  <strong>{{ formattedLastAutoBackup }}</strong> | Next backup:
-                  <strong>{{ nextInText }}</strong>
-                </div>
-              </div>
-              <div class="q-mt-xs text-caption text-white">
-                <div></div>
-                <div></div>
               </div>
             </div>
-          </div>
-          <div class="q-mt-md">
-            <div class="text-subtitle2 q-mb-sm">Internet services</div>
-            <div class="row items-center q-gutter-sm">
-              <div class="col text-white">
-                <div
-                  class="text-caption text-white q-mt-xs"
-                  style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
-                >
-                  App is downloading data from following services/APIs:
-                </div>
-                <div class="text-caption text-white q-mt-xs">
-                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.35; color: inherit">
-                    <li>
-                      https://date.nager.at/api/v3/PublicHolidays/{year}/PL — public holidays
-                      (country code PL). Once data is downloaded, it is stored locally on device.
-                    </li>
-                    <li>
-                      https://www.google.com/favicon.ico — detect Internet connection status -
-                      method will be changed, as for now it just works.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <div class="col-auto">
-                <q-btn
-                  dense
-                  outline
-                  color="primary"
-                  label="Manage"
-                  @click="() => notify('info', 'Internet settings not implemented')"
-                />
-              </div>
-            </div>
-          </div>
+          </q-expansion-item>
         </div>
       </q-card-section>
 
