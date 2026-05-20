@@ -94,6 +94,17 @@
                       </q-item-section>
                       <q-item-section>{{ $text("menu.connections") }}</q-item-section>
                     </q-item>
+                    <q-item
+                      v-if="pendingActionsCount > 0"
+                      clickable
+                      v-ripple
+                      @click="openPendingActionsFromMenu"
+                    >
+                      <q-item-section avatar>
+                        <q-icon name="hourglass_top" />
+                      </q-item-section>
+                      <q-item-section>{{ pendingActionsMenuLabel }}</q-item-section>
+                    </q-item>
                     <q-item clickable v-ripple @click="openSettings">
                       <q-item-section avatar>
                         <q-icon name="settings" />
@@ -143,6 +154,12 @@
           @saved="onRolesSetupSaved"
         />
         <SyncContractHost />
+        <PendingActionsDialog
+          v-model="showPendingActionsDialog"
+          :actions="pendingActionsList"
+          @run-now="onPendingRunNow"
+          @cancel="onPendingCancel"
+        />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
@@ -177,7 +194,21 @@ import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
 import RolesSetupDialog from "src/components/settings/RolesSetupDialog.vue";
 import SyncContractHost from "src/components/settings/SyncContractHost.vue";
+import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
+import { usePendingActions } from "src/composables/usePendingActions";
+import { appNotify } from "src/utils/appNotify";
+import { dispatchBaselineRestore } from "src/modules/storage/sync/syncContractUi";
+import {
+  OPEN_PENDING_ACTIONS_EVENT,
+  startPendingActionsScheduler,
+  stopPendingActionsScheduler,
+} from "src/modules/storage/sync/syncPendingActions";
+import {
+  loadConnectedDevices,
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
+} from "src/modules/storage/sync/deviceRoleAssignment";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
 const isOnline = ref(false);
@@ -188,6 +219,46 @@ const showConnectionsDialog = ref(false);
 const showRolesSetupDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
+const showPendingActionsDialog = ref(false);
+
+const {
+  actions: pendingActionsList,
+  count: pendingActionsCount,
+  refresh: refreshPendingActions,
+  runNow: runPendingActionNow,
+  cancelPendingAction: cancelPendingActionById,
+} = usePendingActions();
+
+const pendingActionsMenuLabel = computed(() =>
+  $text("sync.pending_actions_menu").replace("{count}", String(pendingActionsCount.value)),
+);
+
+function openPendingActionsFromMenu(): void {
+  menuOpen.value = false;
+  void refreshPendingActions();
+  showPendingActionsDialog.value = true;
+}
+
+function onOpenPendingActionsEvent(): void {
+  void refreshPendingActions();
+  showPendingActionsDialog.value = true;
+}
+
+async function onPendingRunNow(actionId: string): Promise<void> {
+  const ok = await runPendingActionNow(actionId);
+  void refreshPendingActions();
+  appNotify(
+    ok ? "positive" : "warning",
+    ok ? $text("sync.pending_action_run_ok") : $text("sync.pending_action_run_fail"),
+  );
+}
+
+async function onPendingCancel(actionId: string): Promise<void> {
+  const baseline = await cancelPendingActionById(actionId);
+  dispatchBaselineRestore(baseline);
+  void refreshPendingActions();
+  appNotify("info", $text("sync.pending_action_cancelled"));
+}
 
 function openRolesSetupDialog(ev: Event): void {
   const detail = (ev as CustomEvent<{ createNew?: boolean }>).detail;
@@ -277,6 +348,13 @@ function updateOnlineStatus() {
 }
 
 onMounted(async () => {
+  startPendingActionsScheduler(async () => {
+    const local = await loadOwnDeviceMeta();
+    const loaded = await loadConnectedDevices();
+    return mergeLocalDeviceIntoList(loaded, local);
+  });
+  window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+
   // Initial check only
   updateOnlineStatus();
   // Load organiser data so we can show upcoming event
@@ -458,6 +536,8 @@ async function reloadWithTestData() {
 }
 
 onUnmounted(() => {
+  stopPendingActionsScheduler();
+  window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.removeEventListener("online", updateOnlineStatus);
   window.removeEventListener("offline", updateOnlineStatus);
   try {

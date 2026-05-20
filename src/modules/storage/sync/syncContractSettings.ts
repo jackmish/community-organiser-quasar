@@ -29,6 +29,9 @@ export type SyncContractPending = {
   /** Device id that proposed this contract (local). */
   proposerDeviceId: string;
   proposerDeviceName: string;
+  /** Agreed sync interval (seconds) — included when peer is offline. */
+  intervalSeconds?: number;
+  duplicateResolution?: SyncDuplicateResolution;
 };
 
 export async function loadSyncIntervalSeconds(): Promise<number> {

@@ -176,12 +176,31 @@ export function useSyncContractFlow() {
     preview.value = null;
   }
 
+  /** User accepted preview — queue delivery; do not advance baseline until peer signs or cancel. */
+  function onPreviewAcceptedPending(): void {
+    showPreviewDialog.value = false;
+    showPeerAcceptDialog.value = false;
+    pendingSnapshot.value = null;
+    preview.value = null;
+  }
+
+  function getBaselineSnapshot(): SyncContractSnapshot | null {
+    return baselineSnapshot;
+  }
+
+  function restoreBaseline(snapshot: SyncContractSnapshot | null): void {
+    baselineSnapshot = snapshot;
+  }
+
+  /** Legacy: peer accepted on proposer side — advance baseline to last signed contract. */
   function onPreviewAccepted(): void {
     showPreviewDialog.value = false;
-    showPeerAcceptDialog.value = true;
+    showPeerAcceptDialog.value = false;
     if (pendingSnapshot.value) {
       baselineSnapshot = pendingSnapshot.value;
     }
+    pendingSnapshot.value = null;
+    preview.value = null;
   }
 
   function onPreviewCancelled(): void {
@@ -217,6 +236,9 @@ export function useSyncContractFlow() {
     onConfirmRules,
     onCancelConfirm,
     onPreviewAccepted,
+    onPreviewAcceptedPending,
+    getBaselineSnapshot,
+    restoreBaseline,
     onPreviewCancelled,
     onPeerContractSigned,
   };

@@ -1,11 +1,16 @@
 import type { Ref } from 'vue';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSyncContractFlow } from 'src/composables/useSyncContractFlow';
-import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
+import {
+  createSendContractAction,
+  findSendContractAction,
+  PENDING_ACTIONS_CHANGED_EVENT,
+  tryDeliverAction,
+} from 'src/modules/storage/sync/syncPendingActions';
+import { SYNC_BASELINE_RESTORE_EVENT } from 'src/modules/storage/sync/syncContractUi';
 import {
   loadLastContractSnapshot,
   normalizeSyncDuplicateResolution,
-  savePendingOutgoingContract,
   saveSyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import {
@@ -22,10 +27,16 @@ export function useSyncContractInDialog(
   roleProfiles: Ref<RoleProfileData[]>,
 ) {
   const sync = useSyncContractFlow();
+  const hasPendingSendAction = ref(false);
 
-  const hasPendingChanges = computed(() =>
-    sync.hasChanges(devices.value, roleProfiles.value),
-  );
+  async function refreshPendingSend(): Promise<void> {
+    hasPendingSendAction.value = !!(await findSendContractAction());
+  }
+
+  const hasPendingChanges = computed(() => {
+    if (hasPendingSendAction.value) return false;
+    return sync.hasChanges(devices.value, roleProfiles.value);
+  });
 
   async function captureBaseline(): Promise<void> {
     const last = await loadLastContractSnapshot();
@@ -59,17 +70,48 @@ export function useSyncContractInDialog(
     const snap = sync.pendingSnapshot.value;
     const local = await loadOwnDeviceMeta();
     if (snap) {
+      const preAccept = sync.getBaselineSnapshot();
       const pending = {
         createdAt: Date.now(),
         snapshot: snap,
         proposerDeviceId: local.id,
         proposerDeviceName: local.name,
       };
-      await savePendingOutgoingContract(pending);
-      await pushSyncContractToLanPeers(devices.value, pending);
+      const action = await createSendContractAction({
+        pending,
+        intervalSeconds: sync.confirmIntervalSeconds.value,
+        duplicateResolution: sync.confirmDuplicateResolution.value,
+        devices: devices.value,
+        preAcceptBaseline: preAccept,
+      });
+      await tryDeliverAction(action, devices.value);
     }
-    sync.onPreviewAccepted();
+    sync.onPreviewAcceptedPending();
+    await refreshPendingSend();
   }
+
+  function onBaselineRestore(ev: Event): void {
+    const detail = (ev as CustomEvent<{ baseline: unknown }>).detail;
+    sync.restoreBaseline(
+      detail?.baseline && typeof detail.baseline === 'object'
+        ? (detail.baseline as ReturnType<typeof sync.getBaselineSnapshot>)
+        : null,
+    );
+    void refreshPendingSend();
+  }
+
+  const onPendingChanged = () => void refreshPendingSend();
+
+  onMounted(() => {
+    void refreshPendingSend();
+    window.addEventListener(PENDING_ACTIONS_CHANGED_EVENT, onPendingChanged);
+    window.addEventListener(SYNC_BASELINE_RESTORE_EVENT, onBaselineRestore);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener(PENDING_ACTIONS_CHANGED_EVENT, onPendingChanged);
+    window.removeEventListener(SYNC_BASELINE_RESTORE_EVENT, onBaselineRestore);
+  });
 
   return {
     showPreviewDialog: sync.showPreviewDialog,
@@ -81,6 +123,8 @@ export function useSyncContractInDialog(
     confirmDuplicateResolution: sync.confirmDuplicateResolution,
     setDuplicateResolution: sync.setDuplicateResolution,
     hasPendingChanges,
+    hasPendingSendAction,
+    refreshPendingSend,
     captureBaseline,
     startConfirmChanges,
     applyIntervalToRemoteDevices,

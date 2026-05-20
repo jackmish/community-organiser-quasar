@@ -43,13 +43,15 @@ export async function lanPostSyncContractPropose(
 export async function pushSyncContractToLanPeers(
   devices: ConnectedDevice[],
   pending: SyncContractPending,
-): Promise<void> {
+): Promise<boolean> {
   const remotes = devices.filter((d) => !d.isLocal && d.lanHost);
-  await Promise.all(
+  if (!remotes.length) return false;
+  const results = await Promise.all(
     remotes.map(async (d) => {
       const base = co21LanBaseUrl(d.lanHost!);
-      if (!base) return;
-      await lanPostSyncContractPropose(base, pending);
+      if (!base) return false;
+      return lanPostSyncContractPropose(base, pending);
     }),
   );
+  return results.some(Boolean);
 }

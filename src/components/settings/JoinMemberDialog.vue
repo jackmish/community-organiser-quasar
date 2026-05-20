@@ -62,7 +62,28 @@
           "
         >
           <q-banner
-            v-if="hasPendingChanges"
+            v-if="hasPendingSendAction"
+            dense
+            rounded
+            class="bg-positive text-white q-mb-sm"
+          >
+            <template #avatar>
+              <q-icon name="hourglass_top" color="white" />
+            </template>
+            {{ $text('sync.pending_send_banner') }}
+            <template #action>
+              <q-btn
+                unelevated
+                dense
+                color="white"
+                text-color="positive"
+                :label="pendingActionsMenuLabel"
+                @click="openPendingActionsDialog"
+              />
+            </template>
+          </q-banner>
+          <q-banner
+            v-else-if="hasPendingChanges"
             dense
             rounded
             class="bg-positive text-white q-mb-sm"
@@ -304,13 +325,6 @@
       @confirm="onPrivilegeDialogConfirm"
       @cancel="onPrivilegeDialogCancel"
     />
-    <SyncContractPeerAcceptDialog
-      v-model="showPeerAcceptDialog"
-      :proposer-name="ownDeviceLabel"
-      :is-incoming="false"
-      @accept="onSyncPeerDone"
-      @cancel="closeSyncPeerDialog"
-    />
   </q-dialog>
 </template>
 
@@ -320,8 +334,12 @@ import { $text } from 'src/modules/lang';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
-import SyncContractPeerAcceptDialog from './SyncContractPeerAcceptDialog.vue';
 import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
+import { usePendingActions } from 'src/composables/usePendingActions';
+import {
+  dispatchPendingActionsChanged,
+  OPEN_PENDING_ACTIONS_EVENT,
+} from 'src/modules/storage/sync/syncPendingActions';
 import CC from 'src/CCAccess';
 import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
 import {
@@ -378,39 +396,40 @@ const groups = ref<GroupRecord[]>([]);
 const {
   showPreviewDialog,
   showPrivilegeDialog,
-  showPeerAcceptDialog,
   preview,
   privilegeChanges,
   confirmIntervalSeconds,
   confirmDuplicateResolution,
   setDuplicateResolution,
   hasPendingChanges,
+  hasPendingSendAction,
   captureBaseline,
   startConfirmChanges,
   onPreviewConfirm,
   onPrivilegeDialogConfirm,
   onPrivilegeDialogCancel,
   onPreviewCancelled,
-  onPeerContractSigned,
   minSyncInterval,
   maxSyncInterval,
 } = useSyncContractInDialog(devices, roleProfiles);
 
-const ownDeviceLabel = computed(() => devices.value.find((d) => d.isLocal)?.name ?? '');
+const { count: pendingActionsCount } = usePendingActions();
+
+const pendingActionsMenuLabel = computed(() => {
+  const n = pendingActionsCount.value;
+  return n > 0
+    ? `${$text('sync.pending_actions_btn')} (${n})`
+    : $text('sync.pending_actions_btn');
+});
+
+function openPendingActionsDialog(): void {
+  window.dispatchEvent(new Event(OPEN_PENDING_ACTIONS_EVENT));
+}
 
 async function onSyncPreviewConfirm(): Promise<void> {
   await onPreviewConfirm();
   await persistDevices();
-  window.dispatchEvent(new Event('co21:sync-contract-signed'));
-}
-
-function onSyncPeerDone(): void {
-  onPeerContractSigned();
-  void captureBaseline();
-}
-
-function closeSyncPeerDialog(): void {
-  showPeerAcceptDialog.value = false;
+  dispatchPendingActionsChanged();
 }
 
 function openRolesSetup(): void {
