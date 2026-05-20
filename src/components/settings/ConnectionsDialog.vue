@@ -420,7 +420,8 @@ import {
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
-import { patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
+import { patchCo21Settings, loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
+import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
@@ -764,6 +765,7 @@ function registerLanDevice(payload: LanPairedDevicePayload): void {
     row.lanHost = payload.lanHost;
   }
   devices.value = [...devices.value, row];
+  void refreshLanServerForConnections(devices.value, ownDeviceName.value);
 }
 
 watch(dialogVisible, (open) => {
@@ -771,6 +773,10 @@ watch(dialogVisible, (open) => {
     void loadSettings().then(async () => {
       await refreshRoleProfiles();
       await captureBaseline();
+      const data = await loadCo21Settings();
+      const ownName =
+        typeof data.ownDeviceName === 'string' ? data.ownDeviceName : ownDeviceName.value;
+      await refreshLanServerForConnections(devices.value, ownName);
     });
   }
 });

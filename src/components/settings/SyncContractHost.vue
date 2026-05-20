@@ -29,6 +29,13 @@ import {
   loadIncomingBannerState,
   SYNC_CONTRACT_INCOMING_EVENT,
 } from 'src/modules/storage/sync/syncContractIncoming';
+import {
+  loadConnectedDevices,
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
+} from 'src/modules/storage/sync/deviceRoleAssignment';
+import { registeredRemoteDeviceIds } from 'src/modules/lan/lanServerManager';
+import logger from 'src/utils/logger';
 import type { SyncContractPending } from 'src/modules/storage/sync/syncContractSettings';
 import {
   loadPendingIncomingContract,
@@ -81,8 +88,24 @@ function isValidIncomingPending(raw: unknown): raw is SyncContractPending {
   );
 }
 
+async function isProposerRegistered(proposerDeviceId: string): Promise<boolean> {
+  const local = await loadOwnDeviceMeta();
+  const loaded = await loadConnectedDevices();
+  const devices = mergeLocalDeviceIntoList(loaded, local);
+  const ids = registeredRemoteDeviceIds(devices);
+  if (!ids.length) return true;
+  return ids.includes(proposerDeviceId);
+}
+
 async function persistIncomingFromLan(raw: unknown): Promise<void> {
   if (!isValidIncomingPending(raw)) return;
+  if (!(await isProposerRegistered(raw.proposerDeviceId))) {
+    logger.warn(
+      '[SyncContractHost] ignored contract from unregistered device',
+      raw.proposerDeviceId,
+    );
+    return;
+  }
   await savePendingIncomingContract(raw);
   await refreshIncomingBanner();
 }

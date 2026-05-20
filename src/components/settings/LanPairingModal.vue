@@ -74,6 +74,10 @@
           color="positive"
           @update:model-value="onToggleListen"
         />
+        <div class="text-caption text-grey-7 q-mt-xs">
+          Required to receive sync contracts from paired devices. When you have LAN devices in
+          Connections, the server starts automatically on app launch.
+        </div>
         <div v-if="listenOn && serverAddrs.length" class="q-mt-sm text-body2">
           <div class="text-weight-medium">This PC on your Wi‑Fi (Bonjour / .local):</div>
           <div class="text-caption text-grey-7 q-mb-xs">
@@ -261,6 +265,7 @@ import {
   type LanPendingDetail,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
+import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
@@ -514,6 +519,7 @@ async function stopListen() {
 
 async function onToggleListen(v: boolean) {
   listenError.value = '';
+  await saveLanAutoListen(v);
   const elan = (window as unknown as {
     electronLan?: {
       startServer?: (i: { deviceId: string; deviceName: string; appVersion: string }) => Promise<unknown>;

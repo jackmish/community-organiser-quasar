@@ -34,6 +34,8 @@ let identity: LanIdentityPublic | null = null;
 const pendings = new Map<string, Pending>();
 let getMainWindow: () => BrowserWindow | undefined = () => undefined;
 let pruneTimer: ReturnType<typeof setInterval> | null = null;
+/** When non-empty, only these device ids may POST sync/contract/propose. Empty = allow any proposer. */
+let trustedContractDeviceIds = new Set<string>();
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -58,6 +60,18 @@ function normalizeClientIp(raw: string | undefined): string {
   let s = String(raw);
   if (s.startsWith('::ffff:')) s = s.slice(7);
   return s;
+}
+
+export function setLanTrustedContractDeviceIds(ids: string[]): void {
+  trustedContractDeviceIds = new Set(ids.map((id) => String(id || '').trim()).filter(Boolean));
+  logger.info(
+    `[lanPairingServer] trusted contract device ids: ${trustedContractDeviceIds.size}`,
+  );
+}
+
+function isContractProposerTrusted(proposerDeviceId: string): boolean {
+  if (trustedContractDeviceIds.size === 0) return true;
+  return trustedContractDeviceIds.has(proposerDeviceId);
 }
 
 export function getLanIPv4Addresses(): string[] {
@@ -115,6 +129,13 @@ function handleSyncContractPropose(
       typeof parsed.proposerDeviceName === 'string' ? parsed.proposerDeviceName : '';
     if (!snapshot || typeof snapshot !== 'object' || !proposerDeviceId) {
       sendJson(res, 400, { error: 'invalid_contract' });
+      return;
+    }
+    if (!isContractProposerTrusted(proposerDeviceId)) {
+      logger.warn(
+        `[lanPairingServer] contract rejected (unregistered proposer ${proposerDeviceId})`,
+      );
+      sendJson(res, 403, { error: 'proposer_not_registered' });
       return;
     }
     const createdAt =

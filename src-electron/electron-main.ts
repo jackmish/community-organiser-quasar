@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import {
   startLanPairingServer,
+  setLanTrustedContractDeviceIds,
   stopLanPairingServer,
   resolveLanPairing,
   setLanPairingMainWindowProvider,
@@ -172,6 +173,12 @@ ipcMain.handle('lan:status', () => ({
   port: CO21_LAN_PAIRING_PORT,
   addresses: getLanIPv4Addresses(),
 }));
+
+ipcMain.handle('lan:set-trusted-contract-devices', (_evt, ids: string[]) => {
+  const list = Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
+  setLanTrustedContractDeviceIds(list);
+  return { ok: true as const, count: list.length };
+});
 
 ipcMain.handle(
   'lan:browse-co21',

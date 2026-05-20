@@ -44,14 +44,24 @@ export async function pushSyncContractToLanPeers(
   devices: ConnectedDevice[],
   pending: SyncContractPending,
 ): Promise<boolean> {
-  const remotes = devices.filter((d) => !d.isLocal && d.lanHost);
+  const remotes = devices.filter((d) => !d.isLocal);
   if (!remotes.length) return false;
+
+  let anyHost = false;
   const results = await Promise.all(
     remotes.map(async (d) => {
-      const base = co21LanBaseUrl(d.lanHost!);
+      const host = (d.lanHost || '').trim();
+      if (!host) return false;
+      anyHost = true;
+      const base = co21LanBaseUrl(host);
       if (!base) return false;
       return lanPostSyncContractPropose(base, pending);
     }),
   );
+  if (!anyHost) return false;
   return results.some(Boolean);
+}
+
+export function remoteDevicesMissingLanHost(devices: ConnectedDevice[]): ConnectedDevice[] {
+  return devices.filter((d) => !d.isLocal && !(d.lanHost || '').trim());
 }

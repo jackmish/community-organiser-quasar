@@ -209,6 +209,8 @@ import {
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
 } from "src/modules/storage/sync/deviceRoleAssignment";
+import { loadCo21Settings } from "src/modules/storage/sync/roleProfileSettings";
+import { refreshLanServerForConnections } from "src/modules/lan/lanServerManager";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
 const isOnline = ref(false);
@@ -354,6 +356,18 @@ onMounted(async () => {
     return mergeLocalDeviceIntoList(loaded, local);
   });
   window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+
+  try {
+    const local = await loadOwnDeviceMeta();
+    const loaded = await loadConnectedDevices();
+    const devices = mergeLocalDeviceIntoList(loaded, local);
+    const settings = await loadCo21Settings();
+    const ownName =
+      typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
+    await refreshLanServerForConnections(devices, ownName);
+  } catch {
+    void 0;
+  }
 
   // Initial check only
   updateOnlineStatus();

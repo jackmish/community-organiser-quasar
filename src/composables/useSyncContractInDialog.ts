@@ -7,6 +7,10 @@ import {
   PENDING_ACTIONS_CHANGED_EVENT,
   tryDeliverAction,
 } from 'src/modules/storage/sync/syncPendingActions';
+import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
+import { remoteDevicesMissingLanHost } from 'src/modules/lan/lanSyncContract';
+import { appNotify } from 'src/utils/appNotify';
+import { $text } from 'src/modules/lang';
 import { SYNC_BASELINE_RESTORE_EVENT } from 'src/modules/storage/sync/syncContractUi';
 import {
   loadLastContractSnapshot,
@@ -67,8 +71,23 @@ export function useSyncContractInDialog(
   async function onPreviewConfirm(): Promise<void> {
     applyIntervalToRemoteDevices(sync.confirmIntervalSeconds.value);
     await saveSyncDuplicateResolution(sync.confirmDuplicateResolution.value);
-    const snap = sync.pendingSnapshot.value;
+
     const local = await loadOwnDeviceMeta();
+    const ownLabel = devices.value.find((d) => d.isLocal)?.name || local.name;
+    await refreshLanServerForConnections(devices.value, ownLabel);
+
+    const missingHost = remoteDevicesMissingLanHost(devices.value);
+    if (missingHost.length) {
+      appNotify(
+        'warning',
+        $text('sync.missing_lan_host').replace(
+          '{names}',
+          missingHost.map((d) => d.name).join(', '),
+        ),
+      );
+    }
+
+    const snap = sync.pendingSnapshot.value;
     if (snap) {
       const preAccept = sync.getBaselineSnapshot();
       const pending = {
@@ -84,7 +103,10 @@ export function useSyncContractInDialog(
         devices: devices.value,
         preAcceptBaseline: preAccept,
       });
-      await tryDeliverAction(action, devices.value);
+      const delivered = await tryDeliverAction(action, devices.value);
+      if (!delivered) {
+        appNotify('warning', $text('sync.lan_delivery_failed'));
+      }
     }
     sync.onPreviewAcceptedPending();
     await refreshPendingSend();
