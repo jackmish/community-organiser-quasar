@@ -26,7 +26,7 @@
         </div>
       </q-card-section>
 
-      <q-card-section :class="bodyClass" :style="bodyStyle">
+      <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
         <div class="q-gutter-md">
           <div class="text-subtitle2 q-mb-sm">Manage external connections and integrations</div>
           <div
@@ -144,46 +144,93 @@
               </div>
             </div>
           </div>
-          <div class="q-mt-md">
-            <q-item v-for="d in devices" :key="d.id">
-              <q-item-section>
+          <div class="connections-devices-panel q-mt-md">
+            <div v-if="!devices.length" class="text-body2 text-grey-7 q-pa-sm">
+              {{ $text('connections.no_devices') }}
+            </div>
+            <div v-else class="connections-devices-list column q-gutter-sm">
+              <div
+                v-for="d in devices"
+                :key="d.id"
+                class="connections-device-card"
+                :class="{ 'connections-device-card--local': d.isLocal }"
+              >
                 <div
-                  class="row items-center settings-dialog-device-row"
-                  :class="{ column: isMobile, 'items-stretch': isMobile }"
+                  class="row items-start q-col-gutter-sm"
+                  :class="{ column: isMobile }"
                 >
-                  <div class="col">
-                    {{ d.name }}
-                    <span class="text-caption text-grey-7 q-ml-sm">({{ d.type }})</span>
-                    <span v-if="d.lanHost" class="text-caption text-grey-6 q-ml-sm block">
-                      {{ d.lanHost }}
-                    </span>
-                    <div v-if="!d.isLocal" class="row items-center q-gutter-xs q-mt-xs">
-                      <q-input
-                        :model-value="deviceSyncInterval(d)"
-                        type="number"
-                        dense
-                        outlined
-                        class="connections-device-sync-input"
-                        style="max-width: 140px"
-                        :label="$text('sync.per_device_interval_label')"
-                        :min="minSyncInterval"
-                        :max="maxSyncInterval"
-                        @update:model-value="(v) => setDeviceSyncInterval(d.id, v)"
-                        @blur="void saveSettings()"
-                      />
-                      <span class="text-caption text-grey-7">{{ $text('sync.interval_unit') }}</span>
+                  <div class="col row items-start no-wrap q-gutter-sm">
+                    <q-icon
+                      :name="deviceIcon(d)"
+                      size="22px"
+                      class="connections-device-card__icon q-mt-xs"
+                    />
+                    <div class="col" style="min-width: 0">
+                      <div class="text-subtitle2 text-weight-medium connections-device-card__name">
+                        {{ d.name }}
+                        <q-badge
+                          v-if="d.isLocal"
+                          dense
+                          color="grey-7"
+                          class="q-ml-xs"
+                          :label="$text('connections.this_device')"
+                        />
+                      </div>
+                      <div v-if="!d.isLocal" class="text-caption connections-device-card__meta">
+                        {{ d.type || 'Device' }}
+                        <span v-if="d.lanHost"> · {{ d.lanHost }}</span>
+                      </div>
+                      <div
+                        v-if="!d.isLocal"
+                        class="row items-center q-gutter-xs q-mt-sm"
+                      >
+                        <q-input
+                          :model-value="deviceSyncInterval(d)"
+                          type="number"
+                          dense
+                          outlined
+                          class="connections-device-sync-input"
+                          style="max-width: 140px"
+                          :label="$text('sync.per_device_interval_label')"
+                          :min="minSyncInterval"
+                          :max="maxSyncInterval"
+                          @update:model-value="(v) => setDeviceSyncInterval(d.id, v)"
+                          @blur="void saveSettings()"
+                        />
+                        <span class="text-caption text-grey-7">
+                          {{ $text('sync.interval_unit') }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div
                     class="row items-center q-gutter-xs"
-                    :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto no-wrap'"
+                    :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto'"
                   >
-                    <q-btn dense flat label="Connect" color="primary" @click="connectDevice(d)" />
-                    <q-btn dense flat icon="delete" color="negative" @click="removeDevice(d.id)" />
+                    <q-btn
+                      v-if="!d.isLocal"
+                      dense
+                      unelevated
+                      no-caps
+                      :class="checkBtnClass(d.id)"
+                      :label="checkBtnLabel(d.id)"
+                      :loading="deviceCheckState(d.id) === 'checking'"
+                      :disable="deviceCheckState(d.id) === 'checking'"
+                      @click="onCheckDevice(d)"
+                    />
+                    <q-btn
+                      v-if="!d.isLocal"
+                      dense
+                      flat
+                      round
+                      icon="delete"
+                      color="negative"
+                      @click="removeDevice(d.id)"
+                    />
                   </div>
                 </div>
-              </q-item-section>
-            </q-item>
+              </div>
+            </div>
           </div>
           <q-expansion-item
             class="connections-backup-expansion q-mt-md"
@@ -422,6 +469,8 @@ import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import { patchCo21Settings, loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
+import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
+import { lanFetchInfo } from 'src/modules/lan/lanPairingClient';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
@@ -442,6 +491,61 @@ const dialogVisible = computed({
 });
 
 const devices = ref<ConnectedDevice[]>([]);
+
+type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
+const deviceCheckById = ref<Record<string, DeviceCheckState>>({});
+
+function deviceCheckState(deviceId: string): DeviceCheckState {
+  return deviceCheckById.value[deviceId] ?? 'idle';
+}
+
+function deviceIcon(d: ConnectedDevice): string {
+  const t = String(d.type || '').toLowerCase();
+  if (t.includes('lan') || t.includes('wifi')) return 'wifi';
+  if (t.includes('bluetooth')) return 'bluetooth';
+  return 'devices';
+}
+
+function checkBtnLabel(deviceId: string): string {
+  const s = deviceCheckState(deviceId);
+  if (s === 'success') return $text('connections.check_success');
+  if (s === 'fail') return $text('connections.check_retry');
+  return $text('connections.check_btn');
+}
+
+function checkBtnClass(deviceId: string): string {
+  const s = deviceCheckState(deviceId);
+  if (s === 'success') return 'connections-check-btn connections-check-btn--success';
+  if (s === 'fail') return 'connections-check-btn connections-check-btn--fail';
+  return 'connections-check-btn connections-check-btn--idle';
+}
+
+async function onCheckDevice(d: ConnectedDevice): Promise<void> {
+  if (d.isLocal) return;
+  deviceCheckById.value = { ...deviceCheckById.value, [d.id]: 'checking' };
+  let ok = false;
+  try {
+    const host = (d.lanHost || '').trim();
+    if (!host) {
+      notify('warning', $text('connections.check_no_host'));
+    } else {
+      const info = await lanFetchInfo(co21LanBaseUrl(host), { timeoutMs: 8000 });
+      ok = !!info && info.deviceId === d.id;
+      if (info && info.deviceId !== d.id) {
+        notify('warning', $text('connections.check_wrong_device'));
+      }
+    }
+  } catch {
+    ok = false;
+  }
+  deviceCheckById.value = { ...deviceCheckById.value, [d.id]: ok ? 'success' : 'fail' };
+}
+
+function clearDeviceCheckState(deviceId: string): void {
+  const next = { ...deviceCheckById.value };
+  delete next[deviceId];
+  deviceCheckById.value = next;
+}
 const roleProfiles = ref<RoleProfileData[]>([]);
 
 const {
@@ -552,6 +656,7 @@ function openAddMenu() {
 }
 
 function removeDevice(id: string) {
+  clearDeviceCheckState(id);
   devices.value = devices.value.filter((d) => d.id !== id);
 }
 
@@ -1027,26 +1132,6 @@ function onDeviceSelected(device: any) {
   notify('positive', `Added device ${device.name || device.id}`);
 }
 
-async function connectDevice(d: any) {
-  try {
-    notify('info', `Connecting to ${d.name}...`);
-    const ble = (window as any).electronBLE;
-    if (ble && typeof ble.connect === 'function') {
-      const res = await ble.connect(d.id);
-      if (res && res.status === 'connected') {
-        notify('positive', `Connected to ${d.name}`);
-      } else if (res && res.error) {
-        notify('negative', `Connect failed: ${res.error}`);
-      } else {
-        notify('positive', `Connect result: ${JSON.stringify(res)}`);
-      }
-    } else {
-      notify('warning', 'BLE connect not available in this runtime');
-    }
-  } catch (e: any) {
-    notify('negative', `Connect error: ${e?.message || e}`);
-  }
-}
 </script>
 
 <style scoped></style>

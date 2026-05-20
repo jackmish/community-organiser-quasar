@@ -73,6 +73,59 @@
   color: rgba(0, 0, 0, 0.6);
 }
 
+/* Connections dialog: readable list panel on blue card chrome */
+.connections-dialog-body {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.connections-devices-panel {
+  background: #e8ecf0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.connections-device-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.connections-device-card--local {
+  background: #f5f8fc;
+  border-color: rgba(25, 118, 210, 0.25);
+}
+
+.connections-device-card__name,
+.connections-device-card__icon {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.connections-device-card__meta {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.connections-check-btn {
+  min-width: 88px;
+}
+
+.connections-check-btn--idle {
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.connections-check-btn--success {
+  background: #21ba45 !important;
+  color: #fff !important;
+}
+
+.connections-check-btn--fail {
+  background: #c62828 !important;
+  color: #fff !important;
+}
+
 .join-member-layout--split {
   align-items: flex-start;
   align-content: flex-start;
