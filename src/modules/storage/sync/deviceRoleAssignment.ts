@@ -1,15 +1,21 @@
 import type { AccessRange, RolePrivilege } from './RoleModel';
+import { PRIVILEGE_ORDER } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
+import { loadCo21Settings } from './roleProfileSettings';
+import { deviceId } from './deviceId';
 import {
   maxPrivilegeFromProfile,
   roleHasEnabledFunctions,
   type RoleFunctionId,
 } from './roleFunctionCatalog';
+
 export type ConnectedDevice = {
   id: string;
   name: string;
   type?: string;
   lanHost?: string;
+  /** This installation's device row. */
+  isLocal?: boolean;
   /** groupId → roleProfileId (direct assignment on that group only) */
   rolesByGroup?: Record<string, string>;
   /** Default role profile for this device (Connections dialog). */
@@ -27,10 +33,96 @@ export type EffectiveRoleAssignment = {
   roleName: string;
   accessRange: AccessRange;
   privilege: RolePrivilege;
-  kind: 'direct' | 'inherited';
+  kind: 'direct' | 'inherited' | 'default_full';
   sourceGroupId: string;
   sourceGroupName: string;
 };
+
+/** Devices on a group with no explicit role inherit full access (creator default). */
+export function defaultFullAccessAssignment(
+  groups: GroupRecord[],
+  groupId: string,
+): EffectiveRoleAssignment {
+  return {
+    roleProfileId: '',
+    roleName: '',
+    accessRange: 'max',
+    privilege: 'full',
+    kind: 'default_full',
+    sourceGroupId: groupId,
+    sourceGroupName: groupNameById(groups, groupId),
+  };
+}
+
+export function resolveEffectiveRoleWithDefault(
+  device: ConnectedDevice,
+  groups: GroupRecord[],
+  profiles: RoleProfileData[],
+  targetGroupId: string,
+): EffectiveRoleAssignment {
+  return (
+    resolveEffectiveRole(device, groups, profiles, targetGroupId) ??
+    defaultFullAccessAssignment(groups, targetGroupId)
+  );
+}
+
+/** Role profile with the lowest privilege (for default “restrict” suggestion). */
+export function pickDefaultRestrictiveRoleProfile(profiles: RoleProfileData[]): RoleProfileData | null {
+  const applicable = profiles.filter((p) => roleHasEnabledFunctions(p));
+  if (!applicable.length) return null;
+  let best = applicable[0]!;
+  let bestScore = PRIVILEGE_ORDER[maxPrivilegeFromProfile(best)];
+  for (const p of applicable) {
+    const score = PRIVILEGE_ORDER[maxPrivilegeFromProfile(p)];
+    if (score < bestScore) {
+      bestScore = score;
+      best = p;
+    }
+  }
+  return best;
+}
+
+export function sortRolesByRestrictiveness(profiles: RoleProfileData[]): RoleProfileData[] {
+  return [...profiles].filter((p) => roleHasEnabledFunctions(p)).sort((a, b) => {
+    return PRIVILEGE_ORDER[maxPrivilegeFromProfile(a)] - PRIVILEGE_ORDER[maxPrivilegeFromProfile(b)];
+  });
+}
+
+export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }> {
+  let id = deviceId.getSync() ?? '';
+  if (!id) {
+    try {
+      id = await deviceId.get();
+    } catch {
+      id = '';
+    }
+  }
+  const settings = await loadCo21Settings();
+  const name =
+    typeof settings.ownDeviceName === 'string' && settings.ownDeviceName.trim()
+      ? settings.ownDeviceName.trim()
+      : 'This device';
+  return { id: id || crypto.randomUUID(), name };
+}
+
+export function mergeLocalDeviceIntoList(
+  devices: ConnectedDevice[],
+  local: { id: string; name: string },
+): ConnectedDevice[] {
+  const idx = devices.findIndex((d) => d.id === local.id);
+  const row: ConnectedDevice = {
+    id: local.id,
+    name: local.name,
+    type: 'Local',
+    isLocal: true,
+  };
+  const prev = idx >= 0 ? devices[idx] : undefined;
+  if (prev?.rolesByGroup) row.rolesByGroup = { ...prev.rolesByGroup };
+  if (idx < 0) return [row, ...devices];
+  const next = [...devices];
+  next[idx] = { ...devices[idx]!, ...row };
+  return next;
+}
 
 function stringField(v: unknown, fallback: string): string {
   if (typeof v === 'string') return v.length ? v : fallback;
@@ -58,6 +150,7 @@ export function parseConnectedDevice(raw: Record<string, unknown>): ConnectedDev
   }
   const defaultRole = stringField(raw.defaultRoleProfileId, '');
   if (defaultRole) row.defaultRoleProfileId = defaultRole;
+  if (raw.isLocal === true || raw.type === 'Local') row.isLocal = true;
   return row;
 }
 
@@ -71,6 +164,7 @@ export function toDeviceJson(d: ConnectedDevice): Record<string, unknown> {
       ? { rolesByGroup: { ...d.rolesByGroup } }
       : {}),
     ...(d.defaultRoleProfileId ? { defaultRoleProfileId: d.defaultRoleProfileId } : {}),
+    ...(d.isLocal ? { isLocal: true } : {}),
   };
 }
 

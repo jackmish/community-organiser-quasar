@@ -286,6 +286,11 @@ function parseProfiles(raw: unknown): RoleProfileData[] {
 
 
 
+export async function loadCo21Settings(): Promise<SettingsJson> {
+  const data = await readSettingsFile();
+  return data ?? {};
+}
+
 export async function loadRoleProfiles(): Promise<RoleProfileData[]> {
 
   const data = await readSettingsFile();

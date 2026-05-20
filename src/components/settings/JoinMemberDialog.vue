@@ -89,8 +89,72 @@
           </div>
 
           <div v-else class="column q-gutter-md" style="max-height: 52vh; overflow: auto">
+            <q-card v-if="localDevice" bordered flat class="rounded-borders bg-blue-1">
+              <q-card-section>
+                <div class="text-subtitle2 row items-center q-gutter-xs">
+                  <q-icon name="computer" color="primary" />
+                  {{ $text('role.local_device') }}
+                </div>
+                <div class="text-body2 q-mt-xs">{{ localDevice.name }}</div>
+                <div class="text-caption q-mt-sm">
+                  {{ $text('role.current_access') }}:
+                  <strong>{{ accessLabelForDevice(localDevice) }}</strong>
+                </div>
+                <q-select
+                  v-if="restrictRoleOptions.length"
+                  dense
+                  outlined
+                  emit-value
+                  map-options
+                  class="q-mt-sm"
+                  :options="restrictRoleOptions"
+                  :model-value="directRoleIdForDevice(localDevice.id)"
+                  :label="$text('role.change_local_role')"
+                  @update:model-value="(v) => onRestrictDevice(localDevice!.id, v)"
+                />
+              </q-card-section>
+            </q-card>
+
             <q-card
-              v-for="role in applicableRoles"
+              v-if="defaultFullDevices.length"
+              bordered
+              flat
+              class="rounded-borders"
+            >
+              <q-card-section class="q-pb-sm">
+                <div class="text-subtitle2">{{ $text('role.default_full_access') }}</div>
+                <div class="text-caption text-grey-7">
+                  {{ $text('role.default_full_access_hint') }}
+                </div>
+              </q-card-section>
+              <q-separator />
+              <q-list dense separator>
+                <q-item v-for="d in defaultFullDevices" :key="d.id">
+                  <q-item-section>
+                    <q-item-label>{{ d.name }}</q-item-label>
+                    <q-item-label v-if="d.type" caption>{{ d.type }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-badge color="positive" :label="$text('role.priv_full')" />
+                  </q-item-section>
+                  <q-item-section v-if="restrictRoleOptions.length" class="col-auto" style="min-width: 200px">
+                    <q-select
+                      dense
+                      outlined
+                      emit-value
+                      map-options
+                      :options="restrictRoleOptions"
+                      :model-value="''"
+                      :label="$text('role.restrict_to_role')"
+                      @update:model-value="(v) => onRestrictDevice(d.id, v)"
+                    />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card>
+
+            <q-card
+              v-for="role in sortedApplicableRoles"
               :key="role.id"
               bordered
               flat
@@ -173,14 +237,6 @@
               </q-card-section>
             </q-card>
 
-            <div v-if="unassignedDevices.length" class="q-mt-sm">
-              <div class="text-caption text-grey-7 q-mb-xs">{{ $text('role.unassigned_devices') }}</div>
-              <div class="text-caption text-grey-6">
-                <span v-for="(d, i) in unassignedDevices" :key="d.id">
-                  {{ d.name }}<span v-if="i < unassignedDevices.length - 1">, </span>
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </q-card-section>
@@ -211,11 +267,16 @@ import {
   devicesInheritedOnRole,
   devicesUnassignedOnGroup,
   loadConnectedDevices,
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
   normalizeGroupsFromCc,
+  pickDefaultRestrictiveRoleProfile,
   resolveEffectiveRole,
+  resolveEffectiveRoleWithDefault,
   roleProfileSummaryLabel,
   rolesApplicableToGroup,
   saveConnectedDevices,
+  sortRolesByRestrictiveness,
   type ConnectedDevice,
   type GroupRecord,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
@@ -295,15 +356,73 @@ const applicableRoles = computed(() => {
   return rolesApplicableToGroup(roleProfiles.value, groups.value, selectedGroupId.value);
 });
 
-const unassignedDevices = computed(() => {
+const RESTRICT_PLACEHOLDER = '';
+
+const localDevice = computed(() => devices.value.find((d) => d.isLocal) ?? null);
+
+const defaultFullDevices = computed(() => {
   if (!selectedGroupId.value) return [];
   return devicesUnassignedOnGroup(
     devices.value,
     groups.value,
     roleProfiles.value,
     selectedGroupId.value,
-  );
+  ).filter((d) => !d.isLocal);
 });
+
+const sortedApplicableRoles = computed(() =>
+  sortRolesByRestrictiveness(
+    rolesApplicableToGroup(roleProfiles.value, groups.value, selectedGroupId.value ?? ''),
+  ),
+);
+
+const defaultRestrictiveRole = computed(() =>
+  pickDefaultRestrictiveRoleProfile(roleProfiles.value),
+);
+
+const restrictRoleOptions = computed(() => {
+  const sorted = sortedApplicableRoles.value;
+  if (!sorted.length) return [];
+  const opts = sorted.map((r) => ({ label: r.name, value: r.id }));
+  const hint = defaultRestrictiveRole.value;
+  if (hint && opts[0]?.value === hint.id) {
+    opts[0] = {
+      label: `${hint.name} (${$text('role.suggested_limited')})`,
+      value: hint.id,
+    };
+  }
+  return [
+    { label: $text('role.keep_full_default'), value: RESTRICT_PLACEHOLDER },
+    ...opts,
+  ];
+});
+
+function accessLabelForDevice(d: ConnectedDevice): string {
+  if (!selectedGroupId.value) return '';
+  const eff = resolveEffectiveRoleWithDefault(
+    d,
+    groups.value,
+    roleProfiles.value,
+    selectedGroupId.value,
+  );
+  if (eff.kind === 'default_full') return $text('role.creator_default_name');
+  return eff.roleName;
+}
+
+function directRoleIdForDevice(deviceId: string): string {
+  if (!selectedGroupId.value) return RESTRICT_PLACEHOLDER;
+  const d = devices.value.find((x) => x.id === deviceId);
+  return d?.rolesByGroup?.[selectedGroupId.value] ?? RESTRICT_PLACEHOLDER;
+}
+
+async function onRestrictDevice(deviceId: string, roleProfileId: string | number | null): Promise<void> {
+  const id = roleProfileId ? String(roleProfileId) : '';
+  if (!id || id === RESTRICT_PLACEHOLDER) {
+    await disconnectDirect(deviceId);
+    return;
+  }
+  await assignDeviceToRole(deviceId, id);
+}
 
 function labelRange(r: AccessRange): string {
   if (r === 'single') return $text('role.range_strict');
@@ -387,7 +506,9 @@ async function disconnectDirect(deviceId: string): Promise<void> {
 
 async function reload(): Promise<void> {
   roleProfiles.value = await loadRoleProfiles();
-  devices.value = await loadConnectedDevices();
+  const local = await loadOwnDeviceMeta();
+  const loaded = await loadConnectedDevices();
+  devices.value = mergeLocalDeviceIntoList(loaded, local);
   try {
     groups.value = normalizeGroupsFromCc(CC.group.list.all.value ?? []);
   } catch {
