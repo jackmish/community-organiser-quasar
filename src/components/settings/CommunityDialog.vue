@@ -167,6 +167,7 @@
                     :label="pendingGroupLabel(p.id) || 'Select group…'"
                   >
                     <q-tree
+                      class="q-tree-expanded-only"
                       :nodes="groupTree"
                       node-key="id"
                       label-key="name"
@@ -174,6 +175,8 @@
                       v-model:selected="pendingGroupId[p.id]"
                       default-expand-all
                       no-connectors
+                      v-model:expanded="groupTreeExpanded"
+                      @update:expanded="onGroupTreeExpandedUpdate"
                       style="min-width: 220px; padding: 8px"
                     />
                   </q-btn-dropdown>
@@ -227,6 +230,8 @@ import type {
   GroupPrivilege,
 } from "src/modules/storage/sync/DeviceProfile";
 import CC from "src/CCAccess";
+import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
+import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 
 // ── Props / emit ──────────────────────────────────────────────────────────────
 
@@ -326,9 +331,10 @@ interface TreeNode {
   id: string;
   name: string;
   children?: TreeNode[];
+  [key: string]: unknown;
 }
 
-const groupTree = computed<TreeNode[]>(() => {
+const groupTree = computed(() => {
   const all: any[] = CC.group.groups ?? [];
   const byParent = new Map<string | null, any[]>();
   for (const g of all) {
@@ -343,8 +349,11 @@ const groupTree = computed<TreeNode[]>(() => {
       children: build(g.id),
     }));
   }
-  return build(null);
+  return treeNodesExpandedOnly(build(null));
 });
+
+const { expanded: groupTreeExpanded, onExpandedUpdate: onGroupTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(groupTree);
 
 // ── Group display helpers ─────────────────────────────────────────────────────
 

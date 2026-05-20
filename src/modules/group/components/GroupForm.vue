@@ -359,10 +359,14 @@
             <q-separator />
             <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
               <q-tree
-                :nodes="groupTree || []"
+                class="q-tree-expanded-only"
+                :nodes="lockedParentTree"
                 node-key="id"
                 default-expand-all
+                no-connectors
+                v-model:expanded="parentTreeExpanded"
                 :selected="localParent ? [String(localParent)] : []"
+                @update:expanded="onParentTreeExpandedUpdate"
                 @update:selected="onParentTreeSelect"
               >
                 <template #default-header="prop">
@@ -436,6 +440,8 @@ import { ref, computed, watch, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
 import type { QTreeNode } from "quasar";
+import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
+import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 
 const props = defineProps<{
   groupTree?: QTreeNode<any>[];
@@ -446,6 +452,12 @@ const emit = defineEmits<{
   (e: "submit", payload: any): void;
   (e: "cancel"): void;
 }>();
+
+const lockedParentTree = computed(() =>
+  treeNodesExpandedOnly((props.groupTree || []) as QTreeNode[]),
+);
+const { expanded: parentTreeExpanded, onExpandedUpdate: onParentTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(lockedParentTree);
 
 const localName = ref("");
 const localParent = ref<string | null>(null);

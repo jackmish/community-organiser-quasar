@@ -64,8 +64,17 @@
             <q-separator />
 
             <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
-              <q-tree :nodes="treeNodes" node-key="id" default-expand-all :selected="selectedKeyArray"
-                @update:selected="onTreeSelect">
+              <q-tree
+                class="q-tree-expanded-only"
+                :nodes="treeNodes"
+                node-key="id"
+                default-expand-all
+                no-connectors
+                v-model:expanded="treeExpanded"
+                :selected="selectedKeyArray"
+                @update:expanded="onTreeExpandedUpdate"
+                @update:selected="onTreeSelect"
+              >
                 <template #default-header="prop">
                   <div class="row items-center full-width">
                     <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
@@ -130,6 +139,8 @@ import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
+import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
+import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 
 const $q = useQuasar();
 
@@ -256,11 +267,14 @@ const convertNode = (n: any): any => ({
 
 const treeNodes = computed(() => {
   try {
-    return (CC.group.list.tree.value || []).map(convertNode);
+    return treeNodesExpandedOnly((CC.group.list.tree.value || []).map(convertNode));
   } catch (e) {
     return [];
   }
 });
+
+const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(treeNodes);
 
 const selectedKeyArray = computed(() =>
   localValue.value ? [String(localValue.value)] : []

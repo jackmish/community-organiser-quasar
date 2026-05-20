@@ -16,37 +16,39 @@
       <q-card-section class="q-pt-none row q-col-gutter-md">
         <div class="col-12 col-md-4">
           <div class="text-subtitle2 q-mb-sm">{{ $text('ui.select_group') }}</div>
-          <q-list
-            bordered
-            separator
-            class="rounded-borders join-member-group-list"
-            style="max-height: 52vh; overflow: auto"
+          <div
+            class="rounded-borders"
+            style="max-height: 52vh; overflow: auto; border: 1px solid rgba(0, 0, 0, 0.12); padding: 4px"
           >
-            <q-item
-              v-for="row in flatGroupRows"
-              :key="row.id"
-              clickable
-              v-ripple
-              :active="selectedGroupId === row.id"
-              active-class="bg-primary text-white"
-              @click="selectedGroupId = row.id"
+            <q-tree
+              class="q-tree-expanded-only join-member-group-tree"
+              :nodes="treeNodes"
+              node-key="id"
+              default-expand-all
+              no-connectors
+              v-model:expanded="treeExpanded"
+              v-model:selected="treeSelected"
+              selected-color="primary"
+              @update:expanded="onTreeExpandedUpdate"
             >
-              <q-item-section avatar style="min-width: 32px">
-                <q-icon
-                  :name="row.icon || 'folder'"
-                  :style="row.color ? { color: row.color } : undefined"
-                />
-              </q-item-section>
-              <q-item-section :style="{ paddingLeft: `${row.depth * 12}px` }">
-                {{ row.name }}
-              </q-item-section>
-            </q-item>
-            <q-item v-if="!flatGroupRows.length">
-              <q-item-section class="text-caption text-grey-6">
-                {{ $text('role.no_groups') }}
-              </q-item-section>
-            </q-item>
-          </q-list>
+              <template #default-header="scope">
+                <div
+                  class="join-member-tree-node row items-center full-width q-px-sm q-py-xs rounded-borders"
+                  :class="{
+                    'join-member-tree-node--selected':
+                      selectedGroupId != null && String(scope.key) === selectedGroupId,
+                  }"
+                >
+                  <q-icon
+                    :name="scope.node.icon || 'folder'"
+                    class="q-mr-sm"
+                    :style="scope.node.color ? { color: scope.node.color } : undefined"
+                  />
+                  <span class="join-member-tree-node__label">{{ scope.node.label }}</span>
+                </div>
+              </template>
+            </q-tree>
+          </div>
         </div>
 
         <div class="col-12 col-md-8 column">
@@ -194,6 +196,12 @@
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import CC from 'src/CCAccess';
+import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
+import {
+  collectTreeNodeKeys,
+  treeNodeKeyString,
+  treeNodesExpandedOnly,
+} from 'src/modules/group/utils/treeUi';
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
@@ -231,34 +239,51 @@ const roleProfiles = ref<RoleProfileData[]>([]);
 const devices = ref<ConnectedDevice[]>([]);
 const groups = ref<GroupRecord[]>([]);
 
-type FlatGroupRow = {
-  id: string;
-  name: string;
-  depth: number;
-  icon?: string;
-  color?: string | null;
-};
-
-function flattenGroupList(list: GroupRecord[], parentId: string | null = null, depth = 0): FlatGroupRow[] {
-  const out: FlatGroupRow[] = [];
-  const pid = parentId ?? null;
-  for (const g of list) {
-    const gParent = g.parentId ?? null;
-    if (gParent !== pid) continue;
-    const src = CC.group.list.find(g.id) as { icon?: string; color?: string } | undefined;
-    out.push({
-      id: g.id,
-      name: g.name,
-      depth,
-      icon: src?.icon ?? 'folder',
-      color: src?.color ?? null,
-    });
-    out.push(...flattenGroupList(list, g.id, depth + 1));
-  }
-  return out;
+function nodeString(v: unknown, fallback: string): string {
+  if (typeof v === 'string') return v.length ? v : fallback;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return fallback;
 }
 
-const flatGroupRows = computed(() => flattenGroupList(groups.value));
+function convertNode(n: Record<string, unknown>): Record<string, unknown> {
+  const id = nodeString(n.id, '');
+  return {
+    id,
+    label: nodeString(n.name, nodeString(n.label, id)),
+    icon: n.icon ?? 'folder',
+    color: n.color ?? null,
+    children: Array.isArray(n.children)
+      ? (n.children as Record<string, unknown>[]).map(convertNode)
+      : [],
+  };
+}
+
+const treeNodes = computed(() => {
+  try {
+    const raw = (CC.group.list.tree.value ?? []).map((n: unknown) =>
+      convertNode(n as Record<string, unknown>),
+    );
+    return treeNodesExpandedOnly(raw);
+  } catch {
+    return [];
+  }
+});
+
+const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(treeNodes);
+
+/** Quasar toggles selection off on second click — keep a group always selected. */
+const treeSelected = computed({
+  get: (): string | null => selectedGroupId.value,
+  set: (val: string | string[] | null) => {
+    if (val == null || val === '' || (Array.isArray(val) && !val.length)) {
+      return;
+    }
+    const raw = Array.isArray(val) ? val[0] : val;
+    const id = treeNodeKeyString(raw);
+    if (id) selectedGroupId.value = id;
+  },
+});
 
 const selectedGroupName = computed(() => {
   if (!selectedGroupId.value) return '';
@@ -374,34 +399,59 @@ watch(
   () => props.modelValue,
   (open) => {
     if (!open) return;
-    try {
-      const active = CC.group.active.activeGroup.value;
-      if (!active) {
-        selectedGroupId.value = null;
-      } else if (typeof active === 'string' || typeof active === 'number') {
-        selectedGroupId.value = String(active);
-      } else {
-        const a = active as Record<string, unknown>;
-        const raw = a.value ?? a.id ?? null;
-        selectedGroupId.value =
-          typeof raw === 'string' || typeof raw === 'number' ? String(raw) : null;
-      }
-    } catch {
-      selectedGroupId.value = null;
-    }
-    void reload();
+    void reload().then(() => ensureGroupSelected());
   },
 );
 
-watch(flatGroupRows, (rows) => {
-  if (!props.modelValue || !rows.length) return;
-  if (selectedGroupId.value && rows.some((r) => r.id === selectedGroupId.value)) return;
-  selectedGroupId.value = rows[0]?.id ?? null;
+watch(treeNodes, () => {
+  if (props.modelValue) ensureGroupSelected();
 });
+
+function ensureGroupSelected(): void {
+  const keys = collectTreeNodeKeys(treeNodes.value);
+  if (!keys.length) {
+    selectedGroupId.value = null;
+    return;
+  }
+  if (selectedGroupId.value && keys.includes(selectedGroupId.value)) return;
+  try {
+    const active = CC.group.active.activeGroup.value;
+    let fromActive: string | null = null;
+    if (typeof active === 'string' || typeof active === 'number') {
+      fromActive = String(active);
+    } else if (active && typeof active === 'object') {
+      const a = active as Record<string, unknown>;
+      const raw = a.value ?? a.id ?? null;
+      if (typeof raw === 'string' || typeof raw === 'number') fromActive = String(raw);
+    }
+    if (fromActive && keys.includes(fromActive)) {
+      selectedGroupId.value = fromActive;
+      return;
+    }
+  } catch {
+    void 0;
+  }
+  selectedGroupId.value = keys[0] ?? null;
+}
 </script>
 
 <style scoped>
-.join-member-group-list :deep(.q-item__section--avatar) {
-  min-width: 32px;
+.join-member-group-tree :deep(.q-tree__node--selected > .q-tree__node-header) {
+  background: transparent !important;
+}
+
+.join-member-tree-node--selected {
+  background: var(--q-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.join-member-tree-node--selected .join-member-tree-node__label,
+.join-member-tree-node--selected .q-icon {
+  color: #fff !important;
+}
+
+.join-member-tree-node:not(.join-member-tree-node--selected):hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 </style>

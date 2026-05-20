@@ -47,7 +47,15 @@
           />
         </q-card-section>
 
-        <q-tree :nodes="groupTree" node-key="id" default-expand-all>
+        <q-tree
+          class="q-tree-expanded-only"
+          :nodes="lockedGroupTree"
+          node-key="id"
+          default-expand-all
+          no-connectors
+          v-model:expanded="treeExpanded"
+          @update:expanded="onTreeExpandedUpdate"
+        >
           <template #default-header="prop">
             <div class="row items-center full-width">
               <q-icon
@@ -124,12 +132,18 @@ import CC from "src/CCAccess";
 import * as groupRepository from 'src/modules/group/managers/groupRepository';
 import { saveData } from 'src/utils/storageUtils';
 import GroupForm from "./GroupForm.vue";
+import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
+import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 
 const props = defineProps<{
   modelValue: boolean;
   groupOptions: any[];
   groupTree: any[];
 }>();
+
+const lockedGroupTree = computed(() => treeNodesExpandedOnly(props.groupTree || []));
+const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(lockedGroupTree);
 
 const emit = defineEmits<{
   (e: "update:modelValue", v: boolean): void;

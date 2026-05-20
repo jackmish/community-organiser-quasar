@@ -1,0 +1,9 @@
+/* QTree: hide only the expand/collapse arrow; keep headers clickable for selection */
+.q-tree-expanded-only :deep(.q-tree__arrow) {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}

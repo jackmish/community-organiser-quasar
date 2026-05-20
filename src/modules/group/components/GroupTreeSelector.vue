@@ -1,9 +1,13 @@
 <template>
   <div class="group-tree-selector">
     <q-tree
+      class="q-tree-expanded-only"
       :nodes="treeNodes"
       node-key="id"
       default-expand-all
+      no-connectors
+      v-model:expanded="treeExpanded"
+      @update:expanded="onTreeExpandedUpdate"
       @update:selected="onSelect"
     >
       <template #default-header="{ node }">
@@ -19,6 +23,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
+import { treeNodesExpandedOnly } from 'src/modules/group/utils/treeUi';
 
 const props = defineProps<{
   groups?: any[] | undefined;
@@ -40,11 +46,14 @@ function convertNode(n: any) {
 
 const treeNodes = computed(() => {
   try {
-    return (props.groups || []).map(convertNode);
+    return treeNodesExpandedOnly((props.groups || []).map(convertNode));
   } catch (e) {
     return [];
   }
 });
+
+const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
+  useTreeAlwaysExpanded(treeNodes);
 
 function onSelect(val: any) {
   const key = Array.isArray(val) ? val[0] : val;
