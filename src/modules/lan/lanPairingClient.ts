@@ -6,7 +6,10 @@ export type LanPeerInfo = {
   appVersion: string;
 };
 
-export type LanPairRequestBody = LanPeerInfo;
+export type LanPairRequestBody = LanPeerInfo & {
+  /** This machine's reachable IPv4/LAN addresses for reverse pairing. */
+  lanReachableAddresses?: string[];
+};
 
 export type LanPairRequestResponse = {
   token: string;

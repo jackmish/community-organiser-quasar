@@ -419,6 +419,7 @@
     <LanPairingModal
       v-model="showLanPairingModal"
       :own-device-name="ownDeviceName"
+      :pending-offer="lanPairingPendingOffer"
       @paired="onLanPairedFromModal"
     />
     <JoinMemberDialog
@@ -454,7 +455,9 @@ import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
 import { jsonStringField, lanFetchInfo, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import {
-  parseConnectedDevice,
+  loadConnectedDevices,
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
   normalizeDeviceId,
   toDeviceJson,
   type ConnectedDevice,
@@ -470,9 +473,16 @@ import {
   OPEN_PENDING_ACTIONS_EVENT,
 } from 'src/modules/storage/sync/syncPendingActions';
 import {
+  LAN_PAIRED_EVENT,
   LAN_PAIRING_PENDING_EVENT,
+  parseLanPendingDetail,
   type LanPairedDevicePayload,
+  type LanPendingDetail,
 } from 'src/modules/lan/lanPairingUi';
+import {
+  parseDevicesFromSettingsJson,
+  sanitizeConnectionDevices,
+} from 'src/modules/lan/lanPairingRegister';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
@@ -715,6 +725,7 @@ function close() {
 const $q = useQuasar();
 const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
+const lanPairingPendingOffer = ref<LanPendingDetail | null>(null);
 const showJoinMemberDialog = ref(false);
 
 async function refreshRoleProfiles(): Promise<void> {
@@ -827,9 +838,11 @@ async function loadSettings() {
         autoBackupMinutes.value = data.autoBackupMinutes;
       if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
       if (Array.isArray(data.devices)) {
-        devices.value = data.devices.map((d: Record<string, unknown>) => {
-          return parseConnectedDevice(d);
-        });
+        const local = await loadOwnDeviceMeta();
+        devices.value = mergeLocalDeviceIntoList(
+          parseDevicesFromSettingsJson(data.devices),
+          local,
+        );
       }
     }
   } catch (e) {
@@ -874,7 +887,7 @@ async function saveSettings(): Promise<boolean> {
       autoBackupEnabled: !!autoBackupEnabled.value,
       autoBackupHours: Number(autoBackupHours.value || 0),
       autoBackupMinutes: Number(autoBackupMinutes.value || 0),
-      devices: devices.value.map((d) => toDeviceJson(d)),
+      devices: sanitizeConnectionDevices(devices.value).map((d) => toDeviceJson(d)),
     };
     if (lastAutoBackup.value) patch.lastAutoBackup = lastAutoBackup.value;
     return await patchCo21Settings(patch);
@@ -900,26 +913,23 @@ async function saveOwnDeviceName() {
   }
 }
 
-function onLanPairingPendingOpen(): void {
+function openLanPairingWithOffer(detail: LanPendingDetail | null): void {
+  lanPairingPendingOffer.value = detail;
   dialogVisible.value = true;
   showLanPairingModal.value = true;
 }
 
-function registerLanDevice(payload: LanPairedDevicePayload): void {
-  if (devices.value.some((d) => d.id === payload.id)) return;
-  const row: ConnectedDevice = {
-    id: payload.id,
-    name: payload.name,
-    type: payload.type,
-    syncIntervalSeconds: DEFAULT_SYNC_INTERVAL_SECONDS,
-  };
-  if (payload.lanHost) {
-    row.lanHost = payload.lanHost;
-  }
-  devices.value = [...devices.value, row];
-  void refreshLanServerForConnections(devices.value, ownDeviceName.value).then((next) => {
-    devices.value = next;
-  });
+function onLanPairingPendingEvent(ev: Event): void {
+  const ce = ev as CustomEvent<Record<string, unknown>>;
+  const detail = ce.detail ? parseLanPendingDetail(ce.detail) : null;
+  if (!detail) return;
+  openLanPairingWithOffer(detail);
+}
+
+async function reloadDevicesFromSettings(): Promise<void> {
+  const local = await loadOwnDeviceMeta();
+  const loaded = await loadConnectedDevices();
+  devices.value = mergeLocalDeviceIntoList(loaded, local);
 }
 
 watch(dialogVisible, (open) => {
@@ -950,7 +960,8 @@ function onRolesSavedForSync(): void {
 
 onMounted(() => {
   void loadSettings();
-  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
+  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingEvent as EventListener);
+  window.addEventListener(LAN_PAIRED_EVENT, onLanPairedEvent as EventListener);
   window.addEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
   window.addEventListener('co21:sync-contract-signed', () => void captureBaseline());
   window.addEventListener('co21:roles-saved', onRolesSavedForSync as EventListener);
@@ -962,14 +973,20 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
+  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingEvent as EventListener);
+  window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedEvent as EventListener);
   window.removeEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
   window.removeEventListener('co21:roles-saved', onRolesSavedForSync as EventListener);
   if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 
-function onLanPairedFromModal(payload: LanPairedDevicePayload) {
-  registerLanDevice(payload);
+async function onLanPairedFromModal(_payload: LanPairedDevicePayload): Promise<void> {
+  await reloadDevicesFromSettings();
+  lanPairingPendingOffer.value = null;
+}
+
+function onLanPairedEvent(): void {
+  void reloadDevicesFromSettings();
 }
 
 watch(

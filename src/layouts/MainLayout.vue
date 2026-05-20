@@ -211,6 +211,13 @@ import {
 } from "src/modules/storage/sync/deviceRoleAssignment";
 import { loadCo21Settings } from "src/modules/storage/sync/roleProfileSettings";
 import { refreshLanServerForConnections } from "src/modules/lan/lanServerManager";
+import {
+  LAN_PAIRING_PENDING_EVENT,
+  LAN_PAIRED_EVENT,
+  parseLanPendingDetail,
+  type LanPairedDevicePayload,
+} from "src/modules/lan/lanPairingUi";
+import { persistPairedLanDevice } from "src/modules/lan/lanPairingRegister";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
 const isOnline = ref(false);
@@ -244,6 +251,19 @@ function openPendingActionsFromMenu(): void {
 function onOpenPendingActionsEvent(): void {
   void refreshPendingActions();
   showPendingActionsDialog.value = true;
+}
+
+function onLanPairingPendingGlobal(ev: Event): void {
+  const ce = ev as CustomEvent<Record<string, unknown>>;
+  if (!ce.detail || !parseLanPendingDetail(ce.detail)) return;
+  showConnectionsDialog.value = true;
+}
+
+function onLanPairedGlobal(ev: Event): void {
+  const ce = ev as CustomEvent<LanPairedDevicePayload>;
+  if (ce.detail?.id) {
+    void persistPairedLanDevice(ce.detail);
+  }
 }
 
 async function onPendingRunNow(actionId: string): Promise<void> {
@@ -356,6 +376,8 @@ onMounted(async () => {
     return mergeLocalDeviceIntoList(loaded, local);
   });
   window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+  window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
+  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
 
   try {
     const local = await loadOwnDeviceMeta();
@@ -552,6 +574,8 @@ async function reloadWithTestData() {
 onUnmounted(() => {
   stopPendingActionsScheduler();
   window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+  window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
+  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
   window.removeEventListener("online", updateOnlineStatus);
   window.removeEventListener("offline", updateOnlineStatus);
   try {

@@ -1,4 +1,5 @@
 import { jsonStringField } from './lanPairingClient';
+import { pickReachableLanHost, parseLanReachableAddresses } from './lanPairingHosts';
 
 /** Pending LAN pairing request shown in the Wi‑Fi / LAN pairing dialog. */
 export type LanPendingDetail = {
@@ -7,7 +8,11 @@ export type LanPendingDetail = {
   remoteName: string;
   remoteAppVersion?: string;
   remoteAddress?: string;
+  /** Proposer's LAN IPs from pair request (preferred over socket-only loopback). */
+  remoteLanAddresses?: string[];
 };
+
+export const LAN_PAIRED_EVENT = 'co21-lan-paired';
 
 export type LanPairedDevicePayload = {
   id: string;
@@ -33,7 +38,14 @@ export function parseLanPendingDetail(raw: Record<string, unknown>): LanPendingD
   if (ver) detail.remoteAppVersion = ver;
   const addr = jsonStringField(raw.remoteAddress, '');
   if (addr) detail.remoteAddress = addr;
+  const addrs = parseLanReachableAddresses(raw.remoteLanAddresses);
+  if (addrs.length) detail.remoteLanAddresses = addrs;
   return detail;
+}
+
+export function dispatchLanPaired(payload: LanPairedDevicePayload): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(LAN_PAIRED_EVENT, { detail: payload }));
 }
 
 export function dispatchLanPairingPending(detail: LanPendingDetail): void {
@@ -42,11 +54,15 @@ export function dispatchLanPairingPending(detail: LanPendingDetail): void {
 }
 
 export function buildLanPairedPayloadFromPending(p: LanPendingDetail): LanPairedDevicePayload {
+  const lanHost = pickReachableLanHost([
+    ...(p.remoteLanAddresses ?? []),
+    p.remoteAddress,
+  ]);
   const row: LanPairedDevicePayload = {
     id: p.remoteDeviceId,
     name: p.remoteName,
     type: 'LAN',
-    lanHost: p.remoteAddress || '',
+    lanHost,
   };
   if (p.remoteAppVersion) row.appVersion = p.remoteAppVersion;
   return row;
@@ -56,10 +72,9 @@ export function pickLanHostFromPeer(
   peer: { lanAddresses?: string[] },
   fallbackHost: string,
 ): string {
-  const addrs = peer.lanAddresses;
-  if (Array.isArray(addrs) && addrs.length > 0) {
-    const first = addrs.find((a) => typeof a === 'string' && a.trim().length > 0);
-    if (first) return first.trim();
-  }
-  return fallbackHost;
+  const fromPeer = pickReachableLanHost(
+    Array.isArray(peer.lanAddresses) ? peer.lanAddresses : [],
+  );
+  if (fromPeer) return fromPeer;
+  return pickReachableLanHost([fallbackHost]);
 }

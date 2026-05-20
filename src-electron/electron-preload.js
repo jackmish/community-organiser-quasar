@@ -282,12 +282,15 @@ contextBridge.exposeInMainWorld('electronLan', {
   browseCo21: (opts) => ipcRenderer.invoke('lan:browse-co21', opts),
   onPairingPending: (callback) => {
     const fn = (_e, detail) => {
-      try {
-        callback(detail);
-        window.dispatchEvent(new CustomEvent('co21-lan-pairing-pending', { detail }));
-      } catch (err) {
-        console.error('electronLan onPairingPending callback', err);
-      }
+      window.dispatchEvent(new CustomEvent('co21-lan-pairing-pending', { detail }));
+      if (typeof callback !== 'function') return;
+      void (async () => {
+        try {
+          await callback(detail);
+        } catch (err) {
+          console.error('electronLan onPairingPending callback', err);
+        }
+      })();
     };
     ipcRenderer.on('lan:pairing-pending', fn);
     return () => ipcRenderer.removeListener('lan:pairing-pending', fn);

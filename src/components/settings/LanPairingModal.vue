@@ -260,11 +260,14 @@ import type { Co21DiscoveredHost } from 'src/modules/lan/lanPairingDiscovery';
 import {
   LAN_PAIRING_PENDING_EVENT,
   buildLanPairedPayloadFromPending,
+  dispatchLanPaired,
   parseLanPendingDetail,
   pickLanHostFromPeer,
   type LanPendingDetail,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
+import { isUsableLanHost } from 'src/modules/lan/lanPairingHosts';
+import { persistPairedLanDevice } from 'src/modules/lan/lanPairingRegister';
 import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
@@ -275,6 +278,8 @@ const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
 const props = defineProps<{
   modelValue: boolean;
   ownDeviceName: string;
+  /** Set by parent when IPC arrives before this dialog mounted. */
+  pendingOffer?: LanPendingDetail | null;
 }>();
 
 const emit = defineEmits<{
@@ -338,11 +343,34 @@ const incomingPending = ref<LanPendingDetail | null>(null);
 const incomingBusy = ref(false);
 let removeElectronPendingListener: (() => void) | null = null;
 
-function onPairingPendingDetail(raw: Record<string, unknown>): void {
-  const detail = parseLanPendingDetail(raw);
+function applyPendingOffer(detail: LanPendingDetail | null | undefined): void {
   if (!detail) return;
   incomingPending.value = detail;
   emit('update:modelValue', true);
+}
+
+function onPairingPendingDetail(raw: Record<string, unknown>): void {
+  const detail = parseLanPendingDetail(raw);
+  applyPendingOffer(detail);
+}
+
+async function resolveMyLanReachableAddresses(): Promise<string[]> {
+  const out: string[] = [];
+  const push = (a: string) => {
+    if (isUsableLanHost(a) && !out.includes(a)) out.push(a);
+  };
+  for (const a of deviceLanAddrs.value) push(a);
+  for (const a of serverAddrs.value) push(a);
+  try {
+    const elan = (window as unknown as {
+      electronLan?: { status?: () => Promise<{ addresses?: string[] }> };
+    }).electronLan;
+    const st = await elan?.status?.();
+    for (const a of st?.addresses ?? []) push(String(a));
+  } catch {
+    void 0;
+  }
+  return out;
 }
 
 function onPairingPendingWindow(ev: Event): void {
@@ -350,7 +378,9 @@ function onPairingPendingWindow(ev: Event): void {
   if (ce.detail) onPairingPendingDetail(ce.detail);
 }
 
-function emitPaired(payload: LanPairedDevicePayload): void {
+async function completePairing(payload: LanPairedDevicePayload): Promise<void> {
+  await persistPairedLanDevice(payload);
+  dispatchLanPaired(payload);
   emit('paired', payload);
   pairHint.value = `Connected with ${payload.name}. Both devices are now linked.`;
   pairHintClass.value = 'text-positive';
@@ -376,7 +406,7 @@ async function acceptIncoming(): Promise<void> {
       incomingPending.value = null;
       return;
     }
-    emitPaired(buildLanPairedPayloadFromPending(p));
+    await completePairing(buildLanPairedPayloadFromPending(p));
     incomingPending.value = null;
   } catch (e: unknown) {
     pairHint.value = e instanceof Error ? e.message : String(e);
@@ -449,6 +479,14 @@ async function regenerateQr(): Promise<void> {
 watch([listenOn, qrHost], () => {
   void regenerateQr();
 });
+
+watch(
+  () => props.pendingOffer,
+  (p) => {
+    applyPendingOffer(p ?? null);
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.modelValue,
@@ -660,12 +698,14 @@ async function requestPairToPc() {
         ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
         : '';
 
+    const myLanAddrs = await resolveMyLanReachableAddresses();
     const req = await lanPostPairRequest(
       base,
       {
         deviceId: myId,
         deviceName: myName,
         appVersion: myVer,
+        ...(myLanAddrs.length ? { lanReachableAddresses: myLanAddrs } : {}),
       },
       { timeoutMs: LAN_CONNECT_TIMEOUT_MS, signal },
     );
@@ -697,7 +737,7 @@ async function requestPairToPc() {
       if (poll.peer.appVersion) {
         paired.appVersion = poll.peer.appVersion;
       }
-      emitPaired(paired);
+      await completePairing(paired);
       emit('update:modelValue', false);
     } else if (poll.status === 'rejected') {
       pairHint.value = 'The PC user declined pairing.';

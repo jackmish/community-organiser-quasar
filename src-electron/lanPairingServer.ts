@@ -12,6 +12,10 @@ import {
   CO21_LAN_PAIRING_PORT,
   lanHostMatchKeys,
 } from 'src/modules/lan/lanPairingConstants';
+import {
+  isUsableLanHost,
+  parseLanReachableAddresses,
+} from '../src/modules/lan/lanPairingHosts';
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
 
@@ -27,6 +31,7 @@ type Pending = {
   remoteName: string;
   remoteAppVersion: string;
   remoteAddress: string;
+  remoteLanAddresses: string[];
   createdAt: number;
   status: 'pending' | 'accepted' | 'rejected';
 };
@@ -232,25 +237,36 @@ function handlePairRequest(
       return;
     }
 
+    const socketAddr = normalizeClientIp(remoteAddr);
+    const bodyAddrs = parseLanReachableAddresses(parsed.lanReachableAddresses);
+    const remoteLanAddresses = [
+      ...bodyAddrs,
+      ...(isUsableLanHost(socketAddr) ? [socketAddr] : []),
+    ];
+
     const token = randomUUID();
     const pending: Pending = {
       token,
       remoteDeviceId,
       remoteName,
       remoteAppVersion,
-      remoteAddress: normalizeClientIp(remoteAddr),
+      remoteAddress: socketAddr,
+      remoteLanAddresses,
       createdAt: Date.now(),
       status: 'pending',
     };
     pendings.set(token, pending);
 
-    const detail = {
+    const detail: Record<string, unknown> = {
       token,
       remoteDeviceId,
       remoteName,
       remoteAppVersion,
       remoteAddress: pending.remoteAddress,
     };
+    if (remoteLanAddresses.length) {
+      detail.remoteLanAddresses = remoteLanAddresses;
+    }
     notifyRenderer('lan:pairing-pending', detail);
 
     sendJson(res, 200, {
