@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 520px; max-width: 94vw">
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
       <q-card-section>
         <div class="text-h6">Connections and data</div>
         <div class="q-mt-sm row items-center q-gutter-sm">
@@ -26,27 +26,32 @@
         </div>
       </q-card-section>
 
-      <q-card-section class="q-pt-sm">
+      <q-card-section :class="bodyClass" :style="bodyStyle">
         <div class="q-gutter-md">
           <div class="text-subtitle2 q-mb-sm">Manage external connections and integrations</div>
-          <div class="row items-center q-gutter-sm q-mb-sm">
+          <div
+            class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
+            :class="{ column: isMobile }"
+          >
             <q-btn
               outline
               color="primary"
               icon="admin_panel_settings"
               :label="rolesSetupLabel"
-              @click="showRolesSetupDialog = true"
+              class="col-grow"
+              @click="openRolesSetup"
             />
             <q-btn
               outline
               color="secondary"
               icon="badge"
               :label="assignRolesPerGroupLabel"
+              class="col-grow"
               @click="showJoinMemberDialog = true"
             />
           </div>
-          <div class="row items-center q-gutter-sm">
-            <div class="col">{{ devicesSummary }}</div>
+          <div class="row items-center q-gutter-sm" :class="{ 'column items-stretch': isMobile }">
+            <div :class="isMobile ? 'col-12' : 'col'">{{ devicesSummary }}</div>
             <div class="col-auto" style="position: relative">
               <q-btn ref="addBtn" dense label="Add Device" color="primary" @click="openAddMenu" />
 
@@ -99,7 +104,10 @@
           <div class="q-mt-md">
             <q-item v-for="d in devices" :key="d.id">
               <q-item-section>
-                <div class="row items-center">
+                <div
+                  class="row items-center settings-dialog-device-row"
+                  :class="{ column: isMobile, 'items-stretch': isMobile }"
+                >
                   <div class="col">
                     {{ d.name }}
                     <span class="text-caption text-grey-7 q-ml-sm">({{ d.type }})</span>
@@ -107,7 +115,10 @@
                       {{ d.lanHost }}
                     </span>
                   </div>
-                  <div class="col-auto row items-center q-gutter-xs no-wrap">
+                  <div
+                    class="row items-center q-gutter-xs"
+                    :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto no-wrap'"
+                  >
                     <q-btn dense flat label="Connect" color="primary" @click="connectDevice(d)" />
                     <q-btn dense flat icon="delete" color="negative" @click="removeDevice(d.id)" />
                   </div>
@@ -123,18 +134,30 @@
             caption="Export, merge, override, and automatic local backup"
           >
             <div class="q-pt-sm">
-              <div class="row items-center q-gutter-sm">
-                <div class="col">
+              <div
+                class="row items-center q-gutter-sm"
+                :class="{ column: isMobile, 'items-stretch': isMobile }"
+              >
+                <div :class="isMobile ? 'col-12' : 'col'">
                   Make manual backup, merge current state with data from file, or totally replace
                   current data with data from file
                 </div>
                 <div
-                  class="col-auto"
-                  style="
-                    display: flex;
-                    flex-direction: column;
-                    align-items: flex-end;
-                    justify-content: center;
+                  :class="isMobile ? 'col-12' : 'col-auto'"
+                  :style="
+                    isMobile
+                      ? {
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'stretch',
+                          width: '100%',
+                        }
+                      : {
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          justifyContent: 'center',
+                        }
                   "
                 >
                   <div style="display: flex; align-items: center">
@@ -285,7 +308,6 @@
       :own-device-name="ownDeviceName"
       @paired="onLanPairedFromModal"
     />
-    <RolesSetupDialog v-model="showRolesSetupDialog" />
     <JoinMemberDialog
       v-model="showJoinMemberDialog"
       @open-roles-setup="onOpenRolesSetup"
@@ -306,9 +328,13 @@ import {
 } from 'src/modules/lan/lanPairingUi';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
-import RolesSetupDialog from './RolesSetupDialog.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import { patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
+import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(520);
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -393,7 +419,6 @@ function close() {
 const $q = useQuasar();
 const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
-const showRolesSetupDialog = ref(false);
 const showJoinMemberDialog = ref(false);
 const rolesSetupLabel = computed(() => $text('role.setup_title'));
 const assignRolesPerGroupLabel = computed(() => $text('role.assign_roles_per_group'));
@@ -404,10 +429,12 @@ const devicesSummary = computed(() => {
   return `${n} ${$text('connections.devices_label')}`;
 });
 
+function openRolesSetup(): void {
+  dispatchOpenRolesSetup();
+}
+
 function onOpenRolesSetup(): void {
-  dialogVisible.value = true;
   showJoinMemberDialog.value = false;
-  showRolesSetupDialog.value = true;
 }
 
 const fileInput = ref<HTMLInputElement | null>(null);

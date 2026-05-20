@@ -1,24 +1,27 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 720px; max-width: 920px">
-      <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6 col">{{ $text('ui.join_device') }}</div>
-        <q-btn
-          class="col-auto"
-          outline
-          color="primary"
-          icon="admin_panel_settings"
-          :label="$text('role.setup_title')"
-          @click="emit('open-roles-setup')"
-        />
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="[cardClass, 'join-member-dialog-card']" :style="cardStyle">
+      <q-card-section class="q-pb-none">
+        <div class="text-h6">{{ $text('ui.join_device') }}</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-none row q-col-gutter-md">
-        <div class="col-12 col-md-4">
-          <div class="text-subtitle2 q-mb-sm">{{ $text('ui.select_group') }}</div>
+      <q-card-section
+        class="q-pt-none join-member-body"
+        :class="bodyClass"
+        :style="bodyStyle"
+      >
+        <div
+          :class="
+            isMobile
+              ? 'join-member-layout join-member-layout--stacked'
+              : 'join-member-layout join-member-layout--split row q-col-gutter-sm'
+          "
+        >
+        <div :class="isMobile ? 'join-member-tree-col' : 'col-12 col-md-4'">
+          <div class="text-subtitle2 q-mb-xs">{{ $text('ui.select_group') }}</div>
           <div
-            class="rounded-borders"
-            style="max-height: 52vh; overflow: auto; border: 1px solid rgba(0, 0, 0, 0.12); padding: 4px"
+            class="rounded-borders join-member-tree-panel"
+            style="overflow: auto; border: 1px solid rgba(0, 0, 0, 0.12); padding: 4px"
           >
             <q-tree
               class="q-tree-expanded-only join-member-group-tree"
@@ -51,10 +54,16 @@
           </div>
         </div>
 
-        <div class="col-12 col-md-8 column">
+        <div
+          :class="
+            isMobile
+              ? 'join-member-roles-col column'
+              : 'col-12 col-md-8 column join-member-roles-panel'
+          "
+        >
           <div
             v-if="selectedGroupName"
-            class="text-subtitle1 text-primary q-mb-md"
+            class="text-subtitle1 text-primary q-mb-sm"
           >
             {{ $text('role.roles_for_group') }}: <strong>{{ selectedGroupName }}</strong>
           </div>
@@ -65,30 +74,18 @@
 
           <div v-else-if="!roleProfiles.length" class="text-body2 text-grey-7">
             {{ $text('role.no_role_profiles') }}
-            <q-btn
-              flat
-              dense
-              color="primary"
-              class="q-mt-sm"
-              :label="$text('role.setup_title')"
-              @click="emit('open-roles-setup')"
-            />
           </div>
 
           <div v-else-if="!applicableRoles.length" class="text-body2 text-grey-7">
             {{ $text('role.no_roles_apply_to_group') }}
-            <q-btn
-              flat
-              dense
-              color="primary"
-              class="q-mt-sm block"
-              icon="admin_panel_settings"
-              :label="$text('role.setup_title')"
-              @click="emit('open-roles-setup')"
-            />
           </div>
 
-          <div v-else class="column q-gutter-md" style="max-height: 52vh; overflow: auto">
+          <div
+            v-else
+            class="column join-member-roles-panel"
+            :class="isMobile ? 'q-gutter-sm' : 'q-gutter-md'"
+            style="overflow: auto"
+          >
             <q-card v-if="localDevice" bordered flat class="rounded-borders bg-blue-1">
               <q-card-section>
                 <div class="text-subtitle2 row items-center q-gutter-xs">
@@ -129,15 +126,13 @@
               </q-card-section>
               <q-separator />
               <q-list dense separator>
-                <q-item v-for="d in defaultFullDevices" :key="d.id">
+                <q-item v-for="d in defaultFullDevices" :key="d.id" class="join-member-default-full-item">
                   <q-item-section>
                     <q-item-label>{{ d.name }}</q-item-label>
                     <q-item-label v-if="d.type" caption>{{ d.type }}</q-item-label>
+                    <q-badge class="q-mt-xs" color="positive" :label="$text('role.priv_full')" />
                   </q-item-section>
-                  <q-item-section side>
-                    <q-badge color="positive" :label="$text('role.priv_full')" />
-                  </q-item-section>
-                  <q-item-section v-if="restrictRoleOptions.length" class="col-auto" style="min-width: 200px">
+                  <q-item-section v-if="restrictRoleOptions.length" class="col-12 col-md-auto">
                     <q-select
                       dense
                       outlined
@@ -238,6 +233,30 @@
             </q-card>
 
           </div>
+
+          <div
+            v-if="selectedGroupId"
+            class="row q-gutter-sm join-member-role-actions"
+            :class="[isMobile ? 'column q-mt-sm' : 'q-mt-md']"
+          >
+            <q-btn
+              class="col"
+              outline
+              color="primary"
+              icon="admin_panel_settings"
+              :label="$text('role.setup_title')"
+              @click="openRolesSetup"
+            />
+            <q-btn
+              class="col"
+              unelevated
+              color="primary"
+              icon="add"
+              :label="$text('role.new_role')"
+              @click="openNewRoleSetup"
+            />
+          </div>
+        </div>
         </div>
       </q-card-section>
 
@@ -249,8 +268,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { $text } from 'src/modules/lang';
+import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import CC from 'src/CCAccess';
 import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
 import {
@@ -258,6 +278,10 @@ import {
   treeNodeKeyString,
   treeNodesExpandedOnly,
 } from 'src/modules/group/utils/treeUi';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720);
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
@@ -299,6 +323,27 @@ const selectedGroupId = ref<string | null>(null);
 const roleProfiles = ref<RoleProfileData[]>([]);
 const devices = ref<ConnectedDevice[]>([]);
 const groups = ref<GroupRecord[]>([]);
+function openRolesSetup(): void {
+  dispatchOpenRolesSetup({ createNew: false });
+  emit('open-roles-setup');
+}
+
+function openNewRoleSetup(): void {
+  dispatchOpenRolesSetup({ createNew: true });
+  emit('open-roles-setup');
+}
+
+function onRolesSaved(): void {
+  if (props.modelValue) void reload();
+}
+
+onMounted(() => {
+  window.addEventListener('co21:roles-saved', onRolesSaved as EventListener);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('co21:roles-saved', onRolesSaved as EventListener);
+});
 
 function nodeString(v: unknown, fallback: string): string {
   if (typeof v === 'string') return v.length ? v : fallback;

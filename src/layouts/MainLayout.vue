@@ -136,6 +136,11 @@
 
         <AppConfigDialog v-model="showConfigDialog" />
         <ConnectionsDialog v-model="showConnectionsDialog" />
+        <RolesSetupDialog
+          v-model="showRolesSetupDialog"
+          :initial-action="rolesSetupInitialAction"
+          @saved="onRolesSetupSaved"
+        />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
@@ -168,6 +173,7 @@ import CC from "src/CCAccess";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
+import RolesSetupDialog from "src/components/settings/RolesSetupDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
@@ -176,7 +182,23 @@ let checkInterval: number | undefined;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
+const showRolesSetupDialog = ref(false);
+const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
+
+function openRolesSetupDialog(ev: Event): void {
+  const detail = (ev as CustomEvent<{ createNew?: boolean }>).detail;
+  rolesSetupInitialAction.value = detail?.createNew ? "new" : "none";
+  showRolesSetupDialog.value = true;
+}
+
+watch(showRolesSetupDialog, (open) => {
+  if (!open) rolesSetupInitialAction.value = "none";
+});
+
+function onRolesSetupSaved(): void {
+  window.dispatchEvent(new Event("co21:roles-saved"));
+}
 const menuOpen = ref(false);
 const selectedLanguage = ref("en-US");
 const langSelect = ref<any>(null);
@@ -289,6 +311,10 @@ onMounted(async () => {
       }
     };
     window.addEventListener("group:manage-request", headerManageHandler as EventListener);
+    window.addEventListener(
+      "co21:open-roles-setup",
+      openRolesSetupDialog as EventListener
+    );
     // Pull injected app version (set by main process) if available
     // appVersion is populated from preload; nothing else required
   } catch (e) {
@@ -440,6 +466,7 @@ onUnmounted(() => {
   } catch (e) {
     // ignore
   }
+  window.removeEventListener("co21:open-roles-setup", openRolesSetupDialog as EventListener);
 });
 
 // NextEventNotification component handles computation and display

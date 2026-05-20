@@ -469,7 +469,6 @@ const showCommunityDialog = ref(false);
 
 function openRolesSetupFromJoin(): void {
   showCommunityDialog.value = false;
-  window.dispatchEvent(new Event("co21:open-roles-setup"));
 }
 
 // Inline edit-group dialog removed (unused)

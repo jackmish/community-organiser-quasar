@@ -1,6 +1,10 @@
 <template>
-  <q-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
-    <q-card style="min-width: 360px; max-width: 92vw">
+  <q-dialog
+    :model-value="modelValue"
+    v-bind="dialogBind"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
+    <q-card :class="cardClass" :style="cardStyle">
       <q-card-section>
         <div class="text-h6">Wi‑Fi / LAN pairing</div>
         <div class="text-caption text-grey-7 q-mt-xs">
@@ -15,7 +19,8 @@
         </div>
       </q-card-section>
 
-      <q-card-section v-if="incomingPending" class="q-pt-none">
+      <div :class="[bodyClass, 'q-px-md q-pb-md']" :style="bodyStyle">
+      <q-card-section v-if="incomingPending" class="q-pt-none q-px-none">
         <q-banner dense rounded class="lan-incoming-banner text-white">
           <template #avatar>
             <q-icon name="wifi" color="white" />
@@ -45,7 +50,7 @@
         </q-banner>
       </q-card-section>
 
-      <q-card-section v-if="!hasElectronLan" class="q-pt-none">
+      <q-card-section v-if="!hasElectronLan" class="q-pt-none q-px-none">
         <div class="text-subtitle2 q-mb-xs">This phone on Wi‑Fi</div>
         <div v-if="deviceLanProbeBusy" class="text-caption text-grey-7">Detecting address…</div>
         <div v-else-if="deviceLanAddrs.length" class="text-body2">
@@ -61,7 +66,7 @@
         </div>
       </q-card-section>
 
-      <q-card-section v-if="hasElectronLan" class="q-pt-none">
+      <q-card-section v-if="hasElectronLan" class="q-pt-none q-px-none">
         <div class="text-subtitle2 q-mb-sm">On this computer</div>
         <q-toggle
           :model-value="listenOn"
@@ -108,13 +113,12 @@
           />
           <div
             v-if="qrDataUrl"
-            class="flex flex-center q-pa-sm bg-white rounded-borders"
-            style="max-width: 280px"
+            class="flex flex-center q-pa-sm bg-white rounded-borders lan-qr-wrap"
           >
             <q-img
               :src="qrDataUrl"
               fit="contain"
-              style="width: 220px; height: 220px"
+              class="lan-qr-img"
               spinner-color="primary"
               alt="LAN pairing QR code"
             />
@@ -129,7 +133,7 @@
 
       <q-separator v-if="hasElectronLan" />
 
-      <q-card-section>
+      <q-card-section class="q-px-none">
         <div class="text-subtitle2 q-mb-sm">Discover on Wi‑Fi (Bonjour / .local)</div>
         <q-btn
           outline
@@ -166,7 +170,7 @@
 
       <q-separator />
 
-      <q-card-section>
+      <q-card-section class="q-px-none">
         <div class="text-subtitle2 q-mb-sm">From this device — pair with a PC</div>
         <q-input
           v-model="pcHost"
@@ -223,8 +227,9 @@
         />
         <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
       </q-card-section>
+      </div>
 
-      <q-card-actions align="right">
+      <q-card-actions align="right" class="q-pt-none">
         <q-btn flat label="Close" color="primary" @click="close" />
       </q-card-actions>
     </q-card>
@@ -257,6 +262,10 @@ import {
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
 import logger from 'src/utils/logger';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(360);
 
 const props = defineProps<{
   modelValue: boolean;

@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialogVisible" maximized transition-show="slide-up" transition-hide="slide-down">
-    <q-card class="column" style="min-width: 720px; max-width: 96vw; max-height: 92vh">
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">{{ $text('role.setup_title') }}</div>
         <q-space />
@@ -11,8 +11,11 @@
         {{ $text('role.setup_intro') }}
       </q-card-section>
 
-      <q-card-section class="row q-col-gutter-md q-pt-none" style="flex: 1; min-height: 0">
-        <div class="col-12 col-md-3 column" style="min-height: 200px">
+      <q-card-section
+        :class="['row q-col-gutter-md q-pt-none', bodyClass]"
+        :style="bodyStyle"
+      >
+        <div class="col-12 col-md-3 column" :style="isMobile ? { maxHeight: '32vh' } : { minHeight: '200px' }">
           <div class="row items-center q-mb-sm q-gutter-xs">
             <span class="text-subtitle2">{{ $text('role.roles_list') }}</span>
             <q-space />
@@ -60,6 +63,7 @@
         <div class="col-12 col-md-9 column" style="min-height: 0">
           <template v-if="editing">
             <q-input
+              ref="roleNameInputRef"
               :model-value="roleNameInput"
               :label="$text('role.name')"
               outlined
@@ -147,7 +151,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { Notify } from 'quasar';
+import type { QInput } from 'quasar';
 import { $text } from 'src/modules/lang';
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import {
@@ -163,8 +169,15 @@ import {
 } from 'src/modules/storage/sync/roleFunctionCatalog';
 import { loadRoleProfiles, saveRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import logger from 'src/utils/logger';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
-const props = defineProps<{ modelValue: boolean }>();
+const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720);
+
+const props = withDefaults(
+  defineProps<{ modelValue: boolean; initialAction?: 'none' | 'new' }>(),
+  { initialAction: 'none' },
+);
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'saved'): void;
@@ -179,8 +192,15 @@ const profiles = ref<RoleProfileData[]>([]);
 const selectedRoleId = ref<string | null>(null);
 const editing = ref<RoleProfileData | null>(null);
 const roleNameInput = ref('');
+const roleNameInputRef = ref<QInput | null>(null);
 const dirty = ref(false);
 const saving = ref(false);
+
+async function focusRoleNameInput(): Promise<void> {
+  await nextTick();
+  await nextTick();
+  roleNameInputRef.value?.focus?.();
+}
 
 const rangeOptions = computed(() => [
   { label: $text('role.range_strict'), value: 'single' as AccessRange },
@@ -219,10 +239,11 @@ function markDirty(): void {
 }
 
 function displayRoleName(role: RoleProfileData): string {
-  if (selectedRoleId.value === role.id && editing.value) {
-    return roleNameInput.value || role.name;
-  }
-  return role.name;
+  const raw =
+    selectedRoleId.value === role.id && editing.value
+      ? roleNameInput.value
+      : role.name;
+  return raw.trim() || $text('role.unnamed');
 }
 
 function onRoleNameInput(v: string | number | null): void {
@@ -254,7 +275,7 @@ function commitEditingToList(): void {
   const next = [...profiles.value];
   next[idx] = {
     ...editing.value,
-    name: roleNameInput.value.trim() || editing.value.name,
+    name: roleNameInput.value.trim(),
     functionAccess: syncFunctionAccess(editing.value.functionAccess),
     updatedAt: Date.now(),
   };
@@ -263,13 +284,14 @@ function commitEditingToList(): void {
 
 function addRole(): void {
   commitEditingToList();
-  const name = $text('role.new_role_default_name');
-  const created = createRoleProfile(name);
+  const created = createRoleProfile('');
   profiles.value = [...profiles.value, created];
   selectedRoleId.value = created.id;
   editing.value = cloneProfile(created);
-  roleNameInput.value = created.name;
+  editing.value.name = '';
+  roleNameInput.value = '';
   dirty.value = true;
+  void focusRoleNameInput();
 }
 
 function deleteRole(id: string): void {
@@ -318,10 +340,14 @@ function setAccessRange(accessRange: AccessRange): void {
   markDirty();
 }
 
-async function loadAll(): Promise<void> {
+async function loadAll(selectNew = false): Promise<void> {
   profiles.value = await loadRoleProfiles();
   for (const p of profiles.value) {
     p.functionAccess = syncFunctionAccess(p.functionAccess);
+  }
+  if (selectNew) {
+    addRole();
+    return;
   }
   selectedRoleId.value = profiles.value[0]?.id ?? null;
   editing.value = selectedRoleId.value
@@ -333,6 +359,21 @@ async function loadAll(): Promise<void> {
 
 async function saveAll(): Promise<void> {
   commitEditingToList();
+  const unnamed = profiles.value.find((p) => !p.name.trim());
+  if (unnamed) {
+    if (unnamed.id === selectedRoleId.value) {
+      await focusRoleNameInput();
+    } else {
+      selectRole(unnamed.id);
+      await focusRoleNameInput();
+    }
+    Notify.create({
+      type: 'warning',
+      message: $text('role.name_required'),
+      timeout: 3000,
+    });
+    return;
+  }
   saving.value = true;
   try {
     const ok = await saveRoleProfiles(profiles.value);
@@ -351,7 +392,14 @@ async function saveAll(): Promise<void> {
 watch(
   () => props.modelValue,
   (open) => {
-    if (open) void loadAll();
+    if (open) void loadAll(props.initialAction === 'new');
+    else {
+      profiles.value = [];
+      selectedRoleId.value = null;
+      editing.value = null;
+      roleNameInput.value = '';
+      dirty.value = false;
+    }
   },
 );
 </script>

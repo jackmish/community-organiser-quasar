@@ -1,0 +1,128 @@
+.settings-dialog-card--mobile {
+  width: 100%;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  max-height: 100dvh;
+  border-radius: 0;
+}
+
+.settings-dialog-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.settings-dialog-header-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-dialog-header-actions .q-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-dialog-device-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-dialog-device-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.join-member-default-full-item {
+  flex-wrap: wrap;
+}
+
+.join-member-default-full-item .q-item__section--side + .q-item__section--side {
+  width: 100%;
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+.lan-qr-wrap {
+  max-width: min(280px, 100%);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.lan-qr-img {
+  width: min(220px, 100%);
+  height: auto;
+  max-height: 220px;
+}
+
+.join-member-role-actions .q-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.join-member-layout--split {
+  align-items: flex-start;
+  align-content: flex-start;
+  width: 100%;
+}
+
+.join-member-tree-panel {
+  max-height: 52vh;
+}
+
+/* Mobile: stack tree + roles tightly; avoid flex row stretching empty space between blocks */
+.join-member-dialog-card.settings-dialog-card--mobile .join-member-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+.join-member-layout--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.join-member-layout--stacked .join-member-tree-col,
+.join-member-layout--stacked .join-member-roles-col {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.join-member-layout--stacked .join-member-tree-panel {
+  max-height: 36vh;
+  height: auto;
+}
+
+.join-member-layout--stacked .join-member-role-actions {
+  margin-top: 4px;
+}
+
+@media (max-width: 1023px) {
+  .join-member-layout--split .join-member-tree-panel {
+    max-height: 28vh;
+  }
+
+  .join-member-roles-panel {
+    max-height: none;
+  }
+
+  .role-access-table :deep(.q-option-group) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .role-access-table :deep(.q-radio) {
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+}
