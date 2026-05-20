@@ -9,6 +9,7 @@ import { Notification } from 'electron';
 import logger from 'src/utils/logger';
 
 import { CO21_LAN_API_PREFIX, CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
+import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
 
 export type LanIdentityPublic = {
@@ -68,7 +69,7 @@ export function getLanIPv4Addresses(): string[] {
       if (ni.family === 'IPv4' && !ni.internal) out.push(ni.address);
     }
   }
-  return out;
+  return sortLanIPv4Addresses(out);
 }
 
 function prunePendings(): void {

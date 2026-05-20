@@ -4,7 +4,29 @@
       <q-card-section>
         <div class="text-h6">Wi‑Fi / LAN pairing</div>
         <div class="text-caption text-grey-7 q-mt-xs">
-          Phone and PC must be on the same network. Port {{ port }}.
+          <template v-if="hasElectronLan">
+            Other devices connect on port {{ port }}. Share the QR or an address below.
+          </template>
+          <template v-else>
+            Phone and PC must be on the same Wi‑Fi. Enter the PC’s IP only — you do not need to
+            type :{{ port }} (the app adds it).
+          </template>
+        </div>
+      </q-card-section>
+
+      <q-card-section v-if="!hasElectronLan" class="q-pt-none">
+        <div class="text-subtitle2 q-mb-xs">This phone on Wi‑Fi</div>
+        <div v-if="deviceLanProbeBusy" class="text-caption text-grey-7">Detecting address…</div>
+        <div v-else-if="deviceLanAddrs.length" class="text-body2">
+          <div v-for="a in deviceLanAddrs" :key="a" class="text-primary">{{ a }}</div>
+          <div class="text-caption text-grey-7 q-mt-xs">
+            The PC’s address should look similar (e.g. both <strong>192.168.1.x</strong>). Turn off
+            mobile data if pairing fails.
+          </div>
+        </div>
+        <div v-else class="text-caption text-grey-7">
+          Could not detect a Wi‑Fi address. Connect to Wi‑Fi (not mobile data) and reopen this
+          dialog.
         </div>
       </q-card-section>
 
@@ -22,15 +44,27 @@
             Other devices can search for “CO21” computers — no IP typing needed when discovery
             works.
           </div>
-          <div class="text-weight-medium">Or enter an address manually:</div>
-          <div v-for="a in serverAddrs" :key="a" class="text-primary">{{ a }}:{{ port }}</div>
+          <div class="text-weight-medium">For another PC — copy address with port:</div>
+          <div v-for="a in serverAddrs" :key="a" class="row items-center no-wrap q-gutter-xs">
+            <span class="text-primary">{{ a }}:{{ port }}</span>
+            <q-btn
+              flat
+              dense
+              round
+              size="sm"
+              icon="content_copy"
+              color="grey-7"
+              :aria-label="`Copy ${a}:${port}`"
+              @click="copyText(`${a}:${port}`)"
+            />
+          </div>
 
           <q-separator class="q-my-md" />
           <div class="text-subtitle2 q-mb-sm">Share this PC (QR)</div>
           <div class="text-caption text-grey-7 q-mb-sm">
-            On your phone: CO21 → Connections → Wi‑Fi / LAN → <strong>Scan PC QR with camera</strong>.
-            Or use “Load address from QR image” with a screenshot. Any QR app also works if you paste
-            the link below.
+            Phone must use <strong>Wi‑Fi on the same network</strong> as this PC (not mobile data).
+            On your phone: CO21 → Connections → Wi‑Fi / LAN → <strong>Scan PC QR with camera</strong>,
+            then <strong>Request pairing</strong>.
           </div>
           <q-select
             v-if="serverAddrs.length > 1"
@@ -107,9 +141,15 @@
           v-model="pcHost"
           dense
           outlined
-          label="PC hostname or IP (e.g. Jacks-PC.local or 192.168.1.10)"
+          label="PC IP or hostname (no port needed)"
+          hint="Scan the PC’s QR or type e.g. 192.168.1.10 — port :47321 is added automatically"
+          persistent-hint
           class="q-mb-sm"
         />
+        <div v-if="pcConnectPreview" class="text-caption text-grey-7 q-mb-sm">
+          Will connect to:
+          <span class="text-primary break-all">{{ pcConnectPreview }}</span>
+        </div>
         <q-btn
           v-if="showQrCameraButton"
           outline
@@ -159,6 +199,10 @@ import jsQR from 'jsqr';
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { CO21_LAN_PAIRING_PORT, co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
 import { buildLanPairingQrPayload, parseHostFromLanQrContent } from 'src/modules/lan/lanQrPayload';
+import {
+  lanConnectionTroubleshootHint,
+  probeLocalLanIPv4Addresses,
+} from 'src/modules/lan/lanNetwork';
 import { canUseLanQrCamera, scanLanQrWithCamera } from 'src/modules/lan/lanQrScan';
 import {
   lanFetchInfo,
@@ -219,6 +263,15 @@ const qrPayloadPreview = computed(() => {
   }
 });
 
+const pcConnectPreview = computed(() => {
+  const h = pcHost.value.trim();
+  if (!h) return '';
+  return co21LanBaseUrl(h) || '';
+});
+
+const deviceLanAddrs = ref<string[]>([]);
+const deviceLanProbeBusy = ref(false);
+
 watch(serverAddrs, (addrs) => {
   if (!addrs.length) {
     qrHost.value = '';
@@ -261,13 +314,40 @@ watch(
       discovered.value = [];
       browseError.value = '';
       qrDataUrl.value = '';
+      deviceLanAddrs.value = [];
       return;
     }
     if (hasElectronLan.value) {
       void refreshStatus();
+    } else {
+      void refreshDeviceLanAddresses();
     }
   },
 );
+
+async function refreshDeviceLanAddresses(): Promise<void> {
+  deviceLanProbeBusy.value = true;
+  deviceLanAddrs.value = [];
+  try {
+    deviceLanAddrs.value = await probeLocalLanIPv4Addresses();
+  } catch (e) {
+    logger.warn('[LanPairingModal] device LAN probe failed', e);
+  } finally {
+    deviceLanProbeBusy.value = false;
+  }
+}
+
+async function copyText(text: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      pairHint.value = 'Copied to clipboard.';
+      pairHintClass.value = 'text-grey-7';
+    }
+  } catch (e) {
+    logger.warn('[LanPairingModal] copy failed', e);
+  }
+}
 
 async function refreshStatus() {
   const elan = (window as unknown as { electronLan?: { status?: () => Promise<unknown> } }).electronLan;
@@ -371,9 +451,19 @@ async function requestPairToPc() {
   pairBusy.value = true;
   try {
     const base = co21LanBaseUrl(pcHost.value.trim());
-    const info = await lanFetchInfo(base);
+    if (!base) {
+      pairHint.value = 'Invalid PC address. Use an IP like 192.168.1.10 or scan the QR again.';
+      pairHintClass.value = 'text-negative';
+      return;
+    }
+    let info: Awaited<ReturnType<typeof lanFetchInfo>> = null;
+    try {
+      info = await lanFetchInfo(base);
+    } catch {
+      info = null;
+    }
     if (!info) {
-      pairHint.value = 'Could not reach a CO21 app on that address.';
+      pairHint.value = `Could not reach CO21 on ${base}. ${lanConnectionTroubleshootHint(port)}`;
       pairHintClass.value = 'text-negative';
       return;
     }
@@ -447,7 +537,10 @@ function applyQrText(text: string): boolean {
     return false;
   }
   pcHost.value = host;
-  pairHint.value = 'Address loaded from QR. Tap “Request pairing”.';
+  const preview = co21LanBaseUrl(host);
+  pairHint.value = preview
+    ? `Address loaded from QR. Will use ${preview} — tap “Request pairing”.`
+    : 'Address loaded from QR. Tap “Request pairing”.';
   pairHintClass.value = 'text-grey-7';
   return true;
 }

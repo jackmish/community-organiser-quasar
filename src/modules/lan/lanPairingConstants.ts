@@ -22,5 +22,14 @@ export function co21LanBaseUrl(host: string, port = CO21_LAN_PAIRING_PORT): stri
   if (raw.startsWith('[')) {
     return `http://${raw}:${port}`;
   }
+  // host:port without scheme (e.g. from QR caption or manual paste)
+  const colonIdx = raw.indexOf(':');
+  if (colonIdx > 0) {
+    const hostPart = raw.slice(0, colonIdx);
+    const portPart = raw.slice(colonIdx + 1).split('/')[0] ?? '';
+    if (hostPart && /^\d+$/.test(portPart)) {
+      return `http://${hostPart}:${portPart}`;
+    }
+  }
   return `http://${raw}:${port}`;
 }
