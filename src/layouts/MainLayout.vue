@@ -46,18 +46,21 @@
                   self="top right"
                   style="width: auto"
                 >
-                  <q-list style="min-width: 160px">
-                    <q-item style="padding: 0; position: relative">
-                      <q-item-section
-                        style="position: absolute; left: 0; right: 0; top: 0; padding: 0"
-                      >
+                  <q-list style="min-width: 220px">
+                    <q-item>
+                      <q-item-section avatar>
+                        <q-icon name="language" />
+                      </q-item-section>
+                      <q-item-section>
                         <q-select
-                          style="width: 100%; position: relative"
+                          style="width: 100%"
                           class="lang-select"
                           use-input
                           hide-selected
                           fill-input
-                          :input-style="{ paddingLeft: '16px', paddingRight: '16px' }"
+                          dense
+                          borderless
+                          :input-style="{ paddingLeft: '0', paddingRight: '0' }"
                           popup-content-class="lang-popup"
                           ref="langSelect"
                           v-model="selectedLanguage"
@@ -73,9 +76,9 @@
                         >
                           <template v-slot:no-option>
                             <q-item>
-                              <q-item-section class="text-grey"
-                                >{{ $text('ui.no_results') }}</q-item-section
-                              >
+                              <q-item-section class="text-grey">{{
+                                $text('ui.no_results')
+                              }}</q-item-section>
                             </q-item>
                           </template>
                         </q-select>
@@ -83,6 +86,9 @@
                     </q-item>
                     <q-separator />
                     <q-item clickable v-ripple @click="openManageHeader">
+                      <q-item-section avatar>
+                        <q-icon name="folder_special" />
+                      </q-item-section>
                       <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
                     </q-item>
                     <q-item
@@ -95,9 +101,15 @@
                         }
                       "
                     >
+                      <q-item-section avatar>
+                        <q-icon name="devices" />
+                      </q-item-section>
                       <q-item-section>{{ $text("menu.connections") }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openSettings">
+                      <q-item-section avatar>
+                        <q-icon name="settings" />
+                      </q-item-section>
                       <q-item-section>{{ $text("menu.settings") }}</q-item-section>
                     </q-item>
 
@@ -111,18 +123,23 @@
                         }
                       "
                     >
+                      <q-item-section avatar>
+                        <q-icon name="build" />
+                      </q-item-section>
                       <q-item-section>{{ $text("menu.debug_tools") }}</q-item-section>
                     </q-item>
 
                     <q-item clickable v-ripple @click="reloadWithTestData">
-                      <q-item-section>{{
-                        $text("menu.explain_features")
-                      }}</q-item-section>
+                      <q-item-section avatar>
+                        <q-icon name="help_outline" />
+                      </q-item-section>
+                      <q-item-section>{{ $text("menu.explain_features") }}</q-item-section>
                     </q-item>
                     <q-item clickable v-ripple @click="openAbout">
-                      <q-item-section
-                        >{{ $text("menu.about") }} v{{ appVersion }}</q-item-section
-                      >
+                      <q-item-section avatar>
+                        <q-icon name="info" />
+                      </q-item-section>
+                      <q-item-section>{{ $text("menu.about") }} v{{ appVersion }}</q-item-section>
                     </q-item>
                   </q-list>
                 </q-menu>
