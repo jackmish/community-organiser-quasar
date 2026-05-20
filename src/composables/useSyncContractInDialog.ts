@@ -103,7 +103,7 @@ export function useSyncContractInDialog(
         devices: devices.value,
         preAcceptBaseline: preAccept,
       });
-      const delivered = await tryDeliverAction(action, devices.value);
+      const delivered = await tryDeliverAction(action, devices.value, { skipReconcile: true });
       if (!delivered) {
         appNotify('warning', $text('sync.lan_delivery_failed'));
       }

@@ -26,6 +26,7 @@ import { Notify } from 'quasar';
 import { $text } from 'src/modules/lang';
 import {
   buildIncomingContractPreview,
+  dispatchSyncContractIncoming,
   loadIncomingBannerState,
   SYNC_CONTRACT_INCOMING_EVENT,
 } from 'src/modules/storage/sync/syncContractIncoming';
@@ -34,8 +35,10 @@ import {
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
   normalizeDeviceId,
+  saveConnectedDevices,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
-import { registeredRemoteDeviceIds } from 'src/modules/lan/lanServerManager';
+import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
+import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import logger from 'src/utils/logger';
 import type { SyncContractPending } from 'src/modules/storage/sync/syncContractSettings';
 import {
@@ -77,39 +80,65 @@ function onIncomingDuplicateChange(mode: SyncDuplicateResolution): void {
 const minSyncInterval = MIN_SYNC_INTERVAL_SECONDS;
 const maxSyncInterval = MAX_SYNC_INTERVAL_SECONDS;
 
-function isValidIncomingPending(raw: unknown): raw is SyncContractPending {
-  if (!raw || typeof raw !== 'object') return false;
-  const p = raw as SyncContractPending;
-  return (
-    typeof p.createdAt === 'number' &&
-    typeof p.proposerDeviceId === 'string' &&
-    p.proposerDeviceId.length > 0 &&
-    !!p.snapshot &&
-    typeof p.snapshot === 'object'
-  );
+function pendingFromLanDetail(raw: Record<string, unknown>): SyncContractPending | null {
+  const snapshot = raw.snapshot;
+  const proposerDeviceId =
+    typeof raw.proposerDeviceId === 'string' ? raw.proposerDeviceId.trim() : '';
+  if (!snapshot || typeof snapshot !== 'object' || !proposerDeviceId) return null;
+  const pending: SyncContractPending = {
+    createdAt: typeof raw.createdAt === 'number' && raw.createdAt > 0 ? raw.createdAt : Date.now(),
+    snapshot: snapshot as SyncContractPending['snapshot'],
+    proposerDeviceId,
+    proposerDeviceName:
+      typeof raw.proposerDeviceName === 'string' && raw.proposerDeviceName.trim()
+        ? raw.proposerDeviceName.trim()
+        : 'Unknown device',
+  };
+  if (typeof raw.intervalSeconds === 'number' && raw.intervalSeconds > 0) {
+    pending.intervalSeconds = Math.floor(raw.intervalSeconds);
+  }
+  if (raw.duplicateResolution === 'manual' || raw.duplicateResolution === 'auto') {
+    pending.duplicateResolution = raw.duplicateResolution;
+  }
+  return pending;
 }
 
-async function isProposerRegistered(proposerDeviceId: string): Promise<boolean> {
+/** Ensure proposer appears in Connections (server already accepted the POST). */
+async function ensureProposerInConnections(pending: SyncContractPending): Promise<void> {
   const local = await loadOwnDeviceMeta();
   const loaded = await loadConnectedDevices();
-  const devices = mergeLocalDeviceIntoList(loaded, local);
-  const ids = registeredRemoteDeviceIds(devices);
-  if (!ids.length) return true;
-  const proposerNorm = normalizeDeviceId(proposerDeviceId);
-  return ids.some((id) => normalizeDeviceId(id) === proposerNorm);
+  let devices = mergeLocalDeviceIntoList(loaded, local);
+  const norm = normalizeDeviceId(pending.proposerDeviceId);
+  if (devices.some((d) => !d.isLocal && normalizeDeviceId(d.id) === norm)) {
+    return;
+  }
+  const snapRow = pending.snapshot.devices.find((x) => normalizeDeviceId(x.id) === norm);
+  devices = [
+    ...devices,
+    {
+      id: pending.proposerDeviceId,
+      name: pending.proposerDeviceName || snapRow?.name || 'LAN device',
+      type: 'LAN',
+    },
+  ];
+  await saveConnectedDevices(devices);
+  const settings = await loadCo21Settings();
+  const ownName =
+    typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
+  await refreshLanServerForConnections(devices, ownName);
 }
 
 async function persistIncomingFromLan(raw: unknown): Promise<void> {
-  if (!isValidIncomingPending(raw)) return;
-  if (!(await isProposerRegistered(raw.proposerDeviceId))) {
-    logger.warn(
-      '[SyncContractHost] ignored contract from unregistered device',
-      raw.proposerDeviceId,
-    );
+  if (!raw || typeof raw !== 'object') return;
+  const pending = pendingFromLanDetail(raw as Record<string, unknown>);
+  if (!pending) {
+    logger.warn('[SyncContractHost] invalid incoming contract payload', raw);
     return;
   }
-  await savePendingIncomingContract(raw);
+  await ensureProposerInConnections(pending);
+  await savePendingIncomingContract(pending);
   await refreshIncomingBanner();
+  dispatchSyncContractIncoming();
 }
 
 async function refreshIncomingBanner(): Promise<void> {

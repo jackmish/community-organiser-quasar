@@ -11,7 +11,6 @@ import type { SyncContractSnapshot } from './syncContractSettings';
 import {
   loadLastContractSnapshot,
   loadPendingIncomingContract,
-  loadPendingOutgoingContract,
   type SyncContractPending,
 } from './syncContractSettings';
 import {
@@ -92,8 +91,7 @@ export async function loadIncomingBannerState(): Promise<{
 }> {
   const incoming = await loadPendingIncomingContract();
   if (!incoming) return { pending: null, showBanner: false };
-  const outgoing = await loadPendingOutgoingContract();
-  if (outgoing) return { pending: incoming, showBanner: false };
+  // Always surface peer contracts in the header (local outgoing queue is separate).
   return { pending: incoming, showBanner: true };
 }
 

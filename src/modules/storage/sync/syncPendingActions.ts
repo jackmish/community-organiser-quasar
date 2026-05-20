@@ -149,13 +149,18 @@ export async function findSendContractAction(): Promise<SyncPendingAction | null
 export async function tryDeliverAction(
   action: SyncPendingAction,
   devices: ConnectedDevice[],
+  opts?: { skipReconcile?: boolean },
 ): Promise<boolean> {
-  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
-  if (repaired.length > 0) {
-    await saveConnectedDevices(reconciled);
-    await syncLanTrustedContractDevices(reconciled);
+  let rows = devices;
+  if (!opts?.skipReconcile) {
+    const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
+    if (repaired.length > 0) {
+      await saveConnectedDevices(reconciled);
+      await syncLanTrustedContractDevices(reconciled);
+    }
+    rows = reconciled;
   }
-  const deviceRows = reconciled.filter((d) => !d.isLocal);
+  const deviceRows = rows.filter((d) => !d.isLocal);
   const local = await loadOwnDeviceMeta();
   const pendingToSend = {
     ...action.pending,
