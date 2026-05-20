@@ -3,8 +3,26 @@
     <q-card style="min-width: 420px; max-width: 90vw">
       <q-card-section>
         <div class="text-h6">Connections and data</div>
-        <div class="q-mt-sm">
-          <q-input dense outlined v-model="ownDeviceName" label="Your device name" />
+        <div class="q-mt-sm row items-center q-gutter-sm">
+          <q-input
+            class="col"
+            dense
+            outlined
+            v-model="ownDeviceName"
+            label="Your device name"
+            @keyup.enter="saveOwnDeviceName"
+          />
+          <q-btn
+            class="col-auto"
+            dense
+            unelevated
+            :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
+            :icon="ownDeviceNameShowSaved ? 'check' : 'save'"
+            :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
+            :disable="!ownDeviceNameDirty || ownDeviceNameSaving"
+            :loading="ownDeviceNameSaving"
+            @click="saveOwnDeviceName"
+          />
         </div>
       </q-card-section>
 
@@ -339,6 +357,19 @@ const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 const ownDeviceName = ref<string>('');
+const savedOwnDeviceName = ref<string>('');
+const ownDeviceNameShowSaved = ref(false);
+const ownDeviceNameSaving = ref(false);
+
+const ownDeviceNameDirty = computed(
+  () => ownDeviceName.value.trim() !== savedOwnDeviceName.value.trim(),
+);
+
+watch(ownDeviceName, () => {
+  if (ownDeviceNameDirty.value) {
+    ownDeviceNameShowSaved.value = false;
+  }
+});
 
 // Automatic backup settings
 const autoBackupEnabled = ref<boolean>(false);
@@ -402,7 +433,11 @@ async function loadSettings() {
     if (!exists) return;
     const data = await api.readJsonFile(settingsFile);
     if (data) {
-      if (typeof data.ownDeviceName === 'string') ownDeviceName.value = data.ownDeviceName;
+      if (typeof data.ownDeviceName === 'string') {
+        ownDeviceName.value = data.ownDeviceName;
+        savedOwnDeviceName.value = data.ownDeviceName;
+        ownDeviceNameShowSaved.value = false;
+      }
       if (typeof data.autoBackupEnabled === 'boolean')
         autoBackupEnabled.value = data.autoBackupEnabled;
       if (typeof data.autoBackupHours === 'number') autoBackupHours.value = data.autoBackupHours;
@@ -460,11 +495,11 @@ async function loadGroupsFromAppData(): Promise<any[]> {
   }
 }
 
-async function saveSettings() {
+async function saveSettings(): Promise<boolean> {
   try {
     const api = (window as any).electronAPI;
     const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
-    if (!appPath) return;
+    if (!appPath) return false;
     const settingsDir = api.joinPath(appPath, 'co21');
     const settingsFile = api.joinPath(settingsDir, 'settings.json');
     await api.ensureDir(settingsDir);
@@ -482,8 +517,26 @@ async function saveSettings() {
     };
     if (lastAutoBackup.value) payload.lastAutoBackup = lastAutoBackup.value;
     await api.writeJsonFile(settingsFile, payload);
+    return true;
   } catch (e) {
     logger.error('saveSettings failed', e);
+    return false;
+  }
+}
+
+async function saveOwnDeviceName() {
+  if (!ownDeviceNameDirty.value || ownDeviceNameSaving.value) return;
+  ownDeviceNameSaving.value = true;
+  try {
+    const ok = await saveSettings();
+    if (ok) {
+      savedOwnDeviceName.value = ownDeviceName.value.trim();
+      ownDeviceNameShowSaved.value = true;
+    } else {
+      notify('negative', 'Failed to save device name');
+    }
+  } finally {
+    ownDeviceNameSaving.value = false;
   }
 }
 
