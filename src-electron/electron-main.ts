@@ -188,7 +188,7 @@ ipcMain.handle(
       setLanTrustedContractPeers(peers);
       return { ok: true as const, count: peers.length };
     }
-    const list = payload.filter((id) => typeof id === 'string') as string[];
+    const list = payload.filter((id): id is string => typeof id === 'string');
     setLanTrustedContractDeviceIds(list);
     return { ok: true as const, count: list.length };
   },
