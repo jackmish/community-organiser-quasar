@@ -24,6 +24,21 @@ export type LanPairedDevicePayload = {
 
 export const LAN_PAIRING_PENDING_EVENT = 'co21-lan-pairing-pending';
 
+/** Last incoming offer (survives if pairing modal was closed when IPC arrived). */
+let stashedPendingOffer: LanPendingDetail | null = null;
+
+export function stashLanPendingOffer(detail: LanPendingDetail): void {
+  stashedPendingOffer = detail;
+}
+
+export function peekLanPendingOffer(): LanPendingDetail | null {
+  return stashedPendingOffer;
+}
+
+export function clearLanPendingOffer(): void {
+  stashedPendingOffer = null;
+}
+
 export function parseLanPendingDetail(raw: Record<string, unknown>): LanPendingDetail | null {
   const token = jsonStringField(raw.token, '');
   if (!token) return null;
@@ -71,7 +86,10 @@ export function dispatchLanPaired(payload: LanPairedDevicePayload): void {
 
 export function dispatchLanPairingPending(detail: LanPendingDetail): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(LAN_PAIRING_PENDING_EVENT, { detail }));
+  stashLanPendingOffer(detail);
+  window.dispatchEvent(
+    new CustomEvent(LAN_PAIRING_PENDING_EVENT, { detail: { ...detail } }),
+  );
 }
 
 export function buildLanPairedPayloadFromPending(p: LanPendingDetail): LanPairedDevicePayload {

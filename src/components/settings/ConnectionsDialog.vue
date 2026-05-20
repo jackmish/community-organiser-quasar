@@ -476,7 +476,10 @@ import {
 import {
   LAN_PAIRED_EVENT,
   LAN_PAIRING_PENDING_EVENT,
+  clearLanPendingOffer,
   parseLanPendingDetail,
+  peekLanPendingOffer,
+  stashLanPendingOffer,
   type LanPairedDevicePayload,
   type LanPendingDetail,
 } from 'src/modules/lan/lanPairingUi';
@@ -917,6 +920,7 @@ async function saveOwnDeviceName() {
 }
 
 function openLanPairingWithOffer(detail: LanPendingDetail | null): void {
+  if (detail) stashLanPendingOffer(detail);
   lanPairingPendingOffer.value = detail;
   dialogVisible.value = true;
   showLanPairingModal.value = true;
@@ -937,6 +941,11 @@ async function reloadDevicesFromSettings(): Promise<void> {
 
 watch(dialogVisible, (open) => {
   if (open) {
+    const pending = peekLanPendingOffer();
+    if (pending) {
+      lanPairingPendingOffer.value = pending;
+      showLanPairingModal.value = true;
+    }
     void loadSettings().then(async () => {
       await refreshRoleProfiles();
       await captureBaseline();
@@ -986,6 +995,7 @@ onBeforeUnmount(() => {
 async function onLanPairedFromModal(_payload: LanPairedDevicePayload): Promise<void> {
   await reloadDevicesFromSettings();
   lanPairingPendingOffer.value = null;
+  clearLanPendingOffer();
 }
 
 function onLanPairedEvent(): void {

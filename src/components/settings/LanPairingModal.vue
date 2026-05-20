@@ -264,8 +264,10 @@ import type { Co21DiscoveredHost } from 'src/modules/lan/lanPairingDiscovery';
 import {
   LAN_PAIRING_PENDING_EVENT,
   buildLanPairedPayloadFromPending,
+  clearLanPendingOffer,
   dispatchLanPaired,
   parseLanPendingDetail,
+  peekLanPendingOffer,
   type LanPendingDetail,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
@@ -344,7 +346,6 @@ const deviceLanProbeBusy = ref(false);
 
 const incomingPending = ref<LanPendingDetail | null>(null);
 const incomingBusy = ref(false);
-let removeElectronPendingListener: (() => void) | null = null;
 
 function applyPendingOffer(detail: LanPendingDetail | null | undefined): void {
   if (!detail) return;
@@ -412,6 +413,7 @@ async function acceptIncoming(): Promise<void> {
     await completePairing(buildLanPairedPayloadFromPending(p));
     await notifyProposerWeAccepted(p);
     incomingPending.value = null;
+    clearLanPendingOffer();
   } catch (e: unknown) {
     pairHint.value = e instanceof Error ? e.message : String(e);
     pairHintClass.value = 'text-negative';
@@ -503,20 +505,12 @@ async function declineIncoming(): Promise<void> {
 
 onMounted(() => {
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onPairingPendingWindow as EventListener);
-  const elan = (window as unknown as {
-    electronLan?: { onPairingPending?: (cb: (d: Record<string, unknown>) => void) => () => void };
-  }).electronLan;
-  if (elan?.onPairingPending) {
-    removeElectronPendingListener = elan.onPairingPending(onPairingPendingDetail);
-  }
+  const stashed = peekLanPendingOffer();
+  if (stashed) applyPendingOffer(stashed);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onPairingPendingWindow as EventListener);
-  if (removeElectronPendingListener) {
-    removeElectronPendingListener();
-    removeElectronPendingListener = null;
-  }
 });
 
 watch(serverAddrs, (addrs) => {
@@ -560,6 +554,10 @@ watch(
 watch(
   () => props.modelValue,
   async (open) => {
+    if (open) {
+      const stashed = peekLanPendingOffer();
+      if (stashed && !incomingPending.value) applyPendingOffer(stashed);
+    }
     if (!open) {
       if (!pairActive.value) {
         cancelPairing();

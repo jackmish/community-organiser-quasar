@@ -216,6 +216,7 @@ import {
   LAN_PAIRED_EVENT,
   parseLanPendingDetail,
   parseLanPairedPayload,
+  stashLanPendingOffer,
   type LanPairedDevicePayload,
 } from "src/modules/lan/lanPairingUi";
 import { persistPairedLanDevice } from "src/modules/lan/lanPairingRegister";
@@ -257,8 +258,15 @@ function onOpenPendingActionsEvent(): void {
 
 function onLanPairingPendingGlobal(ev: Event): void {
   const ce = ev as CustomEvent<Record<string, unknown>>;
-  if (!ce.detail || !parseLanPendingDetail(ce.detail)) return;
+  const detail = ce.detail ? parseLanPendingDetail(ce.detail) : null;
+  if (!detail) return;
+  stashLanPendingOffer(detail);
   showConnectionsDialog.value = true;
+  appNotify(
+    "info",
+    `${detail.remoteName} wants to pair with this device. Open Wi‑Fi / LAN pairing and tap Accept.`,
+    { timeout: 12000, position: "top" },
+  );
 }
 
 function onLanPairedGlobal(ev: Event): void {

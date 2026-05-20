@@ -272,6 +272,52 @@ contextBridge.exposeInMainWorld('electronBLE', {
   },
 });
 
+/** Always-on IPC → window bridge (do not remove on component unmount). */
+const pairingPendingCallbacks = new Set();
+const pairingCompleteCallbacks = new Set();
+
+function dispatchPairingPending(detail) {
+  try {
+    window.dispatchEvent(new CustomEvent('co21-lan-pairing-pending', { detail }));
+  } catch (err) {
+    console.error('electronLan dispatchPairingPending', err);
+  }
+  for (const cb of pairingPendingCallbacks) {
+    void (async () => {
+      try {
+        await cb(detail);
+      } catch (err) {
+        console.error('electronLan onPairingPending callback', err);
+      }
+    })();
+  }
+}
+
+function dispatchPairingComplete(detail) {
+  try {
+    window.dispatchEvent(new CustomEvent('co21-lan-paired', { detail }));
+  } catch (err) {
+    console.error('electronLan dispatchPairingComplete', err);
+  }
+  for (const cb of pairingCompleteCallbacks) {
+    void (async () => {
+      try {
+        await cb(detail);
+      } catch (err) {
+        console.error('electronLan onPairingComplete callback', err);
+      }
+    })();
+  }
+}
+
+ipcRenderer.on('lan:pairing-pending', (_e, detail) => {
+  dispatchPairingPending(detail);
+});
+
+ipcRenderer.on('lan:pairing-complete', (_e, detail) => {
+  dispatchPairingComplete(detail);
+});
+
 contextBridge.exposeInMainWorld('electronLan', {
   startServer: (identity) => ipcRenderer.invoke('lan:start-server', identity),
   stopServer: () => ipcRenderer.invoke('lan:stop-server'),
@@ -281,34 +327,14 @@ contextBridge.exposeInMainWorld('electronLan', {
   resolvePair: (token, accept) => ipcRenderer.invoke('lan:resolve-pair', { token, accept }),
   browseCo21: (opts) => ipcRenderer.invoke('lan:browse-co21', opts),
   onPairingPending: (callback) => {
-    const fn = (_e, detail) => {
-      window.dispatchEvent(new CustomEvent('co21-lan-pairing-pending', { detail }));
-      if (typeof callback !== 'function') return;
-      void (async () => {
-        try {
-          await callback(detail);
-        } catch (err) {
-          console.error('electronLan onPairingPending callback', err);
-        }
-      })();
-    };
-    ipcRenderer.on('lan:pairing-pending', fn);
-    return () => ipcRenderer.removeListener('lan:pairing-pending', fn);
+    if (typeof callback !== 'function') return () => {};
+    pairingPendingCallbacks.add(callback);
+    return () => pairingPendingCallbacks.delete(callback);
   },
   onPairingComplete: (callback) => {
-    const fn = (_e, detail) => {
-      window.dispatchEvent(new CustomEvent('co21-lan-paired', { detail }));
-      if (typeof callback !== 'function') return;
-      void (async () => {
-        try {
-          await callback(detail);
-        } catch (err) {
-          console.error('electronLan onPairingComplete callback', err);
-        }
-      })();
-    };
-    ipcRenderer.on('lan:pairing-complete', fn);
-    return () => ipcRenderer.removeListener('lan:pairing-complete', fn);
+    if (typeof callback !== 'function') return () => {};
+    pairingCompleteCallbacks.add(callback);
+    return () => pairingCompleteCallbacks.delete(callback);
   },
   onSyncContractIncoming: (callback) => {
     const fn = (_e, detail) => {
