@@ -295,6 +295,21 @@ contextBridge.exposeInMainWorld('electronLan', {
     ipcRenderer.on('lan:pairing-pending', fn);
     return () => ipcRenderer.removeListener('lan:pairing-pending', fn);
   },
+  onPairingComplete: (callback) => {
+    const fn = (_e, detail) => {
+      window.dispatchEvent(new CustomEvent('co21-lan-paired', { detail }));
+      if (typeof callback !== 'function') return;
+      void (async () => {
+        try {
+          await callback(detail);
+        } catch (err) {
+          console.error('electronLan onPairingComplete callback', err);
+        }
+      })();
+    };
+    ipcRenderer.on('lan:pairing-complete', fn);
+    return () => ipcRenderer.removeListener('lan:pairing-complete', fn);
+  },
   onSyncContractIncoming: (callback) => {
     const fn = (_e, detail) => {
       void (async () => {

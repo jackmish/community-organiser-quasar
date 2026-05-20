@@ -43,6 +43,27 @@ export function parseLanPendingDetail(raw: Record<string, unknown>): LanPendingD
   return detail;
 }
 
+/** Parse IPC / notify-accepted payload into a Connections device row. */
+export function parseLanPairedPayload(raw: Record<string, unknown>): LanPairedDevicePayload | null {
+  const id =
+    jsonStringField(raw.id, '').trim() || jsonStringField(raw.deviceId, '').trim();
+  if (!id) return null;
+  const lanHost = pickReachableLanHost([
+    ...parseLanReachableAddresses(raw.lanReachableAddresses),
+    ...parseLanReachableAddresses(raw.lanAddresses),
+    jsonStringField(raw.lanHost, ''),
+  ]);
+  const row: LanPairedDevicePayload = {
+    id,
+    name: jsonStringField(raw.name, '') || jsonStringField(raw.deviceName, id),
+    type: jsonStringField(raw.type, 'LAN') || 'LAN',
+    lanHost,
+  };
+  const ver = jsonStringField(raw.appVersion, '');
+  if (ver) row.appVersion = ver;
+  return row;
+}
+
 export function dispatchLanPaired(payload: LanPairedDevicePayload): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(LAN_PAIRED_EVENT, { detail: payload }));

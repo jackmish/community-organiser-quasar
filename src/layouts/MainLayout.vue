@@ -215,6 +215,7 @@ import {
   LAN_PAIRING_PENDING_EVENT,
   LAN_PAIRED_EVENT,
   parseLanPendingDetail,
+  parseLanPairedPayload,
   type LanPairedDevicePayload,
 } from "src/modules/lan/lanPairingUi";
 import { persistPairedLanDevice } from "src/modules/lan/lanPairingRegister";
@@ -260,9 +261,11 @@ function onLanPairingPendingGlobal(ev: Event): void {
 }
 
 function onLanPairedGlobal(ev: Event): void {
-  const ce = ev as CustomEvent<LanPairedDevicePayload>;
-  if (ce.detail?.id) {
-    void persistPairedLanDevice(ce.detail);
+  const ce = ev as CustomEvent<Record<string, unknown>>;
+  const payload = ce.detail ? parseLanPairedPayload(ce.detail) : null;
+  if (payload?.id) {
+    void persistPairedLanDevice(payload);
+    appNotify("positive", `Paired with ${payload.name}`);
   }
 }
 

@@ -1,4 +1,5 @@
-import { CO21_LAN_API_PREFIX } from './lanPairingConstants';
+import { CO21_LAN_API_PREFIX, co21LanBaseUrl } from './lanPairingConstants';
+import { parseLanReachableAddresses } from './lanPairingHosts';
 
 export type LanPeerInfo = {
   deviceId: string;
@@ -247,4 +248,45 @@ export async function lanPollUntilResolved(
     await sleepMs(intervalMs, opts.signal);
   }
   return { status: 'unknown' };
+}
+
+export type LanPairNotifyAcceptedBody = {
+  deviceId: string;
+  deviceName: string;
+  appVersion?: string;
+  lanReachableAddresses?: string[];
+};
+
+/**
+ * After local Accept, tell the proposer (initiator) to register this device.
+ * Needed when the proposer closed the pairing dialog or poll did not finish.
+ */
+export async function lanNotifyProposerAccepted(
+  proposerHosts: string[],
+  body: LanPairNotifyAcceptedBody,
+  opts: LanFetchOptions = {},
+): Promise<boolean> {
+  const hosts = parseLanReachableAddresses(proposerHosts);
+  const timeoutMs = opts.timeoutMs ?? 5000;
+  for (const host of hosts) {
+    const base = co21LanBaseUrl(host);
+    if (!base) continue;
+    const url = `${base.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/notify-accepted`;
+    try {
+      const res = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+        timeoutMs,
+        opts.signal,
+      );
+      if (res.ok) return true;
+    } catch {
+      void 0;
+    }
+  }
+  return false;
 }

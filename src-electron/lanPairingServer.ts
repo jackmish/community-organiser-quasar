@@ -15,6 +15,7 @@ import {
 import {
   isUsableLanHost,
   parseLanReachableAddresses,
+  pickReachableLanHost,
 } from '../src/modules/lan/lanPairingHosts';
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
@@ -276,6 +277,54 @@ function handlePairRequest(
   })();
 }
 
+/** Acceptor tells proposer (initiator) to register this machine after user confirmed pairing. */
+function handlePairNotifyAccepted(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  void (async () => {
+    if (!identity) {
+      sendJson(res, 503, { error: 'server_not_ready' });
+      return;
+    }
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const deviceId =
+      typeof parsed.deviceId === 'string' ? parsed.deviceId.trim() : '';
+    if (!deviceId) {
+      sendJson(res, 400, { error: 'missing_deviceId' });
+      return;
+    }
+    const deviceName =
+      typeof parsed.deviceName === 'string' ? parsed.deviceName : 'Unknown device';
+    const bodyAddrs = parseLanReachableAddresses(parsed.lanReachableAddresses);
+    const lanHost = pickReachableLanHost(bodyAddrs);
+    const detail: Record<string, unknown> = {
+      id: deviceId,
+      name: deviceName,
+      type: 'LAN',
+      lanHost,
+    };
+    const ver = typeof parsed.appVersion === 'string' ? parsed.appVersion : '';
+    if (ver) detail.appVersion = ver;
+    if (bodyAddrs.length) detail.lanReachableAddresses = bodyAddrs;
+    notifyRenderer('lan:pairing-complete', detail);
+    sendJson(res, 200, { ok: true });
+  })();
+}
+
 function handlePairStatus(res: http.ServerResponse, token: string): void {
   const p = pendings.get(token);
   if (!p) {
@@ -347,6 +396,11 @@ export function startLanPairingServer(
         if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/pair/request`) {
           const ra = normalizeClientIp(req.socket.remoteAddress);
           handlePairRequest(req, res, ra);
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/pair/notify-accepted`) {
+          handlePairNotifyAccepted(req, res);
           return;
         }
 

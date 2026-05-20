@@ -253,6 +253,7 @@ import {
 import { canUseLanQrCamera, scanLanQrWithCamera } from 'src/modules/lan/lanQrScan';
 import {
   lanFetchInfoWithRetry,
+  lanNotifyProposerAccepted,
   lanPostPairRequest,
   lanPollUntilResolved,
 } from 'src/modules/lan/lanPairingClient';
@@ -266,7 +267,7 @@ import {
   type LanPendingDetail,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
-import { isUsableLanHost } from 'src/modules/lan/lanPairingHosts';
+import { isUsableLanHost, parseLanReachableAddresses } from 'src/modules/lan/lanPairingHosts';
 import { persistPairedLanDevice } from 'src/modules/lan/lanPairingRegister';
 import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
 import logger from 'src/utils/logger';
@@ -407,12 +408,73 @@ async function acceptIncoming(): Promise<void> {
       return;
     }
     await completePairing(buildLanPairedPayloadFromPending(p));
+    await notifyProposerWeAccepted(p);
     incomingPending.value = null;
   } catch (e: unknown) {
     pairHint.value = e instanceof Error ? e.message : String(e);
     pairHintClass.value = 'text-negative';
   } finally {
     incomingBusy.value = false;
+  }
+}
+
+/** Push acceptor identity to initiator so it registers us even if its poll stopped. */
+async function ensureLanListeningForPairing(): Promise<void> {
+  if (!hasElectronLan.value) return;
+  const elan = (window as unknown as {
+    electronLan?: {
+      status?: () => Promise<{ listening?: boolean }>;
+      startServer?: (i: {
+        deviceId: string;
+        deviceName: string;
+        appVersion: string;
+      }) => Promise<unknown>;
+    };
+  }).electronLan;
+  if (!elan?.startServer) return;
+  try {
+    const st = await elan.status?.();
+    if (st?.listening) return;
+    const id = await deviceId.get();
+    const name = (props.ownDeviceName || '').trim() || 'This device';
+    const ver =
+      typeof (window as unknown as { APP_VERSION?: string }).APP_VERSION === 'string'
+        ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
+        : '';
+    await elan.startServer({ deviceId: id, deviceName: name, appVersion: ver });
+    await refreshStatus();
+  } catch (e) {
+    logger.warn('[LanPairingModal] ensure LAN listen failed', e);
+  }
+}
+
+/** Push acceptor identity to initiator so it registers us even if its poll stopped. */
+async function notifyProposerWeAccepted(p: LanPendingDetail): Promise<void> {
+  await ensureLanListeningForPairing();
+  const proposerHosts = parseLanReachableAddresses([
+    ...(p.remoteLanAddresses ?? []),
+    p.remoteAddress,
+  ]);
+  if (!proposerHosts.length) return;
+  try {
+    const myId = await deviceId.get();
+    const myName = (props.ownDeviceName || '').trim() || 'This device';
+    const myVer =
+      typeof (window as unknown as { APP_VERSION?: string }).APP_VERSION === 'string'
+        ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
+        : '';
+    const myLanAddrs = await resolveMyLanReachableAddresses();
+    const ok = await lanNotifyProposerAccepted(proposerHosts, {
+      deviceId: myId,
+      deviceName: myName,
+      appVersion: myVer,
+      ...(myLanAddrs.length ? { lanReachableAddresses: myLanAddrs } : {}),
+    });
+    if (!ok) {
+      logger.warn('[LanPairingModal] could not notify proposer to register this device');
+    }
+  } catch (e) {
+    logger.warn('[LanPairingModal] notify proposer failed', e);
   }
 }
 
@@ -492,7 +554,9 @@ watch(
   () => props.modelValue,
   async (open) => {
     if (!open) {
-      cancelPairing();
+      if (!pairActive.value) {
+        cancelPairing();
+      }
       pcHost.value = '';
       if (!incomingPending.value) {
         pairHint.value = '';
@@ -636,6 +700,7 @@ async function browseNetwork() {
 
 async function requestPairToPc() {
   if (pairActive.value) return;
+  await ensureLanListeningForPairing();
 
   pairHint.value = 'Connecting…';
   pairHintClass.value = 'text-grey-7';
