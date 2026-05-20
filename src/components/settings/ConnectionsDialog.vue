@@ -50,6 +50,28 @@
               @click="showJoinMemberDialog = true"
             />
           </div>
+          <q-banner
+            v-if="hasPendingChanges"
+            dense
+            rounded
+            class="bg-positive text-white"
+          >
+            <template #avatar>
+              <q-icon name="sync" color="white" />
+            </template>
+            {{ $text('sync.confirm_pending_banner') }}
+            <template #action>
+              <q-btn
+                unelevated
+                dense
+                color="white"
+                text-color="positive"
+                :label="$text('sync.confirm_changes_btn')"
+                @click="startConfirmChanges"
+              />
+            </template>
+          </q-banner>
+
           <div class="row items-center q-gutter-sm" :class="{ 'column items-stretch': isMobile }">
             <div :class="isMobile ? 'col-12' : 'col'">{{ devicesSummary }}</div>
             <div class="col-auto" style="position: relative">
@@ -114,6 +136,22 @@
                     <span v-if="d.lanHost" class="text-caption text-grey-6 q-ml-sm block">
                       {{ d.lanHost }}
                     </span>
+                    <div v-if="!d.isLocal" class="row items-center q-gutter-xs q-mt-xs">
+                      <q-input
+                        :model-value="deviceSyncInterval(d)"
+                        type="number"
+                        dense
+                        outlined
+                        class="connections-device-sync-input"
+                        style="max-width: 140px"
+                        :label="$text('sync.per_device_interval_label')"
+                        :min="minSyncInterval"
+                        :max="maxSyncInterval"
+                        @update:model-value="(v) => setDeviceSyncInterval(d.id, v)"
+                        @blur="void saveSettings()"
+                      />
+                      <span class="text-caption text-grey-7">{{ $text('sync.interval_unit') }}</span>
+                    </div>
                   </div>
                   <div
                     class="row items-center q-gutter-xs"
@@ -312,6 +350,29 @@
       v-model="showJoinMemberDialog"
       @open-roles-setup="onOpenRolesSetup"
     />
+
+    <SyncContractPreviewDialog
+      v-model="showPreviewDialog"
+      v-model:interval-seconds="confirmIntervalSeconds"
+      :preview="preview"
+      :min-sync-interval="minSyncInterval"
+      :max-sync-interval="maxSyncInterval"
+      @confirm="onSyncPreviewConfirm"
+      @cancel="onPreviewCancelled"
+    />
+    <PrivilegeChangeSyncDialog
+      v-model="showPrivilegeDialog"
+      :changes="privilegeChanges"
+      @confirm="onPrivilegeDialogConfirm"
+      @cancel="onPrivilegeDialogCancel"
+    />
+    <SyncContractPeerAcceptDialog
+      v-model="showPeerAcceptDialog"
+      :proposer-name="ownDeviceLabel"
+      :is-incoming="false"
+      @accept="onSyncPeerDone"
+      @cancel="closeSyncPeerDialog"
+    />
   </q-dialog>
 </template>
 
@@ -321,7 +382,17 @@ import { useQuasar, Notify } from 'quasar';
 import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
 import { jsonStringField } from 'src/modules/lan/lanPairingClient';
-import { parseConnectedDevice, toDeviceJson } from 'src/modules/storage/sync/deviceRoleAssignment';
+import {
+  parseConnectedDevice,
+  toDeviceJson,
+  type ConnectedDevice,
+} from 'src/modules/storage/sync/deviceRoleAssignment';
+import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
+import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
+import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
+import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
+import SyncContractPeerAcceptDialog from './SyncContractPeerAcceptDialog.vue';
+import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
 import {
   LAN_PAIRING_PENDING_EVENT,
   type LanPairedDevicePayload,
@@ -331,6 +402,11 @@ import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import { patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
+import {
+  DEFAULT_SYNC_INTERVAL_SECONDS,
+  MIN_SYNC_INTERVAL_SECONDS,
+  MAX_SYNC_INTERVAL_SECONDS,
+} from 'src/modules/storage/sync/syncContractSettings';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
@@ -344,15 +420,58 @@ const dialogVisible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-type ConnectionDevice = {
-  id: string;
-  name: string;
-  type?: string;
-  lanHost?: string;
-  rolesByGroup?: Record<string, string>;
-};
+const devices = ref<ConnectedDevice[]>([]);
+const roleProfiles = ref<RoleProfileData[]>([]);
 
-const devices = ref<ConnectionDevice[]>([]);
+const {
+  showPreviewDialog,
+  showPrivilegeDialog,
+  showPeerAcceptDialog,
+  preview,
+  privilegeChanges,
+  confirmIntervalSeconds,
+  hasPendingChanges,
+  captureBaseline,
+  startConfirmChanges,
+  onPreviewConfirm,
+  onPrivilegeDialogConfirm,
+  onPrivilegeDialogCancel,
+  onPreviewCancelled,
+  onPeerContractSigned,
+  minSyncInterval,
+  maxSyncInterval,
+} = useSyncContractInDialog(devices, roleProfiles);
+
+const ownDeviceLabel = computed(() => devices.value.find((d) => d.isLocal)?.name ?? '');
+
+async function onSyncPreviewConfirm(): Promise<void> {
+  await onPreviewConfirm();
+  await saveSettings();
+  window.dispatchEvent(new Event('co21:sync-contract-signed'));
+}
+
+function onSyncPeerDone(): void {
+  onPeerContractSigned();
+  void captureBaseline();
+}
+
+function closeSyncPeerDialog(): void {
+  showPeerAcceptDialog.value = false;
+}
+
+function deviceSyncInterval(d: ConnectedDevice): number {
+  return d.syncIntervalSeconds ?? DEFAULT_SYNC_INTERVAL_SECONDS;
+}
+
+function setDeviceSyncInterval(deviceId: string, v: string | number | null): void {
+  const n = Math.min(
+    maxSyncInterval,
+    Math.max(minSyncInterval, Math.floor(Number(v) || DEFAULT_SYNC_INTERVAL_SECONDS)),
+  );
+  devices.value = devices.value.map((d) =>
+    d.id === deviceId ? { ...d, syncIntervalSeconds: n } : d,
+  );
+}
 const addMenu = ref(false);
 const addBtn = ref<any>(null);
 const addMenuStyle = ref<Record<string, string>>({
@@ -420,6 +539,10 @@ const $q = useQuasar();
 const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
 const showJoinMemberDialog = ref(false);
+
+async function refreshRoleProfiles(): Promise<void> {
+  roleProfiles.value = await loadRoleProfiles();
+}
 const rolesSetupLabel = computed(() => $text('role.setup_title'));
 const assignRolesPerGroupLabel = computed(() => $text('role.assign_roles_per_group'));
 const devicesSummary = computed(() => {
@@ -528,15 +651,7 @@ async function loadSettings() {
       if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
       if (Array.isArray(data.devices)) {
         devices.value = data.devices.map((d: Record<string, unknown>) => {
-          const parsed = parseConnectedDevice(d);
-          const row: ConnectionDevice = {
-            id: parsed.id,
-            name: parsed.name,
-          };
-          if (parsed.type) row.type = parsed.type;
-          if (parsed.lanHost) row.lanHost = parsed.lanHost;
-          if (parsed.rolesByGroup) row.rolesByGroup = parsed.rolesByGroup;
-          return row;
+          return parseConnectedDevice(d);
         });
       }
     }
@@ -615,10 +730,11 @@ function onLanPairingPendingOpen(): void {
 
 function registerLanDevice(payload: LanPairedDevicePayload): void {
   if (devices.value.some((d) => d.id === payload.id)) return;
-  const row: { id: string; name: string; type?: string; lanHost?: string } = {
+  const row: ConnectedDevice = {
     id: payload.id,
     name: payload.name,
     type: payload.type,
+    syncIntervalSeconds: DEFAULT_SYNC_INTERVAL_SECONDS,
   };
   if (payload.lanHost) {
     row.lanHost = payload.lanHost;
@@ -628,14 +744,32 @@ function registerLanDevice(payload: LanPairedDevicePayload): void {
 
 watch(dialogVisible, (open) => {
   if (open) {
-    void loadSettings();
+    void loadSettings().then(async () => {
+      await refreshRoleProfiles();
+      await captureBaseline();
+    });
   }
 });
+
+watch(showJoinMemberDialog, (open) => {
+  if (!open && dialogVisible.value) {
+    void loadSettings().then(async () => {
+      await refreshRoleProfiles();
+      await captureBaseline();
+    });
+  }
+});
+
+function onRolesSavedForSync(): void {
+  if (dialogVisible.value) void refreshRoleProfiles();
+}
 
 onMounted(() => {
   void loadSettings();
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
   window.addEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
+  window.addEventListener('co21:sync-contract-signed', () => void captureBaseline());
+  window.addEventListener('co21:roles-saved', onRolesSavedForSync as EventListener);
   // start periodic check for automatic backups
   autoTimerId.value = setInterval(() => {
     now.value = Date.now();
@@ -646,6 +780,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
   window.removeEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
+  window.removeEventListener('co21:roles-saved', onRolesSavedForSync as EventListener);
   if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 

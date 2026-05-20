@@ -170,6 +170,7 @@ import {
 import { loadRoleProfiles, saveRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+import { dispatchCaptureSyncBaseline } from 'src/modules/storage/sync/syncContractUi';
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
   useSettingsDialogLayout(720);
@@ -392,7 +393,10 @@ async function saveAll(): Promise<void> {
 watch(
   () => props.modelValue,
   (open) => {
-    if (open) void loadAll(props.initialAction === 'new');
+    if (open) {
+      dispatchCaptureSyncBaseline();
+      void loadAll(props.initialAction === 'new');
+    }
     else {
       profiles.value = [];
       selectedRoleId.value = null;

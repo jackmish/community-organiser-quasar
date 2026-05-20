@@ -290,4 +290,16 @@ contextBridge.exposeInMainWorld('electronLan', {
     ipcRenderer.on('lan:pairing-pending', fn);
     return () => ipcRenderer.removeListener('lan:pairing-pending', fn);
   },
+  onSyncContractIncoming: (callback) => {
+    const fn = (_e, detail) => {
+      try {
+        callback(detail);
+        window.dispatchEvent(new CustomEvent('co21:sync-contract-incoming', { detail }));
+      } catch (err) {
+        console.error('electronLan onSyncContractIncoming callback', err);
+      }
+    };
+    ipcRenderer.on('lan:sync-contract-incoming', fn);
+    return () => ipcRenderer.removeListener('lan:sync-contract-incoming', fn);
+  },
 });

@@ -17,6 +17,9 @@
         <p class="text-body2 q-mb-md" :class="isReduction ? 'text-warning' : 'text-info'">
           {{ isReduction ? $text('role.sync_intro_reduction') : $text('role.sync_intro_extension') }}
         </p>
+        <p v-if="!isReduction" class="text-caption text-grey-7 q-mb-md">
+          {{ $text('sync.contract_extension_note') }}
+        </p>
 
         <!-- Change list -->
         <q-list bordered separator style="border-radius: 6px">

@@ -80,13 +80,55 @@ function prunePendings(): void {
   }
 }
 
-function notifyRenderer(detail: Record<string, unknown>): void {
+function notifyRenderer(channel: string, detail: Record<string, unknown>): void {
   const win = getMainWindow();
   try {
-    win?.webContents.send('lan:pairing-pending', detail);
+    win?.webContents.send(channel, detail);
   } catch (e) {
     logger.warn('[lanPairingServer] webContents.send failed', e);
   }
+}
+
+function handleSyncContractPropose(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  void (async () => {
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const snapshot = parsed.snapshot;
+    const proposerDeviceId =
+      typeof parsed.proposerDeviceId === 'string' ? parsed.proposerDeviceId : '';
+    const proposerDeviceName =
+      typeof parsed.proposerDeviceName === 'string' ? parsed.proposerDeviceName : '';
+    if (!snapshot || typeof snapshot !== 'object' || !proposerDeviceId) {
+      sendJson(res, 400, { error: 'invalid_contract' });
+      return;
+    }
+    const createdAt =
+      typeof parsed.createdAt === 'number' && parsed.createdAt > 0
+        ? parsed.createdAt
+        : Date.now();
+    notifyRenderer('lan:sync-contract-incoming', {
+      createdAt,
+      snapshot,
+      proposerDeviceId,
+      proposerDeviceName: proposerDeviceName || 'Unknown device',
+    });
+    sendJson(res, 200, { ok: true });
+  })();
 }
 
 async function readBody(req: http.IncomingMessage): Promise<string> {
@@ -151,7 +193,7 @@ function handlePairRequest(
       remoteAppVersion,
       remoteAddress: pending.remoteAddress,
     };
-    notifyRenderer(detail);
+    notifyRenderer('lan:pairing-pending', detail);
 
     sendJson(res, 200, {
       token,
@@ -237,6 +279,11 @@ export function startLanPairingServer(
         if (req.method === 'GET' && pathOnly.startsWith(`${CO21_LAN_API_PREFIX}/pair/status/`)) {
           const token = pathOnly.slice(`${CO21_LAN_API_PREFIX}/pair/status/`.length);
           handlePairStatus(res, token);
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/propose`) {
+          void handleSyncContractPropose(req, res);
           return;
         }
 

@@ -64,6 +64,15 @@
   min-width: 0;
 }
 
+.connections-device-sync-input :deep(.q-field__native),
+.connections-device-sync-input :deep(.q-field__input) {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.connections-device-sync-input :deep(.q-field__label) {
+  color: rgba(0, 0, 0, 0.6);
+}
+
 .join-member-layout--split {
   align-items: flex-start;
   align-content: flex-start;

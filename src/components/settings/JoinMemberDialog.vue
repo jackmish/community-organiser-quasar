@@ -61,6 +61,28 @@
               : 'col-12 col-md-8 column join-member-roles-panel'
           "
         >
+          <q-banner
+            v-if="hasPendingChanges"
+            dense
+            rounded
+            class="bg-positive text-white q-mb-sm"
+          >
+            <template #avatar>
+              <q-icon name="sync" color="white" />
+            </template>
+            {{ $text('sync.confirm_pending_banner') }}
+            <template #action>
+              <q-btn
+                unelevated
+                dense
+                color="white"
+                text-color="positive"
+                :label="$text('sync.confirm_changes_btn')"
+                @click="startConfirmChanges"
+              />
+            </template>
+          </q-banner>
+
           <div
             v-if="selectedGroupName"
             class="text-subtitle1 text-primary q-mb-sm"
@@ -264,6 +286,29 @@
         <q-btn flat :label="$text('action.close')" color="primary" @click="dialogVisible = false" />
       </q-card-actions>
     </q-card>
+
+    <SyncContractPreviewDialog
+      v-model="showPreviewDialog"
+      v-model:interval-seconds="confirmIntervalSeconds"
+      :preview="preview"
+      :min-sync-interval="minSyncInterval"
+      :max-sync-interval="maxSyncInterval"
+      @confirm="onSyncPreviewConfirm"
+      @cancel="onPreviewCancelled"
+    />
+    <PrivilegeChangeSyncDialog
+      v-model="showPrivilegeDialog"
+      :changes="privilegeChanges"
+      @confirm="onPrivilegeDialogConfirm"
+      @cancel="onPrivilegeDialogCancel"
+    />
+    <SyncContractPeerAcceptDialog
+      v-model="showPeerAcceptDialog"
+      :proposer-name="ownDeviceLabel"
+      :is-incoming="false"
+      @accept="onSyncPeerDone"
+      @cancel="closeSyncPeerDialog"
+    />
   </q-dialog>
 </template>
 
@@ -271,6 +316,10 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { $text } from 'src/modules/lang';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
+import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
+import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
+import SyncContractPeerAcceptDialog from './SyncContractPeerAcceptDialog.vue';
+import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
 import CC from 'src/CCAccess';
 import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
 import {
@@ -323,6 +372,43 @@ const selectedGroupId = ref<string | null>(null);
 const roleProfiles = ref<RoleProfileData[]>([]);
 const devices = ref<ConnectedDevice[]>([]);
 const groups = ref<GroupRecord[]>([]);
+
+const {
+  showPreviewDialog,
+  showPrivilegeDialog,
+  showPeerAcceptDialog,
+  preview,
+  privilegeChanges,
+  confirmIntervalSeconds,
+  hasPendingChanges,
+  captureBaseline,
+  startConfirmChanges,
+  onPreviewConfirm,
+  onPrivilegeDialogConfirm,
+  onPrivilegeDialogCancel,
+  onPreviewCancelled,
+  onPeerContractSigned,
+  minSyncInterval,
+  maxSyncInterval,
+} = useSyncContractInDialog(devices, roleProfiles);
+
+const ownDeviceLabel = computed(() => devices.value.find((d) => d.isLocal)?.name ?? '');
+
+async function onSyncPreviewConfirm(): Promise<void> {
+  await onPreviewConfirm();
+  await persistDevices();
+  window.dispatchEvent(new Event('co21:sync-contract-signed'));
+}
+
+function onSyncPeerDone(): void {
+  onPeerContractSigned();
+  void captureBaseline();
+}
+
+function closeSyncPeerDialog(): void {
+  showPeerAcceptDialog.value = false;
+}
+
 function openRolesSetup(): void {
   dispatchOpenRolesSetup({ createNew: false });
   emit('open-roles-setup');
@@ -565,7 +651,10 @@ watch(
   () => props.modelValue,
   (open) => {
     if (!open) return;
-    void reload().then(() => ensureGroupSelected());
+    void reload().then(async () => {
+      ensureGroupSelected();
+      await captureBaseline();
+    });
   },
 );
 

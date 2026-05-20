@@ -13,8 +13,9 @@
             />
           </div>
 
-          <div class="notification-wrapper">
-            <NextEventNotification style="min-width: 0; width: 100%" />
+          <div id="co21-header-notifications" class="notification-wrapper">
+            <div id="co21-sync-contract-slot" class="col-auto" />
+            <NextEventNotification style="min-width: 0; flex: 1" />
           </div>
           <div style="margin-left: auto; display: inline-block">
             <q-btn
@@ -141,6 +142,7 @@
           :initial-action="rolesSetupInitialAction"
           @saved="onRolesSetupSaved"
         />
+        <SyncContractHost />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
@@ -174,6 +176,7 @@ import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
 import RolesSetupDialog from "src/components/settings/RolesSetupDialog.vue";
+import SyncContractHost from "src/components/settings/SyncContractHost.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
@@ -487,6 +490,8 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   overflow: visible;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */

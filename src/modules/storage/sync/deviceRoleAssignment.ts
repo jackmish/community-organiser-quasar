@@ -20,6 +20,8 @@ export type ConnectedDevice = {
   rolesByGroup?: Record<string, string>;
   /** Default role profile for this device (Connections dialog). */
   defaultRoleProfileId?: string;
+  /** Periodic sync interval (seconds) for this paired device. */
+  syncIntervalSeconds?: number;
 };
 
 export type GroupRecord = {
@@ -150,6 +152,10 @@ export function parseConnectedDevice(raw: Record<string, unknown>): ConnectedDev
   }
   const defaultRole = stringField(raw.defaultRoleProfileId, '');
   if (defaultRole) row.defaultRoleProfileId = defaultRole;
+  const syncSec = raw.syncIntervalSeconds;
+  if (typeof syncSec === 'number' && Number.isFinite(syncSec)) {
+    row.syncIntervalSeconds = Math.floor(syncSec);
+  }
   if (raw.isLocal === true || raw.type === 'Local') row.isLocal = true;
   return row;
 }
@@ -164,6 +170,9 @@ export function toDeviceJson(d: ConnectedDevice): Record<string, unknown> {
       ? { rolesByGroup: { ...d.rolesByGroup } }
       : {}),
     ...(d.defaultRoleProfileId ? { defaultRoleProfileId: d.defaultRoleProfileId } : {}),
+    ...(typeof d.syncIntervalSeconds === 'number'
+      ? { syncIntervalSeconds: d.syncIntervalSeconds }
+      : {}),
     ...(d.isLocal ? { isLocal: true } : {}),
   };
 }
