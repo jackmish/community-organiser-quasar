@@ -455,6 +455,7 @@ import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
 import { jsonStringField, lanFetchInfo, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import {
+  dedupeConnectedDevicesByPeerId,
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
@@ -887,7 +888,9 @@ async function saveSettings(): Promise<boolean> {
       autoBackupEnabled: !!autoBackupEnabled.value,
       autoBackupHours: Number(autoBackupHours.value || 0),
       autoBackupMinutes: Number(autoBackupMinutes.value || 0),
-      devices: sanitizeConnectionDevices(devices.value).map((d) => toDeviceJson(d)),
+      devices: dedupeConnectedDevicesByPeerId(sanitizeConnectionDevices(devices.value)).map(
+        (d) => toDeviceJson(d),
+      ),
     };
     if (lastAutoBackup.value) patch.lastAutoBackup = lastAutoBackup.value;
     return await patchCo21Settings(patch);
@@ -929,7 +932,7 @@ function onLanPairingPendingEvent(ev: Event): void {
 async function reloadDevicesFromSettings(): Promise<void> {
   const local = await loadOwnDeviceMeta();
   const loaded = await loadConnectedDevices();
-  devices.value = mergeLocalDeviceIntoList(loaded, local);
+  devices.value = dedupeConnectedDevicesByPeerId(mergeLocalDeviceIntoList(loaded, local));
 }
 
 watch(dialogVisible, (open) => {

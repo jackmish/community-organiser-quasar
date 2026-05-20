@@ -1,6 +1,7 @@
 import { co21LanBaseUrl } from './lanPairingConstants';
 import { lanFetchInfo } from './lanPairingClient';
 import {
+  dedupeConnectedDevicesByPeerId,
   normalizeDeviceId,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
@@ -40,13 +41,26 @@ export async function reconcileLanDeviceIds(
     const storedNorm = normalizeDeviceId(d.id);
     if (peerNorm === storedNorm) continue;
 
-    const duplicate = next.some(
-      (x) => !x.isLocal && x.id !== d.id && normalizeDeviceId(x.id) === peerNorm,
-    );
-    if (duplicate) continue;
-
     const peerId = info.deviceId.trim();
     const peerName = info.deviceName.trim();
+    const existingIdx = next.findIndex(
+      (x) => !x.isLocal && x.id !== d.id && normalizeDeviceId(x.id) === peerNorm,
+    );
+    if (existingIdx >= 0) {
+      const existing = next[existingIdx]!;
+      const merged: ConnectedDevice = { ...existing, id: peerId };
+      if (peerName) merged.name = peerName;
+      const staleHost = (d.lanHost || '').trim();
+      if (!(merged.lanHost || '').trim() && staleHost) {
+        merged.lanHost = staleHost;
+      }
+      next = next
+        .filter((x) => x.id !== d.id)
+        .map((x) => (x.id === existing.id ? merged : x));
+      repaired.push(d.name || d.id);
+      continue;
+    }
+
     next = next.map((dev) => {
       if (dev.id !== d.id) return dev;
       const row: ConnectedDevice = { ...dev, id: peerId };
@@ -56,5 +70,5 @@ export async function reconcileLanDeviceIds(
     repaired.push(d.name || d.id);
   }
 
-  return { devices: next, repaired };
+  return { devices: dedupeConnectedDevicesByPeerId(next), repaired };
 }

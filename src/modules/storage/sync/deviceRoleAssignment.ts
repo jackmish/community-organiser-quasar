@@ -110,23 +110,92 @@ export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }>
   return { id, name };
 }
 
+function deviceRowMergeScore(d: ConnectedDevice): number {
+  let score = 0;
+  if ((d.lanHost || '').trim()) score += 10;
+  if (d.rolesByGroup && Object.keys(d.rolesByGroup).length > 0) score += 5;
+  if (d.defaultRoleProfileId) score += 2;
+  if (typeof d.syncIntervalSeconds === 'number') score += 1;
+  return score;
+}
+
+function mergePeerDeviceRows(primary: ConnectedDevice, secondary: ConnectedDevice): ConnectedDevice {
+  const merged: ConnectedDevice = { ...primary };
+  const host = (secondary.lanHost || '').trim();
+  if (host && !(merged.lanHost || '').trim()) merged.lanHost = host;
+  const name = (secondary.name || '').trim();
+  if (name && !(merged.name || '').trim()) merged.name = secondary.name;
+  if (secondary.rolesByGroup) {
+    merged.rolesByGroup = { ...(merged.rolesByGroup ?? {}), ...secondary.rolesByGroup };
+  }
+  if (secondary.defaultRoleProfileId && !merged.defaultRoleProfileId) {
+    merged.defaultRoleProfileId = secondary.defaultRoleProfileId;
+  }
+  if (
+    typeof merged.syncIntervalSeconds !== 'number' &&
+    typeof secondary.syncIntervalSeconds === 'number'
+  ) {
+    merged.syncIntervalSeconds = secondary.syncIntervalSeconds;
+  }
+  return merged;
+}
+
+/** Collapse duplicate LAN peers (same device id, different casing or stale rows). */
+export function dedupeConnectedDevicesByPeerId(devices: ConnectedDevice[]): ConnectedDevice[] {
+  const localNorm = devices.find((d) => d.isLocal)?.id;
+  const localNormKey = localNorm ? normalizeDeviceId(localNorm) : '';
+  const remoteByNorm = new Map<string, ConnectedDevice>();
+  let localRow: ConnectedDevice | null = null;
+
+  for (const d of devices) {
+    if (d.isLocal) {
+      if (!localRow || deviceRowMergeScore(d) >= deviceRowMergeScore(localRow)) {
+        localRow = { ...d, isLocal: true, type: 'Local' };
+      }
+      continue;
+    }
+    const norm = normalizeDeviceId(d.id);
+    if (!norm) continue;
+    if (localNormKey && norm === localNormKey) continue;
+    const prev = remoteByNorm.get(norm);
+    if (!prev) {
+      remoteByNorm.set(norm, { ...d });
+      continue;
+    }
+    const primary =
+      deviceRowMergeScore(prev) >= deviceRowMergeScore(d) ? prev : d;
+    const secondary = primary === prev ? d : prev;
+    remoteByNorm.set(norm, mergePeerDeviceRows(primary, secondary));
+  }
+
+  const remote = [...remoteByNorm.values()];
+  if (localRow) return [localRow, ...remote];
+  return remote;
+}
+
 export function mergeLocalDeviceIntoList(
   devices: ConnectedDevice[],
   local: { id: string; name: string },
 ): ConnectedDevice[] {
-  const idx = devices.findIndex((d) => d.id === local.id);
+  const localNorm = normalizeDeviceId(local.id);
+  const withoutSelfPeer = devices.filter(
+    (d) => d.isLocal || normalizeDeviceId(d.id) !== localNorm,
+  );
+  const idx = withoutSelfPeer.findIndex(
+    (d) => d.isLocal || normalizeDeviceId(d.id) === localNorm,
+  );
   const row: ConnectedDevice = {
     id: local.id,
     name: local.name,
     type: 'Local',
     isLocal: true,
   };
-  const prev = idx >= 0 ? devices[idx] : undefined;
+  const prev = idx >= 0 ? withoutSelfPeer[idx] : undefined;
   if (prev?.rolesByGroup) row.rolesByGroup = { ...prev.rolesByGroup };
-  if (idx < 0) return [row, ...devices];
-  const next = [...devices];
-  next[idx] = { ...devices[idx]!, ...row };
-  return next;
+  if (idx < 0) return dedupeConnectedDevicesByPeerId([row, ...withoutSelfPeer]);
+  const next = [...withoutSelfPeer];
+  next[idx] = { ...withoutSelfPeer[idx]!, ...row };
+  return dedupeConnectedDevicesByPeerId(next);
 }
 
 function stringField(v: unknown, fallback: string): string {
@@ -357,13 +426,17 @@ export async function loadConnectedDevices(): Promise<ConnectedDevice[]> {
     if (!data || typeof data !== 'object' || !Array.isArray((data as { devices?: unknown }).devices)) {
       return [];
     }
-    return ((data as { devices: Record<string, unknown>[] }).devices).map(parseConnectedDevice);
+    const parsed = ((data as { devices: Record<string, unknown>[] }).devices).map(
+      parseConnectedDevice,
+    );
+    return dedupeConnectedDevicesByPeerId(parsed);
   } catch {
     return [];
   }
 }
 
 export async function saveConnectedDevices(devices: ConnectedDevice[]): Promise<boolean> {
+  const deduped = dedupeConnectedDevicesByPeerId(devices);
   try {
     const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
     if (!api || typeof api.getAppDataPath !== 'function') return false;
@@ -379,7 +452,7 @@ export async function saveConnectedDevices(devices: ConnectedDevice[]): Promise<
     const payload = JSON.parse(
       JSON.stringify({
         ...existing,
-        devices: devices.map(toDeviceJson),
+        devices: deduped.map(toDeviceJson),
       }),
     ) as Record<string, unknown>;
     await (api.writeJsonFile as (p: string, d: unknown) => Promise<void>)(settingsFile, payload);

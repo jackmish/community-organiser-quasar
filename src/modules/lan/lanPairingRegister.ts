@@ -2,6 +2,7 @@ import { refreshLanServerForConnections } from './lanServerManager';
 import { isUsableLanHost, pickReachableLanHost } from './lanPairingHosts';
 import type { LanPairedDevicePayload } from './lanPairingUi';
 import {
+  dedupeConnectedDevicesByPeerId,
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
@@ -15,7 +16,7 @@ import { DEFAULT_SYNC_INTERVAL_SECONDS } from 'src/modules/storage/sync/syncCont
 
 /** Drop bogus rows saved from loopback pairing (not this device's local row). */
 export function sanitizeConnectionDevices(devices: ConnectedDevice[]): ConnectedDevice[] {
-  return devices.filter((d) => {
+  const filtered = devices.filter((d) => {
     if (d.isLocal) return true;
     const name = String(d.name || '').trim().toLowerCase();
     const host = String(d.lanHost || '').trim();
@@ -23,6 +24,7 @@ export function sanitizeConnectionDevices(devices: ConnectedDevice[]): Connected
     if (host && !isUsableLanHost(host)) return false;
     return true;
   });
+  return dedupeConnectedDevicesByPeerId(filtered);
 }
 
 /** Add or update a LAN peer after pairing (both initiator and acceptor). */
@@ -49,6 +51,7 @@ export async function persistPairedLanDevice(payload: LanPairedDevicePayload): P
   } else {
     devices = [...devices, row];
   }
+  devices = dedupeConnectedDevicesByPeerId(devices);
   await saveConnectedDevices(devices);
   const settings = await loadCo21Settings();
   const ownName =
