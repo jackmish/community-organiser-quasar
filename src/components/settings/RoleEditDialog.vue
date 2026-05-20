@@ -91,15 +91,15 @@ watch(
 );
 
 const accessRangeOptions = computed(() => [
-  { label: $text('role.range_max'), value: 'max' },
-  { label: $text('role.range_child'), value: 'child' },
-  { label: $text('role.range_single'), value: 'single' },
+  { label: $text('role.range_strict'), value: 'single' },
+  { label: $text('role.range_children'), value: 'child' },
+  { label: $text('role.range_all'), value: 'max' },
 ]);
 
 const privilegeOptions = computed(() => [
-  { label: $text('role.priv_preview'), value: 'preview' },
+  { label: $text('role.priv_show'), value: 'preview' },
   { label: $text('role.priv_edit'), value: 'edit' },
-  { label: $text('role.priv_full'), value: 'full' },
+  { label: $text('role.priv_owner'), value: 'full' },
 ]);
 
 function onSave() {

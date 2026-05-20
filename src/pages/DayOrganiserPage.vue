@@ -141,7 +141,10 @@
       :editing-group-id="editDialogGroupId"
     />
     <!-- Join Member Dialog (opened from options menu 'Join new member or device') -->
-    <JoinMemberDialog v-model="showCommunityDialog" />
+    <JoinMemberDialog
+      v-model="showCommunityDialog"
+      @open-roles-setup="openRolesSetupFromJoin"
+    />
     <!-- First Run Dialog -->
     <FirstRunDialog
       v-model="showFirstRunDialog"
@@ -463,6 +466,11 @@ watch(showGroupEditDialog, (v) => {
   if (!v) editDialogGroupId.value = null;
 });
 const showCommunityDialog = ref(false);
+
+function openRolesSetupFromJoin(): void {
+  showCommunityDialog.value = false;
+  window.dispatchEvent(new Event("co21:open-roles-setup"));
+}
 
 // Inline edit-group dialog removed (unused)
 const showFirstRunDialog = ref(false);

@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 420px; max-width: 90vw">
+    <q-card style="min-width: 520px; max-width: 94vw">
       <q-card-section>
         <div class="text-h6">Connections and data</div>
         <div class="q-mt-sm row items-center q-gutter-sm">
@@ -29,8 +29,24 @@
       <q-card-section class="q-pt-sm">
         <div class="q-gutter-md">
           <div class="text-subtitle2 q-mb-sm">Manage external connections and integrations</div>
+          <div class="row items-center q-gutter-sm q-mb-sm">
+            <q-btn
+              outline
+              color="primary"
+              icon="admin_panel_settings"
+              :label="rolesSetupLabel"
+              @click="showRolesSetupDialog = true"
+            />
+            <q-btn
+              outline
+              color="secondary"
+              icon="badge"
+              :label="assignRolesPerGroupLabel"
+              @click="showJoinMemberDialog = true"
+            />
+          </div>
           <div class="row items-center q-gutter-sm">
-            <div class="col">No devices configured.</div>
+            <div class="col">{{ devicesSummary }}</div>
             <div class="col-auto" style="position: relative">
               <q-btn ref="addBtn" dense label="Add Device" color="primary" @click="openAddMenu" />
 
@@ -91,7 +107,7 @@
                       {{ d.lanHost }}
                     </span>
                   </div>
-                  <div class="col-auto">
+                  <div class="col-auto row items-center q-gutter-xs no-wrap">
                     <q-btn dense flat label="Connect" color="primary" @click="connectDevice(d)" />
                     <q-btn dense flat icon="delete" color="negative" @click="removeDevice(d.id)" />
                   </div>
@@ -269,20 +285,30 @@
       :own-device-name="ownDeviceName"
       @paired="onLanPairedFromModal"
     />
+    <RolesSetupDialog v-model="showRolesSetupDialog" />
+    <JoinMemberDialog
+      v-model="showJoinMemberDialog"
+      @open-roles-setup="onOpenRolesSetup"
+    />
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useQuasar, Notify } from 'quasar';
+import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
 import { jsonStringField } from 'src/modules/lan/lanPairingClient';
+import { parseConnectedDevice, toDeviceJson } from 'src/modules/storage/sync/deviceRoleAssignment';
 import {
   LAN_PAIRING_PENDING_EVENT,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
+import RolesSetupDialog from './RolesSetupDialog.vue';
+import JoinMemberDialog from './JoinMemberDialog.vue';
+import { patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -292,7 +318,15 @@ const dialogVisible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-const devices = ref<Array<{ id: string; name: string; type?: string; lanHost?: string }>>([]);
+type ConnectionDevice = {
+  id: string;
+  name: string;
+  type?: string;
+  lanHost?: string;
+  rolesByGroup?: Record<string, string>;
+};
+
+const devices = ref<ConnectionDevice[]>([]);
 const addMenu = ref(false);
 const addBtn = ref<any>(null);
 const addMenuStyle = ref<Record<string, string>>({
@@ -359,6 +393,23 @@ function close() {
 const $q = useQuasar();
 const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
+const showRolesSetupDialog = ref(false);
+const showJoinMemberDialog = ref(false);
+const rolesSetupLabel = computed(() => $text('role.setup_title'));
+const assignRolesPerGroupLabel = computed(() => $text('role.assign_roles_per_group'));
+const devicesSummary = computed(() => {
+  const n = devices.value.length;
+  if (!n) return $text('connections.no_devices');
+  if (n === 1) return $text('connections.one_device');
+  return `${n} ${$text('connections.devices_label')}`;
+});
+
+function onOpenRolesSetup(): void {
+  dialogVisible.value = true;
+  showJoinMemberDialog.value = false;
+  showRolesSetupDialog.value = true;
+}
+
 const fileInput = ref<HTMLInputElement | null>(null);
 const ownDeviceName = ref<string>('');
 const savedOwnDeviceName = ref<string>('');
@@ -450,16 +501,14 @@ async function loadSettings() {
       if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
       if (Array.isArray(data.devices)) {
         devices.value = data.devices.map((d: Record<string, unknown>) => {
-          const id = jsonStringField(d.id, '');
-          const row: { id: string; name: string; type?: string; lanHost?: string } = {
-            id,
-            name: jsonStringField(d.name, id),
-            type: jsonStringField(d.type, 'LAN'),
+          const parsed = parseConnectedDevice(d);
+          const row: ConnectionDevice = {
+            id: parsed.id,
+            name: parsed.name,
           };
-          const lh = jsonStringField(d.lanHost, '');
-          if (lh) {
-            row.lanHost = lh;
-          }
+          if (parsed.type) row.type = parsed.type;
+          if (parsed.lanHost) row.lanHost = parsed.lanHost;
+          if (parsed.rolesByGroup) row.rolesByGroup = parsed.rolesByGroup;
           return row;
         });
       }
@@ -501,27 +550,15 @@ async function loadGroupsFromAppData(): Promise<any[]> {
 
 async function saveSettings(): Promise<boolean> {
   try {
-    const api = (window as any).electronAPI;
-    const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
-    if (!appPath) return false;
-    const settingsDir = api.joinPath(appPath, 'co21');
-    const settingsFile = api.joinPath(settingsDir, 'settings.json');
-    await api.ensureDir(settingsDir);
-    const payload: any = {
+    const patch: Record<string, unknown> = {
       ownDeviceName: ownDeviceName.value || '',
       autoBackupEnabled: !!autoBackupEnabled.value,
       autoBackupHours: Number(autoBackupHours.value || 0),
       autoBackupMinutes: Number(autoBackupMinutes.value || 0),
-      devices: devices.value.map((d) => ({
-        id: d.id,
-        name: d.name,
-        type: d.type,
-        ...(d.lanHost ? { lanHost: d.lanHost } : {}),
-      })),
+      devices: devices.value.map((d) => toDeviceJson(d)),
     };
-    if (lastAutoBackup.value) payload.lastAutoBackup = lastAutoBackup.value;
-    await api.writeJsonFile(settingsFile, payload);
-    return true;
+    if (lastAutoBackup.value) patch.lastAutoBackup = lastAutoBackup.value;
+    return await patchCo21Settings(patch);
   } catch (e) {
     logger.error('saveSettings failed', e);
     return false;
@@ -562,9 +599,16 @@ function registerLanDevice(payload: LanPairedDevicePayload): void {
   devices.value = [...devices.value, row];
 }
 
+watch(dialogVisible, (open) => {
+  if (open) {
+    void loadSettings();
+  }
+});
+
 onMounted(() => {
-  loadSettings();
+  void loadSettings();
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
+  window.addEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
   // start periodic check for automatic backups
   autoTimerId.value = setInterval(() => {
     now.value = Date.now();
@@ -574,6 +618,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
+  window.removeEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
   if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 
