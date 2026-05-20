@@ -129,67 +129,16 @@
             :class="isMobile ? 'q-gutter-sm' : 'q-gutter-md'"
             style="overflow: auto"
           >
-            <q-card v-if="localDevice" bordered flat class="rounded-borders bg-blue-1">
-              <q-card-section>
-                <div class="text-subtitle2 row items-center q-gutter-xs">
-                  <q-icon name="computer" color="primary" />
-                  {{ $text('role.local_device') }}
-                </div>
-                <div class="text-body2 q-mt-xs">{{ localDevice.name }}</div>
-                <div class="text-caption q-mt-sm">
-                  {{ $text('role.current_access') }}:
-                  <strong>{{ accessLabelForDevice(localDevice) }}</strong>
-                </div>
-                <q-select
-                  v-if="restrictRoleOptions.length"
-                  dense
-                  outlined
-                  emit-value
-                  map-options
-                  class="q-mt-sm"
-                  :options="restrictRoleOptions"
-                  :model-value="directRoleIdForDevice(localDevice.id)"
-                  :label="$text('role.change_local_role')"
-                  @update:model-value="(v) => onRestrictDevice(localDevice!.id, v)"
-                />
-              </q-card-section>
-            </q-card>
-
-            <q-card
-              v-if="defaultFullDevices.length"
-              bordered
-              flat
-              class="rounded-borders"
+            <p
+              v-if="localDevice"
+              class="text-caption text-grey-7 q-mb-sm row items-center q-gutter-xs"
             >
-              <q-card-section class="q-pb-sm">
-                <div class="text-subtitle2">{{ $text('role.default_full_access') }}</div>
-                <div class="text-caption text-grey-7">
-                  {{ $text('role.default_full_access_hint') }}
-                </div>
-              </q-card-section>
-              <q-separator />
-              <q-list dense separator>
-                <q-item v-for="d in defaultFullDevices" :key="d.id" class="join-member-default-full-item">
-                  <q-item-section>
-                    <q-item-label>{{ d.name }}</q-item-label>
-                    <q-item-label v-if="d.type" caption>{{ d.type }}</q-item-label>
-                    <q-badge class="q-mt-xs" color="positive" :label="$text('role.priv_full')" />
-                  </q-item-section>
-                  <q-item-section v-if="restrictRoleOptions.length" class="col-12 col-md-auto">
-                    <q-select
-                      dense
-                      outlined
-                      emit-value
-                      map-options
-                      :options="restrictRoleOptions"
-                      :model-value="''"
-                      :label="$text('role.restrict_to_role')"
-                      @update:model-value="(v) => onRestrictDevice(d.id, v)"
-                    />
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-card>
+              <q-icon name="computer" size="16px" />
+              <span>
+                <strong>{{ localDevice.name }}</strong>
+                — {{ accessLabelForDevice(localDevice) }}
+              </span>
+            </p>
 
             <q-card
               v-for="role in sortedApplicableRoles"
@@ -198,17 +147,28 @@
               flat
               class="rounded-borders"
             >
-              <q-card-section class="q-pb-sm">
-                <div class="text-subtitle2">{{ role.name }}</div>
-                <div class="text-caption text-grey-7 q-mt-xs">
-                  {{ roleRuleCaption(role) }}
+              <q-card-section class="q-pb-sm join-member-role-card__head">
+                <div class="row items-center no-wrap q-gutter-xs join-member-role-card__title-row">
+                  <span class="text-subtitle2 text-weight-medium join-member-role-card__title">
+                    {{ role.name }}
+                  </span>
+                  <q-icon name="info_outline" size="18px" class="join-member-role-info">
+                    <q-tooltip
+                      anchor="top middle"
+                      self="bottom middle"
+                      :offset="[0, 6]"
+                      class="join-member-role-tooltip text-body2"
+                    >
+                      {{ roleAccessTooltip(role) }}
+                    </q-tooltip>
+                  </q-icon>
                 </div>
               </q-card-section>
 
               <q-separator />
 
               <q-card-section class="q-pt-sm q-pb-sm">
-                <div class="text-caption text-weight-medium text-grey-8 q-mb-xs">
+                <div class="text-caption text-weight-medium join-member-role-card__label q-mb-xs">
                   {{ $text('role.direct_devices') }}
                 </div>
                 <q-list v-if="directDevices(role.id).length" dense bordered separator class="rounded-borders">
@@ -230,7 +190,7 @@
                     </q-item-section>
                   </q-item>
                 </q-list>
-                <div v-else class="text-caption text-grey-6 q-mb-sm">
+                <div v-else class="text-caption join-member-role-card__muted q-mb-sm">
                   {{ $text('role.no_devices_on_role') }}
                 </div>
 
@@ -250,16 +210,18 @@
 
               <q-card-section
                 v-if="inheritedDevices(role.id).length"
-                class="q-pt-none bg-grey-2"
+                class="q-pt-none join-member-role-card__inherited"
               >
-                <div class="text-caption text-weight-medium text-grey-8 q-mb-xs">
+                <div class="text-caption text-weight-medium join-member-role-card__label q-mb-xs">
                   {{ $text('role.inherited_devices') }}
                 </div>
                 <q-list dense>
                   <q-item v-for="row in inheritedDevices(role.id)" :key="row.device.id">
                     <q-item-section>
-                      <q-item-label>{{ row.device.name }}</q-item-label>
-                      <q-item-label caption class="text-warning-9">
+                      <q-item-label class="join-member-role-card__item-name">
+                        {{ row.device.name }}
+                      </q-item-label>
+                      <q-item-label caption class="join-member-role-card__caption">
                         {{ $text('role.inherited_from') }}
                         <strong>{{ row.assignment.sourceGroupName }}</strong>
                         ({{ $text('role.privilege') }}: {{ row.assignment.roleName }})
@@ -354,19 +316,15 @@ const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
-import type { RoleFunctionId } from 'src/modules/storage/sync/roleFunctionCatalog';
+import { syncFunctionAccess, type RoleFunctionId } from 'src/modules/storage/sync/roleFunctionCatalog';
 import {
   devicesDirectlyOnRole,
   devicesInheritedOnRole,
-  devicesUnassignedOnGroup,
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
   normalizeGroupsFromCc,
-  pickDefaultRestrictiveRoleProfile,
-  resolveEffectiveRole,
   resolveEffectiveRoleWithDefault,
-  roleProfileSummaryLabel,
   rolesApplicableToGroup,
   saveConnectedDevices,
   sortRolesByRestrictiveness,
@@ -510,46 +468,13 @@ const applicableRoles = computed(() => {
   return rolesApplicableToGroup(roleProfiles.value, groups.value, selectedGroupId.value);
 });
 
-const RESTRICT_PLACEHOLDER = '';
-
 const localDevice = computed(() => devices.value.find((d) => d.isLocal) ?? null);
-
-const defaultFullDevices = computed(() => {
-  if (!selectedGroupId.value) return [];
-  return devicesUnassignedOnGroup(
-    devices.value,
-    groups.value,
-    roleProfiles.value,
-    selectedGroupId.value,
-  ).filter((d) => !d.isLocal);
-});
 
 const sortedApplicableRoles = computed(() =>
   sortRolesByRestrictiveness(
     rolesApplicableToGroup(roleProfiles.value, groups.value, selectedGroupId.value ?? ''),
   ),
 );
-
-const defaultRestrictiveRole = computed(() =>
-  pickDefaultRestrictiveRoleProfile(roleProfiles.value),
-);
-
-const restrictRoleOptions = computed(() => {
-  const sorted = sortedApplicableRoles.value;
-  if (!sorted.length) return [];
-  const opts = sorted.map((r) => ({ label: r.name, value: r.id }));
-  const hint = defaultRestrictiveRole.value;
-  if (hint && opts[0]?.value === hint.id) {
-    opts[0] = {
-      label: `${hint.name} (${$text('role.suggested_limited')})`,
-      value: hint.id,
-    };
-  }
-  return [
-    { label: $text('role.keep_full_default'), value: RESTRICT_PLACEHOLDER },
-    ...opts,
-  ];
-});
 
 function accessLabelForDevice(d: ConnectedDevice): string {
   if (!selectedGroupId.value) return '';
@@ -559,23 +484,9 @@ function accessLabelForDevice(d: ConnectedDevice): string {
     roleProfiles.value,
     selectedGroupId.value,
   );
-  if (eff.kind === 'default_full') return $text('role.creator_default_name');
+  if (eff.kind === 'default_full') return $text('role.creator_badge');
+  if (eff.kind === 'none') return $text('role.no_access');
   return eff.roleName;
-}
-
-function directRoleIdForDevice(deviceId: string): string {
-  if (!selectedGroupId.value) return RESTRICT_PLACEHOLDER;
-  const d = devices.value.find((x) => x.id === deviceId);
-  return d?.rolesByGroup?.[selectedGroupId.value] ?? RESTRICT_PLACEHOLDER;
-}
-
-async function onRestrictDevice(deviceId: string, roleProfileId: string | number | null): Promise<void> {
-  const id = roleProfileId ? String(roleProfileId) : '';
-  if (!id || id === RESTRICT_PLACEHOLDER) {
-    await disconnectDirect(deviceId);
-    return;
-  }
-  await assignDeviceToRole(deviceId, id);
 }
 
 function labelRange(r: AccessRange): string {
@@ -596,8 +507,18 @@ function labelFunction(functionId: RoleFunctionId): string {
   return t !== key ? t : functionId;
 }
 
-function roleRuleCaption(role: RoleProfileData): string {
-  return roleProfileSummaryLabel(role, labelRange, labelPriv, labelFunction);
+/** Multi-line tooltip for the info icon next to the role name. */
+function roleAccessTooltip(role: RoleProfileData): string {
+  const lines = [labelRange(role.accessRange)];
+  for (const f of syncFunctionAccess(role.functionAccess)) {
+    if (f.enabled) {
+      lines.push(`${labelFunction(f.functionId)}: ${labelPriv(f.privilege)}`);
+    }
+  }
+  if (lines.length === 1) {
+    lines.push($text('role.no_functions_enabled'));
+  }
+  return lines.join('\n');
 }
 
 function directDevices(roleProfileId: string): ConnectedDevice[] {
@@ -619,7 +540,10 @@ function inheritedDevices(roleProfileId: string) {
 function assignableDevices(roleProfileId: string): ConnectedDevice[] {
   if (!selectedGroupId.value) return [];
   const gid = selectedGroupId.value;
-  return devices.value.filter((d) => d.rolesByGroup?.[gid] !== roleProfileId);
+  return devices.value.filter((d) => {
+    if (d.isLocal) return false;
+    return d.rolesByGroup?.[gid] !== roleProfileId;
+  });
 }
 
 function assignableDeviceOptions(roleProfileId: string) {
@@ -732,4 +656,43 @@ function ensureGroupSelected(): void {
 .join-member-tree-node:not(.join-member-tree-node--selected):hover {
   background: rgba(0, 0, 0, 0.04);
 }
+
+.join-member-role-card__title {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.join-member-role-info {
+  color: rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.join-member-role-info:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+:deep(.join-member-role-tooltip) {
+  white-space: pre-line;
+  max-width: 280px;
+  line-height: 1.35;
+}
+
+.join-member-role-card__label {
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.join-member-role-card__muted,
+.join-member-role-card__caption {
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.join-member-role-card__item-name {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.join-member-role-card__inherited {
+  background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 </style>

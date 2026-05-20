@@ -53,6 +53,11 @@ main {
   z-index: 2147483647 !important;
 }
 
+/* Tooltips inside maximized / high z-index dialogs (role info, etc.) */
+.q-tooltip {
+  z-index: 2147483647 !important;
+}
+
 /* Menu items & overlays: use a pseudo-element overlay so text/icons remain readable */
 .q-menu .q-item {
   position: relative;

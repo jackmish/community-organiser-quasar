@@ -46,7 +46,10 @@ export async function persistPairedLanDevice(payload: LanPairedDevicePayload): P
   };
   if (idx >= 0) {
     const prev = devices[idx]!;
-    const updated: ConnectedDevice = { ...prev, ...row };
+    const updated: ConnectedDevice = { ...row };
+    if (prev.rolesByGroup && Object.keys(prev.rolesByGroup).length > 0) {
+      updated.rolesByGroup = { ...prev.rolesByGroup };
+    }
     devices = devices.map((d, i) => (i === idx ? updated : d));
   } else {
     devices = [...devices, row];

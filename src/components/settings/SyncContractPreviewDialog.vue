@@ -1,13 +1,12 @@
 <template>
   <q-dialog v-model="dialogVisible" persistent v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
-      <q-card-section class="row items-center q-gutter-sm q-pb-none">
-        <q-icon name="sync_alt" color="primary" size="28px" />
-        <div class="text-h6">{{ $text('sync.contract_preview_title') }}</div>
+      <q-card-section class="q-pb-none">
+        <div class="text-subtitle1 text-weight-medium">{{ $text('sync.contract_preview_title') }}</div>
       </q-card-section>
 
       <q-card-section :class="bodyClass" :style="bodyStyle" class="q-pt-sm sync-contract-preview-body">
-        <p class="text-caption text-grey-7 q-mb-md">
+        <p class="text-caption text-grey-7 q-mb-sm">
           {{ $text('sync.contract_preview_creator_note') }}
         </p>
 

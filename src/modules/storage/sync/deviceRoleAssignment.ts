@@ -35,12 +35,12 @@ export type EffectiveRoleAssignment = {
   roleName: string;
   accessRange: AccessRange;
   privilege: RolePrivilege;
-  kind: 'direct' | 'inherited' | 'default_full';
+  kind: 'direct' | 'inherited' | 'default_full' | 'none';
   sourceGroupId: string;
   sourceGroupName: string;
 };
 
-/** Devices on a group with no explicit role inherit full access (creator default). */
+/** Local device with no explicit role on a group — creator / owner default on this installation only. */
 export function defaultFullAccessAssignment(
   groups: GroupRecord[],
   groupId: string,
@@ -56,16 +56,34 @@ export function defaultFullAccessAssignment(
   };
 }
 
+/** Remote device with no role on a group — no shared access until explicitly assigned. */
+export function noAccessAssignment(
+  groups: GroupRecord[],
+  groupId: string,
+): EffectiveRoleAssignment {
+  return {
+    roleProfileId: '',
+    roleName: '',
+    accessRange: 'single',
+    privilege: 'preview',
+    kind: 'none',
+    sourceGroupId: groupId,
+    sourceGroupName: groupNameById(groups, groupId),
+  };
+}
+
 export function resolveEffectiveRoleWithDefault(
   device: ConnectedDevice,
   groups: GroupRecord[],
   profiles: RoleProfileData[],
   targetGroupId: string,
 ): EffectiveRoleAssignment {
-  return (
-    resolveEffectiveRole(device, groups, profiles, targetGroupId) ??
-    defaultFullAccessAssignment(groups, targetGroupId)
-  );
+  const resolved = resolveEffectiveRole(device, groups, profiles, targetGroupId);
+  if (resolved) return resolved;
+  if (device.isLocal) {
+    return defaultFullAccessAssignment(groups, targetGroupId);
+  }
+  return noAccessAssignment(groups, targetGroupId);
 }
 
 /** Role profile with the lowest privilege (for default “restrict” suggestion). */
