@@ -282,6 +282,7 @@ contextBridge.exposeInMainWorld('electronLan', {
     const fn = (_e, detail) => {
       try {
         callback(detail);
+        window.dispatchEvent(new CustomEvent('co21-lan-pairing-pending', { detail }));
       } catch (err) {
         console.error('electronLan onPairingPending callback', err);
       }

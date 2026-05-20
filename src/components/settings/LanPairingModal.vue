@@ -5,13 +5,44 @@
         <div class="text-h6">Wi‑Fi / LAN pairing</div>
         <div class="text-caption text-grey-7 q-mt-xs">
           <template v-if="hasElectronLan">
-            Other devices connect on port {{ port }}. Share the QR or an address below.
+            Other devices connect on port {{ port }}. When pairing completes, both devices are
+            added to each other’s Connections list.
           </template>
           <template v-else>
             Phone and PC must be on the same Wi‑Fi. Enter the PC’s IP only — you do not need to
             type :{{ port }} (the app adds it).
           </template>
         </div>
+      </q-card-section>
+
+      <q-card-section v-if="incomingPending" class="q-pt-none">
+        <q-banner dense rounded class="lan-incoming-banner text-white">
+          <template #avatar>
+            <q-icon name="wifi" color="white" />
+          </template>
+          <div class="text-weight-medium">Incoming pairing request</div>
+          <div class="text-body2 q-mt-xs">
+            <strong>{{ incomingPending.remoteName }}</strong> wants to connect with this device.
+          </div>
+          <div v-if="incomingPending.remoteAddress" class="text-caption q-mt-xs">
+            From {{ incomingPending.remoteAddress }}
+          </div>
+          <div class="text-caption q-mt-sm">
+            Accept to link both devices — each will appear in the other’s Connections list.
+          </div>
+          <template #action>
+            <q-btn flat dense label="Decline" color="white" @click="declineIncoming" />
+            <q-btn
+              unelevated
+              dense
+              label="Accept"
+              color="white"
+              text-color="positive"
+              :loading="incomingBusy"
+              @click="acceptIncoming"
+            />
+          </template>
+        </q-banner>
       </q-card-section>
 
       <q-card-section v-if="!hasElectronLan" class="q-pt-none">
@@ -201,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import jsQR from 'jsqr';
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { CO21_LAN_PAIRING_PORT, co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
@@ -217,6 +248,14 @@ import {
   lanPollUntilResolved,
 } from 'src/modules/lan/lanPairingClient';
 import type { Co21DiscoveredHost } from 'src/modules/lan/lanPairingDiscovery';
+import {
+  LAN_PAIRING_PENDING_EVENT,
+  buildLanPairedPayloadFromPending,
+  parseLanPendingDetail,
+  pickLanHostFromPeer,
+  type LanPendingDetail,
+  type LanPairedDevicePayload,
+} from 'src/modules/lan/lanPairingUi';
 import logger from 'src/utils/logger';
 
 const props = defineProps<{
@@ -226,10 +265,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
-  (
-    e: 'paired',
-    payload: { id: string; name: string; type: string; lanHost: string; appVersion?: string },
-  ): void;
+  (e: 'paired', payload: LanPairedDevicePayload): void;
 }>();
 
 const port = CO21_LAN_PAIRING_PORT;
@@ -284,6 +320,92 @@ const pcConnectPreview = computed(() => {
 const deviceLanAddrs = ref<string[]>([]);
 const deviceLanProbeBusy = ref(false);
 
+const incomingPending = ref<LanPendingDetail | null>(null);
+const incomingBusy = ref(false);
+let removeElectronPendingListener: (() => void) | null = null;
+
+function onPairingPendingDetail(raw: Record<string, unknown>): void {
+  const detail = parseLanPendingDetail(raw);
+  if (!detail) return;
+  incomingPending.value = detail;
+  emit('update:modelValue', true);
+}
+
+function onPairingPendingWindow(ev: Event): void {
+  const ce = ev as CustomEvent<Record<string, unknown>>;
+  if (ce.detail) onPairingPendingDetail(ce.detail);
+}
+
+function emitPaired(payload: LanPairedDevicePayload): void {
+  emit('paired', payload);
+  pairHint.value = `Connected with ${payload.name}. Both devices are now linked.`;
+  pairHintClass.value = 'text-positive';
+}
+
+async function acceptIncoming(): Promise<void> {
+  const p = incomingPending.value;
+  if (!p || incomingBusy.value) return;
+  incomingBusy.value = true;
+  try {
+    const elan = (window as unknown as {
+      electronLan?: { resolvePair?: (t: string, a: boolean) => Promise<unknown> };
+    }).electronLan;
+    if (!elan?.resolvePair) {
+      pairHint.value = 'Accept is only available in the desktop app.';
+      pairHintClass.value = 'text-negative';
+      return;
+    }
+    const res = (await elan.resolvePair(p.token, true)) as { ok?: boolean };
+    if (!res?.ok) {
+      pairHint.value = 'This request expired or was already answered.';
+      pairHintClass.value = 'text-warning';
+      incomingPending.value = null;
+      return;
+    }
+    emitPaired(buildLanPairedPayloadFromPending(p));
+    incomingPending.value = null;
+  } catch (e: unknown) {
+    pairHint.value = e instanceof Error ? e.message : String(e);
+    pairHintClass.value = 'text-negative';
+  } finally {
+    incomingBusy.value = false;
+  }
+}
+
+async function declineIncoming(): Promise<void> {
+  const p = incomingPending.value;
+  if (!p) return;
+  try {
+    const elan = (window as unknown as {
+      electronLan?: { resolvePair?: (t: string, a: boolean) => Promise<unknown> };
+    }).electronLan;
+    await elan?.resolvePair?.(p.token, false);
+  } catch (e) {
+    logger.warn('[LanPairingModal] decline failed', e);
+  }
+  incomingPending.value = null;
+  pairHint.value = 'Pairing request declined.';
+  pairHintClass.value = 'text-grey-7';
+}
+
+onMounted(() => {
+  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onPairingPendingWindow as EventListener);
+  const elan = (window as unknown as {
+    electronLan?: { onPairingPending?: (cb: (d: Record<string, unknown>) => void) => () => void };
+  }).electronLan;
+  if (elan?.onPairingPending) {
+    removeElectronPendingListener = elan.onPairingPending(onPairingPendingDetail);
+  }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onPairingPendingWindow as EventListener);
+  if (removeElectronPendingListener) {
+    removeElectronPendingListener();
+    removeElectronPendingListener = null;
+  }
+});
+
 watch(serverAddrs, (addrs) => {
   if (!addrs.length) {
     qrHost.value = '';
@@ -319,11 +441,10 @@ watch(
   async (open) => {
     if (!open) {
       cancelPairing();
-      if (listenOn.value && hasElectronLan.value) {
-        await stopListen();
-      }
       pcHost.value = '';
-      pairHint.value = '';
+      if (!incomingPending.value) {
+        pairHint.value = '';
+      }
       discovered.value = [];
       browseError.value = '';
       qrDataUrl.value = '';
@@ -541,7 +662,8 @@ async function requestPairToPc() {
       return;
     }
 
-    pairHint.value = 'Waiting for someone on the PC to confirm…';
+    pairHint.value =
+      'Waiting for confirmation on the other device — open Wi‑Fi / LAN there and tap Accept.';
     pairHintClass.value = 'text-grey-7';
     const poll = await lanPollUntilResolved(base, req.token, { signal });
     if (signal.aborted) return;
@@ -551,24 +673,16 @@ async function requestPairToPc() {
       const noScheme = trimmed.replace(/^https?:\/\//i, '');
       const hostPart = noScheme.split('/')[0] ?? '';
       const hostOnly = (hostPart.split(':')[0] ?? '').trim() || 'unknown';
-      const paired: {
-        id: string;
-        name: string;
-        type: string;
-        lanHost: string;
-        appVersion?: string;
-      } = {
+      const paired: LanPairedDevicePayload = {
         id: poll.peer.deviceId,
         name: poll.peer.deviceName,
         type: 'LAN',
-        lanHost: hostOnly,
+        lanHost: pickLanHostFromPeer(poll.peer, hostOnly),
       };
       if (poll.peer.appVersion) {
         paired.appVersion = poll.peer.appVersion;
       }
-      emit('paired', paired);
-      pairHint.value = `Paired with ${poll.peer.deviceName}.`;
-      pairHintClass.value = 'text-positive';
+      emitPaired(paired);
       emit('update:modelValue', false);
     } else if (poll.status === 'rejected') {
       pairHint.value = 'The PC user declined pairing.';
@@ -693,5 +807,8 @@ function close() {
 <style scoped>
 .lan-qr-file-input {
   display: none;
+}
+.lan-incoming-banner {
+  background: #2e7d32;
 }
 </style>

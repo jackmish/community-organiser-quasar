@@ -277,6 +277,10 @@ import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useQuasar, Notify } from 'quasar';
 import logger from 'src/utils/logger';
 import { jsonStringField } from 'src/modules/lan/lanPairingClient';
+import {
+  LAN_PAIRING_PENDING_EVENT,
+  type LanPairedDevicePayload,
+} from 'src/modules/lan/lanPairingUi';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 
@@ -540,9 +544,27 @@ async function saveOwnDeviceName() {
   }
 }
 
+function onLanPairingPendingOpen(): void {
+  dialogVisible.value = true;
+  showLanPairingModal.value = true;
+}
+
+function registerLanDevice(payload: LanPairedDevicePayload): void {
+  if (devices.value.some((d) => d.id === payload.id)) return;
+  const row: { id: string; name: string; type?: string; lanHost?: string } = {
+    id: payload.id,
+    name: payload.name,
+    type: payload.type,
+  };
+  if (payload.lanHost) {
+    row.lanHost = payload.lanHost;
+  }
+  devices.value = [...devices.value, row];
+}
+
 onMounted(() => {
   loadSettings();
-  window.addEventListener('co21-lan-pair-accepted', onLanPairAcceptedWindow as EventListener);
+  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
   // start periodic check for automatic backups
   autoTimerId.value = setInterval(() => {
     now.value = Date.now();
@@ -551,49 +573,12 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('co21-lan-pair-accepted', onLanPairAcceptedWindow as EventListener);
+  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingOpen as EventListener);
   if (autoTimerId.value) clearInterval(autoTimerId.value);
 });
 
-function onLanPairedFromModal(payload: {
-  id: string;
-  name: string;
-  type: string;
-  lanHost: string;
-}) {
-  if (!devices.value.some((d) => d.id === payload.id)) {
-    const row: { id: string; name: string; type?: string; lanHost?: string } = {
-      id: payload.id,
-      name: payload.name,
-      type: payload.type,
-    };
-    if (payload.lanHost) {
-      row.lanHost = payload.lanHost;
-    }
-    devices.value = [...devices.value, row];
-  }
-  notify('positive', `Added ${payload.name}`);
-}
-
-function onLanPairAcceptedWindow(ev: Event) {
-  const ce = ev as CustomEvent<{
-    remoteDeviceId?: string;
-    remoteName?: string;
-    remoteAddress?: string;
-  }>;
-  const d = ce.detail;
-  if (!d?.remoteDeviceId) return;
-  if (devices.value.some((x) => x.id === d.remoteDeviceId)) return;
-  const row: { id: string; name: string; type?: string; lanHost?: string } = {
-    id: d.remoteDeviceId,
-    name: String(d.remoteName || d.remoteDeviceId),
-    type: 'LAN',
-  };
-  if (d.remoteAddress) {
-    row.lanHost = d.remoteAddress;
-  }
-  devices.value = [...devices.value, row];
-  notify('positive', `Added ${d.remoteName || 'device'} (LAN)`);
+function onLanPairedFromModal(payload: LanPairedDevicePayload) {
+  registerLanDevice(payload);
 }
 
 watch(

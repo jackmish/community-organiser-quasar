@@ -5,7 +5,6 @@ import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import type { BrowserWindow } from 'electron';
-import { Notification } from 'electron';
 import logger from 'src/utils/logger';
 
 import { CO21_LAN_API_PREFIX, CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
@@ -90,28 +89,6 @@ function notifyRenderer(detail: Record<string, unknown>): void {
   }
 }
 
-function showSystemNotification(
-  title: string,
-  body: string,
-  onClickDetail: Record<string, unknown>,
-): void {
-  try {
-    if (!Notification.isSupported()) return;
-    const n = new Notification({ title, body });
-    n.on('click', () => {
-      const win = getMainWindow();
-      if (win) {
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      }
-      notifyRenderer(onClickDetail);
-    });
-    n.show();
-  } catch (e) {
-    logger.warn('[lanPairingServer] Notification.show failed', e);
-  }
-}
-
 async function readBody(req: http.IncomingMessage): Promise<string> {
   return await new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -175,11 +152,6 @@ function handlePairRequest(
       remoteAddress: pending.remoteAddress,
     };
     notifyRenderer(detail);
-    showSystemNotification(
-      'CO21 — LAN pairing',
-      `${remoteName} is asking to register with this computer.`,
-      detail,
-    );
 
     sendJson(res, 200, {
       token,
