@@ -2,7 +2,6 @@ import { refreshLanServerForConnections } from './lanServerManager';
 import { isUsableLanHost, pickReachableLanHost } from './lanPairingHosts';
 import type { LanPairedDevicePayload } from './lanPairingUi';
 import {
-  DEFAULT_SYNC_INTERVAL_SECONDS,
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
@@ -12,6 +11,7 @@ import {
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
+import { DEFAULT_SYNC_INTERVAL_SECONDS } from 'src/modules/storage/sync/syncContractSettings';
 
 /** Drop bogus rows saved from loopback pairing (not this device's local row). */
 export function sanitizeConnectionDevices(devices: ConnectedDevice[]): ConnectedDevice[] {
@@ -44,16 +44,8 @@ export async function persistPairedLanDevice(payload: LanPairedDevicePayload): P
   };
   if (idx >= 0) {
     const prev = devices[idx]!;
-    devices = devices.map((d, i) =>
-      i === idx
-        ? {
-            ...prev,
-            ...row,
-            rolesByGroup: prev.rolesByGroup,
-            defaultRoleProfileId: prev.defaultRoleProfileId,
-          }
-        : d,
-    );
+    const updated: ConnectedDevice = { ...prev, ...row };
+    devices = devices.map((d, i) => (i === idx ? updated : d));
   } else {
     devices = [...devices, row];
   }
