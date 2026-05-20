@@ -44,3 +44,26 @@ export function co21LanBaseUrl(host: string, port = CO21_LAN_PAIRING_PORT): stri
   }
   return `http://${raw}:${port}`;
 }
+
+/** Hostname / IPv4 keys used to match incoming LAN HTTP client address. */
+export function lanHostMatchKeys(host: string): string[] {
+  const raw = normalizeLanHostInput(host);
+  if (!raw) return [];
+  const keys: string[] = [];
+  const push = (s: string) => {
+    const k = s.trim().toLowerCase();
+    if (k) keys.push(k);
+  };
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw);
+      push(u.hostname);
+    } catch {
+      void 0;
+    }
+  }
+  const colonIdx = raw.indexOf(':');
+  const hostPart = (colonIdx > 0 ? raw.slice(0, colonIdx) : raw).split('/')[0] ?? '';
+  push(hostPart);
+  return [...new Set(keys)];
+}

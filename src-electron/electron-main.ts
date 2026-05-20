@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import {
   startLanPairingServer,
   setLanTrustedContractDeviceIds,
+  setLanTrustedContractPeers,
+  type LanTrustedContractPeer,
   stopLanPairingServer,
   resolveLanPairing,
   setLanPairingMainWindowProvider,
@@ -174,11 +176,23 @@ ipcMain.handle('lan:status', () => ({
   addresses: getLanIPv4Addresses(),
 }));
 
-ipcMain.handle('lan:set-trusted-contract-devices', (_evt, ids: string[]) => {
-  const list = Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
-  setLanTrustedContractDeviceIds(list);
-  return { ok: true as const, count: list.length };
-});
+ipcMain.handle(
+  'lan:set-trusted-contract-devices',
+  (_evt, payload: string[] | LanTrustedContractPeer[]) => {
+    if (!Array.isArray(payload)) {
+      setLanTrustedContractDeviceIds([]);
+      return { ok: true as const, count: 0 };
+    }
+    if (payload.length > 0 && typeof payload[0] === 'object' && payload[0] !== null) {
+      const peers = payload as LanTrustedContractPeer[];
+      setLanTrustedContractPeers(peers);
+      return { ok: true as const, count: peers.length };
+    }
+    const list = payload.filter((id) => typeof id === 'string') as string[];
+    setLanTrustedContractDeviceIds(list);
+    return { ok: true as const, count: list.length };
+  },
+);
 
 ipcMain.handle(
   'lan:browse-co21',

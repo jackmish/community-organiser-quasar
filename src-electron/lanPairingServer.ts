@@ -7,7 +7,11 @@ import os from 'node:os';
 import type { BrowserWindow } from 'electron';
 import logger from 'src/utils/logger';
 
-import { CO21_LAN_API_PREFIX, CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
+import {
+  CO21_LAN_API_PREFIX,
+  CO21_LAN_PAIRING_PORT,
+  lanHostMatchKeys,
+} from 'src/modules/lan/lanPairingConstants';
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
 
@@ -36,6 +40,16 @@ let getMainWindow: () => BrowserWindow | undefined = () => undefined;
 let pruneTimer: ReturnType<typeof setInterval> | null = null;
 /** When non-empty, only these device ids may POST sync/contract/propose. Empty = allow any proposer. */
 let trustedContractDeviceIds = new Set<string>();
+let trustedContractLanKeys = new Set<string>();
+
+export type LanTrustedContractPeer = {
+  deviceId: string;
+  lanHost?: string;
+};
+
+function normalizeTrustedDeviceId(id: string): string {
+  return String(id || '').trim().toLowerCase();
+}
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -63,15 +77,37 @@ function normalizeClientIp(raw: string | undefined): string {
 }
 
 export function setLanTrustedContractDeviceIds(ids: string[]): void {
-  trustedContractDeviceIds = new Set(ids.map((id) => String(id || '').trim()).filter(Boolean));
-  logger.info(
-    `[lanPairingServer] trusted contract device ids: ${trustedContractDeviceIds.size}`,
+  setLanTrustedContractPeers(
+    ids.map((deviceId) => ({ deviceId: String(deviceId || '') })),
   );
 }
 
-function isContractProposerTrusted(proposerDeviceId: string): boolean {
-  if (trustedContractDeviceIds.size === 0) return true;
-  return trustedContractDeviceIds.has(proposerDeviceId);
+export function setLanTrustedContractPeers(peers: LanTrustedContractPeer[]): void {
+  const idSet = new Set<string>();
+  const hostSet = new Set<string>();
+  for (const p of peers) {
+    const id = normalizeTrustedDeviceId(p.deviceId);
+    if (id) idSet.add(id);
+    for (const k of lanHostMatchKeys(p.lanHost || '')) {
+      hostSet.add(k);
+    }
+  }
+  trustedContractDeviceIds = idSet;
+  trustedContractLanKeys = hostSet;
+  logger.info(
+    `[lanPairingServer] trusted contract peers: ${idSet.size} id(s), ${hostSet.size} host key(s)`,
+  );
+}
+
+function isContractProposerTrusted(proposerDeviceId: string, remoteAddr: string): boolean {
+  if (trustedContractDeviceIds.size === 0 && trustedContractLanKeys.size === 0) {
+    return true;
+  }
+  const prop = normalizeTrustedDeviceId(proposerDeviceId);
+  if (prop && trustedContractDeviceIds.has(prop)) return true;
+  const rip = normalizeClientIp(remoteAddr).toLowerCase();
+  if (rip && trustedContractLanKeys.has(rip)) return true;
+  return false;
 }
 
 export function getLanIPv4Addresses(): string[] {
@@ -131,9 +167,10 @@ function handleSyncContractPropose(
       sendJson(res, 400, { error: 'invalid_contract' });
       return;
     }
-    if (!isContractProposerTrusted(proposerDeviceId)) {
+    const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    if (!isContractProposerTrusted(proposerDeviceId, remoteAddr)) {
       logger.warn(
-        `[lanPairingServer] contract rejected (unregistered proposer ${proposerDeviceId})`,
+        `[lanPairingServer] contract rejected proposer=${proposerDeviceId} from=${remoteAddr} trustedIds=${trustedContractDeviceIds.size} trustedHosts=${trustedContractLanKeys.size}`,
       );
       sendJson(res, 403, { error: 'proposer_not_registered' });
       return;

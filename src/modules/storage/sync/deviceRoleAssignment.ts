@@ -104,7 +104,10 @@ export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }>
     typeof settings.ownDeviceName === 'string' && settings.ownDeviceName.trim()
       ? settings.ownDeviceName.trim()
       : 'This device';
-  return { id: id || crypto.randomUUID(), name };
+  if (!id) {
+    id = await deviceId.get();
+  }
+  return { id, name };
 }
 
 export function mergeLocalDeviceIntoList(

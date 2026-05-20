@@ -15,7 +15,9 @@ type ElectronLan = {
   }) => Promise<{ ok?: boolean; error?: string; addresses?: string[] }>;
   stopServer?: () => Promise<unknown>;
   status?: () => Promise<{ listening?: boolean; addresses?: string[] }>;
-  setTrustedContractDevices?: (ids: string[]) => Promise<unknown>;
+  setTrustedContractDevices?: (
+    peers: Array<string | { deviceId: string; lanHost?: string }>,
+  ) => Promise<unknown>;
 };
 
 function electronLan(): ElectronLan | undefined {
@@ -36,13 +38,26 @@ export function registeredRemoteDeviceIds(devices: ConnectedDevice[]): string[] 
   return devices.filter((d) => !d.isLocal && d.id).map((d) => d.id);
 }
 
-/** Tell main process which device ids may POST sync contracts (empty = allow any). */
+export function registeredRemoteLanPeers(
+  devices: ConnectedDevice[],
+): Array<{ deviceId: string; lanHost?: string }> {
+  return devices
+    .filter((d) => !d.isLocal && d.id)
+    .map((d) => {
+      const peer: { deviceId: string; lanHost?: string } = { deviceId: d.id };
+      const host = (d.lanHost || '').trim();
+      if (host) peer.lanHost = host;
+      return peer;
+    });
+}
+
+/** Tell main process which peers may POST sync contracts (empty = allow any). */
 export async function syncLanTrustedContractDevices(devices: ConnectedDevice[]): Promise<void> {
   const elan = electronLan();
   if (!elan?.setTrustedContractDevices) return;
-  const ids = registeredRemoteDeviceIds(devices);
+  const peers = registeredRemoteLanPeers(devices);
   try {
-    await elan.setTrustedContractDevices(ids);
+    await elan.setTrustedContractDevices(peers);
   } catch (e) {
     logger.warn('[lanServerManager] setTrustedContractDevices failed', e);
   }
