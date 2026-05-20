@@ -176,12 +176,19 @@
           @change="onQrFileChange"
         />
         <q-btn
+          v-if="!pairActive"
           color="primary"
           unelevated
           label="Request pairing"
-          :loading="pairBusy"
           :disable="!pcHost.trim()"
           @click="requestPairToPc"
+        />
+        <q-btn
+          v-else
+          color="warning"
+          unelevated
+          label="Cancel pairing"
+          @click="cancelPairing"
         />
         <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
       </q-card-section>
@@ -205,7 +212,7 @@ import {
 } from 'src/modules/lan/lanNetwork';
 import { canUseLanQrCamera, scanLanQrWithCamera } from 'src/modules/lan/lanQrScan';
 import {
-  lanFetchInfo,
+  lanFetchInfoWithRetry,
   lanPostPairRequest,
   lanPollUntilResolved,
 } from 'src/modules/lan/lanPairingClient';
@@ -241,9 +248,14 @@ const serverAddrs = ref<string[]>([]);
 const listenError = ref('');
 
 const pcHost = ref('');
-const pairBusy = ref(false);
+const pairActive = ref(false);
+const pairAbort = ref<AbortController | null>(null);
 const pairHint = ref('');
 const pairHintClass = ref('text-grey-7');
+
+const LAN_CONNECT_ATTEMPTS = 5;
+const LAN_CONNECT_RETRY_DELAY_MS = 5000;
+const LAN_CONNECT_TIMEOUT_MS = 5000;
 
 const browseBusy = ref(false);
 const browseError = ref('');
@@ -306,6 +318,7 @@ watch(
   () => props.modelValue,
   async (open) => {
     if (!open) {
+      cancelPairing();
       if (listenOn.value && hasElectronLan.value) {
         await stopListen();
       }
@@ -448,8 +461,15 @@ async function browseNetwork() {
 }
 
 async function requestPairToPc() {
-  pairHint.value = '';
-  pairBusy.value = true;
+  if (pairActive.value) return;
+
+  pairHint.value = 'Connecting…';
+  pairHintClass.value = 'text-grey-7';
+  pairActive.value = true;
+  const controller = new AbortController();
+  pairAbort.value = controller;
+  const { signal } = controller;
+
   try {
     const base = co21LanBaseUrl(pcHost.value.trim());
     if (!base) {
@@ -457,22 +477,43 @@ async function requestPairToPc() {
       pairHintClass.value = 'text-negative';
       return;
     }
-    let info: Awaited<ReturnType<typeof lanFetchInfo>> = null;
+
+    let info: Awaited<ReturnType<typeof lanFetchInfoWithRetry>> = null;
     try {
-      info = await lanFetchInfo(base);
+      info = await lanFetchInfoWithRetry(base, {
+        attempts: LAN_CONNECT_ATTEMPTS,
+        delayMs: LAN_CONNECT_RETRY_DELAY_MS,
+        timeoutMs: LAN_CONNECT_TIMEOUT_MS,
+        signal,
+        onAttemptFailed: (attempt) => {
+          if (signal.aborted) return;
+          if (attempt === 1) {
+            pairHint.value = 'Connection problems.';
+            pairHintClass.value = 'text-warning';
+          } else if (attempt < LAN_CONNECT_ATTEMPTS) {
+            pairHint.value = `Connection problems. Retrying (${attempt}/${LAN_CONNECT_ATTEMPTS})…`;
+            pairHintClass.value = 'text-warning';
+          }
+        },
+      });
     } catch (e: unknown) {
+      if (signal.aborted) return;
       const detail = e instanceof Error ? e.message : String(e);
       pairHint.value = `${detail}. ${lanConnectionTroubleshootHint(port)}`;
       pairHintClass.value = 'text-negative';
       return;
     }
+
+    if (signal.aborted) return;
+
     if (!info) {
       pairHint.value =
-        `CO21 on ${base} did not respond (is “Accept pairing” ON on that device?). ` +
+        `Could not connect after ${LAN_CONNECT_ATTEMPTS} attempts. ` +
         lanConnectionTroubleshootHint(port);
       pairHintClass.value = 'text-negative';
       return;
     }
+
     pairHint.value = `Found: ${info.deviceName} (${info.deviceId.slice(0, 8)}…)`;
     pairHintClass.value = 'text-grey-7';
 
@@ -483,11 +524,17 @@ async function requestPairToPc() {
         ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
         : '';
 
-    const req = await lanPostPairRequest(base, {
-      deviceId: myId,
-      deviceName: myName,
-      appVersion: myVer,
-    });
+    const req = await lanPostPairRequest(
+      base,
+      {
+        deviceId: myId,
+        deviceName: myName,
+        appVersion: myVer,
+      },
+      { timeoutMs: LAN_CONNECT_TIMEOUT_MS, signal },
+    );
+    if (signal.aborted) return;
+
     if (!req) {
       pairHint.value = 'Pairing request was rejected or the PC is not accepting LAN pairing.';
       pairHintClass.value = 'text-negative';
@@ -495,7 +542,10 @@ async function requestPairToPc() {
     }
 
     pairHint.value = 'Waiting for someone on the PC to confirm…';
-    const poll = await lanPollUntilResolved(base, req.token);
+    pairHintClass.value = 'text-grey-7';
+    const poll = await lanPollUntilResolved(base, req.token, { signal });
+    if (signal.aborted) return;
+
     if (poll.status === 'accepted' && poll.peer) {
       const trimmed = pcHost.value.trim();
       const noScheme = trimmed.replace(/^https?:\/\//i, '');
@@ -528,11 +578,21 @@ async function requestPairToPc() {
       pairHintClass.value = 'text-warning';
     }
   } catch (e: unknown) {
+    if (signal.aborted) return;
     pairHint.value = e instanceof Error ? e.message : String(e);
     pairHintClass.value = 'text-negative';
   } finally {
-    pairBusy.value = false;
+    pairActive.value = false;
+    pairAbort.value = null;
   }
+}
+
+function cancelPairing(): void {
+  pairAbort.value?.abort();
+  pairAbort.value = null;
+  pairActive.value = false;
+  pairHint.value = 'Pairing cancelled.';
+  pairHintClass.value = 'text-grey-7';
 }
 
 function applyQrText(text: string): boolean {
