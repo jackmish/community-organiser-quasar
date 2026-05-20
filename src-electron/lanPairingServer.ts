@@ -48,6 +48,12 @@ const acceptedPairByToken = new Map<
   string,
   { peer: Record<string, unknown>; acceptedAt: number }
 >();
+
+/** Survives {@link stopLanPairingServer} → {@link startLanPairingServer} so polling still works after LAN refresh. */
+let pairingStateCarryOver: {
+  pendings: Map<string, Pending>;
+  acceptedPairByToken: Map<string, { peer: Record<string, unknown>; acceptedAt: number }>;
+} | null = null;
 let getMainWindow: () => BrowserWindow | undefined = () => undefined;
 let pruneTimer: ReturnType<typeof setInterval> | null = null;
 /** When non-empty, only these device ids may POST sync/contract/propose. Empty = allow any proposer. */
@@ -133,10 +139,23 @@ export function getLanIPv4Addresses(): string[] {
   return sortLanIPv4Addresses(out);
 }
 
+function normalizePairToken(raw: string): string {
+  try {
+    return decodeURIComponent(String(raw || '').trim());
+  } catch {
+    return String(raw || '').trim();
+  }
+}
+
 function prunePendings(): void {
   const now = Date.now();
   for (const [token, p] of pendings) {
-    if (now - p.createdAt > PENDING_TTL_MS) {
+    if (p.status === 'pending' && now - p.createdAt > PENDING_TTL_MS) {
+      pendings.delete(token);
+    } else if (p.status !== 'pending' && now - p.createdAt > PENDING_TTL_MS) {
+      if (!acceptedPairByToken.has(token)) {
+        cacheAcceptedPair(token);
+      }
       pendings.delete(token);
     }
   }
@@ -357,7 +376,12 @@ function handlePairNotifyAccepted(
   })();
 }
 
-function handlePairStatus(res: http.ServerResponse, token: string): void {
+function handlePairStatus(res: http.ServerResponse, tokenRaw: string): void {
+  const token = normalizePairToken(tokenRaw);
+  if (!token) {
+    sendJson(res, 200, { status: 'unknown' });
+    return;
+  }
   const cached = acceptedPairByToken.get(token);
   if (cached) {
     sendJson(res, 200, { status: 'accepted', peer: cached.peer });
@@ -461,6 +485,18 @@ export function startLanPairingServer(
     });
 
     server.listen(CO21_LAN_PAIRING_PORT, '0.0.0.0', () => {
+      if (pairingStateCarryOver) {
+        for (const [t, p] of pairingStateCarryOver.pendings) {
+          pendings.set(t, p);
+        }
+        for (const [t, a] of pairingStateCarryOver.acceptedPairByToken) {
+          acceptedPairByToken.set(t, a);
+        }
+        pairingStateCarryOver = null;
+        logger.info(
+          `[lanPairingServer] restored ${pendings.size} pending(s), ${acceptedPairByToken.size} accepted pair cache`,
+        );
+      }
       pruneTimer = setInterval(prunePendings, 60_000);
       try {
         if (identity) {
@@ -479,6 +515,12 @@ export function stopLanPairingServer(): void {
   if (pruneTimer) {
     clearInterval(pruneTimer);
     pruneTimer = null;
+  }
+  if (pendings.size > 0 || acceptedPairByToken.size > 0) {
+    pairingStateCarryOver = {
+      pendings: new Map(pendings),
+      acceptedPairByToken: new Map(acceptedPairByToken),
+    };
   }
   pendings.clear();
   acceptedPairByToken.clear();

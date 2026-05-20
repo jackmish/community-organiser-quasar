@@ -135,9 +135,10 @@ export async function ensureLanServerForSync(
 export async function refreshLanServerForConnections(
   devices: ConnectedDevice[],
   ownDeviceName: string,
+  opts?: { restart?: boolean },
 ): Promise<ConnectedDevice[]> {
-  // Listen + mDNS first so peers can reach /info while we reconcile ids
-  await ensureLanServerForSync(ownDeviceName, { restart: true });
+  // Do not restart by default — restarting clears in-flight pairing tokens on this machine.
+  await ensureLanServerForSync(ownDeviceName, { restart: opts?.restart ?? false });
 
   const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
   if (repaired.length > 0) {

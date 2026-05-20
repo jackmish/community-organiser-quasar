@@ -410,8 +410,9 @@ async function acceptIncoming(): Promise<void> {
       incomingPending.value = null;
       return;
     }
-    await completePairing(buildLanPairedPayloadFromPending(p));
-    await notifyProposerWeAccepted(p);
+    const localPayload = buildLanPairedPayloadFromPending(p);
+    void notifyProposerWeAccepted(p);
+    await completePairing(localPayload);
     incomingPending.value = null;
     clearLanPendingOffer();
   } catch (e: unknown) {

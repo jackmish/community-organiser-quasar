@@ -199,7 +199,8 @@ export async function lanGetPairStatus(
   token: string,
   opts: LanFetchOptions = {},
 ): Promise<LanPairPollResult> {
-  const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/status/${encodeURIComponent(token)}`;
+  const tokenPath = encodeURIComponent(token.trim());
+  const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/status/${tokenPath}`;
   let res: Response;
   try {
     res = await fetchWithTimeout(url, { method: 'GET' }, opts.timeoutMs ?? 5000, opts.signal);
