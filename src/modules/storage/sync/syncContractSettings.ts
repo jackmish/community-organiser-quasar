@@ -4,8 +4,15 @@ export const DEFAULT_SYNC_INTERVAL_SECONDS = 60;
 export const MIN_SYNC_INTERVAL_SECONDS = 15;
 export const MAX_SYNC_INTERVAL_SECONDS = 3600;
 
+/** How group/task duplicates are resolved during sync. */
+export type SyncDuplicateResolution = 'auto' | 'manual';
+
+export const DEFAULT_SYNC_DUPLICATE_RESOLUTION: SyncDuplicateResolution = 'auto';
+
 export type SyncContractSnapshot = {
   savedAt: number;
+  /** Group/task duplicate handling for this contract (default auto). */
+  duplicateResolution?: SyncDuplicateResolution;
   devices: Array<{ id: string; name: string; rolesByGroup: Record<string, string> }>;
   roleProfiles: Array<{
     id: string;
@@ -39,6 +46,26 @@ export async function saveSyncIntervalSeconds(seconds: number): Promise<boolean>
     Math.max(MIN_SYNC_INTERVAL_SECONDS, Math.floor(seconds)),
   );
   return patchCo21Settings({ syncIntervalSeconds: v });
+}
+
+export async function loadSyncDuplicateResolution(): Promise<SyncDuplicateResolution> {
+  const data = await loadCo21Settings();
+  const v = data.syncDuplicateResolution;
+  return v === 'manual' ? 'manual' : DEFAULT_SYNC_DUPLICATE_RESOLUTION;
+}
+
+export async function saveSyncDuplicateResolution(
+  mode: SyncDuplicateResolution,
+): Promise<boolean> {
+  return patchCo21Settings({
+    syncDuplicateResolution: mode === 'manual' ? 'manual' : DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  });
+}
+
+export function normalizeSyncDuplicateResolution(
+  v: unknown,
+): SyncDuplicateResolution {
+  return v === 'manual' ? 'manual' : DEFAULT_SYNC_DUPLICATE_RESOLUTION;
 }
 
 export async function loadLastContractSnapshot(): Promise<SyncContractSnapshot | null> {

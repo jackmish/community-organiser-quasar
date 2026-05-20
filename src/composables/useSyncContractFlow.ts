@@ -11,7 +11,11 @@ import {
 } from 'src/modules/storage/sync/syncContractPreview';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
+  DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  loadSyncDuplicateResolution,
+  normalizeSyncDuplicateResolution,
   type SyncContractSnapshot,
+  type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import {
   loadConnectedDevices,
@@ -30,6 +34,7 @@ export function useSyncContractFlow() {
   const pendingSnapshot = ref<SyncContractSnapshot | null>(null);
   const privilegeChanges = ref<PrivilegeChange[]>([]);
   const confirmIntervalSeconds = ref(DEFAULT_SYNC_INTERVAL_SECONDS);
+  const confirmDuplicateResolution = ref<SyncDuplicateResolution>(DEFAULT_SYNC_DUPLICATE_RESOLUTION);
 
   let baselineSnapshot: SyncContractSnapshot | null = null;
 
@@ -63,7 +68,9 @@ export function useSyncContractFlow() {
     profiles: RoleProfileData[],
     baseline?: SyncContractSnapshot | null,
   ): void {
-    baselineSnapshot = baseline ?? buildSyncContractSnapshot(devices, profiles);
+    baselineSnapshot =
+      baseline ??
+      buildSyncContractSnapshot(devices, profiles, confirmDuplicateResolution.value);
   }
 
   async function captureBaseline(): Promise<void> {
@@ -72,7 +79,11 @@ export function useSyncContractFlow() {
   }
 
   function hasChanges(devices: ConnectedDevice[], profiles: RoleProfileData[]): boolean {
-    const current = buildSyncContractSnapshot(devices, profiles);
+    const current = buildSyncContractSnapshot(
+      devices,
+      profiles,
+      confirmDuplicateResolution.value,
+    );
     return hasSnapshotChanges(baselineSnapshot, current);
   }
 
@@ -87,7 +98,11 @@ export function useSyncContractFlow() {
     profiles: RoleProfileData[],
     intervalSeconds?: number,
   ): boolean {
-    const current = buildSyncContractSnapshot(devices, profiles);
+    const current = buildSyncContractSnapshot(
+      devices,
+      profiles,
+      confirmDuplicateResolution.value,
+    );
     const previous = baselineSnapshot;
     if (!hasSnapshotChanges(previous, current)) {
       return false;
@@ -109,12 +124,25 @@ export function useSyncContractFlow() {
     return true;
   }
 
+  async function initDuplicateResolutionFromSettings(): Promise<void> {
+    confirmDuplicateResolution.value = await loadSyncDuplicateResolution();
+  }
+
+  function setDuplicateResolution(mode: SyncDuplicateResolution): void {
+    const v = normalizeSyncDuplicateResolution(mode);
+    confirmDuplicateResolution.value = v;
+    if (pendingSnapshot.value) {
+      pendingSnapshot.value = { ...pendingSnapshot.value, duplicateResolution: v };
+    }
+  }
+
   /** User tapped confirm — privilege step (if needed), then preview. */
-  function beginConfirmation(
+  async function beginConfirmation(
     devices: ConnectedDevice[],
     profiles: RoleProfileData[],
     intervalSeconds?: number,
-  ): boolean {
+  ): Promise<boolean> {
+    await initDuplicateResolutionFromSettings();
     if (!prepareConfirmation(devices, profiles, intervalSeconds)) {
       return false;
     }
@@ -177,6 +205,9 @@ export function useSyncContractFlow() {
     pendingSnapshot,
     privilegeChanges,
     confirmIntervalSeconds,
+    confirmDuplicateResolution,
+    setDuplicateResolution,
+    initDuplicateResolutionFromSettings,
     captureBaseline,
     captureBaselineFrom,
     hasChanges,

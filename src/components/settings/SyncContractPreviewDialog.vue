@@ -83,21 +83,41 @@
 
         <q-separator class="q-my-md" />
 
-        <div class="row items-center q-gutter-sm">
-          <q-input
-            :model-value="intervalModel"
-            type="number"
-            dense
-            outlined
-            class="col sync-contract-interval-input"
-            :label="$text('sync.interval_label')"
-            :min="minSyncInterval"
-            :max="maxSyncInterval"
-            @update:model-value="onIntervalInput"
-          />
-          <span class="text-caption sync-contract-interval-unit col-auto">
-            {{ $text('sync.interval_unit') }}
-          </span>
+        <div class="row items-center q-gutter-md sync-contract-preview-options">
+          <div class="row items-center q-gutter-sm col-auto">
+            <q-input
+              :model-value="intervalModel"
+              type="number"
+              dense
+              outlined
+              class="sync-contract-interval-input"
+              style="width: 120px"
+              :label="$text('sync.interval_label')"
+              :min="minSyncInterval"
+              :max="maxSyncInterval"
+              @update:model-value="onIntervalInput"
+            />
+            <span class="text-caption sync-contract-interval-unit">
+              {{ $text('sync.interval_unit') }}
+            </span>
+          </div>
+          <div class="row items-center q-gutter-sm col sync-contract-duplicate-row">
+            <span class="text-caption sync-contract-duplicate-label">
+              {{ $text('sync.duplicate_resolution_label') }}
+            </span>
+            <q-radio
+              v-model="duplicateLocal"
+              val="auto"
+              dense
+              :label="$text('sync.duplicate_resolution_auto')"
+            />
+            <q-radio
+              v-model="duplicateLocal"
+              val="manual"
+              dense
+              :label="$text('sync.duplicate_resolution_manual')"
+            />
+          </div>
         </div>
       </q-card-section>
 
@@ -128,8 +148,10 @@ import {
 } from 'src/modules/storage/sync/syncContractPreview';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
+  DEFAULT_SYNC_DUPLICATE_RESOLUTION,
   MIN_SYNC_INTERVAL_SECONDS,
   MAX_SYNC_INTERVAL_SECONDS,
+  type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
@@ -137,6 +159,7 @@ const props = defineProps<{
   modelValue: boolean;
   preview: SyncContractPreview | null;
   intervalSeconds?: number;
+  duplicateResolution?: SyncDuplicateResolution;
   minSyncInterval?: number;
   maxSyncInterval?: number;
 }>();
@@ -144,6 +167,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'update:intervalSeconds', v: number): void;
+  (e: 'update:duplicateResolution', v: SyncDuplicateResolution): void;
   (e: 'confirm'): void;
   (e: 'cancel'): void;
 }>();
@@ -159,6 +183,11 @@ const minSyncInterval = computed(() => props.minSyncInterval ?? MIN_SYNC_INTERVA
 const maxSyncInterval = computed(() => props.maxSyncInterval ?? MAX_SYNC_INTERVAL_SECONDS);
 
 const intervalModel = computed(() => props.intervalSeconds ?? DEFAULT_SYNC_INTERVAL_SECONDS);
+
+const duplicateLocal = computed({
+  get: () => props.duplicateResolution ?? DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  set: (v: SyncDuplicateResolution) => emit('update:duplicateResolution', v),
+});
 
 function onIntervalInput(v: string | number | null): void {
   const n = Math.min(
@@ -264,5 +293,18 @@ function onCancel(): void {
 
 .sync-contract-interval-unit {
   color: rgba(0, 0, 0, 0.7);
+}
+
+.sync-contract-preview-options {
+  flex-wrap: wrap;
+}
+
+.sync-contract-duplicate-label {
+  color: rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+
+.sync-contract-duplicate-row :deep(.q-radio__label) {
+  color: rgba(0, 0, 0, 0.87);
 }
 </style>

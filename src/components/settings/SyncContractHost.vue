@@ -10,6 +10,8 @@
   <SyncContractPreviewDialog
     v-model="showIncomingPreview"
     v-model:interval-seconds="incomingIntervalSeconds"
+    :duplicate-resolution="incomingDuplicateResolution"
+    @update:duplicate-resolution="onIncomingDuplicateChange"
     :preview="incomingPreview"
     :min-sync-interval="minSyncInterval"
     :max-sync-interval="maxSyncInterval"
@@ -34,9 +36,13 @@ import {
   savePendingIncomingContract,
   savePendingOutgoingContract,
   DEFAULT_SYNC_INTERVAL_SECONDS,
+  DEFAULT_SYNC_DUPLICATE_RESOLUTION,
   MIN_SYNC_INTERVAL_SECONDS,
   MAX_SYNC_INTERVAL_SECONDS,
   loadSyncIntervalSeconds,
+  normalizeSyncDuplicateResolution,
+  saveSyncDuplicateResolution,
+  type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import type { SyncContractPreview } from 'src/modules/storage/sync/syncContractPreview';
 import SyncContractIncomingNotification from './SyncContractIncomingNotification.vue';
@@ -47,7 +53,18 @@ const incomingProposerName = ref('');
 const showIncomingPreview = ref(false);
 const incomingPreview = ref<SyncContractPreview | null>(null);
 const incomingIntervalSeconds = ref(DEFAULT_SYNC_INTERVAL_SECONDS);
+const incomingDuplicateResolution = ref<SyncDuplicateResolution>(DEFAULT_SYNC_DUPLICATE_RESOLUTION);
 let pendingIncomingContract: SyncContractPending | null = null;
+
+function onIncomingDuplicateChange(mode: SyncDuplicateResolution): void {
+  incomingDuplicateResolution.value = mode;
+  if (pendingIncomingContract?.snapshot) {
+    pendingIncomingContract = {
+      ...pendingIncomingContract,
+      snapshot: { ...pendingIncomingContract.snapshot, duplicateResolution: mode },
+    };
+  }
+}
 
 const minSyncInterval = MIN_SYNC_INTERVAL_SECONDS;
 const maxSyncInterval = MAX_SYNC_INTERVAL_SECONDS;
@@ -86,12 +103,19 @@ async function openIncomingReview(): Promise<void> {
   incomingPreview.value = await buildIncomingContractPreview(pendingIncomingContract);
   const interval = await loadSyncIntervalSeconds();
   incomingIntervalSeconds.value = interval;
+  incomingDuplicateResolution.value = normalizeSyncDuplicateResolution(
+    pendingIncomingContract.snapshot.duplicateResolution,
+  );
   showIncomingPreview.value = true;
 }
 
 async function onIncomingPreviewAccept(): Promise<void> {
   if (!pendingIncomingContract?.snapshot) return;
-  await saveLastContractSnapshot(pendingIncomingContract.snapshot);
+  await saveSyncDuplicateResolution(incomingDuplicateResolution.value);
+  await saveLastContractSnapshot({
+    ...pendingIncomingContract.snapshot,
+    duplicateResolution: incomingDuplicateResolution.value,
+  });
   await savePendingOutgoingContract(null);
   await savePendingIncomingContract(null);
   Notify.create({

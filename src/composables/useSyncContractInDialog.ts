@@ -4,7 +4,9 @@ import { useSyncContractFlow } from 'src/composables/useSyncContractFlow';
 import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
 import {
   loadLastContractSnapshot,
+  normalizeSyncDuplicateResolution,
   savePendingOutgoingContract,
+  saveSyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
@@ -27,11 +29,18 @@ export function useSyncContractInDialog(
 
   async function captureBaseline(): Promise<void> {
     const last = await loadLastContractSnapshot();
+    if (last?.duplicateResolution) {
+      sync.confirmDuplicateResolution.value = normalizeSyncDuplicateResolution(
+        last.duplicateResolution,
+      );
+    } else {
+      await sync.initDuplicateResolutionFromSettings();
+    }
     sync.captureBaselineFrom(devices.value, roleProfiles.value, last);
   }
 
-  function startConfirmChanges(): void {
-    sync.beginConfirmation(devices.value, roleProfiles.value);
+  async function startConfirmChanges(): Promise<void> {
+    await sync.beginConfirmation(devices.value, roleProfiles.value);
   }
 
   function applyIntervalToRemoteDevices(seconds: number): void {
@@ -46,6 +55,7 @@ export function useSyncContractInDialog(
 
   async function onPreviewConfirm(): Promise<void> {
     applyIntervalToRemoteDevices(sync.confirmIntervalSeconds.value);
+    await saveSyncDuplicateResolution(sync.confirmDuplicateResolution.value);
     const snap = sync.pendingSnapshot.value;
     const local = await loadOwnDeviceMeta();
     if (snap) {
@@ -68,6 +78,8 @@ export function useSyncContractInDialog(
     preview: sync.preview,
     privilegeChanges: sync.privilegeChanges,
     confirmIntervalSeconds: sync.confirmIntervalSeconds,
+    confirmDuplicateResolution: sync.confirmDuplicateResolution,
+    setDuplicateResolution: sync.setDuplicateResolution,
     hasPendingChanges,
     captureBaseline,
     startConfirmChanges,

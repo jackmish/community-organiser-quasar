@@ -290,6 +290,8 @@
     <SyncContractPreviewDialog
       v-model="showPreviewDialog"
       v-model:interval-seconds="confirmIntervalSeconds"
+      :duplicate-resolution="confirmDuplicateResolution"
+      @update:duplicate-resolution="setDuplicateResolution"
       :preview="preview"
       :min-sync-interval="minSyncInterval"
       :max-sync-interval="maxSyncInterval"
@@ -380,6 +382,8 @@ const {
   preview,
   privilegeChanges,
   confirmIntervalSeconds,
+  confirmDuplicateResolution,
+  setDuplicateResolution,
   hasPendingChanges,
   captureBaseline,
   startConfirmChanges,

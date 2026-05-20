@@ -4,7 +4,12 @@ import type { PrivilegeChange } from './RoleModel';
 import { PRIVILEGE_ORDER, roleAccessScore, type AccessRange, type RolePrivilege } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
 import { maxPrivilegeFromProfile, syncFunctionAccess, type RoleFunctionId } from './roleFunctionCatalog';
-import type { SyncContractSnapshot } from './syncContractSettings';
+import {
+  DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  normalizeSyncDuplicateResolution,
+  type SyncDuplicateResolution,
+  type SyncContractSnapshot,
+} from './syncContractSettings';
 import {
   normalizeGroupsFromCc,
   resolveEffectiveRole,
@@ -152,9 +157,11 @@ function labelExplicitAccess(
 export function buildSyncContractSnapshot(
   devices: ConnectedDevice[],
   profiles: RoleProfileData[],
+  duplicateResolution: SyncDuplicateResolution = DEFAULT_SYNC_DUPLICATE_RESOLUTION,
 ): SyncContractSnapshot {
   return {
     savedAt: Date.now(),
+    duplicateResolution: normalizeSyncDuplicateResolution(duplicateResolution),
     devices: devices
       .filter((d) => !d.isLocal)
       .map((d) => ({
