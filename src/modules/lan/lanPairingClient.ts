@@ -38,7 +38,13 @@ export function jsonStringField(v: unknown, fallback: string): string {
 
 export async function lanFetchInfo(baseUrl: string): Promise<LanPeerInfo | null> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/info`;
-  const res = await fetch(url, { method: 'GET' });
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'GET' });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Could not connect to ${url} (${msg})`);
+  }
   if (!res.ok) return null;
   const data = await parseJson(res);
   if (!data || typeof data !== 'object') return null;
@@ -57,11 +63,17 @@ export async function lanPostPairRequest(
   body: LanPairRequestBody,
 ): Promise<LanPairRequestResponse | null> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/request`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Could not connect to ${url} (${msg})`);
+  }
   if (!res.ok) return null;
   const data = await parseJson(res);
   if (!data || typeof data !== 'object') return null;

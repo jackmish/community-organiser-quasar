@@ -408,7 +408,8 @@ async function onToggleListen(v: boolean) {
 }
 
 function pickDiscovered(d: Co21DiscoveredHost) {
-  pcHost.value = d.connectHost;
+  pcHost.value =
+    d.port && d.port !== port ? `${d.connectHost}:${d.port}` : d.connectHost;
   pairHint.value = `Selected “${d.displayName}”. Tap “Request pairing” below.`;
   pairHintClass.value = 'text-grey-7';
 }
@@ -459,11 +460,16 @@ async function requestPairToPc() {
     let info: Awaited<ReturnType<typeof lanFetchInfo>> = null;
     try {
       info = await lanFetchInfo(base);
-    } catch {
-      info = null;
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      pairHint.value = `${detail}. ${lanConnectionTroubleshootHint(port)}`;
+      pairHintClass.value = 'text-negative';
+      return;
     }
     if (!info) {
-      pairHint.value = `Could not reach CO21 on ${base}. ${lanConnectionTroubleshootHint(port)}`;
+      pairHint.value =
+        `CO21 on ${base} did not respond (is “Accept pairing” ON on that device?). ` +
+        lanConnectionTroubleshootHint(port);
       pairHintClass.value = 'text-negative';
       return;
     }
