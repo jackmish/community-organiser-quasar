@@ -21,6 +21,14 @@ export function normalizeLanHostInput(host: string): string {
 export function co21LanBaseUrl(host: string, port = CO21_LAN_PAIRING_PORT): string {
   const raw = normalizeLanHostInput(host);
   if (!raw) return '';
+  // Bare IPv6 (multiple ":") — not valid as host:port without brackets
+  if (
+    !raw.startsWith('[') &&
+    !/^https?:\/\//i.test(raw) &&
+    (raw.match(/:/g)?.length ?? 0) > 1
+  ) {
+    return `http://[${raw}]:${port}`;
+  }
   if (/^https?:\/\//i.test(raw)) {
     try {
       const u = new URL(raw);

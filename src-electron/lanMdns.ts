@@ -134,7 +134,13 @@ export async function browseCo21Organisers(options: {
     const browser = bonjour.find({ type: CO21_MDNS_SERVICE_TYPE, protocol: 'tcp' }, (service: Service) => {
       try {
         const row = mapService(service);
-        if (exclude && row.deviceId === exclude) return;
+        if (
+          exclude &&
+          row.deviceId &&
+          row.deviceId.trim().toLowerCase() === exclude.trim().toLowerCase()
+        ) {
+          return;
+        }
         const key = row.fqdn || `${row.displayName}@${row.connectHost}`;
         byKey.set(key, row);
       } catch (e) {

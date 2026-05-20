@@ -80,20 +80,28 @@ export async function isLanServerListening(): Promise<boolean> {
  */
 export async function ensureLanServerForSync(
   ownDeviceName: string,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; restart?: boolean },
 ): Promise<{ listening: boolean; error?: string }> {
   const elan = electronLan();
   if (!elan?.startServer) {
     return { listening: false, error: 'not_electron' };
   }
 
-  if (await isLanServerListening()) {
-    return { listening: true };
-  }
-
   const autoListen = opts?.force ? true : await loadLanAutoListen();
   if (!autoListen) {
     return { listening: false, error: 'auto_listen_disabled' };
+  }
+
+  const listening = await isLanServerListening();
+  if (listening && !opts?.restart) {
+    return { listening: true };
+  }
+  if (listening && opts?.restart && elan.stopServer) {
+    try {
+      await elan.stopServer();
+    } catch (e) {
+      logger.warn('[lanServerManager] stopServer before restart failed', e);
+    }
   }
 
   try {
@@ -128,15 +136,14 @@ export async function refreshLanServerForConnections(
   devices: ConnectedDevice[],
   ownDeviceName: string,
 ): Promise<ConnectedDevice[]> {
+  // Listen + mDNS first so peers can reach /info while we reconcile ids
+  await ensureLanServerForSync(ownDeviceName, { restart: true });
+
   const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
   if (repaired.length > 0) {
     logger.info('[lanServerManager] reconciled LAN device ids for', repaired.join(', '));
     await saveConnectedDevices(reconciled);
   }
   await syncLanTrustedContractDevices(reconciled);
-  const hasLanPeer = reconciled.some((d) => !d.isLocal && d.lanHost);
-  if (hasLanPeer) {
-    await ensureLanServerForSync(ownDeviceName);
-  }
   return reconciled;
 }

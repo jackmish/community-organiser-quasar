@@ -565,13 +565,11 @@ async function onCheckDevice(d: ConnectedDevice): Promise<void> {
     const peerNorm = normalizeDeviceId(info.deviceId);
     const storedNorm = normalizeDeviceId(d.id);
     if (peerNorm !== storedNorm) {
-      const duplicatePeer = devices.value.some(
+      const dupIdx = devices.value.findIndex(
         (x) => !x.isLocal && x.id !== d.id && normalizeDeviceId(x.id) === peerNorm,
       );
-      if (duplicatePeer) {
-        toast('warning', $text('connections.check_wrong_device'));
-        deviceCheckById[rowId] = 'fail';
-        return;
+      if (dupIdx >= 0) {
+        devices.value = devices.value.filter((_, i) => i !== dupIdx);
       }
       syncDeviceRowFromLanPeer(rowId, info);
       clearDeviceCheckState(rowId);
