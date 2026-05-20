@@ -255,15 +255,17 @@ import {
   lanFetchInfoWithRetry,
   lanNotifyProposerAccepted,
   lanPostPairRequest,
-  lanPollUntilResolved,
 } from 'src/modules/lan/lanPairingClient';
+import {
+  cancelOutboundPairingPoll,
+  runOutboundPairingPoll,
+} from 'src/modules/lan/lanPairingOutbound';
 import type { Co21DiscoveredHost } from 'src/modules/lan/lanPairingDiscovery';
 import {
   LAN_PAIRING_PENDING_EVENT,
   buildLanPairedPayloadFromPending,
   dispatchLanPaired,
   parseLanPendingDetail,
-  pickLanHostFromPeer,
   type LanPendingDetail,
   type LanPairedDevicePayload,
 } from 'src/modules/lan/lanPairingUi';
@@ -464,15 +466,20 @@ async function notifyProposerWeAccepted(p: LanPendingDetail): Promise<void> {
         ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
         : '';
     const myLanAddrs = await resolveMyLanReachableAddresses();
-    const ok = await lanNotifyProposerAccepted(proposerHosts, {
-      deviceId: myId,
-      deviceName: myName,
-      appVersion: myVer,
-      ...(myLanAddrs.length ? { lanReachableAddresses: myLanAddrs } : {}),
+    void lanNotifyProposerAccepted(
+      proposerHosts,
+      {
+        deviceId: myId,
+        deviceName: myName,
+        appVersion: myVer,
+        ...(myLanAddrs.length ? { lanReachableAddresses: myLanAddrs } : {}),
+      },
+      { attempts: 25, retryDelayMs: 2000, timeoutMs: 10_000 },
+    ).then((ok) => {
+      if (!ok) {
+        logger.warn('[LanPairingModal] could not notify proposer to register this device');
+      }
     });
-    if (!ok) {
-      logger.warn('[LanPairingModal] could not notify proposer to register this device');
-    }
   } catch (e) {
     logger.warn('[LanPairingModal] notify proposer failed', e);
   }
@@ -698,9 +705,21 @@ async function browseNetwork() {
   }
 }
 
+function remoteHostHintFromPcHost(): string {
+  const trimmed = pcHost.value.trim();
+  const noScheme = trimmed.replace(/^https?:\/\//i, '');
+  const hostPart = noScheme.split('/')[0] ?? '';
+  return (hostPart.split(':')[0] ?? '').trim();
+}
+
 async function requestPairToPc() {
   if (pairActive.value) return;
   await ensureLanListeningForPairing();
+  if (hasElectronLan.value) {
+    await refreshStatus();
+  } else {
+    await refreshDeviceLanAddresses();
+  }
 
   pairHint.value = 'Connecting…';
   pairHintClass.value = 'text-grey-7';
@@ -783,33 +802,32 @@ async function requestPairToPc() {
     }
 
     pairHint.value =
-      'Waiting for confirmation on the other device — open Wi‑Fi / LAN there and tap Accept.';
+      'Waiting for confirmation on the other device — open Wi‑Fi / LAN there and tap Accept. ' +
+      'You can close this dialog; pairing will continue up to 5 minutes.';
     pairHintClass.value = 'text-grey-7';
-    const poll = await lanPollUntilResolved(base, req.token, { signal });
-    if (signal.aborted) return;
 
-    if (poll.status === 'accepted' && poll.peer) {
-      const trimmed = pcHost.value.trim();
-      const noScheme = trimmed.replace(/^https?:\/\//i, '');
-      const hostPart = noScheme.split('/')[0] ?? '';
-      const hostOnly = (hostPart.split(':')[0] ?? '').trim() || 'unknown';
-      const paired: LanPairedDevicePayload = {
-        id: poll.peer.deviceId,
-        name: poll.peer.deviceName,
-        type: 'LAN',
-        lanHost: pickLanHostFromPeer(poll.peer, hostOnly),
-      };
-      if (poll.peer.appVersion) {
-        paired.appVersion = poll.peer.appVersion;
-      }
-      await completePairing(paired);
+    const hostHint = remoteHostHintFromPcHost() || 'unknown';
+    const accepted = await runOutboundPairingPoll(
+      { baseUrl: base, token: req.token, remoteHostHint: hostHint },
+      {
+        onAccepted: (name) => {
+          pairHint.value = `Connected with ${name}. Both devices are now linked.`;
+          pairHintClass.value = 'text-positive';
+        },
+        onRejected: () => {
+          pairHint.value = 'The other device declined pairing.';
+          pairHintClass.value = 'text-negative';
+        },
+        onTimeout: () => {
+          pairHint.value =
+            'Still waiting or lost connection. If you already accepted on the other device, ' +
+            'check Connections — or try pairing again.';
+          pairHintClass.value = 'text-warning';
+        },
+      },
+    );
+    if (accepted) {
       emit('update:modelValue', false);
-    } else if (poll.status === 'rejected') {
-      pairHint.value = 'The PC user declined pairing.';
-      pairHintClass.value = 'text-negative';
-    } else {
-      pairHint.value = 'Timed out or lost connection while waiting for confirmation.';
-      pairHintClass.value = 'text-warning';
     }
   } catch (e: unknown) {
     if (signal.aborted) return;
@@ -822,6 +840,7 @@ async function requestPairToPc() {
 }
 
 function cancelPairing(): void {
+  cancelOutboundPairingPoll();
   pairAbort.value?.abort();
   pairAbort.value = null;
   pairActive.value = false;

@@ -223,6 +223,7 @@ import { persistPairedLanDevice } from "src/modules/lan/lanPairingRegister";
 import { presentation } from "src/modules/presentation/presentationRepository";
 const isOnline = ref(false);
 let checkInterval: number | undefined;
+let lanPairingCompleteUnsub: (() => void) | null = null;
 const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
@@ -381,6 +382,14 @@ onMounted(async () => {
   window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
+  const elan = (window as Window & {
+    electronLan?: { onPairingComplete?: (cb: (d: Record<string, unknown>) => void) => () => void };
+  }).electronLan;
+  if (elan?.onPairingComplete) {
+    lanPairingCompleteUnsub = elan.onPairingComplete(() => {
+      /* co21-lan-paired is dispatched from preload */
+    });
+  }
 
   try {
     const local = await loadOwnDeviceMeta();
@@ -579,6 +588,8 @@ onUnmounted(() => {
   window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
   window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
+  lanPairingCompleteUnsub?.();
+  lanPairingCompleteUnsub = null;
   window.removeEventListener("online", updateOnlineStatus);
   window.removeEventListener("offline", updateOnlineStatus);
   try {

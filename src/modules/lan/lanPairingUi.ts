@@ -89,6 +89,21 @@ export function buildLanPairedPayloadFromPending(p: LanPendingDetail): LanPaired
   return row;
 }
 
+/** Build Connections row from poll `accepted` peer (remote machine that was polled). */
+export function buildLanPairedFromPollPeer(
+  peer: { deviceId: string; deviceName: string; appVersion?: string; lanAddresses?: string[] },
+  remoteHostHint: string,
+): LanPairedDevicePayload {
+  const row: LanPairedDevicePayload = {
+    id: peer.deviceId.trim(),
+    name: (peer.deviceName || '').trim() || peer.deviceId,
+    type: 'LAN',
+    lanHost: pickLanHostFromPeer(peer, remoteHostHint),
+  };
+  if (peer.appVersion) row.appVersion = peer.appVersion;
+  return row;
+}
+
 export function pickLanHostFromPeer(
   peer: { lanAddresses?: string[] },
   fallbackHost: string,

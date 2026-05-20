@@ -38,10 +38,16 @@ type Pending = {
 };
 
 const PENDING_TTL_MS = 5 * 60 * 1000;
+const ACCEPTED_PAIR_CACHE_MS = 10 * 60 * 1000;
 
 let server: http.Server | null = null;
 let identity: LanIdentityPublic | null = null;
 const pendings = new Map<string, Pending>();
+/** Lets initiator poll `accepted` after the first status response (token not deleted immediately). */
+const acceptedPairByToken = new Map<
+  string,
+  { peer: Record<string, unknown>; acceptedAt: number }
+>();
 let getMainWindow: () => BrowserWindow | undefined = () => undefined;
 let pruneTimer: ReturnType<typeof setInterval> | null = null;
 /** When non-empty, only these device ids may POST sync/contract/propose. Empty = allow any proposer. */
@@ -130,10 +136,32 @@ export function getLanIPv4Addresses(): string[] {
 function prunePendings(): void {
   const now = Date.now();
   for (const [token, p] of pendings) {
-    if (p.status === 'pending' && now - p.createdAt > PENDING_TTL_MS) {
+    if (now - p.createdAt > PENDING_TTL_MS) {
       pendings.delete(token);
     }
   }
+  for (const [token, entry] of acceptedPairByToken) {
+    if (now - entry.acceptedAt > ACCEPTED_PAIR_CACHE_MS) {
+      acceptedPairByToken.delete(token);
+    }
+  }
+}
+
+function buildAcceptorPeerPayload(): Record<string, unknown> | null {
+  if (!identity) return null;
+  return {
+    deviceId: identity.deviceId,
+    deviceName: identity.deviceName,
+    appVersion: identity.appVersion,
+    lanAddresses: getLanIPv4Addresses(),
+  };
+}
+
+function cacheAcceptedPair(token: string): Record<string, unknown> | null {
+  const peer = buildAcceptorPeerPayload();
+  if (!peer) return null;
+  acceptedPairByToken.set(token, { peer, acceptedAt: Date.now() });
+  return peer;
 }
 
 function notifyRenderer(channel: string, detail: Record<string, unknown>): void {
@@ -287,6 +315,7 @@ function handlePairNotifyAccepted(
       sendJson(res, 503, { error: 'server_not_ready' });
       return;
     }
+    const socketAddr = normalizeClientIp(req.socket.remoteAddress);
     let raw: string;
     try {
       raw = await readBody(req);
@@ -310,7 +339,10 @@ function handlePairNotifyAccepted(
     const deviceName =
       typeof parsed.deviceName === 'string' ? parsed.deviceName : 'Unknown device';
     const bodyAddrs = parseLanReachableAddresses(parsed.lanReachableAddresses);
-    const lanHost = pickReachableLanHost(bodyAddrs);
+    const lanHost = pickReachableLanHost([
+      ...bodyAddrs,
+      ...(isUsableLanHost(socketAddr) ? [socketAddr] : []),
+    ]);
     const detail: Record<string, unknown> = {
       id: deviceId,
       name: deviceName,
@@ -326,6 +358,11 @@ function handlePairNotifyAccepted(
 }
 
 function handlePairStatus(res: http.ServerResponse, token: string): void {
+  const cached = acceptedPairByToken.get(token);
+  if (cached) {
+    sendJson(res, 200, { status: 'accepted', peer: cached.peer });
+    return;
+  }
   const p = pendings.get(token);
   if (!p) {
     sendJson(res, 200, { status: 'unknown' });
@@ -340,18 +377,11 @@ function handlePairStatus(res: http.ServerResponse, token: string): void {
     sendJson(res, 200, { status: 'rejected' });
     return;
   }
-  // accepted
-  if (!identity) {
+  const peer = cacheAcceptedPair(token);
+  if (!peer) {
     sendJson(res, 200, { status: 'unknown' });
     return;
   }
-  const peer = {
-    deviceId: identity.deviceId,
-    deviceName: identity.deviceName,
-    appVersion: identity.appVersion,
-    lanAddresses: getLanIPv4Addresses(),
-  };
-  pendings.delete(token);
   sendJson(res, 200, { status: 'accepted', peer });
 }
 
@@ -451,6 +481,7 @@ export function stopLanPairingServer(): void {
     pruneTimer = null;
   }
   pendings.clear();
+  acceptedPairByToken.clear();
   identity = null;
   if (server) {
     try {
@@ -466,6 +497,11 @@ export function resolveLanPairing(token: string, accept: boolean): boolean {
   const p = pendings.get(token);
   if (!p || p.status !== 'pending') return false;
   p.status = accept ? 'accepted' : 'rejected';
+  if (accept) {
+    cacheAcceptedPair(token);
+  } else {
+    acceptedPairByToken.delete(token);
+  }
   return true;
 }
 

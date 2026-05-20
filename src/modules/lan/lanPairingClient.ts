@@ -231,20 +231,37 @@ export async function lanGetPairStatus(
   return { status: 'unknown' };
 }
 
-/** Poll until accepted, rejected, unknown token, timeout, or abort. */
+export type LanPollUntilResolvedOptions = {
+  intervalMs?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  /** Per status request timeout (ms). */
+  statusTimeoutMs?: number;
+  /** Keep polling on `unknown` (transient network / race) until timeout. */
+  continueOnUnknown?: boolean;
+};
+
+/** Poll until accepted, rejected, or timeout. */
 export async function lanPollUntilResolved(
   baseUrl: string,
   token: string,
-  opts: { intervalMs?: number; timeoutMs?: number; signal?: AbortSignal } = {},
+  opts: LanPollUntilResolvedOptions = {},
 ): Promise<LanPairPollResult> {
-  const intervalMs = opts.intervalMs ?? 800;
-  const timeoutMs = opts.timeoutMs ?? 120_000;
+  const intervalMs = opts.intervalMs ?? 500;
+  const timeoutMs = opts.timeoutMs ?? 300_000;
+  const statusTimeoutMs = opts.statusTimeoutMs ?? 8000;
+  const continueOnUnknown = opts.continueOnUnknown !== false;
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (opts.signal?.aborted) return { status: 'unknown' };
-    const r = await lanGetPairStatus(baseUrl, token, pickFetchOpts(5000, opts.signal));
+    const r = await lanGetPairStatus(
+      baseUrl,
+      token,
+      pickFetchOpts(statusTimeoutMs, opts.signal),
+    );
     if (opts.signal?.aborted) return { status: 'unknown' };
-    if (r.status === 'accepted' || r.status === 'rejected' || r.status === 'unknown') return r;
+    if (r.status === 'accepted' || r.status === 'rejected') return r;
+    if (r.status === 'unknown' && !continueOnUnknown) return r;
     await sleepMs(intervalMs, opts.signal);
   }
   return { status: 'unknown' };
@@ -261,31 +278,46 @@ export type LanPairNotifyAcceptedBody = {
  * After local Accept, tell the proposer (initiator) to register this device.
  * Needed when the proposer closed the pairing dialog or poll did not finish.
  */
+export type LanNotifyProposerOptions = LanFetchOptions & {
+  attempts?: number;
+  retryDelayMs?: number;
+};
+
 export async function lanNotifyProposerAccepted(
   proposerHosts: string[],
   body: LanPairNotifyAcceptedBody,
-  opts: LanFetchOptions = {},
+  opts: LanNotifyProposerOptions = {},
 ): Promise<boolean> {
   const hosts = parseLanReachableAddresses(proposerHosts);
-  const timeoutMs = opts.timeoutMs ?? 5000;
-  for (const host of hosts) {
-    const base = co21LanBaseUrl(host);
-    if (!base) continue;
-    const url = `${base.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/notify-accepted`;
-    try {
-      const res = await fetchWithTimeout(
-        url,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-        timeoutMs,
-        opts.signal,
-      );
-      if (res.ok) return true;
-    } catch {
-      void 0;
+  if (!hosts.length) return false;
+  const timeoutMs = opts.timeoutMs ?? 8000;
+  const attempts = opts.attempts ?? 20;
+  const retryDelayMs = opts.retryDelayMs ?? 2000;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    if (opts.signal?.aborted) return false;
+    for (const host of hosts) {
+      const base = co21LanBaseUrl(host);
+      if (!base) continue;
+      const url = `${base.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/notify-accepted`;
+      try {
+        const res = await fetchWithTimeout(
+          url,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+          timeoutMs,
+          opts.signal,
+        );
+        if (res.ok) return true;
+      } catch {
+        void 0;
+      }
+    }
+    if (attempt < attempts) {
+      await sleepMs(retryDelayMs, opts.signal);
     }
   }
   return false;
