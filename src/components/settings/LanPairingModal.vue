@@ -24,6 +24,40 @@
           </div>
           <div class="text-weight-medium">Or enter an address manually:</div>
           <div v-for="a in serverAddrs" :key="a" class="text-primary">{{ a }}:{{ port }}</div>
+
+          <q-separator class="q-my-md" />
+          <div class="text-subtitle2 q-mb-sm">Share this PC (QR)</div>
+          <div class="text-caption text-grey-7 q-mb-sm">
+            On your phone: CO21 → Connections → Wi‑Fi / LAN → <strong>Scan PC QR with camera</strong>.
+            Or use “Load address from QR image” with a screenshot. Any QR app also works if you paste
+            the link below.
+          </div>
+          <q-select
+            v-if="serverAddrs.length > 1"
+            v-model="qrHost"
+            dense
+            outlined
+            :options="serverAddrs"
+            label="Address encoded in QR"
+            class="q-mb-sm"
+          />
+          <div
+            v-if="qrDataUrl"
+            class="flex flex-center q-pa-sm bg-white rounded-borders"
+            style="max-width: 280px"
+          >
+            <q-img
+              :src="qrDataUrl"
+              fit="contain"
+              style="width: 220px; height: 220px"
+              spinner-color="primary"
+              alt="LAN pairing QR code"
+            />
+          </div>
+          <div v-else-if="listenOn && qrHost" class="text-caption text-grey-6 q-py-md">Generating QR…</div>
+          <div v-if="qrPayloadPreview" class="text-caption text-grey-7 q-mt-xs break-all">
+            {{ qrPayloadPreview }}
+          </div>
         </div>
         <div v-else-if="listenError" class="text-negative q-mt-sm text-caption">{{ listenError }}</div>
       </q-card-section>
@@ -42,8 +76,8 @@
           @click="browseNetwork"
         />
         <div v-if="!hasElectronLan" class="text-caption text-grey-7 q-mt-xs">
-          Automatic discovery runs in the desktop (Electron) app. On phone builds, enter the PC
-          address below or scan a QR code when we add one.
+          Automatic discovery runs in the desktop (Electron) app. On other builds, use the QR from
+          the PC or type the address below.
         </div>
         <div v-if="browseError" class="text-negative text-caption q-mt-sm">{{ browseError }}</div>
         <q-list v-if="discovered.length" bordered separator class="rounded-borders q-mt-sm">
@@ -77,6 +111,31 @@
           class="q-mb-sm"
         />
         <q-btn
+          v-if="showQrCameraButton"
+          outline
+          color="positive"
+          icon="photo_camera"
+          label="Scan PC QR with camera"
+          class="full-width q-mb-sm"
+          :loading="qrCameraBusy"
+          @click="scanQrWithCamera"
+        />
+        <q-btn
+          outline
+          color="secondary"
+          icon="qr_code_scanner"
+          label="Load address from QR image"
+          class="full-width q-mb-sm"
+          @click="triggerQrFilePick"
+        />
+        <input
+          ref="qrFileInput"
+          type="file"
+          accept="image/*"
+          class="lan-qr-file-input"
+          @change="onQrFileChange"
+        />
+        <q-btn
           color="primary"
           unelevated
           label="Request pairing"
@@ -96,8 +155,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import jsQR from 'jsqr';
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { CO21_LAN_PAIRING_PORT, co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
+import { buildLanPairingQrPayload, parseHostFromLanQrContent } from 'src/modules/lan/lanQrPayload';
+import { canUseLanQrCamera, scanLanQrWithCamera } from 'src/modules/lan/lanQrScan';
 import {
   lanFetchInfo,
   lanPostPairRequest,
@@ -121,6 +183,8 @@ const emit = defineEmits<{
 
 const port = CO21_LAN_PAIRING_PORT;
 
+const showQrCameraButton = canUseLanQrCamera();
+
 const hasElectronLan = computed(
   () =>
     typeof window !== 'undefined' &&
@@ -141,6 +205,50 @@ const browseBusy = ref(false);
 const browseError = ref('');
 const discovered = ref<Co21DiscoveredHost[]>([]);
 
+const qrHost = ref('');
+const qrDataUrl = ref('');
+const qrFileInput = ref<HTMLInputElement | null>(null);
+const qrCameraBusy = ref(false);
+
+const qrPayloadPreview = computed(() => {
+  if (!listenOn.value || !qrHost.value) return '';
+  try {
+    return buildLanPairingQrPayload(qrHost.value);
+  } catch {
+    return '';
+  }
+});
+
+watch(serverAddrs, (addrs) => {
+  if (!addrs.length) {
+    qrHost.value = '';
+    return;
+  }
+  if (!addrs.includes(qrHost.value)) {
+    qrHost.value = addrs[0] ?? '';
+  }
+});
+
+async function regenerateQr(): Promise<void> {
+  qrDataUrl.value = '';
+  if (!listenOn.value || !qrHost.value) return;
+  try {
+    const QR = (await import('qrcode')).default;
+    const payload = buildLanPairingQrPayload(qrHost.value);
+    qrDataUrl.value = await QR.toDataURL(payload, {
+      width: 240,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+    });
+  } catch (e) {
+    logger.warn('[LanPairingModal] QR generation failed', e);
+  }
+}
+
+watch([listenOn, qrHost], () => {
+  void regenerateQr();
+});
+
 watch(
   () => props.modelValue,
   async (open) => {
@@ -152,6 +260,7 @@ watch(
       pairHint.value = '';
       discovered.value = [];
       browseError.value = '';
+      qrDataUrl.value = '';
       return;
     }
     if (hasElectronLan.value) {
@@ -330,7 +439,100 @@ async function requestPairToPc() {
   }
 }
 
+function applyQrText(text: string): boolean {
+  const host = parseHostFromLanQrContent(text);
+  if (!host) {
+    pairHint.value = 'The QR code did not contain a valid PC address or link.';
+    pairHintClass.value = 'text-negative';
+    return false;
+  }
+  pcHost.value = host;
+  pairHint.value = 'Address loaded from QR. Tap “Request pairing”.';
+  pairHintClass.value = 'text-grey-7';
+  return true;
+}
+
+async function scanQrWithCamera(): Promise<void> {
+  qrCameraBusy.value = true;
+  pairHint.value = '';
+  try {
+    const text = await scanLanQrWithCamera();
+    if (!text) {
+      pairHint.value = 'Scan cancelled.';
+      pairHintClass.value = 'text-grey-7';
+      return;
+    }
+    applyQrText(text);
+  } catch (e: unknown) {
+    pairHint.value = e instanceof Error ? e.message : String(e);
+    pairHintClass.value = 'text-negative';
+  } finally {
+    qrCameraBusy.value = false;
+  }
+}
+
+async function decodeQrFromImageFile(file: File): Promise<string | null> {
+  let bmp: ImageBitmap | null = null;
+  try {
+    bmp = await createImageBitmap(file);
+    const max = 960;
+    let w = bmp.width;
+    let h = bmp.height;
+    if (w > max || h > max) {
+      const r = Math.min(max / w, max / h);
+      w = Math.floor(w * r);
+      h = Math.floor(h * r);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
+    return code?.data ?? null;
+  } finally {
+    if (bmp && typeof bmp.close === 'function') {
+      bmp.close();
+    }
+  }
+}
+
+function triggerQrFilePick(): void {
+  const el = qrFileInput.value;
+  if (el) {
+    el.value = '';
+    el.click();
+  }
+}
+
+async function onQrFileChange(ev: Event): Promise<void> {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const text = await decodeQrFromImageFile(file);
+    if (!text) {
+      pairHint.value = 'No QR code found in that image.';
+      pairHintClass.value = 'text-warning';
+      return;
+    }
+    applyQrText(text);
+  } catch (e: unknown) {
+    pairHint.value = e instanceof Error ? e.message : String(e);
+    pairHintClass.value = 'text-negative';
+  }
+}
+
 function close() {
   emit('update:modelValue', false);
 }
 </script>
+
+<style scoped>
+.lan-qr-file-input {
+  display: none;
+}
+</style>
