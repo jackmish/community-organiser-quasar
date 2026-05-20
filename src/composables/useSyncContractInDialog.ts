@@ -74,7 +74,7 @@ export function useSyncContractInDialog(
 
     const local = await loadOwnDeviceMeta();
     const ownLabel = devices.value.find((d) => d.isLocal)?.name || local.name;
-    await refreshLanServerForConnections(devices.value, ownLabel);
+    devices.value = await refreshLanServerForConnections(devices.value, ownLabel);
 
     const missingHost = remoteDevicesMissingLanHost(devices.value);
     if (missingHost.length) {

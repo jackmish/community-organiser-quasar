@@ -576,7 +576,9 @@ async function onCheckDevice(d: ConnectedDevice): Promise<void> {
       syncDeviceRowFromLanPeer(rowId, info);
       clearDeviceCheckState(rowId);
       successKey = info.deviceId.trim();
-      void refreshLanServerForConnections(devices.value, ownDeviceName.value);
+      void refreshLanServerForConnections(devices.value, ownDeviceName.value).then((next) => {
+        devices.value = next;
+      });
       toast('info', $text('connections.check_id_repaired'));
     } else {
       if (info.deviceName.trim() && info.deviceName.trim() !== d.name) {
@@ -917,7 +919,9 @@ function registerLanDevice(payload: LanPairedDevicePayload): void {
     row.lanHost = payload.lanHost;
   }
   devices.value = [...devices.value, row];
-  void refreshLanServerForConnections(devices.value, ownDeviceName.value);
+  void refreshLanServerForConnections(devices.value, ownDeviceName.value).then((next) => {
+    devices.value = next;
+  });
 }
 
 watch(dialogVisible, (open) => {
@@ -928,7 +932,7 @@ watch(dialogVisible, (open) => {
       const data = await loadCo21Settings();
       const ownName =
         typeof data.ownDeviceName === 'string' ? data.ownDeviceName : ownDeviceName.value;
-      await refreshLanServerForConnections(devices.value, ownName);
+      devices.value = await refreshLanServerForConnections(devices.value, ownName);
     });
   }
 });

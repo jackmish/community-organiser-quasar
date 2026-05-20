@@ -1,6 +1,9 @@
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import type { ConnectedDevice } from './deviceRoleAssignment';
+import { saveConnectedDevices } from './deviceRoleAssignment';
+import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
 import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
+import { syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager';
 import {
   normalizeSyncDuplicateResolution,
   savePendingOutgoingContract,
@@ -147,7 +150,12 @@ export async function tryDeliverAction(
   action: SyncPendingAction,
   devices: ConnectedDevice[],
 ): Promise<boolean> {
-  const deviceRows = devices.filter((d) => !d.isLocal);
+  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
+  if (repaired.length > 0) {
+    await saveConnectedDevices(reconciled);
+    await syncLanTrustedContractDevices(reconciled);
+  }
+  const deviceRows = reconciled.filter((d) => !d.isLocal);
   const ok = await pushSyncContractToLanPeers(deviceRows, action.pending);
   const now = Date.now();
   const list = await loadPendingActions();

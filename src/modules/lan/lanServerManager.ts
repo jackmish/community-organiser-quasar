@@ -1,6 +1,10 @@
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { loadCo21Settings, patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
-import type { ConnectedDevice } from 'src/modules/storage/sync/deviceRoleAssignment';
+import {
+  saveConnectedDevices,
+  type ConnectedDevice,
+} from 'src/modules/storage/sync/deviceRoleAssignment';
+import { reconcileLanDeviceIds } from './lanDeviceReconcile';
 import logger from 'src/utils/logger';
 
 type ElectronLan = {
@@ -101,13 +105,23 @@ export async function ensureLanServerForSync(
   }
 }
 
-/** Start server when there are paired LAN devices and sync trusted ids. */
+/**
+ * Reconcile LAN device ids, refresh trusted contract ids, start listener if needed.
+ * Returns the device list to use (ids may have been corrected from peer /info).
+ */
 export async function refreshLanServerForConnections(
   devices: ConnectedDevice[],
   ownDeviceName: string,
-): Promise<void> {
-  await syncLanTrustedContractDevices(devices);
-  const hasLanPeer = devices.some((d) => !d.isLocal && d.lanHost);
-  if (!hasLanPeer) return;
-  await ensureLanServerForSync(ownDeviceName);
+): Promise<ConnectedDevice[]> {
+  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
+  if (repaired.length > 0) {
+    logger.info('[lanServerManager] reconciled LAN device ids for', repaired.join(', '));
+    await saveConnectedDevices(reconciled);
+  }
+  await syncLanTrustedContractDevices(reconciled);
+  const hasLanPeer = reconciled.some((d) => !d.isLocal && d.lanHost);
+  if (hasLanPeer) {
+    await ensureLanServerForSync(ownDeviceName);
+  }
+  return reconciled;
 }

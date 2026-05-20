@@ -33,6 +33,7 @@ import {
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
+  normalizeDeviceId,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { registeredRemoteDeviceIds } from 'src/modules/lan/lanServerManager';
 import logger from 'src/utils/logger';
@@ -94,7 +95,8 @@ async function isProposerRegistered(proposerDeviceId: string): Promise<boolean> 
   const devices = mergeLocalDeviceIntoList(loaded, local);
   const ids = registeredRemoteDeviceIds(devices);
   if (!ids.length) return true;
-  return ids.includes(proposerDeviceId);
+  const proposerNorm = normalizeDeviceId(proposerDeviceId);
+  return ids.some((id) => normalizeDeviceId(id) === proposerNorm);
 }
 
 async function persistIncomingFromLan(raw: unknown): Promise<void> {
