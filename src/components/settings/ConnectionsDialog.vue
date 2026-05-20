@@ -207,17 +207,24 @@
                     class="row items-center q-gutter-xs"
                     :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto'"
                   >
-                    <q-btn
+                    <button
                       v-if="!d.isLocal"
-                      dense
-                      unelevated
-                      no-caps
+                      type="button"
+                      class="connections-check-btn"
                       :class="checkBtnClass(d.id)"
-                      :label="checkBtnLabel(d.id)"
-                      :loading="deviceCheckState(d.id) === 'checking'"
-                      :disable="deviceCheckState(d.id) === 'checking'"
-                      @click="onCheckDevice(d)"
-                    />
+                      :disabled="deviceCheckState(d.id) === 'checking'"
+                      :aria-busy="deviceCheckState(d.id) === 'checking'"
+                      @click.stop="onCheckDevice(d)"
+                    >
+                      <span class="connections-check-btn__inner">
+                        <q-spinner
+                          v-if="deviceCheckState(d.id) === 'checking'"
+                          size="16px"
+                          class="connections-check-btn__spinner"
+                        />
+                        <span>{{ checkBtnLabel(d.id) }}</span>
+                      </span>
+                    </button>
                     <q-btn
                       v-if="!d.isLocal"
                       dense
@@ -387,7 +394,7 @@
                     outline
                     color="primary"
                     label="Manage"
-                    @click="() => notify('info', 'Internet settings not implemented')"
+                    @click="() => toast('info', 'Internet settings not implemented')"
                   />
                 </div>
               </div>
@@ -440,13 +447,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
-import { useQuasar, Notify } from 'quasar';
+import { ref, reactive, computed, onMounted, watch, onBeforeUnmount } from 'vue';
+import { useQuasar } from 'quasar';
+import { appNotify } from 'src/utils/appNotify';
 import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
-import { jsonStringField } from 'src/modules/lan/lanPairingClient';
+import { jsonStringField, lanFetchInfo, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import {
   parseConnectedDevice,
+  normalizeDeviceId,
   toDeviceJson,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
@@ -470,7 +479,6 @@ import JoinMemberDialog from './JoinMemberDialog.vue';
 import { patchCo21Settings, loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
-import { lanFetchInfo } from 'src/modules/lan/lanPairingClient';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
@@ -493,10 +501,10 @@ const dialogVisible = computed({
 const devices = ref<ConnectedDevice[]>([]);
 
 type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
-const deviceCheckById = ref<Record<string, DeviceCheckState>>({});
+const deviceCheckById = reactive<Record<string, DeviceCheckState>>({});
 
 function deviceCheckState(deviceId: string): DeviceCheckState {
-  return deviceCheckById.value[deviceId] ?? 'idle';
+  return deviceCheckById[deviceId] ?? 'idle';
 }
 
 function deviceIcon(d: ConnectedDevice): string {
@@ -520,31 +528,70 @@ function checkBtnClass(deviceId: string): string {
   return 'connections-check-btn connections-check-btn--idle';
 }
 
+function syncDeviceRowFromLanPeer(storedId: string, info: LanPeerInfo): void {
+  const peerId = info.deviceId.trim();
+  const peerName = info.deviceName.trim();
+  devices.value = devices.value.map((dev) => {
+    if (dev.id !== storedId) return dev;
+    const next: ConnectedDevice = { ...dev, id: peerId };
+    if (peerName) next.name = peerName;
+    return next;
+  });
+}
+
 async function onCheckDevice(d: ConnectedDevice): Promise<void> {
-  if (d.isLocal) return;
-  deviceCheckById.value = { ...deviceCheckById.value, [d.id]: 'checking' };
-  let ok = false;
+  if (d.isLocal || deviceCheckState(d.id) === 'checking') return;
+  const rowId = d.id;
+  deviceCheckById[rowId] = 'checking';
+  let successKey = rowId;
   try {
     const host = (d.lanHost || '').trim();
     if (!host) {
-      notify('warning', $text('connections.check_no_host'));
-    } else {
-      const info = await lanFetchInfo(co21LanBaseUrl(host), { timeoutMs: 8000 });
-      ok = !!info && info.deviceId === d.id;
-      if (info && info.deviceId !== d.id) {
-        notify('warning', $text('connections.check_wrong_device'));
-      }
+      toast('warning', $text('connections.check_no_host'));
+      deviceCheckById[rowId] = 'fail';
+      return;
     }
+    const base = co21LanBaseUrl(host);
+    if (!base) {
+      toast('warning', $text('connections.check_no_host'));
+      deviceCheckById[rowId] = 'fail';
+      return;
+    }
+    const info = await lanFetchInfo(base, { timeoutMs: 8000 });
+    if (!info?.deviceId) {
+      deviceCheckById[rowId] = 'fail';
+      return;
+    }
+    const peerNorm = normalizeDeviceId(info.deviceId);
+    const storedNorm = normalizeDeviceId(d.id);
+    if (peerNorm !== storedNorm) {
+      const duplicatePeer = devices.value.some(
+        (x) => !x.isLocal && x.id !== d.id && normalizeDeviceId(x.id) === peerNorm,
+      );
+      if (duplicatePeer) {
+        toast('warning', $text('connections.check_wrong_device'));
+        deviceCheckById[rowId] = 'fail';
+        return;
+      }
+      syncDeviceRowFromLanPeer(rowId, info);
+      clearDeviceCheckState(rowId);
+      successKey = info.deviceId.trim();
+      void refreshLanServerForConnections(devices.value, ownDeviceName.value);
+      toast('info', $text('connections.check_id_repaired'));
+    } else {
+      if (info.deviceName.trim() && info.deviceName.trim() !== d.name) {
+        syncDeviceRowFromLanPeer(rowId, info);
+      }
+      toast('positive', $text('connections.check_toast_ok'));
+    }
+    deviceCheckById[successKey] = 'success';
   } catch {
-    ok = false;
+    deviceCheckById[rowId] = 'fail';
   }
-  deviceCheckById.value = { ...deviceCheckById.value, [d.id]: ok ? 'success' : 'fail' };
 }
 
 function clearDeviceCheckState(deviceId: string): void {
-  const next = { ...deviceCheckById.value };
-  delete next[deviceId];
-  deviceCheckById.value = next;
+  delete deviceCheckById[deviceId];
 }
 const roleProfiles = ref<RoleProfileData[]>([]);
 
@@ -846,7 +893,7 @@ async function saveOwnDeviceName() {
       savedOwnDeviceName.value = ownDeviceName.value.trim();
       ownDeviceNameShowSaved.value = true;
     } else {
-      notify('negative', 'Failed to save device name');
+      toast('negative', 'Failed to save device name');
     }
   } finally {
     ownDeviceNameSaving.value = false;
@@ -934,29 +981,8 @@ watch([autoBackupEnabled, autoBackupHours, autoBackupMinutes], () => {
   void saveSettings();
 });
 
-function notify(type: 'positive' | 'negative' | 'info' | 'warning', message: string) {
-  try {
-    if (typeof (Notify as any)?.create === 'function') {
-      (Notify as any).create({ type, message });
-      return;
-    }
-  } catch (e) {
-    logger.error('notify: Notify.create failed', e);
-  }
-  try {
-    if ($q && typeof ($q.notify as any) === 'function') {
-      ($q.notify as any)({ type, message });
-      return;
-    }
-  } catch (e) {
-    logger.error('notify: $q.notify failed', e);
-  }
-  try {
-    // last resort
-    alert(message);
-  } catch (e) {
-    logger.error('notify: alert fallback failed', e);
-  }
+function toast(type: 'positive' | 'negative' | 'info' | 'warning', message: string): void {
+  appNotify(type, message, { position: 'bottom', timeout: 3000 });
 }
 
 const exportState = ref<'idle' | 'exporting' | 'done' | 'error'>('idle');
@@ -1073,11 +1099,11 @@ const overrideBackup = () => {
       });
       return;
     }
-    notify('info', "Override functionality isn't ready; it will be implemented if needed");
+    toast('info', "Override functionality isn't ready; it will be implemented if needed");
   } catch (e) {
     logger.error('overrideBackup failed', e);
     try {
-      notify('negative', 'Override cancelled');
+      toast('negative', 'Override cancelled');
     } catch (ee) {
       logger.error('notify negative failed', ee);
     }
@@ -1110,12 +1136,12 @@ const onFileSelected = (e: Event) => {
           name: String(d.name || d.id),
           type: d.type || 'imported',
         }));
-        notify('positive', 'Imported connections');
+        toast('positive', 'Imported connections');
       } else {
-        notify('negative', 'Invalid backup format');
+        toast('negative', 'Invalid backup format');
       }
     } catch (err: any) {
-      notify('negative', `Import error: ${err?.message || err}`);
+      toast('negative', `Import error: ${err?.message || err}`);
     }
   };
   if (file) reader.readAsText(file);
@@ -1124,12 +1150,12 @@ const onFileSelected = (e: Event) => {
 function onDeviceSelected(device: any) {
   // device expected to contain { id, name, ... }
   if (!device || !device.id) {
-    notify('negative', 'Invalid device selected');
+    toast('negative', 'Invalid device selected');
     return;
   }
   devices.value.push({ id: device.id, name: device.name || device.id, type: 'Bluetooth' });
   showScanModal.value = false;
-  notify('positive', `Added device ${device.name || device.id}`);
+  toast('positive', `Added device ${device.name || device.id}`);
 }
 
 </script>

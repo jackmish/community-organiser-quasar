@@ -6,9 +6,20 @@ export const CO21_MDNS_SERVICE_TYPE = 'co21-organiser';
 
 export const CO21_LAN_API_PREFIX = '/co21-lan/v1';
 
+/** Normalize stored `lanHost` before {@link co21LanBaseUrl}. */
+export function normalizeLanHostInput(host: string): string {
+  let h = String(host || '').trim();
+  if (h.startsWith('::ffff:')) h = h.slice(7);
+  const infoSuffix = `${CO21_LAN_API_PREFIX}/info`;
+  if (h.includes(infoSuffix)) {
+    h = h.replace(infoSuffix, '').replace(/\/+$/, '');
+  }
+  return h;
+}
+
 /** Build `http://host:port` for LAN pairing API calls. */
 export function co21LanBaseUrl(host: string, port = CO21_LAN_PAIRING_PORT): string {
-  const raw = String(host || '').trim();
+  const raw = normalizeLanHostInput(host);
   if (!raw) return '';
   if (/^https?:\/\//i.test(raw)) {
     try {

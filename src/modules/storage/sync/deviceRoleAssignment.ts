@@ -132,8 +132,13 @@ function stringField(v: unknown, fallback: string): string {
   return fallback;
 }
 
+/** Case-insensitive compare for persisted vs LAN `/info` device ids. */
+export function normalizeDeviceId(id: string): string {
+  return String(id || '').trim().toLowerCase();
+}
+
 export function parseConnectedDevice(raw: Record<string, unknown>): ConnectedDevice {
-  const id = stringField(raw.id, '');
+  const id = stringField(raw.id, '') || stringField(raw.deviceId, '');
   const row: ConnectedDevice = {
     id,
     name: stringField(raw.name, id),

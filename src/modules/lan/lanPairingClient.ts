@@ -110,7 +110,7 @@ export async function lanFetchInfo(
   const data = await parseJson(res);
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
-  const deviceId = jsonStringField(o.deviceId, '');
+  const deviceId = jsonStringField(o.deviceId, '').trim();
   if (!deviceId) return null;
   return {
     deviceId,
