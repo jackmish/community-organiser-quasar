@@ -14,7 +14,7 @@
           </div>
 
           <div id="co21-header-notifications" class="notification-wrapper">
-            <div id="co21-sync-contract-slot" class="col-auto" />
+            <div id="co21-sync-contract-slot" class="co21-sync-contract-slot" />
             <NextEventNotification style="min-width: 0; flex: 1" />
           </div>
           <div style="margin-left: auto; display: inline-block">
@@ -650,6 +650,13 @@ onUnmounted(() => {
   overflow: visible;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.co21-sync-contract-slot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */

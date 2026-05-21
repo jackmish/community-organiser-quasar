@@ -53,8 +53,8 @@ const bannerText = computed(() => {
   cursor: pointer;
   font-size: 13px;
   line-height: 1.3;
-  max-width: min(420px, 55vw);
-  flex-shrink: 1;
+  max-width: min(420px, 42vw);
+  flex-shrink: 0;
   min-width: 0;
 }
 

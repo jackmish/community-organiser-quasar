@@ -8,7 +8,15 @@
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
         <div class="q-gutter-md">
           <SyncDialogBanner
-            v-if="hasPendingSendAction"
+            v-if="showIncomingContract"
+            icon="sync"
+            :message="incomingContractMessage"
+            :button-label="$text('sync.incoming_review_btn')"
+            :mobile="isMobile"
+            @action="openIncomingContractReview"
+          />
+          <SyncDialogBanner
+            v-else-if="hasPendingSendAction"
             icon="hourglass_top"
             :message="$text('sync.pending_send_banner')"
             :button-label="pendingActionsMenuLabel"
@@ -274,6 +282,7 @@ import {
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
+import { useSyncContractIncomingNotice } from 'src/composables/useSyncContractIncomingNotice';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
 import { usePendingActions } from 'src/composables/usePendingActions';
@@ -438,6 +447,13 @@ const {
   minSyncInterval,
   maxSyncInterval,
 } = useSyncContractInDialog(devices, roleProfiles);
+
+const {
+  show: showIncomingContract,
+  bannerMessage: incomingContractMessage,
+  openReview: openIncomingContractReview,
+  refresh: refreshIncomingContractNotice,
+} = useSyncContractIncomingNotice();
 
 const { count: pendingActionsCount } = usePendingActions();
 
@@ -750,6 +766,7 @@ async function reloadDevicesFromSettings(): Promise<void> {
 
 watch(dialogVisible, (open) => {
   if (open) {
+    void refreshIncomingContractNotice();
     const pending = peekLanPendingOffer();
     if (pending) {
       lanPairingPendingOffer.value = pending;

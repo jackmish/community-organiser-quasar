@@ -22,9 +22,14 @@ import {
 import { loadRoleProfiles } from './roleProfileSettings';
 
 export const SYNC_CONTRACT_INCOMING_EVENT = 'co21:sync-contract-incoming';
+export const OPEN_INCOMING_SYNC_REVIEW_EVENT = 'co21:open-incoming-sync-review';
 
 export function dispatchSyncContractIncoming(): void {
   window.dispatchEvent(new Event(SYNC_CONTRACT_INCOMING_EVENT));
+}
+
+export function dispatchOpenIncomingReview(): void {
+  window.dispatchEvent(new Event(OPEN_INCOMING_SYNC_REVIEW_EVENT));
 }
 
 function countTasksByGroup(): Record<string, number> {

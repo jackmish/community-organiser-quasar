@@ -28,6 +28,7 @@ import {
   buildIncomingContractPreview,
   dispatchSyncContractIncoming,
   loadIncomingBannerState,
+  OPEN_INCOMING_SYNC_REVIEW_EVENT,
   SYNC_CONTRACT_INCOMING_EVENT,
 } from 'src/modules/storage/sync/syncContractIncoming';
 import {
@@ -139,6 +140,21 @@ async function persistIncomingFromLan(raw: unknown): Promise<void> {
   await savePendingIncomingContract(pending);
   await refreshIncomingBanner();
   dispatchSyncContractIncoming();
+  const name = pending.proposerDeviceName || '?';
+  Notify.create({
+    type: 'info',
+    message: $text('sync.incoming_banner').replace('{device}', name),
+    timeout: 0,
+    actions: [
+      {
+        label: $text('sync.incoming_review_btn'),
+        color: 'white',
+        handler: () => {
+          void openIncomingReview();
+        },
+      },
+    ],
+  });
 }
 
 async function refreshIncomingBanner(): Promise<void> {
@@ -190,11 +206,16 @@ const onIncomingEvent = () => {
   void refreshIncomingBanner();
 };
 
+const onOpenReviewEvent = () => {
+  void openIncomingReview();
+};
+
 onMounted(() => {
   void refreshIncomingBanner();
 
   window.addEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);
   window.addEventListener('co21:sync-contract-signed', onIncomingEvent);
+  window.addEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);
 
   const lan = (
     window as Window & {
@@ -211,6 +232,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);
   window.removeEventListener('co21:sync-contract-signed', onIncomingEvent);
+  window.removeEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);
   lanUnsub?.();
 });
 

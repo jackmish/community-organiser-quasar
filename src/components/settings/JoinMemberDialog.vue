@@ -38,7 +38,16 @@
           "
         >
           <SyncDialogBanner
-            v-if="hasPendingSendAction"
+            v-if="showIncomingContract"
+            class="q-mb-sm"
+            icon="sync"
+            :message="incomingContractMessage"
+            :button-label="$text('sync.incoming_review_btn')"
+            :mobile="isMobile"
+            @action="openIncomingContractReview"
+          />
+          <SyncDialogBanner
+            v-else-if="hasPendingSendAction"
             class="q-mb-sm"
             icon="hourglass_top"
             :message="$text('sync.pending_send_banner')"
@@ -249,6 +258,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { $text } from 'src/modules/lang';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
+import { useSyncContractIncomingNotice } from 'src/composables/useSyncContractIncomingNotice';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 import PrivilegeChangeSyncDialog from './PrivilegeChangeSyncDialog.vue';
 import { usePendingActions } from 'src/composables/usePendingActions';
@@ -325,6 +335,12 @@ const {
   minSyncInterval,
   maxSyncInterval,
 } = useSyncContractInDialog(devices, roleProfiles);
+
+const {
+  show: showIncomingContract,
+  bannerMessage: incomingContractMessage,
+  openReview: openIncomingContractReview,
+} = useSyncContractIncomingNotice();
 
 const { count: pendingActionsCount } = usePendingActions();
 
