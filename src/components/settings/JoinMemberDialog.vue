@@ -37,48 +37,24 @@
               : 'join-member-roles-col column join-member-roles-panel'
           "
         >
-          <q-banner
+          <SyncDialogBanner
             v-if="hasPendingSendAction"
-            dense
-            rounded
-            class="bg-positive text-white q-mb-sm"
-          >
-            <template #avatar>
-              <q-icon name="hourglass_top" color="white" />
-            </template>
-            {{ $text('sync.pending_send_banner') }}
-            <template #action>
-              <q-btn
-                unelevated
-                dense
-                color="white"
-                text-color="positive"
-                :label="pendingActionsMenuLabel"
-                @click="openPendingActionsDialog"
-              />
-            </template>
-          </q-banner>
-          <q-banner
+            class="q-mb-sm"
+            icon="hourglass_top"
+            :message="$text('sync.pending_send_banner')"
+            :button-label="pendingActionsMenuLabel"
+            :mobile="isMobile"
+            @action="openPendingActionsDialog"
+          />
+          <SyncDialogBanner
             v-else-if="hasPendingChanges"
-            dense
-            rounded
-            class="bg-positive text-white q-mb-sm"
-          >
-            <template #avatar>
-              <q-icon name="sync" color="white" />
-            </template>
-            {{ $text('sync.confirm_pending_banner') }}
-            <template #action>
-              <q-btn
-                unelevated
-                dense
-                color="white"
-                text-color="positive"
-                :label="$text('sync.confirm_changes_btn')"
-                @click="startConfirmChanges"
-              />
-            </template>
-          </q-banner>
+            class="q-mb-sm"
+            icon="sync"
+            :message="$text('sync.confirm_pending_banner')"
+            :button-label="$text('sync.confirm_changes_btn')"
+            :mobile="isMobile"
+            @action="startConfirmChanges"
+          />
 
           <div class="join-member-assignment-surface column col">
           <div
@@ -287,6 +263,7 @@ import {
   treeNodeKeyString,
 } from 'src/modules/group/utils/treeUi';
 import GroupTreeSelector from 'src/modules/group/components/GroupTreeSelector.vue';
+import SyncDialogBanner from './SyncDialogBanner.vue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =

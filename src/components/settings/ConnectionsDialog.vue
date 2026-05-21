@@ -7,26 +7,22 @@
 
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
         <div class="q-gutter-md">
-          <q-banner v-if="hasPendingSendAction" dense rounded class="bg-positive text-white">
-            <template #avatar>
-              <q-icon name="hourglass_top" color="white" />
-            </template>
-            {{ $text('sync.pending_send_banner') }}
-            <template #action>
-              <q-btn unelevated dense color="white" text-color="positive" :label="pendingActionsMenuLabel"
-                @click="openPendingActionsDialog" />
-            </template>
-          </q-banner>
-          <q-banner v-else-if="hasPendingChanges" dense rounded class="bg-positive text-white">
-            <template #avatar>
-              <q-icon name="sync" color="white" />
-            </template>
-            {{ $text('sync.confirm_pending_banner') }}
-            <template #action>
-              <q-btn unelevated dense color="white" text-color="positive" :label="$text('sync.confirm_changes_btn')"
-                @click="startConfirmChanges" />
-            </template>
-          </q-banner>
+          <SyncDialogBanner
+            v-if="hasPendingSendAction"
+            icon="hourglass_top"
+            :message="$text('sync.pending_send_banner')"
+            :button-label="pendingActionsMenuLabel"
+            :mobile="isMobile"
+            @action="openPendingActionsDialog"
+          />
+          <SyncDialogBanner
+            v-else-if="hasPendingChanges"
+            icon="sync"
+            :message="$text('sync.confirm_pending_banner')"
+            :button-label="$text('sync.confirm_changes_btn')"
+            :mobile="isMobile"
+            @action="startConfirmChanges"
+          />
           <div class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
             :class="{ column: isMobile }">
             <q-btn outline color="secondary" icon="badge" :label="assignRolesPerGroupLabel"
@@ -302,6 +298,7 @@ import {
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
+import SyncDialogBanner from './SyncDialogBanner.vue';
 import { patchCo21Settings, loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';

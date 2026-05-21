@@ -46,6 +46,51 @@
   margin-top: 8px;
 }
 
+/* Sync pending / confirm banners in settings dialogs */
+.co21-sync-banner {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--q-positive);
+  color: #fff;
+}
+
+.co21-sync-banner__icon {
+  flex: 0 0 auto;
+  font-size: 28px;
+}
+
+.co21-sync-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.co21-sync-banner__btn {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+}
+
+.co21-sync-banner--mobile {
+  gap: 8px 10px;
+  padding: 10px 12px;
+}
+
+.co21-sync-banner--mobile .co21-sync-banner__icon {
+  font-size: 24px;
+}
+
+.co21-sync-banner--mobile .co21-sync-banner__text {
+  font-size: 13px;
+}
+
 /* LAN pairing dialog */
 .lan-pairing-dialog-body {
   color: rgba(0, 0, 0, 0.87) !important;
