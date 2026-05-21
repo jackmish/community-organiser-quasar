@@ -1,3 +1,4 @@
+import logger from 'src/utils/logger';
 import type { AccessRange, RolePrivilege } from './RoleModel';
 import { PRIVILEGE_ORDER } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
@@ -431,6 +432,71 @@ export function roleProfileSummaryLabel(
   return funcs.length ? `${range} · ${funcs.join(', ')}` : range;
 }
 
+export function parseDevicesFromSettingsData(data: unknown): ConnectedDevice[] {
+  if (!data || typeof data !== 'object' || !Array.isArray((data as { devices?: unknown }).devices)) {
+    return [];
+  }
+  const parsed = ((data as { devices: Record<string, unknown>[] }).devices).map(
+    parseConnectedDevice,
+  );
+  return dedupeConnectedDevicesByPeerId(parsed);
+}
+
+/**
+ * When saving, never drop paired remotes unless explicitly removed in Connections.
+ * Incoming rows win field-level merges for the same peer id.
+ */
+export function mergeDeviceRegistryPreservingRemotes(
+  incoming: ConnectedDevice[],
+  onDisk: ConnectedDevice[],
+  allowRemoteRemoval: boolean,
+): ConnectedDevice[] {
+  const merged = dedupeConnectedDevicesByPeerId(incoming);
+  if (allowRemoteRemoval) return merged;
+
+  const diskRemotes = onDisk.filter((d) => !d.isLocal);
+  if (!diskRemotes.length) return merged;
+
+  const incomingRemotes = merged.filter((d) => !d.isLocal);
+  const incomingNorms = new Set(incomingRemotes.map((d) => normalizeDeviceId(d.id)));
+  const lost = diskRemotes.filter((d) => !incomingNorms.has(normalizeDeviceId(d.id)));
+  if (!lost.length) return merged;
+
+  logger.warn(
+    '[deviceRegistry] blocked removal of paired device(s); keeping on-disk remotes',
+    lost.map((d) => d.name || d.id).join(', '),
+  );
+
+  const byNorm = new Map<string, ConnectedDevice>();
+  for (const d of diskRemotes) {
+    byNorm.set(normalizeDeviceId(d.id), { ...d });
+  }
+  for (const d of incomingRemotes) {
+    const norm = normalizeDeviceId(d.id);
+    const prev = byNorm.get(norm);
+    byNorm.set(norm, prev ? mergePeerDeviceRows(prev, d) : { ...d });
+  }
+
+  const local =
+    merged.find((d) => d.isLocal) ??
+    onDisk.find((d) => d.isLocal) ??
+    null;
+  const localNorm = local ? normalizeDeviceId(local.id) : '';
+  const remotes = [...byNorm.values()].filter(
+    (d) => !localNorm || normalizeDeviceId(d.id) !== localNorm,
+  );
+  if (local) {
+    return dedupeConnectedDevicesByPeerId([{ ...local, isLocal: true, type: 'Local' }, ...remotes]);
+  }
+  return dedupeConnectedDevicesByPeerId(remotes);
+}
+
+export type SaveConnectedDevicesOptions = {
+  /** Set when the user explicitly removes a device in Connections. */
+  allowRemoteRemoval?: boolean;
+  ownDeviceName?: string;
+};
+
 export async function loadConnectedDevices(): Promise<ConnectedDevice[]> {
   try {
     const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
@@ -453,8 +519,11 @@ export async function loadConnectedDevices(): Promise<ConnectedDevice[]> {
   }
 }
 
-export async function saveConnectedDevices(devices: ConnectedDevice[]): Promise<boolean> {
-  const deduped = dedupeConnectedDevicesByPeerId(devices);
+/** Sole API for persisting the Connections device registry (`co21/settings.json` → `devices`). */
+export async function saveConnectedDevices(
+  devices: ConnectedDevice[],
+  opts?: SaveConnectedDevicesOptions,
+): Promise<boolean> {
   try {
     const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
     if (!api || typeof api.getAppDataPath !== 'function') return false;
@@ -467,15 +536,23 @@ export async function saveConnectedDevices(devices: ConnectedDevice[]): Promise<
         string,
         unknown
       > | null) ?? {};
+    const onDisk = parseDevicesFromSettingsData(existing);
+    const toWrite = mergeDeviceRegistryPreservingRemotes(
+      devices,
+      onDisk,
+      !!opts?.allowRemoteRemoval,
+    );
     const payload = JSON.parse(
       JSON.stringify({
         ...existing,
-        devices: deduped.map(toDeviceJson),
+        devices: toWrite.map(toDeviceJson),
+        ...(opts?.ownDeviceName !== undefined ? { ownDeviceName: opts.ownDeviceName } : {}),
       }),
     ) as Record<string, unknown>;
     await (api.writeJsonFile as (p: string, d: unknown) => Promise<void>)(settingsFile, payload);
     return true;
-  } catch {
+  } catch (e) {
+    logger.error('[deviceRegistry] saveConnectedDevices failed', e);
     return false;
   }
 }

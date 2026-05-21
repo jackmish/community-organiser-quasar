@@ -66,22 +66,33 @@ let trustedContractLanKeys = new Set<string>();
 /** Active contract on this device (set on propose / cleared on reject). */
 let lanServerActiveContract: Record<string, unknown> | null = null;
 
+async function readCo21SettingsFile(): Promise<Record<string, unknown>> {
+  const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+  try {
+    const raw = await fs.readFile(settingsFile, 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeCo21SettingsPatch(patch: Record<string, unknown>): Promise<void> {
+  const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+  const existing = await readCo21SettingsFile();
+  await fs.mkdir(path.dirname(settingsFile), { recursive: true });
+  await fs.writeFile(
+    settingsFile,
+    JSON.stringify({ ...existing, ...patch }, null, 2),
+    'utf8',
+  );
+}
+
 async function persistIncomingContractToSettings(pending: Record<string, unknown>): Promise<void> {
   try {
-    const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
-    let existing: Record<string, unknown> = {};
-    try {
-      const raw = await fs.readFile(settingsFile, 'utf8');
-      existing = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      void 0;
-    }
-    await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-    await fs.writeFile(
-      settingsFile,
-      JSON.stringify({ ...existing, syncPendingIncomingContract: pending }, null, 2),
-      'utf8',
-    );
+    await writeCo21SettingsPatch({ syncPendingIncomingContract: pending });
   } catch (e) {
     logger.warn('[lanPairingServer] persist incoming contract failed', e);
   }
@@ -419,19 +430,7 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
 
 async function clearIncomingContractInSettings(): Promise<void> {
   try {
-    const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
-    let existing: Record<string, unknown> = {};
-    try {
-      const raw = await fs.readFile(settingsFile, 'utf8');
-      existing = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      return;
-    }
-    await fs.writeFile(
-      settingsFile,
-      JSON.stringify({ ...existing, syncPendingIncomingContract: null }, null, 2),
-      'utf8',
-    );
+    await writeCo21SettingsPatch({ syncPendingIncomingContract: null });
   } catch (e) {
     logger.warn('[lanPairingServer] clear incoming contract failed', e);
   }

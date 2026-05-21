@@ -1,6 +1,8 @@
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { loadCo21Settings, patchCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import {
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
   saveConnectedDevices,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
@@ -140,11 +142,16 @@ export async function refreshLanServerForConnections(
   // Do not restart by default — restarting clears in-flight pairing tokens on this machine.
   await ensureLanServerForSync(ownDeviceName, { restart: opts?.restart ?? false });
 
-  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
+  const local = await loadOwnDeviceMeta();
+  const localName = (ownDeviceName || '').trim() || local.name;
+  const withLocal = mergeLocalDeviceIntoList(devices, { ...local, name: localName });
+
+  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(withLocal);
+  const out = mergeLocalDeviceIntoList(reconciled, { ...local, name: localName });
   if (repaired.length > 0) {
     logger.info('[lanServerManager] reconciled LAN device ids for', repaired.join(', '));
-    await saveConnectedDevices(reconciled);
+    await saveConnectedDevices(out);
   }
-  await syncLanTrustedContractDevices(reconciled);
-  return reconciled;
+  await syncLanTrustedContractDevices(out);
+  return out;
 }

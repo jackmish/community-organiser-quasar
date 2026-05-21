@@ -7,6 +7,7 @@ import type { FunctionAccessRule, GroupAccessRule, RoleProfileData } from './Rol
 import { migrateLegacyGroupAccess } from './RoleProfileModel';
 
 import { ROLE_FUNCTION_IDS, syncFunctionAccess, type RoleFunctionId } from './roleFunctionCatalog';
+import { ensureDefaultRoleProfiles } from './defaultRoleProfiles';
 
 function isRoleFunctionId(id: string): id is RoleFunctionId {
   return (ROLE_FUNCTION_IDS as readonly string[]).includes(id);
@@ -292,13 +293,13 @@ export async function loadCo21Settings(): Promise<SettingsJson> {
 }
 
 export async function loadRoleProfiles(): Promise<RoleProfileData[]> {
-
   const data = await readSettingsFile();
-
-  if (!data) return [];
-
-  return parseProfiles(data.roleProfiles);
-
+  const parsed = parseProfiles(data?.roleProfiles);
+  const profiles = ensureDefaultRoleProfiles(parsed);
+  if (!parsed.length && profiles.length > 0) {
+    await saveRoleProfiles(profiles);
+  }
+  return profiles;
 }
 
 
@@ -314,9 +315,14 @@ export async function saveRoleProfiles(profiles: RoleProfileData[]): Promise<boo
 /** Merge a patch into `co21/settings.json` without dropping other keys (e.g. roleProfiles). */
 
 export async function patchCo21Settings(patch: SettingsJson): Promise<boolean> {
-
+  if ('devices' in patch && patch.devices !== undefined) {
+    logger.warn(
+      '[roleProfileSettings] patchCo21Settings ignored `devices` — use saveConnectedDevices()',
+    );
+    const { devices: _ignored, ...safe } = patch;
+    return writeSettingsFile(safe);
+  }
   return writeSettingsFile(patch);
-
 }
 
 

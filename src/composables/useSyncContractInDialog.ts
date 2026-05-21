@@ -13,6 +13,7 @@ import { appNotify } from 'src/utils/appNotify';
 import { $text } from 'src/modules/lang';
 import { SYNC_BASELINE_RESTORE_EVENT } from 'src/modules/storage/sync/syncContractUi';
 import {
+  loadActiveContractForSync,
   loadLastContractSnapshot,
   normalizeSyncDuplicateResolution,
   saveSyncDuplicateResolution,
@@ -32,10 +33,21 @@ export function useSyncContractInDialog(
 ) {
   const sync = useSyncContractFlow();
   const hasPendingSendAction = ref(false);
+  const contractActive = ref(false);
 
   async function refreshPendingSend(): Promise<void> {
     hasPendingSendAction.value = !!(await findSendContractAction());
+    contractActive.value = !!(await loadActiveContractForSync());
   }
+
+  const hasRemoteDevices = computed(() => devices.value.some((d) => !d.isLocal));
+
+  const showRenewContract = computed(
+    () =>
+      contractActive.value &&
+      hasRemoteDevices.value &&
+      !hasPendingSendAction.value,
+  );
 
   const hasPendingChanges = computed(() => {
     if (hasPendingSendAction.value) return false;
@@ -56,6 +68,14 @@ export function useSyncContractInDialog(
 
   async function startConfirmChanges(): Promise<void> {
     await sync.beginConfirmation(devices.value, roleProfiles.value);
+  }
+
+  async function startRenewContract(): Promise<void> {
+    if (!hasRemoteDevices.value) {
+      appNotify('warning', $text('sync.renew_no_remotes'));
+      return;
+    }
+    await sync.beginContractRenewal(devices.value, roleProfiles.value);
   }
 
   function applyIntervalToRemoteDevices(seconds: number): void {
@@ -146,9 +166,12 @@ export function useSyncContractInDialog(
     setDuplicateResolution: sync.setDuplicateResolution,
     hasPendingChanges,
     hasPendingSendAction,
+    showRenewContract,
+    contractActive,
     refreshPendingSend,
     captureBaseline,
     startConfirmChanges,
+    startRenewContract,
     applyIntervalToRemoteDevices,
     onPreviewConfirm,
     onPrivilegeDialogConfirm: sync.onPrivilegeDialogConfirm,

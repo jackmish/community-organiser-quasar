@@ -12,6 +12,7 @@ import {
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
   DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  loadLastContractSnapshot,
   loadSyncDuplicateResolution,
   normalizeSyncDuplicateResolution,
   type SyncContractSnapshot,
@@ -154,6 +155,48 @@ export function useSyncContractFlow() {
     return true;
   }
 
+  /** Re-send sync contract with current assignments (even if unchanged vs last signed). */
+  async function beginContractRenewal(
+    devices: ConnectedDevice[],
+    profiles: RoleProfileData[],
+    intervalSeconds?: number,
+  ): Promise<boolean> {
+    await initDuplicateResolutionFromSettings();
+    const last = await loadLastContractSnapshot();
+    if (last) {
+      baselineSnapshot = last;
+      if (last.duplicateResolution) {
+        confirmDuplicateResolution.value = normalizeSyncDuplicateResolution(
+          last.duplicateResolution,
+        );
+      }
+    }
+    const current = buildSyncContractSnapshot(
+      devices,
+      profiles,
+      confirmDuplicateResolution.value,
+    );
+    const previous = baselineSnapshot;
+    const built = buildSyncContractPreview(
+      previous,
+      current,
+      devices,
+      profiles,
+      CC.group?.list?.all?.value ?? [],
+      countTasksByGroup(),
+    );
+    pendingSnapshot.value = current;
+    preview.value = built;
+    privilegeChanges.value = built.privilegeChanges;
+    confirmIntervalSeconds.value = intervalSeconds ?? defaultIntervalFromDevices(devices);
+    if (privilegeChanges.value.length) {
+      showPrivilegeDialog.value = true;
+      return true;
+    }
+    showPreviewDialog.value = true;
+    return true;
+  }
+
   function onPrivilegeDialogConfirm(): void {
     showPrivilegeDialog.value = false;
     showPreviewDialog.value = true;
@@ -231,6 +274,7 @@ export function useSyncContractFlow() {
     captureBaselineFrom,
     hasChanges,
     beginConfirmation,
+    beginContractRenewal,
     onPrivilegeDialogConfirm,
     onPrivilegeDialogCancel,
     onConfirmRules,

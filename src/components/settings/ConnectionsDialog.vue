@@ -37,8 +37,22 @@
               class="col-grow settings-dialog-surface-btn" @click="showJoinMemberDialog = true" />
             <q-btn outline color="primary" icon="admin_panel_settings" :label="rolesSetupLabel"
               class="col-grow settings-dialog-surface-btn" @click="openRolesSetup" />
-
+            <q-btn
+              v-if="showRenewContract && !showIncomingContract"
+              outline
+              color="positive"
+              icon="autorenew"
+              :label="$text('sync.renew_contract_btn')"
+              class="col-grow settings-dialog-surface-btn"
+              @click="startRenewContract"
+            />
           </div>
+          <p
+            v-if="showRenewContract && !showIncomingContract"
+            class="text-caption text-grey-7 q-mb-sm q-mt-none"
+          >
+            {{ $text('sync.renew_contract_hint') }}
+          </p>
 
 
           <div class="row items-center q-gutter-sm" :class="{ 'column items-stretch': isMobile }">
@@ -117,7 +131,7 @@
                         <q-input :model-value="deviceSyncInterval(d)" type="number" dense outlined
                           class="connections-device-sync-input" style="max-width: 140px"
                           :label="$text('sync.per_device_interval_label')" :min="minSyncInterval" :max="maxSyncInterval"
-                          @update:model-value="(v) => setDeviceSyncInterval(d.id, v)" @blur="void saveSettings()" />
+                          @update:model-value="(v) => setDeviceSyncInterval(d.id, v)" @blur="void saveDevicesToStorage()" />
                         <span class="text-caption text-grey-7">
                           {{ $text('sync.interval_unit') }}
                         </span>
@@ -271,12 +285,8 @@ import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
 import { jsonStringField, lanFetchInfo, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import {
-  dedupeConnectedDevicesByPeerId,
-  loadConnectedDevices,
   loadOwnDeviceMeta,
-  mergeLocalDeviceIntoList,
   normalizeDeviceId,
-  toDeviceJson,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
@@ -301,14 +311,15 @@ import {
   type LanPendingDetail,
 } from 'src/modules/lan/lanPairingUi';
 import {
-  parseDevicesFromSettingsJson,
-  sanitizeConnectionDevices,
-} from 'src/modules/lan/lanPairingRegister';
+  loadConnectionsDevices,
+  saveConnectionsBackupSettings,
+  saveConnectionsRegistry,
+} from 'src/modules/storage/sync/connectionsDeviceStorage';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
-import { patchCo21Settings, loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
+import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
@@ -331,6 +342,8 @@ const dialogVisible = computed({
 });
 
 const devices = ref<ConnectedDevice[]>([]);
+/** False until the registry has been read from disk — blocks premature saves. */
+const devicesRegistryLoaded = ref(false);
 
 type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
 const deviceCheckById = reactive<Record<string, DeviceCheckState>>({});
@@ -437,9 +450,11 @@ const {
   setDuplicateResolution,
   hasPendingChanges,
   hasPendingSendAction,
+  showRenewContract,
   refreshPendingSend,
   captureBaseline,
   startConfirmChanges,
+  startRenewContract,
   onPreviewConfirm,
   onPrivilegeDialogConfirm,
   onPrivilegeDialogCancel,
@@ -470,7 +485,7 @@ function openPendingActionsDialog(): void {
 
 async function onSyncPreviewConfirm(): Promise<void> {
   await onPreviewConfirm();
-  await saveSettings();
+  await saveDevicesToStorage();
   dispatchPendingActionsChanged();
 }
 
@@ -511,6 +526,7 @@ function createDevice(type: string) {
   const id = String(Date.now());
   devices.value.push({ id, name: `${type} Device ${devices.value.length + 1}`, type });
   addMenu.value = false;
+  void saveDevicesToStorage();
 }
 
 function openAddMenu() {
@@ -544,6 +560,7 @@ function openAddMenu() {
 function removeDevice(id: string) {
   clearDeviceCheckState(id);
   devices.value = devices.value.filter((d) => d.id !== id);
+  void saveConnectionsRegistry(devices.value, { allowRemoteRemoval: true });
 }
 
 function close() {
@@ -644,38 +661,29 @@ function normalizePrefix(name: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-async function loadSettings() {
+async function loadSettings(): Promise<void> {
+  devicesRegistryLoaded.value = false;
   try {
-    const api = (window as any).electronAPI;
-    const appPath = typeof api.getAppDataPath === 'function' ? await api.getAppDataPath() : null;
-    if (!appPath) return;
-    const settingsDir = api.joinPath(appPath, 'co21');
-    const settingsFile = api.joinPath(settingsDir, 'settings.json');
-    const exists = await api.fileExists(settingsFile);
-    if (!exists) return;
-    const data = await api.readJsonFile(settingsFile);
-    if (data) {
-      if (typeof data.ownDeviceName === 'string') {
-        ownDeviceName.value = data.ownDeviceName;
-        savedOwnDeviceName.value = data.ownDeviceName;
-        ownDeviceNameShowSaved.value = false;
-      }
-      if (typeof data.autoBackupEnabled === 'boolean')
-        autoBackupEnabled.value = data.autoBackupEnabled;
-      if (typeof data.autoBackupHours === 'number') autoBackupHours.value = data.autoBackupHours;
-      if (typeof data.autoBackupMinutes === 'number')
-        autoBackupMinutes.value = data.autoBackupMinutes;
-      if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
-      if (Array.isArray(data.devices)) {
-        const local = await loadOwnDeviceMeta();
-        devices.value = mergeLocalDeviceIntoList(
-          parseDevicesFromSettingsJson(data.devices),
-          local,
-        );
-      }
+    const data = await loadCo21Settings();
+    const local = await loadOwnDeviceMeta();
+    const storedName =
+      typeof data.ownDeviceName === 'string' ? data.ownDeviceName.trim() : '';
+    ownDeviceName.value = storedName || local.name;
+    savedOwnDeviceName.value = ownDeviceName.value;
+    ownDeviceNameShowSaved.value = false;
+    if (typeof data.autoBackupEnabled === 'boolean') {
+      autoBackupEnabled.value = data.autoBackupEnabled;
     }
+    if (typeof data.autoBackupHours === 'number') autoBackupHours.value = data.autoBackupHours;
+    if (typeof data.autoBackupMinutes === 'number') {
+      autoBackupMinutes.value = data.autoBackupMinutes;
+    }
+    if (typeof data.lastAutoBackup === 'number') lastAutoBackup.value = data.lastAutoBackup;
+    await reloadDevicesFromSettings();
   } catch (e) {
     logger.error('loadSettings failed', e);
+  } finally {
+    devicesRegistryLoaded.value = true;
   }
 }
 
@@ -709,21 +717,28 @@ async function loadGroupsFromAppData(): Promise<any[]> {
   }
 }
 
-async function saveSettings(): Promise<boolean> {
+async function saveDevicesToStorage(): Promise<boolean> {
+  if (!devicesRegistryLoaded.value) return false;
   try {
-    const patch: Record<string, unknown> = {
-      ownDeviceName: ownDeviceName.value || '',
+    return await saveConnectionsRegistry(devices.value, {
+      ownDeviceName: ownDeviceName.value.trim(),
+    });
+  } catch (e) {
+    logger.error('saveDevicesToStorage failed', e);
+    return false;
+  }
+}
+
+async function saveBackupSettings(): Promise<boolean> {
+  try {
+    return await saveConnectionsBackupSettings({
       autoBackupEnabled: !!autoBackupEnabled.value,
       autoBackupHours: Number(autoBackupHours.value || 0),
       autoBackupMinutes: Number(autoBackupMinutes.value || 0),
-      devices: dedupeConnectedDevicesByPeerId(sanitizeConnectionDevices(devices.value)).map(
-        (d) => toDeviceJson(d),
-      ),
-    };
-    if (lastAutoBackup.value) patch.lastAutoBackup = lastAutoBackup.value;
-    return await patchCo21Settings(patch);
+      lastAutoBackup: lastAutoBackup.value,
+    });
   } catch (e) {
-    logger.error('saveSettings failed', e);
+    logger.error('saveBackupSettings failed', e);
     return false;
   }
 }
@@ -732,7 +747,7 @@ async function saveOwnDeviceName() {
   if (!ownDeviceNameDirty.value || ownDeviceNameSaving.value) return;
   ownDeviceNameSaving.value = true;
   try {
-    const ok = await saveSettings();
+    const ok = await saveDevicesToStorage();
     if (ok) {
       savedOwnDeviceName.value = ownDeviceName.value.trim();
       ownDeviceNameShowSaved.value = true;
@@ -759,9 +774,7 @@ function onLanPairingPendingEvent(ev: Event): void {
 }
 
 async function reloadDevicesFromSettings(): Promise<void> {
-  const local = await loadOwnDeviceMeta();
-  const loaded = await loadConnectedDevices();
-  devices.value = dedupeConnectedDevicesByPeerId(mergeLocalDeviceIntoList(loaded, local));
+  devices.value = await loadConnectionsDevices();
 }
 
 watch(dialogVisible, (open) => {
@@ -775,9 +788,8 @@ watch(dialogVisible, (open) => {
     void loadSettings().then(async () => {
       await refreshRoleProfiles();
       await captureBaseline();
-      const data = await loadCo21Settings();
-      const ownName =
-        typeof data.ownDeviceName === 'string' ? data.ownDeviceName : ownDeviceName.value;
+      await refreshPendingSend();
+      const ownName = ownDeviceName.value.trim() || (await loadOwnDeviceMeta()).name;
       devices.value = await refreshLanServerForConnections(devices.value, ownName);
     });
   }
@@ -801,7 +813,10 @@ onMounted(() => {
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingEvent as EventListener);
   window.addEventListener(LAN_PAIRED_EVENT, onLanPairedEvent as EventListener);
   window.addEventListener('co21:open-roles-setup', onOpenRolesSetup as EventListener);
-  window.addEventListener('co21:sync-contract-signed', () => void captureBaseline());
+  window.addEventListener('co21:sync-contract-signed', () => {
+    void captureBaseline();
+    void refreshPendingSend();
+  });
   window.addEventListener('co21:roles-saved', onRolesSavedForSync as EventListener);
   // start periodic check for automatic backups
   autoTimerId.value = setInterval(() => {
@@ -828,15 +843,9 @@ function onLanPairedEvent(): void {
   void reloadDevicesFromSettings();
 }
 
-watch(
-  devices,
-  () => {
-    void saveSettings();
-  },
-  { deep: true },
-);
 watch([autoBackupEnabled, autoBackupHours, autoBackupMinutes], () => {
-  void saveSettings();
+  if (!devicesRegistryLoaded.value) return;
+  void saveBackupSettings();
 });
 
 function toast(type: 'positive' | 'negative' | 'info' | 'warning', message: string): void {
@@ -891,7 +900,7 @@ const triggerImport = () => {
 function onAutoToggle(v: boolean) {
   // when enabling, set last auto backup time to now to avoid immediate run
   if (v) lastAutoBackup.value = Date.now();
-  void saveSettings();
+  void saveBackupSettings();
 }
 
 function getAutoPeriodMinutes() {
@@ -917,7 +926,7 @@ async function performAutoBackup() {
     const jsonString = JSON.stringify({ groups: Array.isArray(groups) ? groups : [] }, null, 2);
     await api.exportZip(backupsDir, name, jsonString);
     lastAutoBackup.value = Date.now();
-    await saveSettings();
+    await saveBackupSettings();
     autoBackupStatus.value = 'done';
   } catch (e: any) {
     autoBackupStatus.value = 'error';
@@ -932,7 +941,7 @@ async function checkAutoBackup() {
     if (!lastAutoBackup.value) {
       // initialize last run to now and skip immediate backup
       lastAutoBackup.value = now;
-      await saveSettings();
+      await saveBackupSettings();
       return;
     }
     const elapsedMin = (now - lastAutoBackup.value) / 60000;
