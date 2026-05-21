@@ -82,6 +82,31 @@ export async function loadLastContractSnapshot(): Promise<SyncContractSnapshot |
   return raw as SyncContractSnapshot;
 }
 
+function snapshotFromPending(pending: SyncContractPending): SyncContractSnapshot {
+  const snap = pending.snapshot;
+  const dup =
+    pending.duplicateResolution ?? snap.duplicateResolution ?? DEFAULT_SYNC_DUPLICATE_RESOLUTION;
+  return {
+    ...snap,
+    duplicateResolution: dup,
+    savedAt: typeof snap.savedAt === 'number' && snap.savedAt > 0 ? snap.savedAt : pending.createdAt,
+  };
+}
+
+/**
+ * Contract terms for LAN data sync: signed snapshot, or pending outgoing/incoming proposal.
+ * Avoids `no_contract` when one side has queued/sent a contract but not yet `syncLastContractSnapshot`.
+ */
+export async function loadActiveContractForSync(): Promise<SyncContractSnapshot | null> {
+  const last = await loadLastContractSnapshot();
+  if (last) return last;
+  const incoming = await loadPendingIncomingContract();
+  if (incoming?.snapshot) return snapshotFromPending(incoming);
+  const outgoing = await loadPendingOutgoingContract();
+  if (outgoing?.snapshot) return snapshotFromPending(outgoing);
+  return null;
+}
+
 export async function saveLastContractSnapshot(snapshot: SyncContractSnapshot): Promise<boolean> {
   return patchCo21Settings({
     syncLastContractSnapshot: snapshot,

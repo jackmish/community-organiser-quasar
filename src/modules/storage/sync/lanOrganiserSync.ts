@@ -6,7 +6,7 @@ import type {
 } from 'src/modules/lan/lanSyncAuth';
 import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
-import { loadLastContractSnapshot } from './syncContractSettings';
+import { loadActiveContractForSync } from './syncContractSettings';
 import { contractGroupIds } from './syncContractScope';
 import {
   groupPayloadFromLocal,
@@ -157,7 +157,7 @@ export async function applyInboundSyncDelta(
 export async function handleLanSyncExchangeRequest(
   req: LanSyncExchangeRequest,
 ): Promise<LanSyncExchangeResponse> {
-  const contract = await loadLastContractSnapshot();
+  const contract = await loadActiveContractForSync();
   if (!contract) {
     return { ok: false, nextToken: req.token, since: Date.now(), groups: [], tasks: [], error: 'no_contract' };
   }
@@ -216,7 +216,7 @@ export async function runSyncWithPeer(opts: {
   lanHost: string;
   sessionToken?: string;
 }): Promise<boolean> {
-  const contract = await loadLastContractSnapshot();
+  const contract = await loadActiveContractForSync();
   if (!contract) {
     logger.warn('[lanOrganiserSync] no active contract');
     return false;

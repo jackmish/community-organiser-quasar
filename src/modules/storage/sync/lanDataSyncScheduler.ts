@@ -1,4 +1,4 @@
-import { loadSyncIntervalSeconds, loadLastContractSnapshot } from './syncContractSettings';
+import { loadSyncIntervalSeconds, loadActiveContractForSync } from './syncContractSettings';
 import {
   loadConnectedDevices,
   loadOwnDeviceMeta,
@@ -14,7 +14,7 @@ export function startLanDataSyncScheduler(): void {
   if (timer) return;
   timer = setInterval(() => {
     void (async () => {
-      const contract = await loadLastContractSnapshot();
+      const contract = await loadActiveContractForSync();
       if (!contract) return;
       const intervalSec = await loadSyncIntervalSeconds();
       const local = await loadOwnDeviceMeta();
