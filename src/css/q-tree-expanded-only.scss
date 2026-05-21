@@ -7,3 +7,32 @@
   padding: 0 !important;
   pointer-events: none !important;
 }
+
+/* Shared group tree panel (GroupTreeSelector and co21-group-tree-panel wrapper) */
+.co21-group-tree-panel {
+  background: #def !important;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  padding: 4px;
+  overflow: auto;
+  min-width: 0;
+}
+
+.co21-group-tree-panel--pill :deep(.q-tree__node--selected > .q-tree__node-header) {
+  background: transparent !important;
+}
+
+.co21-group-tree-node--selected {
+  background: var(--q-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.co21-group-tree-node--selected .co21-group-tree-node__label,
+.co21-group-tree-node--selected .q-icon {
+  color: #fff !important;
+}
+
+.co21-group-tree-node:not(.co21-group-tree-node--selected):hover {
+  background: rgba(0, 0, 0, 0.04);
+}

@@ -166,18 +166,11 @@
                     style="width: 100%; text-align: left"
                     :label="pendingGroupLabel(p.id) || 'Select group…'"
                   >
-                    <q-tree
-                      class="q-tree-expanded-only"
+                    <GroupTreeSelector
                       :nodes="groupTree"
-                      node-key="id"
-                      label-key="name"
-                      selected-color="primary"
-                      v-model:selected="pendingGroupId[p.id]"
-                      default-expand-all
-                      no-connectors
-                      v-model:expanded="groupTreeExpanded"
-                      @update:expanded="onGroupTreeExpandedUpdate"
-                      style="min-width: 220px; padding: 8px"
+                      :selected="pendingGroupId[p.id] ?? null"
+                      min-width="220px"
+                      @update:selected="(id) => onPendingGroupSelected(p.id, id)"
                     />
                   </q-btn-dropdown>
                 </div>
@@ -230,8 +223,8 @@ import type {
   GroupPrivilege,
 } from "src/modules/storage/sync/DeviceProfile";
 import CC from "src/CCAccess";
-import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
-import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
+import { treeNodesExpandedOnly, type GroupTreeNode } from "src/modules/group/utils/treeUi";
+import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
 
 // ── Props / emit ──────────────────────────────────────────────────────────────
 
@@ -327,14 +320,7 @@ async function unlinkGroup(p: DeviceProfile, groupId: string): Promise<void> {
 
 // ── Group tree (for selector) ─────────────────────────────────────────────────
 
-interface TreeNode {
-  id: string;
-  name: string;
-  children?: TreeNode[];
-  [key: string]: unknown;
-}
-
-const groupTree = computed(() => {
+const groupTree = computed((): GroupTreeNode[] => {
   const all: any[] = CC.group.groups ?? [];
   const byParent = new Map<string | null, any[]>();
   for (const g of all) {
@@ -342,18 +328,23 @@ const groupTree = computed(() => {
     if (!byParent.has(pid)) byParent.set(pid, []);
     byParent.get(pid)!.push(g);
   }
-  function build(pid: string | null): TreeNode[] {
+  function build(pid: string | null): GroupTreeNode[] {
     return (byParent.get(pid) ?? []).map((g) => ({
-      id: g.id,
-      name: g.name,
-      children: build(g.id),
+      id: String(g.id),
+      label: String(g.name ?? g.id),
+      children: build(String(g.id)),
     }));
   }
   return treeNodesExpandedOnly(build(null));
 });
 
-const { expanded: groupTreeExpanded, onExpandedUpdate: onGroupTreeExpandedUpdate } =
-  useTreeAlwaysExpanded(groupTree);
+function onPendingGroupSelected(
+  profileId: string,
+  id: string | string[] | null,
+): void {
+  const key = Array.isArray(id) ? id[0] : id;
+  pendingGroupId[profileId] = key ? String(key) : null;
+}
 
 // ── Group display helpers ─────────────────────────────────────────────────────
 

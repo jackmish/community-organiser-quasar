@@ -63,37 +63,31 @@
 
             <q-separator />
 
-            <div style="max-height: 48vh; overflow: auto; padding-top: 6px">
-              <q-tree
-                class="q-tree-expanded-only"
-                :nodes="treeNodes"
-                node-key="id"
-                default-expand-all
-                no-connectors
-                v-model:expanded="treeExpanded"
-                :selected="selectedKeyArray"
-                @update:expanded="onTreeExpandedUpdate"
-                @update:selected="onTreeSelect"
-              >
-                <template #default-header="prop">
-                  <div class="row items-center full-width">
-                    <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
-                    <span>{{ prop.node.label }}</span>
-                    <q-space />
-                    <span v-if="isNodeShortcut(prop.node)" flat dense style="
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        text-transform: none;
-                      " class="q-ml-sm" @click.stop.prevent="activateTreeShortcut(prop.node)">
-                      <q-icon :name="prop.node.icon || 'folder'" :style="{ color: prop.node.color }" />
+            <GroupTreeSelector
+              class="q-mt-sm"
+              :nodes="treeNodes"
+              :selected="selectedKeyArray"
+              max-height="48vh"
+              @update:selected="onTreeSelect"
+            >
+              <template #header="prop">
+                <div class="row items-center full-width">
+                  <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
+                  <span>{{ prop.node.label }}</span>
+                  <q-space />
+                  <span v-if="isNodeShortcut(prop.node)" flat dense style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      text-transform: none;
+                    " class="q-ml-sm" @click.stop.prevent="activateTreeShortcut(prop.node)">
+                    <q-icon :name="prop.node.icon || 'folder'" :style="{ color: prop.node.color }" />
 
-                      <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
-                    </span>
-                  </div>
-                </template>
-              </q-tree>
-            </div>
+                    <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
+                  </span>
+                </div>
+              </template>
+            </GroupTreeSelector>
 
             <q-separator />
 
@@ -139,8 +133,8 @@ import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
-import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
-import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
+import { groupsToTreeNodes } from "src/modules/group/utils/treeUi";
+import GroupTreeSelector from "./GroupTreeSelector.vue";
 
 const $q = useQuasar();
 
@@ -256,25 +250,13 @@ const displayedSelectedLabel = computed(() => {
   return label.slice(0, 4);
 });
 
-//converting api tree into q-tree
-const convertNode = (n: any): any => ({
-  id: String(n.id),
-  label: n.label,
-  icon: n.icon || "folder",
-  color: n.color || null,
-  children: (n.children || []).map(convertNode),
-});
-
 const treeNodes = computed(() => {
   try {
-    return treeNodesExpandedOnly((CC.group.list.tree.value || []).map(convertNode));
+    return groupsToTreeNodes(CC.group.list.tree.value || []);
   } catch (e) {
     return [];
   }
 });
-
-const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
-  useTreeAlwaysExpanded(treeNodes);
 
 const selectedKeyArray = computed(() =>
   localValue.value ? [String(localValue.value)] : []

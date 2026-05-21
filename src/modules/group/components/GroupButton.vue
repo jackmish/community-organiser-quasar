@@ -48,9 +48,10 @@ const emit = defineEmits<{
 
 const menuOpen = ref(false);
 
-function onSelect(g: any) {
+function onSelect(payload: { id: string }) {
   menuOpen.value = false;
-  emit("select", g);
+  const found = (props.groups || []).find((g: any) => String(g.id) === String(payload.id));
+  emit("select", found || { id: payload.id });
 }
 
 function handleClick() {

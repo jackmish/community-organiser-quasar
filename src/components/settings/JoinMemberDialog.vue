@@ -19,39 +19,14 @@
         >
         <div :class="isMobile ? 'join-member-tree-col' : 'col-12 col-md-4'">
           <div class="text-subtitle2 q-mb-xs">{{ $text('ui.select_group') }}</div>
-          <div
-            class="rounded-borders join-member-tree-panel"
-            style="overflow: auto; border: 1px solid rgba(0, 0, 0, 0.12); padding: 4px"
-          >
-            <q-tree
-              class="q-tree-expanded-only join-member-group-tree"
-              :nodes="treeNodes"
-              node-key="id"
-              default-expand-all
-              no-connectors
-              v-model:expanded="treeExpanded"
-              v-model:selected="treeSelected"
-              selected-color="primary"
-              @update:expanded="onTreeExpandedUpdate"
-            >
-              <template #default-header="scope">
-                <div
-                  class="join-member-tree-node row items-center full-width q-px-sm q-py-xs rounded-borders"
-                  :class="{
-                    'join-member-tree-node--selected':
-                      selectedGroupId != null && String(scope.key) === selectedGroupId,
-                  }"
-                >
-                  <q-icon
-                    :name="scope.node.icon || 'folder'"
-                    class="q-mr-sm"
-                    :style="scope.node.color ? { color: scope.node.color } : undefined"
-                  />
-                  <span class="join-member-tree-node__label">{{ scope.node.label }}</span>
-                </div>
-              </template>
-            </q-tree>
-          </div>
+          <GroupTreeSelector
+            panel-class="join-member-tree-panel"
+            :nodes="treeNodes"
+            :selected="selectedGroupId"
+            sticky-selection
+            selection-style="pill"
+            @update:selected="onGroupTreeSelected"
+          />
         </div>
 
         <div
@@ -104,34 +79,35 @@
             </template>
           </q-banner>
 
+          <div class="join-member-assignment-surface column col">
           <div
             v-if="selectedGroupName"
-            class="text-subtitle1 text-primary q-mb-sm"
+            class="text-subtitle2 text-weight-medium join-member-assignment-surface__heading q-mb-sm"
           >
             {{ $text('role.roles_for_group') }}: <strong>{{ selectedGroupName }}</strong>
           </div>
 
-          <div v-if="!selectedGroupId" class="text-grey-6 text-caption">
+          <div v-if="!selectedGroupId" class="text-caption join-member-assignment-surface__muted">
             {{ $text('role.select_group_first') }}
           </div>
 
-          <div v-else-if="!roleProfiles.length" class="text-body2 text-grey-7">
+          <div v-else-if="!roleProfiles.length" class="text-body2 join-member-assignment-surface__muted">
             {{ $text('role.no_role_profiles') }}
           </div>
 
-          <div v-else-if="!applicableRoles.length" class="text-body2 text-grey-7">
+          <div v-else-if="!applicableRoles.length" class="text-body2 join-member-assignment-surface__muted">
             {{ $text('role.no_roles_apply_to_group') }}
           </div>
 
           <div
             v-else
-            class="column join-member-roles-panel"
+            class="column join-member-roles-panel col"
             :class="isMobile ? 'q-gutter-sm' : 'q-gutter-md'"
-            style="overflow: auto"
+            style="overflow: auto; min-height: 0"
           >
             <p
               v-if="localDevice"
-              class="text-caption text-grey-7 q-mb-sm row items-center q-gutter-xs"
+              class="text-caption join-member-local-hint q-mb-sm row items-center q-gutter-xs"
             >
               <q-icon name="computer" size="16px" />
               <span>
@@ -145,7 +121,7 @@
               :key="role.id"
               bordered
               flat
-              class="rounded-borders"
+              class="rounded-borders join-member-role-card"
             >
               <q-card-section class="q-pb-sm join-member-role-card__head">
                 <div class="row items-center no-wrap q-gutter-xs join-member-role-card__title-row">
@@ -241,8 +217,8 @@
 
           <div
             v-if="selectedGroupId"
-            class="row q-gutter-sm join-member-role-actions"
-            :class="[isMobile ? 'column q-mt-sm' : 'q-mt-md']"
+            class="row q-gutter-sm join-member-role-actions q-mt-sm"
+            :class="[isMobile ? 'column' : '']"
           >
             <q-btn
               class="col"
@@ -260,6 +236,7 @@
               :label="$text('role.new_role')"
               @click="openNewRoleSetup"
             />
+          </div>
           </div>
         </div>
         </div>
@@ -303,12 +280,12 @@ import {
   OPEN_PENDING_ACTIONS_EVENT,
 } from 'src/modules/storage/sync/syncPendingActions';
 import CC from 'src/CCAccess';
-import { useTreeAlwaysExpanded } from 'src/composables/useTreeAlwaysExpanded';
 import {
   collectTreeNodeKeys,
+  groupsToTreeNodes,
   treeNodeKeyString,
-  treeNodesExpandedOnly,
 } from 'src/modules/group/utils/treeUi';
+import GroupTreeSelector from 'src/modules/group/components/GroupTreeSelector.vue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
@@ -412,51 +389,19 @@ onBeforeUnmount(() => {
   window.removeEventListener('co21:roles-saved', onRolesSaved as EventListener);
 });
 
-function nodeString(v: unknown, fallback: string): string {
-  if (typeof v === 'string') return v.length ? v : fallback;
-  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
-  return fallback;
-}
-
-function convertNode(n: Record<string, unknown>): Record<string, unknown> {
-  const id = nodeString(n.id, '');
-  return {
-    id,
-    label: nodeString(n.name, nodeString(n.label, id)),
-    icon: n.icon ?? 'folder',
-    color: n.color ?? null,
-    children: Array.isArray(n.children)
-      ? (n.children as Record<string, unknown>[]).map(convertNode)
-      : [],
-  };
-}
-
 const treeNodes = computed(() => {
   try {
-    const raw = (CC.group.list.tree.value ?? []).map((n: unknown) =>
-      convertNode(n as Record<string, unknown>),
-    );
-    return treeNodesExpandedOnly(raw);
+    return groupsToTreeNodes(CC.group.list.tree.value ?? []);
   } catch {
     return [];
   }
 });
 
-const { expanded: treeExpanded, onExpandedUpdate: onTreeExpandedUpdate } =
-  useTreeAlwaysExpanded(treeNodes);
-
-/** Quasar toggles selection off on second click — keep a group always selected. */
-const treeSelected = computed({
-  get: (): string | null => selectedGroupId.value,
-  set: (val: string | string[] | null) => {
-    if (val == null || val === '' || (Array.isArray(val) && !val.length)) {
-      return;
-    }
-    const raw = Array.isArray(val) ? val[0] : val;
-    const id = treeNodeKeyString(raw);
-    if (id) selectedGroupId.value = id;
-  },
-});
+function onGroupTreeSelected(val: string | string[] | null): void {
+  const raw = Array.isArray(val) ? val[0] : val;
+  const id = treeNodeKeyString(raw);
+  if (id) selectedGroupId.value = id;
+}
 
 const selectedGroupName = computed(() => {
   if (!selectedGroupId.value) return '';
@@ -638,25 +583,6 @@ function ensureGroupSelected(): void {
 </script>
 
 <style scoped>
-.join-member-group-tree :deep(.q-tree__node--selected > .q-tree__node-header) {
-  background: transparent !important;
-}
-
-.join-member-tree-node--selected {
-  background: var(--q-primary);
-  color: #fff;
-  font-weight: 600;
-}
-
-.join-member-tree-node--selected .join-member-tree-node__label,
-.join-member-tree-node--selected .q-icon {
-  color: #fff !important;
-}
-
-.join-member-tree-node:not(.join-member-tree-node--selected):hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
 .join-member-role-card__title {
   color: rgba(0, 0, 0, 0.87);
 }
@@ -690,9 +616,5 @@ function ensureGroupSelected(): void {
   color: rgba(0, 0, 0, 0.87);
 }
 
-.join-member-role-card__inherited {
-  background: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
 
 </style>

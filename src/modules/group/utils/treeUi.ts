@@ -31,3 +31,33 @@ export function collectTreeNodeKeys(
 export function treeNodesExpandedOnly<T extends TreeNodeLike>(nodes: T[]): T[] {
   return nodes || [];
 }
+
+export type GroupTreeNode = TreeNodeLike & {
+  id: string;
+  label: string;
+  icon?: string;
+  color?: string | null;
+  children?: GroupTreeNode[];
+};
+
+/** Normalize group/CC tree records into Quasar QTree nodes. */
+export function groupRecordToTreeNode(n: Record<string, unknown>): GroupTreeNode {
+  const id = treeNodeKeyString(n.id);
+  const name = typeof n.name === 'string' ? n.name : '';
+  const labelField = typeof n.label === 'string' ? n.label : '';
+  return {
+    id,
+    label: name || labelField || id,
+    icon: typeof n.icon === 'string' ? n.icon : 'folder',
+    color: (n.color as string | null | undefined) ?? null,
+    children: Array.isArray(n.children)
+      ? (n.children as Record<string, unknown>[]).map(groupRecordToTreeNode)
+      : [],
+  };
+}
+
+export function groupsToTreeNodes(input: unknown[]): GroupTreeNode[] {
+  return treeNodesExpandedOnly(
+    (input || []).map((n) => groupRecordToTreeNode(n as Record<string, unknown>)),
+  );
+}

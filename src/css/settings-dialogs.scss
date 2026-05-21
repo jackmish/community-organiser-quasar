@@ -161,6 +161,76 @@
   max-height: 52vh;
 }
 
+/* Join member: bright panel for role/device assignment (overrides blue dialog chrome) */
+.join-member-dialog-card .join-member-assignment-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #eef2f7 !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.join-member-dialog-card .join-member-assignment-surface__heading,
+.join-member-dialog-card .join-member-assignment-surface__heading strong {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface__muted,
+.join-member-dialog-card .join-member-local-hint {
+  color: rgba(0, 0, 0, 0.58) !important;
+}
+
+.join-member-dialog-card .join-member-local-hint strong {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .join-member-role-card,
+.join-member-dialog-card .join-member-assignment-surface .join-member-role-card .q-card__section {
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-separator {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-list--bordered {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  background: #fafbfc !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-item,
+.join-member-dialog-card .join-member-assignment-surface .q-item__label {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-item__label--caption {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .join-member-role-card__inherited {
+  background: #f0f5fa !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-field__native,
+.join-member-dialog-card .join-member-assignment-surface .q-field__input,
+.join-member-dialog-card .join-member-assignment-surface .q-select__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+  caret-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-field__label {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.join-member-dialog-card .join-member-assignment-surface .q-field--outlined .q-field__control:before {
+  border-color: rgba(0, 0, 0, 0.24) !important;
+}
+
 /* Mobile: stack tree + roles tightly; avoid flex row stretching empty space between blocks */
 .join-member-dialog-card.settings-dialog-card--mobile .join-member-body {
   display: flex;

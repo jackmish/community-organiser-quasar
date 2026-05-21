@@ -357,30 +357,24 @@
               </q-item>
             </q-list>
             <q-separator />
-            <div style="max-height: 44vh; overflow: auto; padding-top: 6px">
-              <q-tree
-                class="q-tree-expanded-only"
-                :nodes="lockedParentTree"
-                node-key="id"
-                default-expand-all
-                no-connectors
-                v-model:expanded="parentTreeExpanded"
-                :selected="localParent ? [String(localParent)] : []"
-                @update:expanded="onParentTreeExpandedUpdate"
-                @update:selected="onParentTreeSelect"
-              >
-                <template #default-header="prop">
-                  <div class="row items-center full-width">
-                    <q-icon
-                      :name="getIconName(prop.node.icon)"
-                      class="q-mr-sm"
-                      :style="{ color: prop.node.color }"
-                    />
-                    <span>{{ prop.node.label }}</span>
-                  </div>
-                </template>
-              </q-tree>
-            </div>
+            <GroupTreeSelector
+              class="q-mt-sm"
+              :nodes="lockedParentTree"
+              :selected="localParent ? [String(localParent)] : []"
+              max-height="44vh"
+              @update:selected="onParentTreeSelect"
+            >
+              <template #header="prop">
+                <div class="row items-center full-width">
+                  <q-icon
+                    :name="getIconName(prop.node.icon)"
+                    class="q-mr-sm"
+                    :style="{ color: prop.node.color }"
+                  />
+                  <span>{{ prop.node.label }}</span>
+                </div>
+              </template>
+            </GroupTreeSelector>
             <q-separator />
             <div
               style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px"
@@ -440,8 +434,8 @@ import { ref, computed, watch, onMounted } from "vue";
 import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
 import type { QTreeNode } from "quasar";
-import { useTreeAlwaysExpanded } from "src/composables/useTreeAlwaysExpanded";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
+import GroupTreeSelector from "./GroupTreeSelector.vue";
 
 const props = defineProps<{
   groupTree?: QTreeNode<any>[];
@@ -456,8 +450,6 @@ const emit = defineEmits<{
 const lockedParentTree = computed(() =>
   treeNodesExpandedOnly((props.groupTree || []) as QTreeNode[]),
 );
-const { expanded: parentTreeExpanded, onExpandedUpdate: onParentTreeExpandedUpdate } =
-  useTreeAlwaysExpanded(lockedParentTree);
 
 const localName = ref("");
 const localParent = ref<string | null>(null);
