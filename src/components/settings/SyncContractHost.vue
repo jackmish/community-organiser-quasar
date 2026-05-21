@@ -65,6 +65,8 @@ import {
   handleLanSyncExchangeRequest,
   runFirstSyncAfterContractAccept,
 } from 'src/modules/storage/sync/lanOrganiserSync';
+import { setSyncContractRuntime } from 'src/modules/storage/sync/syncContractRuntime';
+import { loadActiveContractForSync } from 'src/modules/storage/sync/syncContractSettings';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 
 const showIncomingPreview = ref(false);
@@ -205,7 +207,11 @@ async function onIncomingPreviewAccept(): Promise<void> {
     token,
   );
   await savePendingOutgoingContract(null);
-  await clearIncomingState();
+  await savePendingIncomingContract(null);
+  showIncomingPreview.value = false;
+  pendingIncomingContract = null;
+  incomingPreview.value = null;
+  dispatchSyncContractIncoming();
   Notify.create({
     type: 'positive',
     message: $text('sync.contract_signed_ok'),
@@ -288,6 +294,10 @@ onMounted(() => {
     __co21LanSyncExchange?: (req: LanSyncExchangeRequest) => Promise<unknown>;
   }).__co21LanSyncExchange = (req) => handleLanSyncExchangeRequest(req);
 
+  void (async () => {
+    const active = await loadActiveContractForSync();
+    if (active) setSyncContractRuntime(active);
+  })();
   void refreshIncomingBanner();
 
   window.addEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);

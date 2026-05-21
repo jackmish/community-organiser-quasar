@@ -187,17 +187,22 @@ export async function tryDeliverAction(
   dispatchPendingActionsChanged();
   if (ok && action.kind === 'send_contract') {
     const { runSyncWithPeer } = await import('./lanOrganiserSync');
-    for (const t of action.targets) {
-      const host = (t.lanHost || '').trim();
-      if (!host) continue;
-      const syncOpts = {
-        peerDeviceId: t.deviceId,
-        peerDeviceName: t.deviceName,
-        lanHost: host,
-      };
-      const st = action.pending.syncSessionToken;
-      void runSyncWithPeer(st ? { ...syncOpts, sessionToken: st } : syncOpts);
-    }
+    const delayMs = 400;
+    setTimeout(() => {
+      void (async () => {
+        for (const t of action.targets) {
+          const host = (t.lanHost || '').trim();
+          if (!host) continue;
+          const syncOpts = {
+            peerDeviceId: t.deviceId,
+            peerDeviceName: t.deviceName,
+            lanHost: host,
+          };
+          const st = action.pending.syncSessionToken;
+          await runSyncWithPeer(st ? { ...syncOpts, sessionToken: st } : syncOpts);
+        }
+      })();
+    }, delayMs);
   }
   return ok;
 }

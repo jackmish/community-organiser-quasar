@@ -1,9 +1,13 @@
 /** Rotating LAN sync session token (one per paired peer, advanced on each exchange). */
 
+import type { SyncContractSnapshot } from 'src/modules/storage/sync/syncContractSettings';
+
 export type LanSyncExchangeRequest = {
   /** Caller device id (must be a trusted / paired peer). */
   deviceId: string;
   token: string;
+  /** Set by Electron main when contract was just proposed (avoids renderer disk race). */
+  serverContract?: SyncContractSnapshot;
   /** Client watermark (ms). Server returns entities with updatedAt > since. Omit for full contract scope. */
   since?: number;
   /** Outbound delta from caller (groups/tasks in contract scope). */

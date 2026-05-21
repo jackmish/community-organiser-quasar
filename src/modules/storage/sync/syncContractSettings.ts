@@ -1,4 +1,5 @@
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
+import { getSyncContractRuntime, setSyncContractRuntime } from './syncContractRuntime';
 
 export const DEFAULT_SYNC_INTERVAL_SECONDS = 60;
 export const MIN_SYNC_INTERVAL_SECONDS = 15;
@@ -82,7 +83,7 @@ export async function loadLastContractSnapshot(): Promise<SyncContractSnapshot |
   return raw as SyncContractSnapshot;
 }
 
-function snapshotFromPending(pending: SyncContractPending): SyncContractSnapshot {
+export function snapshotFromPending(pending: SyncContractPending): SyncContractSnapshot {
   const snap = pending.snapshot;
   const dup =
     pending.duplicateResolution ?? snap.duplicateResolution ?? DEFAULT_SYNC_DUPLICATE_RESOLUTION;
@@ -98,6 +99,8 @@ function snapshotFromPending(pending: SyncContractPending): SyncContractSnapshot
  * Avoids `no_contract` when one side has queued/sent a contract but not yet `syncLastContractSnapshot`.
  */
 export async function loadActiveContractForSync(): Promise<SyncContractSnapshot | null> {
+  const runtime = getSyncContractRuntime();
+  if (runtime) return runtime;
   const last = await loadLastContractSnapshot();
   if (last) return last;
   const incoming = await loadPendingIncomingContract();
@@ -108,6 +111,7 @@ export async function loadActiveContractForSync(): Promise<SyncContractSnapshot 
 }
 
 export async function saveLastContractSnapshot(snapshot: SyncContractSnapshot): Promise<boolean> {
+  setSyncContractRuntime(snapshot);
   return patchCo21Settings({
     syncLastContractSnapshot: snapshot,
     syncContractAcceptedAt: Date.now(),
@@ -124,6 +128,9 @@ export async function loadPendingOutgoingContract(): Promise<SyncContractPending
 export async function savePendingOutgoingContract(
   pending: SyncContractPending | null,
 ): Promise<boolean> {
+  if (pending?.snapshot) {
+    setSyncContractRuntime(snapshotFromPending(pending));
+  }
   return patchCo21Settings({
     syncPendingOutgoingContract: pending ?? null,
   });
@@ -139,6 +146,9 @@ export async function loadPendingIncomingContract(): Promise<SyncContractPending
 export async function savePendingIncomingContract(
   pending: SyncContractPending | null,
 ): Promise<boolean> {
+  if (pending?.snapshot) {
+    setSyncContractRuntime(snapshotFromPending(pending));
+  }
   return patchCo21Settings({
     syncPendingIncomingContract: pending ?? null,
   });

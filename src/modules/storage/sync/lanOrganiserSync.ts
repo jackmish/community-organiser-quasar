@@ -6,7 +6,7 @@ import type {
 } from 'src/modules/lan/lanSyncAuth';
 import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
-import { loadActiveContractForSync } from './syncContractSettings';
+import { loadActiveContractForSync, type SyncContractSnapshot } from './syncContractSettings';
 import { contractGroupIds } from './syncContractScope';
 import {
   groupPayloadFromLocal,
@@ -153,11 +153,22 @@ export async function applyInboundSyncDelta(
   };
 }
 
+async function resolveContractForExchange(
+  serverContract?: SyncContractSnapshot,
+): Promise<SyncContractSnapshot | null> {
+  const fromStore = await loadActiveContractForSync();
+  if (fromStore) return fromStore;
+  if (serverContract && Array.isArray(serverContract.devices)) {
+    return serverContract;
+  }
+  return null;
+}
+
 /** Handle inbound HTTP sync exchange (renderer bridge). */
 export async function handleLanSyncExchangeRequest(
   req: LanSyncExchangeRequest,
 ): Promise<LanSyncExchangeResponse> {
-  const contract = await loadActiveContractForSync();
+  const contract = await resolveContractForExchange(req.serverContract);
   if (!contract) {
     return { ok: false, nextToken: req.token, since: Date.now(), groups: [], tasks: [], error: 'no_contract' };
   }

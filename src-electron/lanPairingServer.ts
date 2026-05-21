@@ -2,8 +2,11 @@
  * Minimal HTTP server for LAN device pairing (Electron main process only).
  */
 import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
+import { app } from 'electron';
 import type { BrowserWindow } from 'electron';
 import logger from 'src/utils/logger';
 
@@ -59,6 +62,51 @@ let pruneTimer: ReturnType<typeof setInterval> | null = null;
 /** When non-empty, only these device ids may POST sync/contract/propose. Empty = allow any proposer. */
 let trustedContractDeviceIds = new Set<string>();
 let trustedContractLanKeys = new Set<string>();
+
+/** Active contract on this device (set on propose / cleared on reject). */
+let lanServerActiveContract: Record<string, unknown> | null = null;
+
+async function persistIncomingContractToSettings(pending: Record<string, unknown>): Promise<void> {
+  try {
+    const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+    let existing: Record<string, unknown> = {};
+    try {
+      const raw = await fs.readFile(settingsFile, 'utf8');
+      existing = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      void 0;
+    }
+    await fs.mkdir(path.dirname(settingsFile), { recursive: true });
+    await fs.writeFile(
+      settingsFile,
+      JSON.stringify({ ...existing, syncPendingIncomingContract: pending }, null, 2),
+      'utf8',
+    );
+  } catch (e) {
+    logger.warn('[lanPairingServer] persist incoming contract failed', e);
+  }
+}
+
+function normalizeSnapshotFromPropose(
+  snapshot: unknown,
+  duplicateResolution?: string,
+  createdAt?: number,
+): Record<string, unknown> | null {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const snap = snapshot as Record<string, unknown>;
+  if (!Array.isArray(snap.devices)) return null;
+  const savedAt =
+    typeof snap.savedAt === 'number' && snap.savedAt > 0
+      ? snap.savedAt
+      : createdAt ?? Date.now();
+  return {
+    ...snap,
+    savedAt,
+    ...(duplicateResolution === 'manual' || duplicateResolution === 'auto'
+      ? { duplicateResolution }
+      : {}),
+  };
+}
 
 export type LanTrustedContractPeer = {
   deviceId: string;
@@ -242,6 +290,19 @@ function handleSyncContractPropose(
         : undefined;
     const syncSessionToken =
       typeof parsed.syncSessionToken === 'string' ? parsed.syncSessionToken.trim() : '';
+    const pendingRecord: Record<string, unknown> = {
+      createdAt,
+      snapshot,
+      proposerDeviceId,
+      proposerDeviceName: proposerDeviceName || 'Unknown device',
+      proposerLanHost: remoteAddr,
+      ...(intervalSeconds !== undefined ? { intervalSeconds } : {}),
+      ...(duplicateResolution ? { duplicateResolution } : {}),
+      ...(syncSessionToken ? { syncSessionToken } : {}),
+    };
+    lanServerActiveContract =
+      normalizeSnapshotFromPropose(snapshot, duplicateResolution, createdAt) ?? null;
+    await persistIncomingContractToSettings(pendingRecord);
     notifyRenderer('lan:sync-contract-incoming', {
       createdAt,
       snapshot,
@@ -288,6 +349,8 @@ function handleSyncContractReject(
       sendJson(res, 403, { error: 'rejector_not_registered' });
       return;
     }
+    lanServerActiveContract = null;
+    void clearIncomingContractInSettings();
     notifyRenderer('lan:sync-contract-rejected', {
       rejectorDeviceId,
       rejectorDeviceName: rejectorDeviceName || 'Unknown device',
@@ -335,7 +398,11 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
       return;
     }
     try {
-      const payload = JSON.stringify(parsed);
+      const bridgeReq: Record<string, unknown> = { ...parsed };
+      if (lanServerActiveContract) {
+        bridgeReq.serverContract = lanServerActiveContract;
+      }
+      const payload = JSON.stringify(bridgeReq);
       const result = await win.webContents.executeJavaScript(
         `(async () => { const fn = globalThis.__co21LanSyncExchange; if (typeof fn !== 'function') return { ok: false, error: 'bridge_off', nextToken: '', since: Date.now(), groups: [], tasks: [] }; return await fn(${payload}); })()`,
         true,
@@ -348,6 +415,26 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
       sendJson(res, 500, { error: 'bridge_error' });
     }
   })();
+}
+
+async function clearIncomingContractInSettings(): Promise<void> {
+  try {
+    const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+    let existing: Record<string, unknown> = {};
+    try {
+      const raw = await fs.readFile(settingsFile, 'utf8');
+      existing = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return;
+    }
+    await fs.writeFile(
+      settingsFile,
+      JSON.stringify({ ...existing, syncPendingIncomingContract: null }, null, 2),
+      'utf8',
+    );
+  } catch (e) {
+    logger.warn('[lanPairingServer] clear incoming contract failed', e);
+  }
 }
 
 async function readBody(req: http.IncomingMessage): Promise<string> {
