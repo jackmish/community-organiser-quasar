@@ -104,8 +104,9 @@ async function ensureProposerInConnections(pending: SyncContractPending): Promis
   const norm = normalizeDeviceId(pending.proposerDeviceId);
   const lanHost = (pending.proposerLanHost || '').trim();
   const idx = devices.findIndex((d) => !d.isLocal && normalizeDeviceId(d.id) === norm);
-  if (idx >= 0) {
-    if (lanHost && !(devices[idx].lanHost || '').trim()) {
+  const existing = idx >= 0 ? devices[idx] : undefined;
+  if (existing) {
+    if (lanHost && !(existing.lanHost || '').trim()) {
       devices = devices.map((d, i) => (i === idx ? { ...d, lanHost } : d));
       await saveConnectedDevices(devices);
       const settings = await loadCo21Settings();
