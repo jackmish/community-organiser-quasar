@@ -4,92 +4,44 @@
       <q-card-section>
         <div class="text-h6">Connections and data</div>
         <div class="q-mt-sm row items-center q-gutter-sm">
-          <q-input
-            class="col"
-            dense
-            outlined
-            v-model="ownDeviceName"
-            label="Your device name"
-            @keyup.enter="saveOwnDeviceName"
-          />
-          <q-btn
-            class="col-auto"
-            dense
-            unelevated
-            :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
-            :icon="ownDeviceNameShowSaved ? 'check' : 'save'"
-            :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
-            :disable="!ownDeviceNameDirty || ownDeviceNameSaving"
-            :loading="ownDeviceNameSaving"
-            @click="saveOwnDeviceName"
-          />
+          <q-input class="col" dense outlined v-model="ownDeviceName" label="Your device name"
+            @keyup.enter="saveOwnDeviceName" />
+          <q-btn class="col-auto" dense unelevated :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
+            :icon="ownDeviceNameShowSaved ? 'check' : 'save'" :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
+            :disable="!ownDeviceNameDirty || ownDeviceNameSaving" :loading="ownDeviceNameSaving"
+            @click="saveOwnDeviceName" />
         </div>
       </q-card-section>
 
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
         <div class="q-gutter-md">
           <div class="text-subtitle2 q-mb-sm">Manage external connections and integrations</div>
-          <div
-            class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
-            :class="{ column: isMobile }"
-          >
-            <q-btn
-              outline
-              color="primary"
-              icon="admin_panel_settings"
-              :label="rolesSetupLabel"
-              class="col-grow"
-              @click="openRolesSetup"
-            />
-            <q-btn
-              outline
-              color="secondary"
-              icon="badge"
-              :label="assignRolesPerGroupLabel"
-              class="col-grow"
-              @click="showJoinMemberDialog = true"
-            />
+          <div class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
+            :class="{ column: isMobile }">
+            <q-btn outline color="secondary" icon="badge" :label="assignRolesPerGroupLabel"
+              class="col-grow settings-dialog-surface-btn" @click="showJoinMemberDialog = true" />
+            <q-btn outline color="primary" icon="admin_panel_settings" :label="rolesSetupLabel"
+              class="col-grow settings-dialog-surface-btn" @click="openRolesSetup" />
+
           </div>
-          <q-banner
-            v-if="hasPendingSendAction"
-            dense
-            rounded
-            class="bg-positive text-white"
-          >
+          <q-banner v-if="hasPendingSendAction" dense rounded class="bg-positive text-white">
             <template #avatar>
               <q-icon name="hourglass_top" color="white" />
             </template>
             {{ $text('sync.pending_send_banner') }}
             <template #action>
-              <q-btn
-                unelevated
-                dense
-                color="white"
-                text-color="positive"
-                :label="pendingActionsMenuLabel"
-                @click="openPendingActionsDialog"
-              />
+              <q-btn unelevated dense color="white" text-color="positive" :label="pendingActionsMenuLabel"
+                @click="openPendingActionsDialog" />
             </template>
           </q-banner>
-          <q-banner
-            v-else-if="hasPendingChanges"
-            dense
-            rounded
-            class="bg-positive text-white"
-          >
+          <q-banner v-else-if="hasPendingChanges" dense rounded class="bg-positive text-white">
             <template #avatar>
               <q-icon name="sync" color="white" />
             </template>
             {{ $text('sync.confirm_pending_banner') }}
             <template #action>
-              <q-btn
-                unelevated
-                dense
-                color="white"
-                text-color="positive"
-                :label="$text('sync.confirm_changes_btn')"
-                @click="startConfirmChanges"
-              />
+              <q-btn unelevated dense color="white" text-color="positive" :label="$text('sync.confirm_changes_btn')"
+                @click="startConfirmChanges" />
             </template>
           </q-banner>
 
@@ -99,34 +51,24 @@
               <q-btn ref="addBtn" dense label="Add Device" color="primary" @click="openAddMenu" />
 
               <div v-if="addMenu" :style="addMenuStyle" class="connections-menu use-default">
-                <div
-                  style="
+                <div style="
                     padding: 6px 0;
                     width: 220px;
                     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
                     background: var(--q-popup-bg, #fff);
                     border-radius: 6px;
-                  "
-                >
+                  ">
                   <div class="q-list">
-                    <q-item
-                      clickable
-                      role="button"
-                      @click="createDevice('Bluetooth')"
-                      style="padding: 8px 12px; cursor: pointer"
-                    >
+                    <q-item clickable role="button" @click="createDevice('Bluetooth')"
+                      style="padding: 8px 12px; cursor: pointer">
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="bluetooth" />
                       </q-item-section>
                       <q-item-section>Bluetooth</q-item-section>
                     </q-item>
 
-                    <q-item
-                      clickable
-                      role="button"
-                      @click="createDevice('LAN')"
-                      style="padding: 8px 12px; cursor: pointer"
-                    >
+                    <q-item clickable role="button" @click="createDevice('LAN')"
+                      style="padding: 8px 12px; cursor: pointer">
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="wifi" />
                       </q-item-section>
@@ -149,174 +91,82 @@
               {{ $text('connections.no_devices') }}
             </div>
             <div v-else class="connections-devices-list column q-gutter-sm">
-              <div
-                v-for="d in devices"
-                :key="d.id"
-                class="connections-device-card"
-                :class="{ 'connections-device-card--local': d.isLocal }"
-              >
-                <div
-                  class="row items-start q-col-gutter-sm"
-                  :class="{ column: isMobile }"
-                >
+              <div v-for="d in devices" :key="d.id" class="connections-device-card"
+                :class="{ 'connections-device-card--local': d.isLocal }">
+                <div class="row items-start q-col-gutter-sm" :class="{ column: isMobile }">
                   <div class="col row items-start no-wrap q-gutter-sm">
-                    <q-icon
-                      :name="deviceIcon(d)"
-                      size="22px"
-                      class="connections-device-card__icon q-mt-xs"
-                    />
+                    <q-icon :name="deviceIcon(d)" size="22px" class="connections-device-card__icon q-mt-xs" />
                     <div class="col" style="min-width: 0">
                       <div class="text-subtitle2 text-weight-medium connections-device-card__name">
                         {{ d.name }}
-                        <q-badge
-                          v-if="d.isLocal"
-                          dense
-                          color="grey-7"
-                          class="q-ml-xs"
-                          :label="$text('connections.this_device')"
-                        />
+                        <q-badge v-if="d.isLocal" dense color="grey-7" class="q-ml-xs"
+                          :label="$text('connections.this_device')" />
                       </div>
                       <div v-if="!d.isLocal" class="text-caption connections-device-card__meta">
                         {{ d.type || 'Device' }}
                         <span v-if="d.lanHost"> · {{ d.lanHost }}</span>
                       </div>
-                      <div
-                        v-if="!d.isLocal"
-                        class="row items-center q-gutter-xs q-mt-sm"
-                      >
-                        <q-input
-                          :model-value="deviceSyncInterval(d)"
-                          type="number"
-                          dense
-                          outlined
-                          class="connections-device-sync-input"
-                          style="max-width: 140px"
-                          :label="$text('sync.per_device_interval_label')"
-                          :min="minSyncInterval"
-                          :max="maxSyncInterval"
-                          @update:model-value="(v) => setDeviceSyncInterval(d.id, v)"
-                          @blur="void saveSettings()"
-                        />
+                      <div v-if="!d.isLocal" class="row items-center q-gutter-xs q-mt-sm">
+                        <q-input :model-value="deviceSyncInterval(d)" type="number" dense outlined
+                          class="connections-device-sync-input" style="max-width: 140px"
+                          :label="$text('sync.per_device_interval_label')" :min="minSyncInterval" :max="maxSyncInterval"
+                          @update:model-value="(v) => setDeviceSyncInterval(d.id, v)" @blur="void saveSettings()" />
                         <span class="text-caption text-grey-7">
                           {{ $text('sync.interval_unit') }}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div
-                    class="row items-center q-gutter-xs"
-                    :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto'"
-                  >
-                    <button
-                      v-if="!d.isLocal"
-                      type="button"
-                      class="connections-check-btn"
-                      :class="checkBtnClass(d.id)"
+                  <div class="row items-center q-gutter-xs"
+                    :class="isMobile ? 'settings-dialog-device-actions' : 'col-auto'">
+                    <button v-if="!d.isLocal" type="button" class="connections-check-btn" :class="checkBtnClass(d.id)"
                       :disabled="deviceCheckState(d.id) === 'checking'"
-                      :aria-busy="deviceCheckState(d.id) === 'checking'"
-                      @click.stop="onCheckDevice(d)"
-                    >
+                      :aria-busy="deviceCheckState(d.id) === 'checking'" @click.stop="onCheckDevice(d)">
                       <span class="connections-check-btn__inner">
-                        <q-spinner
-                          v-if="deviceCheckState(d.id) === 'checking'"
-                          size="16px"
-                          class="connections-check-btn__spinner"
-                        />
+                        <q-spinner v-if="deviceCheckState(d.id) === 'checking'" size="16px"
+                          class="connections-check-btn__spinner" />
                         <span>{{ checkBtnLabel(d.id) }}</span>
                       </span>
                     </button>
-                    <q-btn
-                      v-if="!d.isLocal"
-                      dense
-                      flat
-                      round
-                      icon="delete"
-                      color="negative"
-                      @click="removeDevice(d.id)"
-                    />
+                    <q-btn v-if="!d.isLocal" dense flat round icon="delete" color="negative"
+                      @click="removeDevice(d.id)" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <q-expansion-item
-            class="connections-backup-expansion q-mt-md"
-            expand-separator
-            icon="backup"
-            label="Backup"
-            caption="Export, merge, override, and automatic local backup"
-          >
+          <q-expansion-item class="connections-backup-expansion q-mt-md" expand-separator icon="backup" label="Backup"
+            caption="Export, merge, override, and automatic local backup">
             <div class="q-pt-sm">
-              <div
-                class="row items-center q-gutter-sm"
-                :class="{ column: isMobile, 'items-stretch': isMobile }"
-              >
+              <div class="row items-center q-gutter-sm" :class="{ column: isMobile, 'items-stretch': isMobile }">
                 <div :class="isMobile ? 'col-12' : 'col'">
                   Make manual backup, merge current state with data from file, or totally replace
                   current data with data from file
                 </div>
-                <div
-                  :class="isMobile ? 'col-12' : 'col-auto'"
-                  :style="
-                    isMobile
-                      ? {
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'stretch',
-                          width: '100%',
-                        }
-                      : {
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          justifyContent: 'center',
-                        }
-                  "
-                >
+                <div :class="isMobile ? 'col-12' : 'col-auto'" :style="isMobile
+                    ? {
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                      width: '100%',
+                    }
+                    : {
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                    }
+                  ">
                   <div style="display: flex; align-items: center">
-                    <q-btn
-                      dense
-                      unelevated
-                      color="primary"
-                      label="Export"
-                      class="q-mr-sm"
-                      @click="exportWithPicker"
-                    />
-                    <q-btn
-                      dense
-                      outline
-                      color="secondary"
-                      label="Merge"
-                      class="q-mr-sm"
-                      @click="triggerImport"
-                    />
-                    <q-btn
-                      dense
-                      unelevated
-                      color="negative"
-                      label="Override"
-                      class="q-ml-sm"
-                      @click="overrideBackup"
-                    />
+                    <q-btn dense unelevated color="primary" label="Export" class="q-mr-sm" @click="exportWithPicker" />
+                    <q-btn dense outline color="secondary" label="Merge" class="q-mr-sm" @click="triggerImport" />
+                    <q-btn dense unelevated color="negative" label="Override" class="q-ml-sm" @click="overrideBackup" />
                   </div>
-                  <div
-                    v-if="exportState !== 'idle'"
-                    style="margin-top: 6px; width: 100%; text-align: left"
-                  >
+                  <div v-if="exportState !== 'idle'" style="margin-top: 6px; width: 100%; text-align: left">
                     <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
                       <q-spinner v-if="exportState === 'exporting'" size="18" />
-                      <q-icon
-                        v-else-if="exportState === 'done'"
-                        name="check"
-                        color="positive"
-                        size="18"
-                      />
-                      <q-icon
-                        v-else-if="exportState === 'error'"
-                        name="error"
-                        color="negative"
-                        size="18"
-                      />
+                      <q-icon v-else-if="exportState === 'done'" name="check" color="positive" size="18" />
+                      <q-icon v-else-if="exportState === 'error'" name="error" color="negative" size="18" />
                       <span>{{ exportMessage }}</span>
                     </div>
                   </div>
@@ -327,12 +177,7 @@
                   <div class="col">
                     Automatic local backup
 
-                    <q-toggle
-                      class="q-ml-sm"
-                      dense
-                      v-model="autoBackupEnabled"
-                      @update:model-value="onAutoToggle"
-                    />
+                    <q-toggle class="q-ml-sm" dense v-model="autoBackupEnabled" @update:model-value="onAutoToggle" />
                   </div>
                 </div>
                 <div v-if="autoBackupEnabled" class="q-mt-sm">
@@ -359,20 +204,13 @@
               </div>
             </div>
           </q-expansion-item>
-          <q-expansion-item
-            class="connections-internet-expansion q-mt-md"
-            expand-separator
-            icon="cloud"
-            label="Internet services"
-            caption="External APIs used by the app"
-          >
+          <q-expansion-item class="connections-internet-expansion q-mt-md" expand-separator icon="cloud"
+            label="Internet services" caption="External APIs used by the app">
             <div class="q-pt-sm">
               <div class="row items-center q-gutter-sm">
                 <div class="col text-white">
-                  <div
-                    class="text-caption text-white q-mt-xs"
-                    style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
-                  >
+                  <div class="text-caption text-white q-mt-xs"
+                    style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                     App is downloading data from following services/APIs:
                   </div>
                   <div class="text-caption text-white q-mt-xs">
@@ -389,13 +227,8 @@
                   </div>
                 </div>
                 <div class="col-auto">
-                  <q-btn
-                    dense
-                    outline
-                    color="primary"
-                    label="Manage"
-                    @click="() => toast('info', 'Internet settings not implemented')"
-                  />
+                  <q-btn dense outline color="primary" label="Manage"
+                    @click="() => toast('info', 'Internet settings not implemented')" />
                 </div>
               </div>
             </div>
@@ -407,43 +240,19 @@
         <q-space />
         <q-btn dense flat label="Close" color="primary" @click="close" />
       </q-card-actions>
-      <input
-        ref="fileInput"
-        type="file"
-        accept="application/json"
-        style="display: none"
-        @change="onFileSelected"
-      />
+      <input ref="fileInput" type="file" accept="application/json" style="display: none" @change="onFileSelected" />
     </q-card>
     <BluetoothScanModal v-model:modelValue="showScanModal" @connect="onDeviceSelected" />
-    <LanPairingModal
-      v-model="showLanPairingModal"
-      :own-device-name="ownDeviceName"
-      :pending-offer="lanPairingPendingOffer"
-      @paired="onLanPairedFromModal"
-    />
-    <JoinMemberDialog
-      v-model="showJoinMemberDialog"
-      @open-roles-setup="onOpenRolesSetup"
-    />
+    <LanPairingModal v-model="showLanPairingModal" :own-device-name="ownDeviceName"
+      :pending-offer="lanPairingPendingOffer" @paired="onLanPairedFromModal" />
+    <JoinMemberDialog v-model="showJoinMemberDialog" @open-roles-setup="onOpenRolesSetup" />
 
-    <SyncContractPreviewDialog
-      v-model="showPreviewDialog"
-      v-model:interval-seconds="confirmIntervalSeconds"
-      :duplicate-resolution="confirmDuplicateResolution"
-      @update:duplicate-resolution="setDuplicateResolution"
-      :preview="preview"
-      :min-sync-interval="minSyncInterval"
-      :max-sync-interval="maxSyncInterval"
-      @confirm="onSyncPreviewConfirm"
-      @cancel="onPreviewCancelled"
-    />
-    <PrivilegeChangeSyncDialog
-      v-model="showPrivilegeDialog"
-      :changes="privilegeChanges"
-      @confirm="onPrivilegeDialogConfirm"
-      @cancel="onPrivilegeDialogCancel"
-    />
+    <SyncContractPreviewDialog v-model="showPreviewDialog" v-model:interval-seconds="confirmIntervalSeconds"
+      :duplicate-resolution="confirmDuplicateResolution" @update:duplicate-resolution="setDuplicateResolution"
+      :preview="preview" :min-sync-interval="minSyncInterval" :max-sync-interval="maxSyncInterval"
+      @confirm="onSyncPreviewConfirm" @cancel="onPreviewCancelled" />
+    <PrivilegeChangeSyncDialog v-model="showPrivilegeDialog" :changes="privilegeChanges"
+      @confirm="onPrivilegeDialogConfirm" @cancel="onPrivilegeDialogCancel" />
   </q-dialog>
 </template>
 
@@ -1198,6 +1007,7 @@ function onDeviceSelected(device: any) {
 :deep(.connections-menu) {
   z-index: 20020 !important;
 }
+
 :deep(.connections-menu .q-menu__content) {
   z-index: 20020 !important;
 }
@@ -1208,6 +1018,7 @@ function onDeviceSelected(device: any) {
   color: var(--q-default-text, #000000) !important;
   -webkit-font-smoothing: antialiased;
 }
+
 :deep(.connections-menu .q-item),
 :deep(.connections-menu .q-item-type) {
   color: var(--q-default-text, #000000) !important;
@@ -1217,9 +1028,11 @@ function onDeviceSelected(device: any) {
 .connections-menu .q-item {
   padding: 8px 12px;
 }
+
 .connections-menu .q-item:hover {
   background: rgba(0, 0, 0, 0.04);
 }
+
 /* Inactive (disabled) inline menu items: visually muted and not interactive */
 .connections-menu .inactive {
   opacity: 0.56;

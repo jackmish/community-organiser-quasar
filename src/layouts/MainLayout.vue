@@ -152,6 +152,11 @@
           v-model="showRolesSetupDialog"
           :initial-action="rolesSetupInitialAction"
           @saved="onRolesSetupSaved"
+          @open-role-assignment="onRolesSetupOpenRoleAssignment"
+        />
+        <JoinMemberDialog
+          v-model="showJoinMemberDialog"
+          @open-roles-setup="onJoinMemberOpenRolesSetup"
         />
         <SyncContractHost />
         <PendingActionsDialog
@@ -193,6 +198,8 @@ import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
 import RolesSetupDialog from "src/components/settings/RolesSetupDialog.vue";
+import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
+import { dispatchOpenRolesSetup } from "src/modules/storage/sync/rolesSetupUi";
 import SyncContractHost from "src/components/settings/SyncContractHost.vue";
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
@@ -229,6 +236,7 @@ const showConfigDialog = ref(false);
 const showAboutDialog = ref(false);
 const showConnectionsDialog = ref(false);
 const showRolesSetupDialog = ref(false);
+const showJoinMemberDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
 const showPendingActionsDialog = ref(false);
@@ -306,6 +314,16 @@ watch(showRolesSetupDialog, (open) => {
 
 function onRolesSetupSaved(): void {
   window.dispatchEvent(new Event("co21:roles-saved"));
+}
+
+function onRolesSetupOpenRoleAssignment(): void {
+  showRolesSetupDialog.value = false;
+  showJoinMemberDialog.value = true;
+}
+
+function onJoinMemberOpenRolesSetup(): void {
+  showJoinMemberDialog.value = false;
+  dispatchOpenRolesSetup();
 }
 const menuOpen = ref(false);
 const selectedLanguage = ref("en-US");

@@ -135,8 +135,21 @@
         </div>
       </q-card-section>
 
-      <q-card-actions align="right" class="q-pt-none">
-        <q-btn flat :label="$text('action.cancel')" @click="dialogVisible = false" />
+      <q-card-actions align="right" class="q-pt-none settings-dialog-footer-actions">
+        <q-btn
+          outline
+          color="secondary"
+          icon="badge"
+          class="settings-dialog-surface-btn"
+          :label="$text('role.assign_roles_per_group')"
+          @click="openRoleAssignment"
+        />
+        <q-btn
+          flat
+          class="settings-dialog-surface-btn"
+          :label="$text('action.cancel')"
+          @click="dialogVisible = false"
+        />
         <q-btn
           unelevated
           color="primary"
@@ -182,7 +195,12 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'saved'): void;
+  (e: 'open-role-assignment'): void;
 }>();
+
+function openRoleAssignment(): void {
+  emit('open-role-assignment');
+}
 
 const dialogVisible = computed({
   get: () => !!props.modelValue,

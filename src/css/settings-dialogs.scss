@@ -78,6 +78,27 @@
   color: rgba(0, 0, 0, 0.87) !important;
 }
 
+/* Readable outline/flat buttons on blue settings-dialog-card chrome */
+.settings-dialog-card .settings-dialog-surface-btn {
+  background: #fff !important;
+}
+
+.settings-dialog-card .settings-dialog-surface-btn.text-primary,
+.settings-dialog-card .settings-dialog-surface-btn.text-primary .q-icon {
+  color: var(--q-primary) !important;
+}
+
+.settings-dialog-card .settings-dialog-surface-btn.text-secondary,
+.settings-dialog-card .settings-dialog-surface-btn.text-secondary .q-icon {
+  color: var(--q-secondary) !important;
+}
+
+.settings-dialog-card .settings-dialog-surface-btn.q-btn--flat,
+.settings-dialog-card .settings-dialog-surface-btn.q-btn--flat .q-btn__content,
+.settings-dialog-card .settings-dialog-surface-btn.q-btn--flat .q-icon {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
 .connections-devices-panel {
   background: #e8ecf0;
   border-radius: 8px;
