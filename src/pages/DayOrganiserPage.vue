@@ -198,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { todayString } from "src/utils/dateUtils";
+import { todayString, yesterdayString } from "src/utils/dateUtils";
 import { createImportHandler } from "src/modules/storage/handlers/importHandlers";
 import { useDayRollover } from "src/composables/useDayRollover";
 
@@ -1144,17 +1144,14 @@ onMounted(async () => {
       // ignore
     }
     try {
-      // If current active date is before today, move active day to today when refreshing
+      // After midnight: advance yesterday → today only (keep historical navigation).
       const todayStr = todayString();
-      if (CC.task.time.currentDate && CC.task.time.currentDate.value) {
-        // Compare YYYY-MM-DD strings to avoid Date parsing/timezone issues.
-        const curStr = String(CC.task.time.currentDate.value || "");
-        if (curStr < todayStr) {
-          try {
-            CC.task.time.setCurrentDate(todayStr);
-          } catch (e) {
-            // ignore
-          }
+      const curStr = String(CC.task.time.currentDate?.value || "");
+      if (curStr && curStr === yesterdayString()) {
+        try {
+          CC.task.time.setCurrentDate(todayStr);
+        } catch (e) {
+          // ignore
         }
       }
     } catch (e) {

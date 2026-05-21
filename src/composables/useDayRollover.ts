@@ -1,12 +1,12 @@
 import { onMounted, onBeforeUnmount } from 'vue';
 import type { Ref } from 'vue';
-import { todayString } from 'src/utils/dateUtils';
+import { todayString, yesterdayString } from 'src/utils/dateUtils';
 
 /**
- * Registers a 60-second interval that advances `currentDate` to today whenever
- * the stored date falls behind the system clock (e.g. after midnight).
+ * Registers a 60-second interval that advances `currentDate` to today when the
+ * calendar day rolls over (user was on yesterday and it is now a new day).
  *
- * Also advances immediately on mount if the stored date is already stale.
+ * Does not pull the user off historical dates they navigated to manually.
  *
  * Safe to call inside any Vue setup() / <script setup>.
  */
@@ -20,7 +20,13 @@ export function useDayRollover(args: {
     try {
       const today = todayString();
       const cur = String(currentDate.value || '');
-      if (!cur || cur < today) {
+      if (!cur) {
+        setCurrentDate(today);
+        return;
+      }
+      if (cur >= today) return;
+      // Only advance across midnight — not when browsing older days.
+      if (cur === yesterdayString()) {
         setCurrentDate(today);
       }
     } catch (e) {

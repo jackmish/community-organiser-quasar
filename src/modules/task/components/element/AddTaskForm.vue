@@ -804,10 +804,11 @@ function performDelete() {
   showDeleteConfirm.value = false;
 }
 
-// Sync when parent calendar selection changes
+// Sync when parent calendar selection changes (add mode only — do not clobber a task being edited)
 watch(
   () => props.selectedDate,
   (val) => {
+    if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
       // When parent changes the selected date (e.g. calendar day click),

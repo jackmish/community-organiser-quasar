@@ -88,7 +88,7 @@ export function createTaskViewHelpers(args: {
     });
   };
 
-  // Sync calendar date with current date
+  // Sync new-task template date with the organiser day (add flow only; edit uses initialTask).
   watch(currentDate, (newDate) => {
     try {
       if ((newTask.value as any).eventDate !== newDate) (newTask.value as any).eventDate = newDate;

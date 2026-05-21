@@ -31,6 +31,17 @@ export function todayString(): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Local-calendar yesterday relative to {@link todayString}. */
+export function yesterdayString(): string {
+  const today = parseYmdLocal(todayString());
+  if (!today) return todayString();
+  today.setDate(today.getDate() - 1);
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /**
  * Extracts the YYYY-MM-DD date part from a full ISO string or returns
  * the value unchanged if it is already a date-only string.
