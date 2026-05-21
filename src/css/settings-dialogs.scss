@@ -191,6 +191,18 @@
   color: rgba(0, 0, 0, 0.55) !important;
 }
 
+.lan-pairing-layout--single {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.lan-pairing-layout--single > .lan-pairing-col--pc {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
 .lan-pairing-layout--split {
   display: flex;
   flex-direction: row;
