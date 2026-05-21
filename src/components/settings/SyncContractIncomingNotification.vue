@@ -1,21 +1,23 @@
 <template>
-  <div v-if="show" class="sync-incoming-notice-icon">
-    <q-btn
-      flat
-      dense
-      class="sync-incoming-notice-icon__btn"
-      :aria-label="bannerText"
-      @click="menuOpen = true"
-    >
-      <q-icon name="sync" size="20px" color="white" />
-    </q-btn>
+  <q-btn
+    v-if="show"
+    flat
+    dense
+    no-caps
+    class="sync-incoming-notice-btn co21-glow-positive co21-glow-positive--pulse"
+    :aria-label="bannerText"
+  >
+    <span class="sync-incoming-notice-btn__icons">
+      <q-icon name="sync" size="14px" />
+      <q-icon name="devices" size="14px" />
+    </span>
 
-    <q-menu
-      v-model="menuOpen"
+    <q-popup-proxy
       anchor="bottom left"
       self="top left"
-      :offset="[0, 8]"
-      class="sync-incoming-notice-menu"
+      :offset="[0, 6]"
+      transition-show="scale"
+      transition-hide="scale"
     >
       <q-card class="sync-incoming-notice-panel">
         <q-card-section class="q-pb-sm">
@@ -28,12 +30,6 @@
         </q-card-section>
         <q-card-actions align="right" class="q-pt-none">
           <q-btn
-            flat
-            dense
-            :label="$text('action.close')"
-            @click="menuOpen = false"
-          />
-          <q-btn
             unelevated
             color="positive"
             :label="$text('sync.incoming_review_btn')"
@@ -41,12 +37,12 @@
           />
         </q-card-actions>
       </q-card>
-    </q-menu>
-  </div>
+    </q-popup-proxy>
+  </q-btn>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
 
 const props = defineProps<{
@@ -58,44 +54,36 @@ const emit = defineEmits<{
   (e: 'review'): void;
 }>();
 
-const menuOpen = ref(false);
-
 const bannerText = computed(() => {
   const raw = $text('sync.incoming_banner');
   return raw.replace('{device}', props.proposerName || '?');
 });
 
 function onReview(): void {
-  menuOpen.value = false;
   emit('review');
 }
 </script>
 
 <style scoped>
-.sync-incoming-notice-icon {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-}
-
-.sync-incoming-notice-icon__btn {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
-  padding: 0;
+.sync-incoming-notice-btn {
+  padding: 6px 8px;
+  min-height: 32px;
+  height: 32px;
+  margin: 0;
   border-radius: 6px;
   background: #21ba45 !important;
   color: #fff !important;
 }
 
-.sync-incoming-notice-icon__btn :deep(.q-btn__content),
-.sync-incoming-notice-icon__btn :deep(.q-icon) {
-  color: #fff !important;
+.sync-incoming-notice-btn__icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.sync-incoming-notice-icon__btn:hover {
-  filter: brightness(1.08);
+.sync-incoming-notice-btn :deep(.q-btn__content),
+.sync-incoming-notice-btn :deep(.q-icon) {
+  color: #fff !important;
 }
 
 .sync-incoming-notice-panel {

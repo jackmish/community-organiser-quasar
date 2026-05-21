@@ -1,0 +1,33 @@
+/* Reusable glow for buttons/chips — add class to any element */
+
+.co21-glow-positive {
+  --co21-glow-rgb: 33, 186, 69;
+  box-shadow: 0 0 6px 1px rgba(var(--co21-glow-rgb), 0.5);
+}
+
+.co21-glow-warning {
+  --co21-glow-rgb: 242, 192, 55;
+  box-shadow: 0 0 6px 1px rgba(var(--co21-glow-rgb), 0.5);
+}
+
+.co21-glow-info {
+  --co21-glow-rgb: 2, 136, 209;
+  box-shadow: 0 0 6px 1px rgba(var(--co21-glow-rgb), 0.5);
+}
+
+.co21-glow-positive--pulse,
+.co21-glow-warning--pulse,
+.co21-glow-info--pulse {
+  animation: co21-glow-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes co21-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 4px 1px rgba(var(--co21-glow-rgb), 0.35);
+  }
+
+  50% {
+    box-shadow: 0 0 14px 4px rgba(var(--co21-glow-rgb), 0.8);
+  }
+}

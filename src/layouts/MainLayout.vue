@@ -660,13 +660,13 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   overflow: visible;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.notification-wrapper > .sync-incoming-notice-icon {
+.notification-wrapper > .sync-incoming-notice-btn {
   flex: 0 0 auto;
-  order: -1;
+  margin-right: 0;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */
