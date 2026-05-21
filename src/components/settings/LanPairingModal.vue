@@ -53,18 +53,66 @@
               <q-toggle :model-value="listenOn" :label="$text('lan.accept_pairing')" color="positive"
                 @update:model-value="onToggleListen" />
 
-
               <div class="text-subtitle2 q-mb-xs">Bonjour / .local</div>
               <div class="text-caption lan-pairing-muted q-mb-sm">
                 {{ $text('lan.bonjour_hint') }}
               </div>
-              <q-btn outline color="primary" icon="search" class="full-width settings-dialog-surface-btn q-mb-sm"
-                :label="$text('lan.search_co21')" :loading="browseBusy" @click="browseNetwork" />
+            </template>
+            <div v-else class="text-caption lan-pairing-muted q-mb-sm">
+              Bonjour search is available in the desktop app. Use the QR on the PC or enter an address
+              below.
+            </div>
+
+            <div
+              class="lan-pairing-tool-row q-mb-sm"
+              :class="{ 'lan-pairing-tool-row--stacked': isMobile }"
+            >
+              <q-btn
+                v-if="hasElectronLan"
+                outline
+                color="primary"
+                icon="search"
+                class="settings-dialog-surface-btn lan-pairing-tool-btn"
+                :label="$text('lan.search_co21')"
+                :loading="browseBusy"
+                @click="browseNetwork"
+              />
+              <q-btn
+                outline
+                color="secondary"
+                icon="qr_code_scanner"
+                class="settings-dialog-surface-btn lan-pairing-tool-btn"
+                :label="$text('lan.load_qr_image')"
+                @click="triggerQrFilePick"
+              />
+              <q-btn
+                v-if="showQrCameraButton"
+                outline
+                color="positive"
+                icon="photo_camera"
+                class="settings-dialog-surface-btn lan-pairing-tool-btn"
+                :label="$text('lan.scan_qr_camera')"
+                :loading="qrCameraBusy"
+                @click="scanQrWithCamera"
+              />
+            </div>
+            <input ref="qrFileInput" type="file" accept="image/*" class="lan-qr-file-input" @change="onQrFileChange" />
+
+            <template v-if="hasElectronLan">
               <div v-if="browseError" class="text-negative text-caption q-mb-sm">{{ browseError }}</div>
-              <q-list v-if="discovered.length" bordered separator
-                class="rounded-borders lan-pairing-discovered-list q-mb-md">
-                <q-item v-for="(d, idx) in discovered" :key="d.fqdn + idx" clickable v-ripple
-                  @click="pickDiscovered(d)">
+              <q-list
+                v-if="discovered.length"
+                bordered
+                separator
+                class="rounded-borders lan-pairing-discovered-list lan-pairing-discovered-bleed q-mb-md"
+              >
+                <q-item
+                  v-for="(d, idx) in discovered"
+                  :key="d.fqdn + idx"
+                  clickable
+                  v-ripple
+                  @click="pickDiscovered(d)"
+                >
                   <q-item-section>
                     <q-item-label class="lan-pairing-list-label">{{ d.displayName }}</q-item-label>
                     <q-item-label caption>{{ d.connectHost }}:{{ d.port }}</q-item-label>
@@ -75,55 +123,50 @@
                 </q-item>
               </q-list>
             </template>
-            <div v-else class="text-caption lan-pairing-muted q-mb-md">
-              Bonjour search is available in the desktop app. Use the QR on the PC or enter an address
-              below.
-            </div>
 
-            <q-btn outline color="secondary" icon="qr_code_scanner"
-              class="full-width settings-dialog-surface-btn q-mb-sm" :label="$text('lan.load_qr_image')"
-              @click="triggerQrFilePick" />
-            <input ref="qrFileInput" type="file" accept="image/*" class="lan-qr-file-input" @change="onQrFileChange" />
-            <q-btn v-if="showQrCameraButton" outline color="positive" icon="photo_camera"
-              class="full-width settings-dialog-surface-btn q-mb-sm" :label="$text('lan.scan_qr_camera')"
-              :loading="qrCameraBusy" @click="scanQrWithCamera" />
-            <div
-              class="row q-col-gutter-sm items-start q-mb-sm lan-pairing-pair-row"
-              :class="{ column: isMobile }"
-            >
-              <div class="col" style="min-width: 0">
+            <q-separator class="lan-pairing-pair-separator q-my-md" />
+
+            <div class="lan-pairing-pair-block">
+              <div class="text-caption lan-pairing-pair-label q-mb-xs">
+                {{ $text('lan.pc_host_label') }}
+              </div>
+              <div
+                class="row q-col-gutter-sm items-center no-wrap lan-pairing-pair-row"
+                :class="{ column: isMobile }"
+              >
                 <q-input
                   v-model="pcHost"
                   dense
                   outlined
                   hide-bottom-space
-                  class="connections-device-sync-input"
-                  :label="$text('lan.pc_host_label')"
+                  class="col connections-device-sync-input lan-pairing-pair-input"
+                  style="min-width: 0"
+                  :placeholder="$text('lan.pc_host_label')"
                   @keyup.enter="requestPairToPc"
                 />
-                <div class="text-caption lan-pairing-muted q-mt-xs">
-                  {{ $text('lan.pc_host_hint') }}
-                </div>
+                <q-btn
+                  v-if="!pairActive"
+                  unelevated
+                  color="primary"
+                  class="col-auto lan-pairing-pair-btn"
+                  :class="{ 'full-width': isMobile }"
+                  :label="$text('lan.request_pairing')"
+                  :disable="!pcHost.trim()"
+                  @click="requestPairToPc"
+                />
+                <q-btn
+                  v-else
+                  unelevated
+                  color="warning"
+                  class="col-auto lan-pairing-pair-btn"
+                  :class="{ 'full-width': isMobile }"
+                  :label="$text('lan.cancel_pairing')"
+                  @click="cancelPairing"
+                />
               </div>
-              <q-btn
-                v-if="!pairActive"
-                unelevated
-                color="primary"
-                class="col-auto"
-                :class="{ 'full-width': isMobile }"
-                :label="$text('lan.request_pairing')"
-                :disable="!pcHost.trim()"
-                @click="requestPairToPc"
-              />
-              <q-btn
-                v-else
-                unelevated
-                color="warning"
-                class="col-auto"
-                :class="{ 'full-width': isMobile }"
-                :label="$text('lan.cancel_pairing')"
-                @click="cancelPairing"
-              />
+              <div class="text-caption lan-pairing-muted q-mt-xs">
+                {{ $text('lan.pc_host_hint') }}
+              </div>
             </div>
             <div v-if="pcConnectPreview" class="text-caption lan-pairing-muted q-mt-xs">
               Will connect to:

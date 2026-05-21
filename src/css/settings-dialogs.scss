@@ -107,6 +107,73 @@
   color: rgba(0, 0, 0, 0.87) !important;
 }
 
+/* Input + button on one line: label is outside q-field (no floating-label offset) */
+.lan-pairing-pair-label {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.lan-pairing-pair-row:not(.column) {
+  align-items: center;
+}
+
+.lan-pairing-pair-row:not(.column) .lan-pairing-pair-input.q-field {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.lan-pairing-pair-row:not(.column) .lan-pairing-pair-input .q-field__inner {
+  padding-bottom: 0;
+}
+
+.lan-pairing-pair-row:not(.column) .lan-pairing-pair-input .q-field__control {
+  min-height: 40px;
+}
+
+.lan-pairing-pair-row:not(.column) .lan-pairing-pair-btn {
+  align-self: center;
+  height: 40px;
+  min-height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 7px;
+  margin-bottom: 0;
+}
+
+.lan-pairing-tool-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lan-pairing-tool-row--stacked {
+  flex-direction: column;
+}
+
+.lan-pairing-tool-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lan-pairing-tool-row--stacked .lan-pairing-tool-btn {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+/* Bonjour results span full dialog width while block stays in PC column */
+.lan-pairing-layout--split .lan-pairing-discovered-bleed {
+  width: calc(200% + 20px);
+  max-width: none;
+}
+
+.lan-pairing-layout--stacked .lan-pairing-discovered-bleed {
+  width: 100%;
+}
+
+.lan-pairing-pair-separator {
+  opacity: 0.35;
+}
+
 .lan-pairing-address-panel {
   background: #eef2f7;
   border: 1px solid rgba(0, 0, 0, 0.1);
