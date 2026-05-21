@@ -41,6 +41,8 @@
   "ui.hide": "Ukryj",
   "ui.show": "Pokaż",
   "ui.add_new_task": "Dodaj nowe zadanie",
+  "ui.calendar_view": "Kalendarz",
+  "ui.day_view": "Widok dnia",
   "ui.no_tasks_for_day": "Brak zadań na ten dzień",
   "ui.all_groups": "Wszystkie grupy",
   "ui.shortcut": "Skrót",

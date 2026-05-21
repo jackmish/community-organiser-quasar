@@ -274,6 +274,14 @@ $hidden-bg: #f2f2f2;
   border-top-right-radius: 0 !important;
 }
 
+.day-organiser-scroll-anchor {
+  scroll-margin-top: 56px;
+}
+
+.mobile-section-toggle-btn {
+  display: none;
+}
+
 .hidden-children-list__list {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -354,6 +362,24 @@ $hidden-bg: #f2f2f2;
 }
 
 @media (max-width: 767px) {
+  .mobile-section-toggle-btn {
+    display: inline-flex;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    /* CSS z-index caps at 2147483647 (32-bit signed int); keep below notifications/tooltips */
+    z-index: 2147483547 !important;
+    padding: 10px 20px;
+    font-weight: 600;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+    max-width: calc(100% - 88px);
+  }
+
   .replenish-column {
     min-width: 0;
   }

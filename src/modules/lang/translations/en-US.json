@@ -41,6 +41,8 @@
   "ui.hide": "Hide",
   "ui.show": "Show",
   "ui.add_new_task": "Add new task",
+  "ui.calendar_view": "Calendar",
+  "ui.day_view": "Day view",
   "ui.no_tasks_for_day": "No tasks for this day",
   "ui.all_groups": "All Groups",
   "ui.shortcut": "Shortcut",

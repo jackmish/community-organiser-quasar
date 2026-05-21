@@ -14,7 +14,11 @@
          stays inside the fixed-right-panel as before. This avoids rendering two copies. -->
     <div v-else>
       <div class="row q-col-gutter-md tasks-row">
-        <div class="col-12 left-panel tasks-column" style="position: relative">
+        <div
+          ref="dayViewSectionRef"
+          class="col-12 left-panel tasks-column day-organiser-day-section day-organiser-scroll-anchor"
+          style="position: relative"
+        >
           <q-card class="task-list-card" :style="cardStyle">
             <q-card-section>
               <div class="text-h6 task-list-header" :style="headerStyle">
@@ -111,7 +115,10 @@
       </div>
 
       <div class="row q-col-gutter-md q-mt-md">
-        <div class="col-12 col-md-8">
+        <div
+          ref="calendarSectionRef"
+          class="col-12 col-md-8 day-organiser-calendar-section day-organiser-scroll-anchor"
+        >
           <CalendarView
             :key="reloadKey"
             :selected-date="CC.task.time.currentDate.value"
@@ -173,6 +180,17 @@
       <DayOrganiserTaskPanelContent />
     </div>
 
+    <q-btn
+      v-if="$q.screen.lt.md"
+      unelevated
+      color="primary"
+      text-color="white"
+      class="mobile-section-toggle-btn"
+      :icon="scrollToggleIcon"
+      :label="$text(scrollToggleLabelKey)"
+      @click="onScrollToggleClick"
+    />
+
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
       v-if="panelHidden || CC.task.active.mode.value !== 'add'"
@@ -231,6 +249,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide } from "vue";
+import { useMobileOrganiserScrollToggle } from "src/composables/useMobileOrganiserScrollToggle";
 import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
@@ -242,6 +261,16 @@ import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 
 const $q = useQuasar();
+
+const dayViewSectionRef = ref<HTMLElement | null>(null);
+const calendarSectionRef = ref<HTMLElement | null>(null);
+const isMobileOrganiser = computed(() => $q.screen.lt.md);
+const { scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
+  useMobileOrganiserScrollToggle({
+    enabled: isMobileOrganiser,
+    daySectionRef: dayViewSectionRef,
+    calendarSectionRef,
+  });
 
 const currentDayData = computed(() => {
   const days = CC.task.time.days.value || {};
