@@ -175,8 +175,11 @@ body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input[type='color'
   -webkit-text-fill-color: #ffffff !important;
 }
 
-.q-dialog:not(.day-organiser-task-panel-dialog) .q-field__native {
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__native,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__input {
   color: #fff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
 
 /* Centralized border: replace Quasar's default outlined pseudo-element */
@@ -216,18 +219,40 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 .q-field--outlined.q-focused .q-field__control::before {
   border-color: rgba(155, 255, 155, 0.15) !important;
 }
-/* TASK-LIST BLUE applied to the q-field container (keeps native inputs transparent) */
+/* TASK-LIST BLUE on field control (rounded), not square outer .q-field */
 /* Do NOT touch .q-menu or .q-select__popup (expanded options) */
 html body .q-select .q-field,
 html body .group-select--header .q-field,
-html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field,
-html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field,
 .q-select:not(.use-default) {
   background: #26b !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff !important;
   box-shadow: none !important;
+}
+
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field {
+  background: transparent !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field--outlined .q-field__control,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field--outlined .q-field__control {
+  background: #26b !important;
+  border-radius: 4px;
+  overflow: hidden;
+  color: #ffffff !important;
+}
+
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field--outlined .q-field__control::before,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field--outlined .q-field__control::after,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field--outlined .q-field__control::before,
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field--outlined .q-field__control::after {
+  border-radius: 4px !important;
 }
 /* keep placeholders readable */
 html body .group-select--header input::placeholder,

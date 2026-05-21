@@ -62,18 +62,6 @@
   color: rgba(0, 0, 0, 0.87) !important;
 }
 
-.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__native),
-.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__input),
-.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-select__input) {
-  color: rgba(0, 0, 0, 0.87) !important;
-  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
-}
-
-.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__label),
-.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__hint) {
-  color: rgba(0, 0, 0, 0.55) !important;
-}
-
 .lan-pairing-address-panel {
   background: #eef2f7;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -136,13 +124,42 @@
   min-width: 0;
 }
 
-.connections-device-sync-input :deep(.q-field__native),
-.connections-device-sync-input :deep(.q-field__input) {
-  color: rgba(0, 0, 0, 0.87);
+/* Hint rendered outside field — keep no extra painted area under control */
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__inner,
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__bottom {
+  background: transparent !important;
 }
 
-.connections-device-sync-input :deep(.q-field__label) {
-  color: rgba(0, 0, 0, 0.6);
+/* White text on #26b outlined controls (matches app dialog field chrome) */
+.settings-dialog-card .connections-device-sync-input input,
+.settings-dialog-card .connections-device-sync-input textarea,
+.settings-dialog-card .connections-device-sync-input .q-field__native,
+.settings-dialog-card .connections-device-sync-input .q-field__input,
+.lan-pairing-dialog-card .connections-device-sync-input input,
+.lan-pairing-dialog-card .connections-device-sync-input textarea,
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__native,
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+
+.settings-dialog-card .connections-device-sync-input input::placeholder,
+.settings-dialog-card .connections-device-sync-input textarea::placeholder,
+.lan-pairing-dialog-card .connections-device-sync-input input::placeholder,
+.lan-pairing-dialog-card .connections-device-sync-input textarea::placeholder {
+  color: rgba(255, 255, 255, 0.65) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.settings-dialog-card .connections-device-sync-input .q-field__label,
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__label {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.settings-dialog-card .connections-device-sync-input .q-field__hint,
+.lan-pairing-dialog-card .connections-device-sync-input .q-field__hint {
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 
 /* Connections dialog: readable list panel on blue card chrome */

@@ -40,8 +40,8 @@
         </q-card-section>
 
         <div :class="isMobile
-            ? 'lan-pairing-layout lan-pairing-layout--stacked'
-            : 'lan-pairing-layout lan-pairing-layout--split'
+          ? 'lan-pairing-layout lan-pairing-layout--stacked'
+          : 'lan-pairing-layout lan-pairing-layout--split'
           ">
           <!-- PC / Laptop -->
           <section class="lan-pairing-col lan-pairing-col--pc">
@@ -87,15 +87,43 @@
             <q-btn v-if="showQrCameraButton" outline color="positive" icon="photo_camera"
               class="full-width settings-dialog-surface-btn q-mb-sm" :label="$text('lan.scan_qr_camera')"
               :loading="qrCameraBusy" @click="scanQrWithCamera" />
-
-            <div class="row q-col-gutter-sm items-center lan-pairing-pair-row" :class="{ column: isMobile }">
-              <q-input v-model="pcHost" dense outlined class="col lan-pairing-host-input"
-                :label="$text('lan.pc_host_label')" :hint="$text('lan.pc_host_hint')" persistent-hint
-                @keyup.enter="requestPairToPc" />
-              <q-btn v-if="!pairActive" unelevated color="primary" class="col-auto" :class="{ 'full-width': isMobile }"
-                :label="$text('lan.request_pairing')" :disable="!pcHost.trim()" @click="requestPairToPc" />
-              <q-btn v-else unelevated color="warning" class="col-auto" :class="{ 'full-width': isMobile }"
-                :label="$text('lan.cancel_pairing')" @click="cancelPairing" />
+            <div
+              class="row q-col-gutter-sm items-start q-mb-sm lan-pairing-pair-row"
+              :class="{ column: isMobile }"
+            >
+              <div class="col" style="min-width: 0">
+                <q-input
+                  v-model="pcHost"
+                  dense
+                  outlined
+                  hide-bottom-space
+                  class="connections-device-sync-input"
+                  :label="$text('lan.pc_host_label')"
+                  @keyup.enter="requestPairToPc"
+                />
+                <div class="text-caption lan-pairing-muted q-mt-xs">
+                  {{ $text('lan.pc_host_hint') }}
+                </div>
+              </div>
+              <q-btn
+                v-if="!pairActive"
+                unelevated
+                color="primary"
+                class="col-auto"
+                :class="{ 'full-width': isMobile }"
+                :label="$text('lan.request_pairing')"
+                :disable="!pcHost.trim()"
+                @click="requestPairToPc"
+              />
+              <q-btn
+                v-else
+                unelevated
+                color="warning"
+                class="col-auto"
+                :class="{ 'full-width': isMobile }"
+                :label="$text('lan.cancel_pairing')"
+                @click="cancelPairing"
+              />
             </div>
             <div v-if="pcConnectPreview" class="text-caption lan-pairing-muted q-mt-xs">
               Will connect to:
@@ -116,7 +144,9 @@
                   {{ $text('lan.qr_share_hint') }}
                 </div>
                 <q-select v-if="serverAddrs.length > 1" v-model="qrHost" dense outlined :options="serverAddrs"
-                  label="Address in QR" class="lan-pairing-host-input q-mb-sm" />
+                  label="Address in QR"
+                  class="connections-device-sync-input q-mb-sm"
+                />
                 <div v-if="qrDataUrl" class="flex flex-center q-pa-sm bg-white rounded-borders lan-qr-wrap q-mb-sm">
                   <q-img :src="qrDataUrl" fit="contain" class="lan-qr-img" spinner-color="primary"
                     alt="LAN pairing QR code" />
