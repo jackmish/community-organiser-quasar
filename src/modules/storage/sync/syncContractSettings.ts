@@ -29,6 +29,8 @@ export type SyncContractPending = {
   /** Device id that proposed this contract (local). */
   proposerDeviceId: string;
   proposerDeviceName: string;
+  /** Shared rotating-token seed for LAN data sync (proposer generates). */
+  syncSessionToken?: string;
   /** LAN host of proposer when known (for reject notify-back). */
   proposerLanHost?: string;
   /** Agreed sync interval (seconds) — included when peer is offline. */

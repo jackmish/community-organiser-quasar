@@ -7,11 +7,43 @@
       </q-card-section>
 
       <q-card-section :class="bodyClass" :style="bodyStyle" class="pending-actions-body">
-        <div v-if="!actions.length" class="text-body2 text-grey-7">
+        <div v-if="!actions.length && !syncRuns.length" class="text-body2 text-grey-7">
           {{ $text('sync.pending_actions_empty') }}
         </div>
 
-        <div v-else class="pending-actions-list column q-gutter-md">
+        <div v-if="syncRuns.length" class="q-mb-md">
+          <div class="text-subtitle2 text-weight-medium q-mb-sm">
+            {{ $text('sync.runs_section_title') }}
+          </div>
+          <div class="pending-actions-list column q-gutter-sm">
+            <div v-for="run in syncRunsNewestFirst" :key="run.id" class="pending-action-card">
+              <div class="row items-center q-gutter-sm q-mb-xs">
+                <div class="text-subtitle2 text-weight-medium">{{ run.peerDeviceName }}</div>
+                <q-badge :color="runStatusColor(run.status)" :label="runStatusLabel(run.status)" />
+                <q-badge
+                  v-if="run.incremental"
+                  color="grey-7"
+                  outline
+                  :label="$text('sync.run_incremental')"
+                />
+              </div>
+              <div class="text-caption text-grey-8">
+                {{ runStartedLabel(run) }}
+                <span v-if="run.finishedAt"> · {{ runFinishedLabel(run) }}</span>
+              </div>
+              <div v-if="run.message" class="text-caption text-grey-7 q-mt-xs">
+                {{ run.message }}
+                <span v-if="run.groupsReceived != null">
+                  · {{ $text('sync.run_stats') }}
+                  ↑{{ run.groupsSent ?? 0 }}/{{ run.tasksSent ?? 0 }}
+                  ↓{{ run.groupsReceived }}/{{ run.tasksReceived ?? 0 }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="actions.length" class="pending-actions-list column q-gutter-md">
           <div
             v-for="action in actions"
             :key="action.id"
@@ -85,11 +117,13 @@
 import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { SyncPendingAction } from 'src/modules/storage/sync/syncPendingActions';
+import type { SyncRunRecord, SyncRunStatus } from 'src/modules/storage/sync/syncRunQueue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const props = defineProps<{
   modelValue: boolean;
   actions: SyncPendingAction[];
+  syncRuns?: SyncRunRecord[];
 }>();
 
 const emit = defineEmits<{
@@ -131,6 +165,34 @@ function lastAttemptLabel(action: SyncPendingAction): string {
   if (!action.lastAttemptAt) return '';
   const raw = $text('sync.pending_action_last_attempt');
   return raw.replace('{time}', new Date(action.lastAttemptAt).toLocaleString());
+}
+
+const syncRuns = computed(() => props.syncRuns ?? []);
+
+const syncRunsNewestFirst = computed(() =>
+  [...syncRuns.value].sort((a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt)),
+);
+
+function runStatusColor(status: SyncRunStatus): string {
+  if (status === 'ok') return 'positive';
+  if (status === 'failed') return 'negative';
+  if (status === 'running') return 'primary';
+  return 'grey-7';
+}
+
+function runStatusLabel(status: SyncRunStatus): string {
+  const key = `sync.run_status_${status}` as 'sync.run_status_ok';
+  return $text(key);
+}
+
+function runStartedLabel(run: SyncRunRecord): string {
+  const t = run.startedAt ?? run.createdAt;
+  return $text('sync.run_started').replace('{time}', new Date(t).toLocaleString());
+}
+
+function runFinishedLabel(run: SyncRunRecord): string {
+  if (!run.finishedAt) return '';
+  return $text('sync.run_finished').replace('{time}', new Date(run.finishedAt).toLocaleString());
 }
 </script>
 

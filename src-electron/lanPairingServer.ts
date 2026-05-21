@@ -240,6 +240,8 @@ function handleSyncContractPropose(
       parsed.duplicateResolution === 'manual' || parsed.duplicateResolution === 'auto'
         ? parsed.duplicateResolution
         : undefined;
+    const syncSessionToken =
+      typeof parsed.syncSessionToken === 'string' ? parsed.syncSessionToken.trim() : '';
     notifyRenderer('lan:sync-contract-incoming', {
       createdAt,
       snapshot,
@@ -248,6 +250,7 @@ function handleSyncContractPropose(
       proposerLanHost: remoteAddr,
       ...(intervalSeconds !== undefined ? { intervalSeconds } : {}),
       ...(duplicateResolution ? { duplicateResolution } : {}),
+      ...(syncSessionToken ? { syncSessionToken } : {}),
     });
     sendJson(res, 200, { ok: true });
   })();
@@ -296,6 +299,54 @@ function handleSyncContractReject(
           : undefined,
     });
     sendJson(res, 200, { ok: true });
+  })();
+}
+
+function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse): void {
+  void (async () => {
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const deviceId = typeof parsed.deviceId === 'string' ? parsed.deviceId.trim() : '';
+    const token = typeof parsed.token === 'string' ? parsed.token.trim() : '';
+    if (!deviceId || !token) {
+      sendJson(res, 400, { error: 'invalid_sync_request' });
+      return;
+    }
+    const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    if (!isContractProposerTrusted(deviceId, remoteAddr)) {
+      sendJson(res, 403, { error: 'device_not_registered' });
+      return;
+    }
+    const win = getMainWindow();
+    if (!win) {
+      sendJson(res, 503, { error: 'renderer_unavailable' });
+      return;
+    }
+    try {
+      const payload = JSON.stringify(parsed);
+      const result = await win.webContents.executeJavaScript(
+        `(async () => { const fn = globalThis.__co21LanSyncExchange; if (typeof fn !== 'function') return { ok: false, error: 'bridge_off', nextToken: '', since: Date.now(), groups: [], tasks: [] }; return await fn(${payload}); })()`,
+        true,
+      );
+      const code =
+        result && typeof result === 'object' && (result as { ok?: boolean }).ok ? 200 : 400;
+      sendJson(res, code, result ?? { ok: false, error: 'empty_response' });
+    } catch (e) {
+      logger.error('[lanPairingServer] sync exchange bridge failed', e);
+      sendJson(res, 500, { error: 'bridge_error' });
+    }
   })();
 }
 
@@ -528,6 +579,11 @@ export function startLanPairingServer(
 
         if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/reject`) {
           void handleSyncContractReject(req, res);
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/exchange`) {
+          void handleSyncExchange(req, res);
           return;
         }
 

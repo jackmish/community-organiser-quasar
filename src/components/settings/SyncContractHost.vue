@@ -59,6 +59,12 @@ import {
   dispatchPendingActionsChanged,
   findSendContractAction,
 } from 'src/modules/storage/sync/syncPendingActions';
+import { ensurePeerSyncSession } from 'src/modules/storage/sync/syncPeerState';
+import type { LanSyncExchangeRequest } from 'src/modules/lan/lanSyncAuth';
+import {
+  handleLanSyncExchangeRequest,
+  runFirstSyncAfterContractAccept,
+} from 'src/modules/storage/sync/lanOrganiserSync';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 
 const showIncomingPreview = ref(false);
@@ -92,6 +98,9 @@ function pendingFromLanDetail(raw: Record<string, unknown>): SyncContractPending
   }
   if (raw.duplicateResolution === 'manual' || raw.duplicateResolution === 'auto') {
     pending.duplicateResolution = raw.duplicateResolution;
+  }
+  if (typeof raw.syncSessionToken === 'string' && raw.syncSessionToken.trim()) {
+    pending.syncSessionToken = raw.syncSessionToken.trim();
   }
   return pending;
 }
@@ -141,6 +150,13 @@ async function persistIncomingFromLan(raw: unknown): Promise<void> {
     return;
   }
   await ensureProposerInConnections(pending);
+  if (pending.syncSessionToken) {
+    await ensurePeerSyncSession(
+      pending.proposerDeviceId,
+      pending.proposerDeviceName,
+      pending.syncSessionToken,
+    );
+  }
   await savePendingIncomingContract(pending);
   await refreshIncomingBanner();
   dispatchSyncContractIncoming();
@@ -177,11 +193,17 @@ async function clearIncomingState(): Promise<void> {
 
 async function onIncomingPreviewAccept(): Promise<void> {
   if (!pendingIncomingContract?.snapshot) return;
+  const token = pendingIncomingContract.syncSessionToken;
   await saveSyncDuplicateResolution(incomingDuplicateResolution.value);
   await saveLastContractSnapshot({
     ...pendingIncomingContract.snapshot,
     duplicateResolution: incomingDuplicateResolution.value,
   });
+  await ensurePeerSyncSession(
+    pendingIncomingContract.proposerDeviceId,
+    pendingIncomingContract.proposerDeviceName,
+    token,
+  );
   await savePendingOutgoingContract(null);
   await clearIncomingState();
   Notify.create({
@@ -190,6 +212,7 @@ async function onIncomingPreviewAccept(): Promise<void> {
     timeout: 2500,
   });
   window.dispatchEvent(new Event('co21:sync-contract-signed'));
+  void runFirstSyncAfterContractAccept(token);
 }
 
 async function onIncomingPreviewReject(): Promise<void> {
@@ -261,6 +284,10 @@ const onOpenReviewEvent = () => {
 };
 
 onMounted(() => {
+  (globalThis as typeof globalThis & {
+    __co21LanSyncExchange?: (req: LanSyncExchangeRequest) => Promise<unknown>;
+  }).__co21LanSyncExchange = (req) => handleLanSyncExchangeRequest(req);
+
   void refreshIncomingBanner();
 
   window.addEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);
@@ -288,6 +315,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  delete (globalThis as { __co21LanSyncExchange?: unknown }).__co21LanSyncExchange;
+
   window.removeEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);
   window.removeEventListener('co21:sync-contract-signed', onIncomingEvent);
   window.removeEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);

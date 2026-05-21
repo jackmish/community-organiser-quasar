@@ -166,6 +166,7 @@
         <PendingActionsDialog
           v-model="showPendingActionsDialog"
           :actions="pendingActionsList"
+          :sync-runs="syncRunsList"
           @run-now="onPendingRunNow"
           @cancel="onPendingCancel"
         />
@@ -210,6 +211,8 @@ import { useSyncContractIncomingNotice } from "src/composables/useSyncContractIn
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import { usePendingActions } from "src/composables/usePendingActions";
+import { useSyncRuns } from "src/composables/useSyncRuns";
+import { startLanDataSyncScheduler } from "src/modules/storage/sync/lanDataSyncScheduler";
 import { appNotify } from "src/utils/appNotify";
 import { dispatchBaselineRestore } from "src/modules/storage/sync/syncContractUi";
 import {
@@ -260,6 +263,8 @@ const {
   proposerName: incomingProposerName,
   openReview: openIncomingContractReview,
 } = useSyncContractIncomingNotice();
+
+const { runs: syncRunsList } = useSyncRuns();
 
 const pendingActionsMenuLabel = computed(() =>
   $text("sync.pending_actions_menu").replace("{count}", String(pendingActionsCount.value)),
@@ -417,6 +422,9 @@ onMounted(async () => {
     const loaded = await loadConnectedDevices();
     return mergeLocalDeviceIntoList(loaded, local);
   });
+  if ((window as Window & { electronLan?: unknown }).electronLan) {
+    startLanDataSyncScheduler();
+  }
   window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);

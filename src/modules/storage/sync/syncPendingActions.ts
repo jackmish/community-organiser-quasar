@@ -2,6 +2,7 @@ import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import type { ConnectedDevice } from './deviceRoleAssignment';
 import { loadOwnDeviceMeta, saveConnectedDevices } from './deviceRoleAssignment';
 import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
+import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
 import { syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager';
 import {
@@ -106,6 +107,7 @@ function enrichPending(
     ...pending,
     intervalSeconds,
     duplicateResolution,
+    syncSessionToken: pending.syncSessionToken || createLanSyncToken(),
   };
 }
 
@@ -183,6 +185,20 @@ export async function tryDeliverAction(
   list[idx] = updated;
   await savePendingActions(list);
   dispatchPendingActionsChanged();
+  if (ok && action.kind === 'send_contract') {
+    const { runSyncWithPeer } = await import('./lanOrganiserSync');
+    for (const t of action.targets) {
+      const host = (t.lanHost || '').trim();
+      if (!host) continue;
+      const syncOpts = {
+        peerDeviceId: t.deviceId,
+        peerDeviceName: t.deviceName,
+        lanHost: host,
+      };
+      const st = action.pending.syncSessionToken;
+      void runSyncWithPeer(st ? { ...syncOpts, sessionToken: st } : syncOpts);
+    }
+  }
   return ok;
 }
 
