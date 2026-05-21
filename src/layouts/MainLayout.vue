@@ -656,7 +656,9 @@ onUnmounted(() => {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  min-height: 32px;
+  align-self: center;
+  min-height: 36px;
+  margin-right: 4px;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */

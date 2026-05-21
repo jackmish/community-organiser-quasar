@@ -167,6 +167,7 @@
   "sync.preview_inherited_current": "Currently these are:",
   "sync.contract_preview_send": "Accept",
   "sync.incoming_banner": "«{device}» proposed sync changes — same terms as in the preview.",
+  "sync.incoming_notice_title": "Incoming sync contract",
   "sync.incoming_review_btn": "Review",
   "sync.pending_actions_menu": "Pending actions — {count}",
   "sync.pending_actions_title": "Pending actions",

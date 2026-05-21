@@ -168,6 +168,7 @@
   "sync.preview_inherited_current": "Obecnie są to:",
   "sync.contract_preview_send": "Akceptuj",
   "sync.incoming_banner": "«{device}» proponuje zmiany synchronizacji — te same warunki co w podglądzie.",
+  "sync.incoming_notice_title": "Przychodząca umowa synchronizacji",
   "sync.incoming_review_btn": "Przejrzyj",
   "sync.pending_actions_menu": "Oczekujące akcje — {count}",
   "sync.pending_actions_title": "Oczekujące akcje",

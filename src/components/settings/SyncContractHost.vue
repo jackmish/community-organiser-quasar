@@ -22,8 +22,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { Notify } from 'quasar';
 import { $text } from 'src/modules/lang';
+import { Notify } from 'quasar';
 import {
   buildIncomingContractPreview,
   dispatchSyncContractIncoming,
@@ -140,21 +140,6 @@ async function persistIncomingFromLan(raw: unknown): Promise<void> {
   await savePendingIncomingContract(pending);
   await refreshIncomingBanner();
   dispatchSyncContractIncoming();
-  const name = pending.proposerDeviceName || '?';
-  Notify.create({
-    type: 'info',
-    message: $text('sync.incoming_banner').replace('{device}', name),
-    timeout: 0,
-    actions: [
-      {
-        label: $text('sync.incoming_review_btn'),
-        color: 'white',
-        handler: () => {
-          void openIncomingReview();
-        },
-      },
-    ],
-  });
 }
 
 async function refreshIncomingBanner(): Promise<void> {
