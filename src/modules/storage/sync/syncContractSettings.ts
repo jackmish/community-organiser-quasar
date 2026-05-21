@@ -29,6 +29,8 @@ export type SyncContractPending = {
   /** Device id that proposed this contract (local). */
   proposerDeviceId: string;
   proposerDeviceName: string;
+  /** LAN host of proposer when known (for reject notify-back). */
+  proposerLanHost?: string;
   /** Agreed sync interval (seconds) — included when peer is offline. */
   intervalSeconds?: number;
   duplicateResolution?: SyncDuplicateResolution;

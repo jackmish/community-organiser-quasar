@@ -232,11 +232,68 @@ function handleSyncContractPropose(
       typeof parsed.createdAt === 'number' && parsed.createdAt > 0
         ? parsed.createdAt
         : Date.now();
+    const intervalSeconds =
+      typeof parsed.intervalSeconds === 'number' && parsed.intervalSeconds > 0
+        ? Math.floor(parsed.intervalSeconds)
+        : undefined;
+    const duplicateResolution =
+      parsed.duplicateResolution === 'manual' || parsed.duplicateResolution === 'auto'
+        ? parsed.duplicateResolution
+        : undefined;
     notifyRenderer('lan:sync-contract-incoming', {
       createdAt,
       snapshot,
       proposerDeviceId,
       proposerDeviceName: proposerDeviceName || 'Unknown device',
+      proposerLanHost: remoteAddr,
+      ...(intervalSeconds !== undefined ? { intervalSeconds } : {}),
+      ...(duplicateResolution ? { duplicateResolution } : {}),
+    });
+    sendJson(res, 200, { ok: true });
+  })();
+}
+
+function handleSyncContractReject(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  void (async () => {
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const rejectorDeviceId =
+      typeof parsed.rejectorDeviceId === 'string' ? parsed.rejectorDeviceId : '';
+    const rejectorDeviceName =
+      typeof parsed.rejectorDeviceName === 'string' ? parsed.rejectorDeviceName : '';
+    if (!rejectorDeviceId) {
+      sendJson(res, 400, { error: 'invalid_reject' });
+      return;
+    }
+    const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    if (!isContractProposerTrusted(rejectorDeviceId, remoteAddr)) {
+      sendJson(res, 403, { error: 'rejector_not_registered' });
+      return;
+    }
+    notifyRenderer('lan:sync-contract-rejected', {
+      rejectorDeviceId,
+      rejectorDeviceName: rejectorDeviceName || 'Unknown device',
+      proposerDeviceId:
+        typeof parsed.proposerDeviceId === 'string' ? parsed.proposerDeviceId : '',
+      createdAt:
+        typeof parsed.createdAt === 'number' && parsed.createdAt > 0
+          ? parsed.createdAt
+          : undefined,
     });
     sendJson(res, 200, { ok: true });
   })();
@@ -466,6 +523,11 @@ export function startLanPairingServer(
 
         if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/propose`) {
           void handleSyncContractPropose(req, res);
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/reject`) {
+          void handleSyncContractReject(req, res);
           return;
         }
 

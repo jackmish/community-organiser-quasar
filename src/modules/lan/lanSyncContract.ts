@@ -17,6 +17,35 @@ async function fetchWithTimeout(
   }
 }
 
+export type SyncContractRejectPayload = {
+  rejectorDeviceId: string;
+  rejectorDeviceName: string;
+  proposerDeviceId: string;
+  createdAt?: number;
+};
+
+/** POST contract rejection to the proposer's LAN HTTP server. */
+export async function lanPostSyncContractReject(
+  baseUrl: string,
+  payload: SyncContractRejectPayload,
+): Promise<boolean> {
+  const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/sync/contract/reject`;
+  try {
+    const res = await fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+      8000,
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** POST proposed sync contract to a peer's LAN HTTP server. */
 export async function lanPostSyncContractPropose(
   baseUrl: string,

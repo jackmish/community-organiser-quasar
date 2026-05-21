@@ -1,13 +1,14 @@
 <template>
   <SyncContractPreviewDialog
     v-model="showIncomingPreview"
-    v-model:interval-seconds="incomingIntervalSeconds"
+    incoming
     :duplicate-resolution="incomingDuplicateResolution"
-    @update:duplicate-resolution="onIncomingDuplicateChange"
     :preview="incomingPreview"
+    :interval-seconds="incomingIntervalSeconds"
     :min-sync-interval="minSyncInterval"
     :max-sync-interval="maxSyncInterval"
     @confirm="onIncomingPreviewAccept"
+    @reject="onIncomingPreviewReject"
     @cancel="showIncomingPreview = false"
   />
 </template>
@@ -21,7 +22,9 @@ import {
   dispatchSyncContractIncoming,
   loadIncomingBannerState,
   OPEN_INCOMING_SYNC_REVIEW_EVENT,
+  resolveProposerLanHost,
   SYNC_CONTRACT_INCOMING_EVENT,
+  SYNC_CONTRACT_REJECTED_EVENT,
 } from 'src/modules/storage/sync/syncContractIncoming';
 import {
   loadConnectedDevices,
@@ -31,6 +34,8 @@ import {
   saveConnectedDevices,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
+import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
+import { lanPostSyncContractReject } from 'src/modules/lan/lanSyncContract';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import logger from 'src/utils/logger';
 import type { SyncContractPending } from 'src/modules/storage/sync/syncContractSettings';
@@ -49,6 +54,11 @@ import {
   type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import type { SyncContractPreview } from 'src/modules/storage/sync/syncContractPreview';
+import {
+  cancelPendingAction,
+  dispatchPendingActionsChanged,
+  findSendContractAction,
+} from 'src/modules/storage/sync/syncPendingActions';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 
 const showIncomingPreview = ref(false);
@@ -56,16 +66,6 @@ const incomingPreview = ref<SyncContractPreview | null>(null);
 const incomingIntervalSeconds = ref(DEFAULT_SYNC_INTERVAL_SECONDS);
 const incomingDuplicateResolution = ref<SyncDuplicateResolution>(DEFAULT_SYNC_DUPLICATE_RESOLUTION);
 let pendingIncomingContract: SyncContractPending | null = null;
-
-function onIncomingDuplicateChange(mode: SyncDuplicateResolution): void {
-  incomingDuplicateResolution.value = mode;
-  if (pendingIncomingContract?.snapshot) {
-    pendingIncomingContract = {
-      ...pendingIncomingContract,
-      snapshot: { ...pendingIncomingContract.snapshot, duplicateResolution: mode },
-    };
-  }
-}
 
 const minSyncInterval = MIN_SYNC_INTERVAL_SECONDS;
 const maxSyncInterval = MAX_SYNC_INTERVAL_SECONDS;
@@ -84,6 +84,9 @@ function pendingFromLanDetail(raw: Record<string, unknown>): SyncContractPending
         ? raw.proposerDeviceName.trim()
         : 'Unknown device',
   };
+  if (typeof raw.proposerLanHost === 'string' && raw.proposerLanHost.trim()) {
+    pending.proposerLanHost = raw.proposerLanHost.trim();
+  }
   if (typeof raw.intervalSeconds === 'number' && raw.intervalSeconds > 0) {
     pending.intervalSeconds = Math.floor(raw.intervalSeconds);
   }
@@ -99,7 +102,17 @@ async function ensureProposerInConnections(pending: SyncContractPending): Promis
   const loaded = await loadConnectedDevices();
   let devices = mergeLocalDeviceIntoList(loaded, local);
   const norm = normalizeDeviceId(pending.proposerDeviceId);
-  if (devices.some((d) => !d.isLocal && normalizeDeviceId(d.id) === norm)) {
+  const lanHost = (pending.proposerLanHost || '').trim();
+  const idx = devices.findIndex((d) => !d.isLocal && normalizeDeviceId(d.id) === norm);
+  if (idx >= 0) {
+    if (lanHost && !(devices[idx].lanHost || '').trim()) {
+      devices = devices.map((d, i) => (i === idx ? { ...d, lanHost } : d));
+      await saveConnectedDevices(devices);
+      const settings = await loadCo21Settings();
+      const ownName =
+        typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
+      await refreshLanServerForConnections(devices, ownName);
+    }
     return;
   }
   const snapRow = pending.snapshot.devices.find((x) => normalizeDeviceId(x.id) === norm);
@@ -109,6 +122,7 @@ async function ensureProposerInConnections(pending: SyncContractPending): Promis
       id: pending.proposerDeviceId,
       name: pending.proposerDeviceName || snapRow?.name || 'LAN device',
       type: 'LAN',
+      ...(lanHost ? { lanHost } : {}),
     },
   ];
   await saveConnectedDevices(devices);
@@ -143,12 +157,21 @@ async function openIncomingReview(): Promise<void> {
     pendingIncomingContract = incoming;
   }
   incomingPreview.value = await buildIncomingContractPreview(pendingIncomingContract);
-  const interval = await loadSyncIntervalSeconds();
-  incomingIntervalSeconds.value = interval;
+  incomingIntervalSeconds.value =
+    pendingIncomingContract.intervalSeconds ?? (await loadSyncIntervalSeconds());
   incomingDuplicateResolution.value = normalizeSyncDuplicateResolution(
-    pendingIncomingContract.snapshot.duplicateResolution,
+    pendingIncomingContract.duplicateResolution ??
+      pendingIncomingContract.snapshot.duplicateResolution,
   );
   showIncomingPreview.value = true;
+}
+
+async function clearIncomingState(): Promise<void> {
+  await savePendingIncomingContract(null);
+  showIncomingPreview.value = false;
+  pendingIncomingContract = null;
+  incomingPreview.value = null;
+  dispatchSyncContractIncoming();
 }
 
 async function onIncomingPreviewAccept(): Promise<void> {
@@ -159,19 +182,74 @@ async function onIncomingPreviewAccept(): Promise<void> {
     duplicateResolution: incomingDuplicateResolution.value,
   });
   await savePendingOutgoingContract(null);
-  await savePendingIncomingContract(null);
+  await clearIncomingState();
   Notify.create({
     type: 'positive',
     message: $text('sync.contract_signed_ok'),
     timeout: 2500,
   });
   window.dispatchEvent(new Event('co21:sync-contract-signed'));
-  showIncomingPreview.value = false;
-  pendingIncomingContract = null;
-  incomingPreview.value = null;
 }
 
-let lanUnsub: (() => void) | undefined;
+async function onIncomingPreviewReject(): Promise<void> {
+  if (!pendingIncomingContract) return;
+  const local = await loadOwnDeviceMeta();
+  const host = await resolveProposerLanHost(pendingIncomingContract);
+  const base = host ? co21LanBaseUrl(host) : '';
+  if (base) {
+    const ok = await lanPostSyncContractReject(base, {
+      rejectorDeviceId: local.id,
+      rejectorDeviceName: local.name,
+      proposerDeviceId: pendingIncomingContract.proposerDeviceId,
+      createdAt: pendingIncomingContract.createdAt,
+    });
+    if (!ok) {
+      Notify.create({
+        type: 'warning',
+        message: $text('sync.contract_reject_notify_fail'),
+        timeout: 3500,
+      });
+    }
+  } else {
+    Notify.create({
+      type: 'warning',
+      message: $text('sync.missing_lan_host').replace(
+        '{names}',
+        pendingIncomingContract.proposerDeviceName || '?',
+      ),
+      timeout: 3500,
+    });
+  }
+  await clearIncomingState();
+  Notify.create({
+    type: 'info',
+    message: $text('sync.contract_rejected_local'),
+    timeout: 2500,
+  });
+}
+
+async function handlePeerRejectedContract(detail: unknown): Promise<void> {
+  if (!detail || typeof detail !== 'object') return;
+  const name =
+    typeof (detail as { rejectorDeviceName?: string }).rejectorDeviceName === 'string'
+      ? (detail as { rejectorDeviceName: string }).rejectorDeviceName.trim()
+      : '';
+  const action = await findSendContractAction();
+  if (action) {
+    await cancelPendingAction(action.id);
+    dispatchPendingActionsChanged();
+  }
+  await savePendingOutgoingContract(null);
+  Notify.create({
+    type: 'warning',
+    message: $text('sync.contract_rejected_by_peer').replace('{device}', name || '?'),
+    timeout: 4000,
+  });
+  window.dispatchEvent(new Event(SYNC_CONTRACT_REJECTED_EVENT));
+}
+
+let lanIncomingUnsub: (() => void) | undefined;
+let lanRejectedUnsub: (() => void) | undefined;
 
 const onIncomingEvent = () => {
   void refreshIncomingBanner();
@@ -190,12 +268,20 @@ onMounted(() => {
 
   const lan = (
     window as Window & {
-      electronLan?: { onSyncContractIncoming?: (cb: (d: unknown) => void) => () => void };
+      electronLan?: {
+        onSyncContractIncoming?: (cb: (d: unknown) => void) => () => void;
+        onSyncContractRejected?: (cb: (d: unknown) => void) => () => void;
+      };
     }
   ).electronLan;
   if (lan?.onSyncContractIncoming) {
-    lanUnsub = lan.onSyncContractIncoming((detail) => {
+    lanIncomingUnsub = lan.onSyncContractIncoming((detail) => {
       void persistIncomingFromLan(detail);
+    });
+  }
+  if (lan?.onSyncContractRejected) {
+    lanRejectedUnsub = lan.onSyncContractRejected((detail) => {
+      void handlePeerRejectedContract(detail);
     });
   }
 });
@@ -204,7 +290,8 @@ onBeforeUnmount(() => {
   window.removeEventListener(SYNC_CONTRACT_INCOMING_EVENT, onIncomingEvent);
   window.removeEventListener('co21:sync-contract-signed', onIncomingEvent);
   window.removeEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);
-  lanUnsub?.();
+  lanIncomingUnsub?.();
+  lanRejectedUnsub?.();
 });
 
 defineExpose({ refreshIncomingBanner });

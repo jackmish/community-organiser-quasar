@@ -17,12 +17,14 @@ import {
   loadConnectedDevices,
   loadOwnDeviceMeta,
   mergeLocalDeviceIntoList,
+  normalizeDeviceId,
   type ConnectedDevice,
 } from './deviceRoleAssignment';
 import { loadRoleProfiles } from './roleProfileSettings';
 
 export const SYNC_CONTRACT_INCOMING_EVENT = 'co21:sync-contract-incoming';
 export const OPEN_INCOMING_SYNC_REVIEW_EVENT = 'co21:open-incoming-sync-review';
+export const SYNC_CONTRACT_REJECTED_EVENT = 'co21:sync-contract-rejected';
 
 export function dispatchSyncContractIncoming(): void {
   window.dispatchEvent(new Event(SYNC_CONTRACT_INCOMING_EVENT));
@@ -105,17 +107,32 @@ export async function buildIncomingContractPreview(
 ): Promise<SyncContractPreview> {
   const profiles = await loadRoleProfiles();
   const local = await loadOwnDeviceMeta();
-  const loaded = await loadConnectedDevices();
-  const devices = mergeLocalDeviceIntoList(loaded, local);
-  const mergedDevices = devicesForIncomingPreview(devices, pending.snapshot);
+  const localId = normalizeDeviceId(local.id);
+  const contractDevices: ConnectedDevice[] = pending.snapshot.devices.map((s) => ({
+    id: s.id,
+    name: s.name,
+    rolesByGroup: { ...s.rolesByGroup },
+    isLocal: normalizeDeviceId(s.id) === localId,
+  }));
   const mergedProfiles = mergeProfilesForIncomingPreview(profiles, pending.snapshot);
   const previous = await loadLastContractSnapshot();
   return buildSyncContractPreview(
     previous,
     pending.snapshot,
-    mergedDevices,
+    contractDevices,
     mergedProfiles,
     CC.group?.list?.all?.value ?? [],
     countTasksByGroup(),
+    { includeAllDevicesInSections: true },
   );
+}
+
+/** Resolve LAN host to notify the device that proposed an incoming contract. */
+export async function resolveProposerLanHost(pending: SyncContractPending): Promise<string> {
+  const stored = (pending.proposerLanHost || '').trim();
+  if (stored) return stored;
+  const norm = normalizeDeviceId(pending.proposerDeviceId);
+  const loaded = await loadConnectedDevices();
+  const row = loaded.find((d) => !d.isLocal && normalizeDeviceId(d.id) === norm);
+  return (row?.lanHost || '').trim();
 }

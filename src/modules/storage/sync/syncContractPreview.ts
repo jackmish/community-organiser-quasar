@@ -448,6 +448,11 @@ export function syncInheritedScopeText(sourceGroup: SyncGroupVisual): string {
   return fmt('sync.preview_inherited_scope', { group: sourceGroup.name });
 }
 
+export type BuildSyncContractPreviewOptions = {
+  /** Incoming peer contract: show roles for all devices in the proposal (including this device). */
+  includeAllDevicesInSections?: boolean;
+};
+
 export function buildSyncContractPreview(
   previous: SyncContractSnapshot | null,
   current: SyncContractSnapshot,
@@ -455,15 +460,18 @@ export function buildSyncContractPreview(
   profiles: RoleProfileData[],
   groupsRaw: unknown,
   taskCountByGroup: Record<string, number>,
+  options?: BuildSyncContractPreviewOptions,
 ): SyncContractPreview {
   const groups = normalizeGroupsFromCc(Array.isArray(groupsRaw) ? groupsRaw : []);
   const visualMap = buildGroupVisualMap(groupsRaw);
-  const remoteDevices = devices.filter((d) => !d.isLocal);
+  const sectionDevices = options?.includeAllDevicesInSections
+    ? devices
+    : devices.filter((d) => !d.isLocal);
 
   return {
     isFirstContract: !previous,
     sections: buildPreviewSections(
-      remoteDevices,
+      sectionDevices,
       groups,
       profiles,
       visualMap,

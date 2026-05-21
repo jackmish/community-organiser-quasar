@@ -7,7 +7,11 @@
 
       <q-card-section :class="bodyClass" :style="bodyStyle" class="q-pt-sm sync-contract-preview-body">
         <p class="text-caption text-grey-7 q-mb-sm">
-          {{ $text('sync.contract_preview_creator_note') }}
+          {{
+            incoming
+              ? $text('sync.contract_preview_incoming_note')
+              : $text('sync.contract_preview_creator_note')
+          }}
         </p>
 
         <template v-if="preview">
@@ -83,50 +87,78 @@
         <q-separator class="q-my-md" />
 
         <div class="row items-center q-gutter-md sync-contract-preview-options">
-          <div class="row items-center q-gutter-sm col-auto">
-            <q-input
-              :model-value="intervalModel"
-              type="number"
-              dense
-              outlined
-              class="sync-contract-interval-input"
-              style="width: 120px"
-              :label="$text('sync.interval_label')"
-              :min="minSyncInterval"
-              :max="maxSyncInterval"
-              @update:model-value="onIntervalInput"
-            />
-            <span class="text-caption sync-contract-interval-unit">
-              {{ $text('sync.interval_unit') }}
-            </span>
-          </div>
-          <div class="row items-center q-gutter-sm col sync-contract-duplicate-row">
-            <span class="text-caption sync-contract-duplicate-label">
-              {{ $text('sync.duplicate_resolution_label') }}
-            </span>
-            <q-radio
-              v-model="duplicateLocal"
-              val="auto"
-              dense
-              :label="$text('sync.duplicate_resolution_auto')"
-            />
-            <q-radio
-              v-model="duplicateLocal"
-              val="manual"
-              dense
-              :label="$text('sync.duplicate_resolution_manual')"
-            />
-          </div>
+          <template v-if="incoming">
+            <div class="col-12 text-body2">
+              <span class="text-caption text-grey-7">{{ $text('sync.interval_label') }}: </span>
+              {{ intervalModel }} {{ $text('sync.interval_unit') }}
+            </div>
+            <div class="col-12 text-body2">
+              <span class="text-caption text-grey-7"
+                >{{ $text('sync.duplicate_resolution_label') }}:
+              </span>
+              {{
+                duplicateLocal === 'manual'
+                  ? $text('sync.duplicate_resolution_manual')
+                  : $text('sync.duplicate_resolution_auto')
+              }}
+            </div>
+          </template>
+          <template v-else>
+            <div class="row items-center q-gutter-sm col-auto">
+              <q-input
+                :model-value="intervalModel"
+                type="number"
+                dense
+                outlined
+                class="sync-contract-interval-input"
+                style="width: 120px"
+                :label="$text('sync.interval_label')"
+                :min="minSyncInterval"
+                :max="maxSyncInterval"
+                @update:model-value="onIntervalInput"
+              />
+              <span class="text-caption sync-contract-interval-unit">
+                {{ $text('sync.interval_unit') }}
+              </span>
+            </div>
+            <div class="row items-center q-gutter-sm col sync-contract-duplicate-row">
+              <span class="text-caption sync-contract-duplicate-label">
+                {{ $text('sync.duplicate_resolution_label') }}
+              </span>
+              <q-radio
+                v-model="duplicateLocal"
+                val="auto"
+                dense
+                :label="$text('sync.duplicate_resolution_auto')"
+              />
+              <q-radio
+                v-model="duplicateLocal"
+                val="manual"
+                dense
+                :label="$text('sync.duplicate_resolution_manual')"
+              />
+            </div>
+          </template>
         </div>
       </q-card-section>
 
       <q-card-actions align="right" class="q-pt-none">
-        <q-btn flat :label="$text('action.cancel')" @click="onCancel" />
+        <q-btn v-if="!incoming" flat :label="$text('action.cancel')" @click="onCancel" />
+        <q-btn
+          v-if="incoming"
+          unelevated
+          color="negative"
+          icon="cancel"
+          :label="$text('sync.contract_preview_reject')"
+          @click="onReject"
+        />
         <q-btn
           unelevated
           color="positive"
           icon="check_circle"
-          :label="$text('sync.contract_preview_send')"
+          :label="
+            incoming ? $text('sync.contract_preview_accept') : $text('sync.contract_preview_send')
+          "
           @click="onSend"
         />
       </q-card-actions>
@@ -157,6 +189,8 @@ import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout
 const props = defineProps<{
   modelValue: boolean;
   preview: SyncContractPreview | null;
+  /** Reviewing a contract proposed by a paired LAN peer. */
+  incoming?: boolean;
   intervalSeconds?: number;
   duplicateResolution?: SyncDuplicateResolution;
   minSyncInterval?: number;
@@ -168,8 +202,11 @@ const emit = defineEmits<{
   (e: 'update:intervalSeconds', v: number): void;
   (e: 'update:duplicateResolution', v: SyncDuplicateResolution): void;
   (e: 'confirm'): void;
+  (e: 'reject'): void;
   (e: 'cancel'): void;
 }>();
+
+const incoming = computed(() => !!props.incoming);
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle } = useSettingsDialogLayout(560);
 
@@ -210,6 +247,11 @@ function chipBtnStyle(group: SyncGroupVisual) {
 
 function onSend(): void {
   emit('confirm');
+  dialogVisible.value = false;
+}
+
+function onReject(): void {
+  emit('reject');
   dialogVisible.value = false;
 }
 
