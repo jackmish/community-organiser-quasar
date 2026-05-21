@@ -46,6 +46,78 @@
   margin-top: 8px;
 }
 
+/* LAN pairing dialog */
+.lan-pairing-dialog-body {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.lan-pairing-dialog-card .lan-pairing-caption,
+.lan-pairing-dialog-card .lan-pairing-muted {
+  color: rgba(0, 0, 0, 0.58) !important;
+}
+
+.lan-pairing-dialog-card .lan-pairing-col__title,
+.lan-pairing-dialog-card .lan-pairing-emphasis,
+.lan-pairing-dialog-card .lan-pairing-list-label {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__native),
+.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__input),
+.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-select__input) {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__label),
+.lan-pairing-dialog-card .lan-pairing-host-input :deep(.q-field__hint) {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.lan-pairing-address-panel {
+  background: #eef2f7;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.lan-pairing-discovered-list {
+  background: #fff !important;
+}
+
+.lan-pairing-discovered-list .q-item__label {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.lan-pairing-discovered-list .q-item__label--caption {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.lan-pairing-layout--split {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  column-gap: 20px;
+  width: 100%;
+}
+
+.lan-pairing-layout--split > .lan-pairing-col--pc {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lan-pairing-layout--split > .lan-pairing-col--mobile {
+  flex: 0 0 38%;
+  max-width: 42%;
+  min-width: 240px;
+}
+
+.lan-pairing-layout--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
 .lan-qr-wrap {
   max-width: min(280px, 100%);
   width: 100%;

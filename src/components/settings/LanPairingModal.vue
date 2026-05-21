@@ -1,13 +1,9 @@
 <template>
-  <q-dialog
-    :model-value="modelValue"
-    v-bind="dialogBind"
-    @update:model-value="emit('update:modelValue', $event)"
-  >
-    <q-card :class="cardClass" :style="cardStyle">
+  <q-dialog :model-value="modelValue" v-bind="dialogBind" @update:model-value="emit('update:modelValue', $event)">
+    <q-card :class="[cardClass, 'lan-pairing-dialog-card']" :style="cardStyle">
       <q-card-section>
-        <div class="text-h6">Wi‑Fi / LAN pairing</div>
-        <div class="text-caption text-grey-7 q-mt-xs">
+        <div class="text-h6">{{ $text('lan.pairing_title') }}</div>
+        <div class="text-caption lan-pairing-caption q-mt-xs">
           <template v-if="hasElectronLan">
             Other devices connect on port {{ port }}. When pairing completes, both devices are
             added to each other’s Connections list.
@@ -19,218 +15,156 @@
         </div>
       </q-card-section>
 
-      <div :class="[bodyClass, 'q-px-md q-pb-md']" :style="bodyStyle">
-      <q-card-section v-if="incomingPending" class="q-pt-none q-px-none">
-        <q-banner dense rounded class="lan-incoming-banner text-white">
-          <template #avatar>
-            <q-icon name="wifi" color="white" />
-          </template>
-          <div class="text-weight-medium">Incoming pairing request</div>
-          <div class="text-body2 q-mt-xs">
-            <strong>{{ incomingPending.remoteName }}</strong> wants to connect with this device.
-          </div>
-          <div v-if="incomingPending.remoteAddress" class="text-caption q-mt-xs">
-            From {{ incomingPending.remoteAddress }}
-          </div>
-          <div class="text-caption q-mt-sm">
-            Accept to link both devices — each will appear in the other’s Connections list.
-          </div>
-          <template #action>
-            <q-btn flat dense label="Decline" color="white" @click="declineIncoming" />
-            <q-btn
-              unelevated
-              dense
-              label="Accept"
-              color="white"
-              text-color="positive"
-              :loading="incomingBusy"
-              @click="acceptIncoming"
-            />
-          </template>
-        </q-banner>
-      </q-card-section>
+      <div :class="[bodyClass, 'lan-pairing-dialog-body q-px-md q-pb-md']" :style="bodyStyle">
+        <q-card-section v-if="incomingPending" class="q-pt-none q-px-none">
+          <q-banner dense rounded class="lan-incoming-banner text-white">
+            <template #avatar>
+              <q-icon name="wifi" color="white" />
+            </template>
+            <div class="text-weight-medium">Incoming pairing request</div>
+            <div class="text-body2 q-mt-xs">
+              <strong>{{ incomingPending.remoteName }}</strong> wants to connect with this device.
+            </div>
+            <div v-if="incomingPending.remoteAddress" class="text-caption q-mt-xs">
+              From {{ incomingPending.remoteAddress }}
+            </div>
+            <div class="text-caption q-mt-sm">
+              Accept to link both devices — each will appear in the other’s Connections list.
+            </div>
+            <template #action>
+              <q-btn flat dense label="Decline" color="white" @click="declineIncoming" />
+              <q-btn unelevated dense label="Accept" color="white" text-color="positive" :loading="incomingBusy"
+                @click="acceptIncoming" />
+            </template>
+          </q-banner>
+        </q-card-section>
 
-      <q-card-section v-if="!hasElectronLan" class="q-pt-none q-px-none">
-        <div class="text-subtitle2 q-mb-xs">This phone on Wi‑Fi</div>
-        <div v-if="deviceLanProbeBusy" class="text-caption text-grey-7">Detecting address…</div>
-        <div v-else-if="deviceLanAddrs.length" class="text-body2">
-          <div v-for="a in deviceLanAddrs" :key="a" class="text-primary">{{ a }}</div>
-          <div class="text-caption text-grey-7 q-mt-xs">
-            The PC’s address should look similar (e.g. both <strong>192.168.1.x</strong>). Turn off
-            mobile data if pairing fails.
-          </div>
+        <div :class="isMobile
+            ? 'lan-pairing-layout lan-pairing-layout--stacked'
+            : 'lan-pairing-layout lan-pairing-layout--split'
+          ">
+          <!-- PC / Laptop -->
+          <section class="lan-pairing-col lan-pairing-col--pc">
+            <div class="text-subtitle1 text-weight-medium lan-pairing-col__title q-mb-sm">
+              {{ $text('lan.col_pc') }}
+            </div>
+
+            <template v-if="hasElectronLan">
+              <q-toggle :model-value="listenOn" :label="$text('lan.accept_pairing')" color="positive"
+                @update:model-value="onToggleListen" />
+
+
+              <div class="text-subtitle2 q-mb-xs">Bonjour / .local</div>
+              <div class="text-caption lan-pairing-muted q-mb-sm">
+                {{ $text('lan.bonjour_hint') }}
+              </div>
+              <q-btn outline color="primary" icon="search" class="full-width settings-dialog-surface-btn q-mb-sm"
+                :label="$text('lan.search_co21')" :loading="browseBusy" @click="browseNetwork" />
+              <div v-if="browseError" class="text-negative text-caption q-mb-sm">{{ browseError }}</div>
+              <q-list v-if="discovered.length" bordered separator
+                class="rounded-borders lan-pairing-discovered-list q-mb-md">
+                <q-item v-for="(d, idx) in discovered" :key="d.fqdn + idx" clickable v-ripple
+                  @click="pickDiscovered(d)">
+                  <q-item-section>
+                    <q-item-label class="lan-pairing-list-label">{{ d.displayName }}</q-item-label>
+                    <q-item-label caption>{{ d.connectHost }}:{{ d.port }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-icon name="chevron_right" color="grey-7" />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </template>
+            <div v-else class="text-caption lan-pairing-muted q-mb-md">
+              Bonjour search is available in the desktop app. Use the QR on the PC or enter an address
+              below.
+            </div>
+
+            <q-btn outline color="secondary" icon="qr_code_scanner"
+              class="full-width settings-dialog-surface-btn q-mb-sm" :label="$text('lan.load_qr_image')"
+              @click="triggerQrFilePick" />
+            <input ref="qrFileInput" type="file" accept="image/*" class="lan-qr-file-input" @change="onQrFileChange" />
+            <q-btn v-if="showQrCameraButton" outline color="positive" icon="photo_camera"
+              class="full-width settings-dialog-surface-btn q-mb-sm" :label="$text('lan.scan_qr_camera')"
+              :loading="qrCameraBusy" @click="scanQrWithCamera" />
+
+            <div class="row q-col-gutter-sm items-center lan-pairing-pair-row" :class="{ column: isMobile }">
+              <q-input v-model="pcHost" dense outlined class="col lan-pairing-host-input"
+                :label="$text('lan.pc_host_label')" :hint="$text('lan.pc_host_hint')" persistent-hint
+                @keyup.enter="requestPairToPc" />
+              <q-btn v-if="!pairActive" unelevated color="primary" class="col-auto" :class="{ 'full-width': isMobile }"
+                :label="$text('lan.request_pairing')" :disable="!pcHost.trim()" @click="requestPairToPc" />
+              <q-btn v-else unelevated color="warning" class="col-auto" :class="{ 'full-width': isMobile }"
+                :label="$text('lan.cancel_pairing')" @click="cancelPairing" />
+            </div>
+            <div v-if="pcConnectPreview" class="text-caption lan-pairing-muted q-mt-xs">
+              Will connect to:
+              <span class="lan-pairing-emphasis break-all">{{ pcConnectPreview }}</span>
+            </div>
+            <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
+          </section>
+
+          <!-- Mobile / Tablet -->
+          <section class="lan-pairing-col lan-pairing-col--mobile">
+            <div class="text-subtitle1 text-weight-medium lan-pairing-col__title q-mb-sm">
+              {{ $text('lan.col_mobile') }}
+            </div>
+
+            <template v-if="hasElectronLan">
+              <template v-if="listenOn">
+                <div class="text-caption lan-pairing-muted q-mb-sm">
+                  {{ $text('lan.qr_share_hint') }}
+                </div>
+                <q-select v-if="serverAddrs.length > 1" v-model="qrHost" dense outlined :options="serverAddrs"
+                  label="Address in QR" class="lan-pairing-host-input q-mb-sm" />
+                <div v-if="qrDataUrl" class="flex flex-center q-pa-sm bg-white rounded-borders lan-qr-wrap q-mb-sm">
+                  <q-img :src="qrDataUrl" fit="contain" class="lan-qr-img" spinner-color="primary"
+                    alt="LAN pairing QR code" />
+                </div>
+                <div v-else-if="qrHost" class="text-caption lan-pairing-muted q-py-md text-center">
+                  Generating QR…
+                </div>
+
+                <div class="text-subtitle2 q-mb-xs">{{ $text('lan.this_pc_addresses') }}</div>
+                <div v-if="serverAddrs.length" class="lan-pairing-address-panel q-pa-sm rounded-borders">
+                  <div v-for="a in serverAddrs" :key="a" class="row items-center no-wrap q-gutter-xs q-mb-xs">
+                    <span class="lan-pairing-emphasis">{{ a }}:{{ port }}</span>
+                    <q-btn flat dense round size="sm" icon="content_copy" class="settings-dialog-surface-btn"
+                      :aria-label="`Copy ${a}:${port}`" @click="copyText(`${a}:${port}`)" />
+                  </div>
+                </div>
+                <div v-else class="text-caption lan-pairing-muted">
+                  No LAN address detected yet.
+                </div>
+                <div v-if="qrPayloadPreview" class="text-caption lan-pairing-muted q-mt-xs break-all">
+                  {{ qrPayloadPreview }}
+                </div>
+              </template>
+              <div v-else class="text-body2 lan-pairing-muted">
+                {{ $text('lan.enable_pairing_for_qr') }}
+              </div>
+              <div v-if="listenError" class="text-negative q-mt-sm text-caption">{{ listenError }}</div>
+            </template>
+
+            <template v-else>
+              <div class="text-subtitle2 q-mb-xs">{{ $text('lan.phone_on_wifi') }}</div>
+              <div v-if="deviceLanProbeBusy" class="text-caption lan-pairing-muted">
+                Detecting address…
+              </div>
+              <div v-else-if="deviceLanAddrs.length" class="lan-pairing-address-panel q-pa-sm rounded-borders">
+                <div v-for="a in deviceLanAddrs" :key="a" class="lan-pairing-emphasis q-mb-xs">{{ a }}</div>
+                <div class="text-caption lan-pairing-muted q-mt-xs">
+                  The PC’s address should look similar (e.g. both <strong>192.168.1.x</strong>). Turn
+                  off mobile data if pairing fails.
+                </div>
+              </div>
+              <div v-else class="text-caption lan-pairing-muted">
+                Could not detect a Wi‑Fi address. Connect to Wi‑Fi (not mobile data) and reopen this
+                dialog.
+              </div>
+            </template>
+          </section>
         </div>
-        <div v-else class="text-caption text-grey-7">
-          Could not detect a Wi‑Fi address. Connect to Wi‑Fi (not mobile data) and reopen this
-          dialog.
-        </div>
-      </q-card-section>
-
-      <q-card-section v-if="hasElectronLan" class="q-pt-none q-px-none">
-        <div class="text-subtitle2 q-mb-sm">On this computer</div>
-        <q-toggle
-          :model-value="listenOn"
-          label="Accept pairing requests from the LAN"
-          color="positive"
-          @update:model-value="onToggleListen"
-        />
-        <div class="text-caption text-grey-7 q-mt-xs">
-          Required to receive sync contracts from paired devices. When you have LAN devices in
-          Connections, the server starts automatically on app launch.
-        </div>
-        <div v-if="listenOn && serverAddrs.length" class="q-mt-sm text-body2">
-          <div class="text-weight-medium">This PC on your Wi‑Fi (Bonjour / .local):</div>
-          <div class="text-caption text-grey-7 q-mb-xs">
-            Other devices can search for “CO21” computers — no IP typing needed when discovery
-            works.
-          </div>
-          <div class="text-weight-medium">For another PC — copy address with port:</div>
-          <div v-for="a in serverAddrs" :key="a" class="row items-center no-wrap q-gutter-xs">
-            <span class="text-primary">{{ a }}:{{ port }}</span>
-            <q-btn
-              flat
-              dense
-              round
-              size="sm"
-              icon="content_copy"
-              color="grey-7"
-              :aria-label="`Copy ${a}:${port}`"
-              @click="copyText(`${a}:${port}`)"
-            />
-          </div>
-
-          <q-separator class="q-my-md" />
-          <div class="text-subtitle2 q-mb-sm">Share this PC (QR)</div>
-          <div class="text-caption text-grey-7 q-mb-sm">
-            Phone must use <strong>Wi‑Fi on the same network</strong> as this PC (not mobile data).
-            On your phone: CO21 → Connections → Wi‑Fi / LAN → <strong>Scan PC QR with camera</strong>,
-            then <strong>Request pairing</strong>.
-          </div>
-          <q-select
-            v-if="serverAddrs.length > 1"
-            v-model="qrHost"
-            dense
-            outlined
-            :options="serverAddrs"
-            label="Address encoded in QR"
-            class="q-mb-sm"
-          />
-          <div
-            v-if="qrDataUrl"
-            class="flex flex-center q-pa-sm bg-white rounded-borders lan-qr-wrap"
-          >
-            <q-img
-              :src="qrDataUrl"
-              fit="contain"
-              class="lan-qr-img"
-              spinner-color="primary"
-              alt="LAN pairing QR code"
-            />
-          </div>
-          <div v-else-if="listenOn && qrHost" class="text-caption text-grey-6 q-py-md">Generating QR…</div>
-          <div v-if="qrPayloadPreview" class="text-caption text-grey-7 q-mt-xs break-all">
-            {{ qrPayloadPreview }}
-          </div>
-        </div>
-        <div v-else-if="listenError" class="text-negative q-mt-sm text-caption">{{ listenError }}</div>
-      </q-card-section>
-
-      <q-separator v-if="hasElectronLan" />
-
-      <q-card-section class="q-px-none">
-        <div class="text-subtitle2 q-mb-sm">Discover on Wi‑Fi (Bonjour / .local)</div>
-        <q-btn
-          outline
-          color="primary"
-          class="full-width"
-          label="Search for CO21 computers"
-          :loading="browseBusy"
-          :disable="!hasElectronLan"
-          @click="browseNetwork"
-        />
-        <div v-if="!hasElectronLan" class="text-caption text-grey-7 q-mt-xs">
-          Automatic discovery runs in the desktop (Electron) app. On other builds, use the QR from
-          the PC or type the address below.
-        </div>
-        <div v-if="browseError" class="text-negative text-caption q-mt-sm">{{ browseError }}</div>
-        <q-list v-if="discovered.length" bordered separator class="rounded-borders q-mt-sm">
-          <q-item
-            v-for="(d, idx) in discovered"
-            :key="d.fqdn + idx"
-            clickable
-            v-ripple
-            @click="pickDiscovered(d)"
-          >
-            <q-item-section>
-              <q-item-label>{{ d.displayName }}</q-item-label>
-              <q-item-label caption>{{ d.connectHost }}:{{ d.port }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-icon name="chevron_right" color="grey-6" />
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card-section>
-
-      <q-separator />
-
-      <q-card-section class="q-px-none">
-        <div class="text-subtitle2 q-mb-sm">From this device — pair with a PC</div>
-        <q-input
-          v-model="pcHost"
-          dense
-          outlined
-          label="PC IP or hostname (no port needed)"
-          hint="Scan the PC’s QR or type e.g. 192.168.1.10 — port :47321 is added automatically"
-          persistent-hint
-          class="q-mb-sm"
-        />
-        <div v-if="pcConnectPreview" class="text-caption text-grey-7 q-mb-sm">
-          Will connect to:
-          <span class="text-primary break-all">{{ pcConnectPreview }}</span>
-        </div>
-        <q-btn
-          v-if="showQrCameraButton"
-          outline
-          color="positive"
-          icon="photo_camera"
-          label="Scan PC QR with camera"
-          class="full-width q-mb-sm"
-          :loading="qrCameraBusy"
-          @click="scanQrWithCamera"
-        />
-        <q-btn
-          outline
-          color="secondary"
-          icon="qr_code_scanner"
-          label="Load address from QR image"
-          class="full-width q-mb-sm"
-          @click="triggerQrFilePick"
-        />
-        <input
-          ref="qrFileInput"
-          type="file"
-          accept="image/*"
-          class="lan-qr-file-input"
-          @change="onQrFileChange"
-        />
-        <q-btn
-          v-if="!pairActive"
-          color="primary"
-          unelevated
-          label="Request pairing"
-          :disable="!pcHost.trim()"
-          @click="requestPairToPc"
-        />
-        <q-btn
-          v-else
-          color="warning"
-          unelevated
-          label="Cancel pairing"
-          @click="cancelPairing"
-        />
-        <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
-      </q-card-section>
       </div>
 
       <q-card-actions align="right" class="q-pt-none">
@@ -242,6 +176,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { $text } from 'src/modules/lang';
 import jsQR from 'jsqr';
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { CO21_LAN_PAIRING_PORT, co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
@@ -278,7 +213,7 @@ import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(360);
+  useSettingsDialogLayout(720);
 
 const props = defineProps<{
   modelValue: boolean;
@@ -574,7 +509,7 @@ watch(
       return;
     }
     if (hasElectronLan.value) {
-      void refreshStatus();
+      void refreshStatus().then(() => maybeStartBonjourDiscovery());
     } else {
       void refreshDeviceLanAddresses();
     }
@@ -654,6 +589,7 @@ async function onToggleListen(v: boolean) {
     if (res?.ok) {
       listenOn.value = true;
       serverAddrs.value = Array.isArray(res.addresses) ? res.addresses : [];
+      maybeStartBonjourDiscovery();
     } else {
       listenOn.value = false;
       listenError.value = res?.error || 'Could not start LAN server';
@@ -669,6 +605,11 @@ function pickDiscovered(d: Co21DiscoveredHost) {
     d.port && d.port !== port ? `${d.connectHost}:${d.port}` : d.connectHost;
   pairHint.value = `Selected “${d.displayName}”. Tap “Request pairing” below.`;
   pairHintClass.value = 'text-grey-7';
+}
+
+function maybeStartBonjourDiscovery(): void {
+  if (!hasElectronLan.value || !listenOn.value || browseBusy.value) return;
+  void browseNetwork();
 }
 
 async function browseNetwork() {
@@ -946,6 +887,7 @@ function close() {
 .lan-qr-file-input {
   display: none;
 }
+
 .lan-incoming-banner {
   background: #2e7d32;
 }
