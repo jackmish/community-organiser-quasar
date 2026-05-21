@@ -14,7 +14,11 @@
           </div>
 
           <div id="co21-header-notifications" class="notification-wrapper">
-            <div id="co21-sync-contract-slot" class="co21-sync-contract-slot" />
+            <SyncContractIncomingNotification
+              :show="showIncomingContract"
+              :proposer-name="incomingProposerName"
+              @review="openIncomingContractReview"
+            />
             <NextEventNotification style="min-width: 0; flex: 1" />
           </div>
           <div style="margin-left: auto; display: inline-block">
@@ -201,6 +205,8 @@ import RolesSetupDialog from "src/components/settings/RolesSetupDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 import { dispatchOpenRolesSetup } from "src/modules/storage/sync/rolesSetupUi";
 import SyncContractHost from "src/components/settings/SyncContractHost.vue";
+import SyncContractIncomingNotification from "src/components/settings/SyncContractIncomingNotification.vue";
+import { useSyncContractIncomingNotice } from "src/composables/useSyncContractIncomingNotice";
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import { usePendingActions } from "src/composables/usePendingActions";
@@ -248,6 +254,12 @@ const {
   runNow: runPendingActionNow,
   cancelPendingAction: cancelPendingActionById,
 } = usePendingActions();
+
+const {
+  show: showIncomingContract,
+  proposerName: incomingProposerName,
+  openReview: openIncomingContractReview,
+} = useSyncContractIncomingNotice();
 
 const pendingActionsMenuLabel = computed(() =>
   $text("sync.pending_actions_menu").replace("{count}", String(pendingActionsCount.value)),
@@ -652,13 +664,9 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.co21-sync-contract-slot {
+.notification-wrapper > .sync-incoming-notice-icon {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  align-self: center;
-  min-height: 36px;
-  margin-right: 4px;
+  order: -1;
 }
 
 /* Ensure the select's background fills the parent but inner text is padded */

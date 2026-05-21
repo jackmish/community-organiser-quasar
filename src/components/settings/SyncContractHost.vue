@@ -1,12 +1,4 @@
 <template>
-  <Teleport to="#co21-sync-contract-slot">
-    <SyncContractIncomingNotification
-      :show="showIncomingBanner"
-      :proposer-name="incomingProposerName"
-      @review="openIncomingReview"
-    />
-  </Teleport>
-
   <SyncContractPreviewDialog
     v-model="showIncomingPreview"
     v-model:interval-seconds="incomingIntervalSeconds"
@@ -57,11 +49,8 @@ import {
   type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import type { SyncContractPreview } from 'src/modules/storage/sync/syncContractPreview';
-import SyncContractIncomingNotification from './SyncContractIncomingNotification.vue';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 
-const showIncomingBanner = ref(false);
-const incomingProposerName = ref('');
 const showIncomingPreview = ref(false);
 const incomingPreview = ref<SyncContractPreview | null>(null);
 const incomingIntervalSeconds = ref(DEFAULT_SYNC_INTERVAL_SECONDS);
@@ -144,8 +133,6 @@ async function persistIncomingFromLan(raw: unknown): Promise<void> {
 
 async function refreshIncomingBanner(): Promise<void> {
   const state = await loadIncomingBannerState();
-  showIncomingBanner.value = state.showBanner;
-  incomingProposerName.value = state.pending?.proposerDeviceName ?? '';
   pendingIncomingContract = state.pending;
 }
 
@@ -180,7 +167,6 @@ async function onIncomingPreviewAccept(): Promise<void> {
   });
   window.dispatchEvent(new Event('co21:sync-contract-signed'));
   showIncomingPreview.value = false;
-  showIncomingBanner.value = false;
   pendingIncomingContract = null;
   incomingPreview.value = null;
 }

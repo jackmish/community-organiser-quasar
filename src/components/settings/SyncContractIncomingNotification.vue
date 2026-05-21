@@ -89,6 +89,11 @@ function onReview(): void {
   color: #fff !important;
 }
 
+.sync-incoming-notice-icon__btn :deep(.q-btn__content),
+.sync-incoming-notice-icon__btn :deep(.q-icon) {
+  color: #fff !important;
+}
+
 .sync-incoming-notice-icon__btn:hover {
   filter: brightness(1.08);
 }

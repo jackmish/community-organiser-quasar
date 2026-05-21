@@ -9,13 +9,17 @@ import {
 /** Incoming sync contract from a paired LAN peer — header + Connections banner. */
 export function useSyncContractIncomingNotice() {
   const show = ref(false);
+  const proposerName = ref('');
   const bannerMessage = ref('');
 
   async function refresh(): Promise<void> {
     const state = await loadIncomingBannerState();
     show.value = state.showBanner;
-    const name = state.pending?.proposerDeviceName ?? '?';
-    bannerMessage.value = $text('sync.incoming_banner').replace('{device}', name);
+    proposerName.value = state.pending?.proposerDeviceName ?? '';
+    bannerMessage.value = $text('sync.incoming_banner').replace(
+      '{device}',
+      proposerName.value || '?',
+    );
   }
 
   function openReview(): void {
@@ -37,5 +41,5 @@ export function useSyncContractIncomingNotice() {
     window.removeEventListener('co21:sync-contract-signed', onChanged);
   });
 
-  return { show, bannerMessage, refresh, openReview };
+  return { show, proposerName, bannerMessage, refresh, openReview };
 }
