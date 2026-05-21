@@ -14,13 +14,14 @@
           :class="
             isMobile
               ? 'join-member-layout join-member-layout--stacked'
-              : 'join-member-layout join-member-layout--split row q-col-gutter-sm'
+              : 'join-member-layout join-member-layout--split'
           "
         >
-        <div :class="isMobile ? 'join-member-tree-col' : 'col-12 col-md-4'">
+        <div class="join-member-tree-col">
           <div class="text-subtitle2 q-mb-xs">{{ $text('ui.select_group') }}</div>
           <GroupTreeSelector
             panel-class="join-member-tree-panel"
+            min-width="0"
             :nodes="treeNodes"
             :selected="selectedGroupId"
             sticky-selection
@@ -33,7 +34,7 @@
           :class="
             isMobile
               ? 'join-member-roles-col column'
-              : 'col-12 col-md-8 column join-member-roles-panel'
+              : 'join-member-roles-col column join-member-roles-panel'
           "
         >
           <q-banner

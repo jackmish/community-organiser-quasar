@@ -173,7 +173,7 @@
   "sync.pending_actions_title": "Oczekujące akcje",
   "sync.pending_actions_empty": "Brak oczekujących akcji.",
   "sync.pending_actions_btn": "Oczekujące akcje",
-  "sync.pending_send_banner": "Na niektórych urządzeniach wysłane zostały komunikaty do potwierdzenia",
+  "sync.pending_send_banner": "Oczekiwanie na inne urządzenia. Zostały wysłane komunikaty do potwierdzenia - bez tego nie ruszy synchronizacja.",
   "sync.pending_action_send_contract": "Wyślij umowę synchronizacji",
   "sync.pending_action_interval": "Interwał ponowienia",
   "sync.pending_action_run_now": "Uruchom teraz",

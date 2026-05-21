@@ -3,27 +3,10 @@
     <q-card :class="cardClass" :style="cardStyle">
       <q-card-section>
         <div class="text-h6">Connections and data</div>
-        <div class="q-mt-sm row items-center q-gutter-sm">
-          <q-input class="col" dense outlined v-model="ownDeviceName" label="Your device name"
-            @keyup.enter="saveOwnDeviceName" />
-          <q-btn class="col-auto" dense unelevated :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
-            :icon="ownDeviceNameShowSaved ? 'check' : 'save'" :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
-            :disable="!ownDeviceNameDirty || ownDeviceNameSaving" :loading="ownDeviceNameSaving"
-            @click="saveOwnDeviceName" />
-        </div>
       </q-card-section>
 
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
         <div class="q-gutter-md">
-          <div class="text-subtitle2 q-mb-sm">Manage external connections and integrations</div>
-          <div class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
-            :class="{ column: isMobile }">
-            <q-btn outline color="secondary" icon="badge" :label="assignRolesPerGroupLabel"
-              class="col-grow settings-dialog-surface-btn" @click="showJoinMemberDialog = true" />
-            <q-btn outline color="primary" icon="admin_panel_settings" :label="rolesSetupLabel"
-              class="col-grow settings-dialog-surface-btn" @click="openRolesSetup" />
-
-          </div>
           <q-banner v-if="hasPendingSendAction" dense rounded class="bg-positive text-white">
             <template #avatar>
               <q-icon name="hourglass_top" color="white" />
@@ -44,6 +27,15 @@
                 @click="startConfirmChanges" />
             </template>
           </q-banner>
+          <div class="row items-center q-gutter-sm q-mb-sm settings-dialog-header-actions"
+            :class="{ column: isMobile }">
+            <q-btn outline color="secondary" icon="badge" :label="assignRolesPerGroupLabel"
+              class="col-grow settings-dialog-surface-btn" @click="showJoinMemberDialog = true" />
+            <q-btn outline color="primary" icon="admin_panel_settings" :label="rolesSetupLabel"
+              class="col-grow settings-dialog-surface-btn" @click="openRolesSetup" />
+
+          </div>
+
 
           <div class="row items-center q-gutter-sm" :class="{ 'column items-stretch': isMobile }">
             <div :class="isMobile ? 'col-12' : 'col'">{{ devicesSummary }}</div>
@@ -97,10 +89,21 @@
                   <div class="col row items-start no-wrap q-gutter-sm">
                     <q-icon :name="deviceIcon(d)" size="22px" class="connections-device-card__icon q-mt-xs" />
                     <div class="col" style="min-width: 0">
-                      <div class="text-subtitle2 text-weight-medium connections-device-card__name">
+                      <template v-if="d.isLocal">
+                        <q-badge dense color="grey-7" class="q-mb-xs" :label="$text('connections.this_device')" />
+                        <div class="row items-center q-gutter-sm">
+                          <q-input v-model="ownDeviceName" class="col connections-device-sync-input" dense outlined
+                            label="Your device name" @keyup.enter="saveOwnDeviceName" />
+                          <q-btn class="col-auto" dense unelevated
+                            :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
+                            :icon="ownDeviceNameShowSaved ? 'check' : 'save'"
+                            :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
+                            :disable="!ownDeviceNameDirty || ownDeviceNameSaving" :loading="ownDeviceNameSaving"
+                            @click="saveOwnDeviceName" />
+                        </div>
+                      </template>
+                      <div v-else class="text-subtitle2 text-weight-medium connections-device-card__name">
                         {{ d.name }}
-                        <q-badge v-if="d.isLocal" dense color="grey-7" class="q-ml-xs"
-                          :label="$text('connections.this_device')" />
                       </div>
                       <div v-if="!d.isLocal" class="text-caption connections-device-card__meta">
                         {{ d.type || 'Device' }}
@@ -144,18 +147,18 @@
                   current data with data from file
                 </div>
                 <div :class="isMobile ? 'col-12' : 'col-auto'" :style="isMobile
-                    ? {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'stretch',
-                      width: '100%',
-                    }
-                    : {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      justifyContent: 'center',
-                    }
+                  ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    width: '100%',
+                  }
+                  : {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center',
+                  }
                   ">
                   <div style="display: flex; align-items: center">
                     <q-btn dense unelevated color="primary" label="Export" class="q-mr-sm" @click="exportWithPicker" />
