@@ -8,6 +8,9 @@ export class GroupModel extends BaseModel {
   shareSubgroups: boolean | undefined;
   hideTasksFromParent: boolean | undefined;
   icon: string | undefined;
+  textColor?: string | undefined;
+  backgroundImage?: string | undefined;
+  backgroundColorize?: boolean | undefined;
   parentId: string | undefined;
   parent_id?: string | null;
   roles: RoleData[];
@@ -27,6 +30,12 @@ export class GroupModel extends BaseModel {
     this.shareSubgroups = data.shareSubgroups;
     this.hideTasksFromParent = data.hideTasksFromParent;
     this.icon = data.icon;
+    this.textColor = (data as any).textColor ?? (data as any).text_color;
+    this.backgroundImage =
+      (data as any).backgroundImage ?? (data as any).background_image;
+    this.backgroundColorize = Boolean(
+      (data as any).backgroundColorize ?? (data as any).background_colorize,
+    );
     // Normalize parent relationship: accept both camelCase and snake_case from legacy data.
     // `parentId` is canonical going forward.
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
@@ -44,6 +53,9 @@ export class GroupModel extends BaseModel {
       shareSubgroups: this.shareSubgroups,
       hideTasksFromParent: this.hideTasksFromParent,
       icon: this.icon,
+      ...(this.textColor ? { textColor: this.textColor } : {}),
+      ...(this.backgroundImage ? { backgroundImage: this.backgroundImage } : {}),
+      ...(this.backgroundColorize ? { backgroundColorize: this.backgroundColorize } : {}),
       parentId: this.parentId,
       // parent_id mirrors parentId for backward compatibility with older persisted data.
       parent_id: this.parentId ?? null,

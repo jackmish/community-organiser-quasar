@@ -79,18 +79,22 @@ async function handleSubmit(payload: any) {
         ...(typeof payload.shareSubgroups === 'boolean' ? { shareSubgroups: payload.shareSubgroups } : {}),
         ...(typeof payload.hideTasksFromParent === 'boolean' ? { hideTasksFromParent: payload.hideTasksFromParent } : {}),
         ...(typeof payload.shortcut === 'boolean' ? { shortcut: payload.shortcut } : {}),
+        ...(typeof payload.backgroundColorize === 'boolean'
+          ? { backgroundColorize: payload.backgroundColorize }
+          : {}),
+        ...(payload.backgroundImage
+          ? { backgroundImage: payload.backgroundImage }
+          : { backgroundImage: undefined }),
       };
       if (typeof CC.group.update === 'function') {
         await CC.group.update(id, updates);
       } else {
         const list = CC.group.list.all.value ?? [];
-        const found = list.find((g: any) => String(g.id) === String(id));
-        if (found) {
-          Object.assign(found, updates);
+        try {
+          groupRepository.updateGroup(list, id, updates);
           await saveData();
-        } else {
-          try { groupRepository.updateGroup(list, id, updates); } catch (e) { logger.error('updateGroup fallback failed', e); }
-          try { await saveData(); } catch (e) { logger.error('saveData failed', e); }
+        } catch (e) {
+          logger.error('updateGroup fallback failed', e);
         }
       }
     } else {
@@ -103,6 +107,10 @@ async function handleSubmit(payload: any) {
         shareSubgroups: payload.shareSubgroups,
         hideTasksFromParent: payload.hideTasksFromParent,
         shortcut: payload.shortcut,
+        ...(payload.backgroundImage ? { backgroundImage: payload.backgroundImage } : {}),
+        ...(typeof payload.backgroundColorize === 'boolean'
+          ? { backgroundColorize: payload.backgroundColorize }
+          : {}),
       });
     }
   } catch (e) {

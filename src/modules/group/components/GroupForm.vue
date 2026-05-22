@@ -274,6 +274,44 @@
         />
       </div>
 
+      <div class="row items-center q-gutter-sm gm-bg-row q-mt-xs" style="width: 100%">
+        <q-btn
+          dense
+          unelevated
+          color="primary"
+          icon="image"
+          :label="$text('action.load_group_image')"
+          @click="pickBackgroundImage"
+        />
+        <q-btn
+          v-if="localBackgroundImage"
+          dense
+          flat
+          color="negative"
+          icon="clear"
+          :label="$text('action.remove_group_image')"
+          @click="clearBackgroundImage"
+        />
+        <q-checkbox
+          v-model="localBackgroundColorize"
+          :disable="!localBackgroundImage"
+          :label="$text('label.colorize_group_background')"
+          dense
+        />
+        <div
+          class="gm-bg-preview"
+          :style="bgPreviewStyle"
+          :title="$text('label.group_background_preview')"
+        />
+        <input
+          ref="bgImageInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="onBackgroundImageSelected"
+        />
+      </div>
+
       <!-- Second line: checkboxes and action buttons -->
       <div class="row q-gutter-sm items-center" style="margin-top: 8px; width: 100%">
         <q-btn
@@ -396,6 +434,12 @@ import {
   GROUP_DEFAULT_TEXT_COLOR,
   GROUP_TEXT_PALETTE,
 } from "src/modules/group/constants/groupPaletteColors";
+import {
+  groupBackgroundLayerStyle,
+  readGroupBackgroundFields,
+  resolveGroupBackground,
+} from "src/modules/group/utils/groupBackground";
+import { appNotify } from "src/utils/appNotify";
 import type { QTreeNode } from "quasar";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 import GroupTreeSelector from "./GroupTreeSelector.vue";
@@ -425,6 +469,21 @@ const localShareSubgroups = ref(false);
 const localHideTasksInParent = ref(false);
 const localShortcut = ref(false);
 const localTextColor = ref(GROUP_DEFAULT_TEXT_COLOR);
+const localBackgroundImage = ref<string | null>(null);
+const localBackgroundColorize = ref(false);
+const bgImageInput = ref<HTMLInputElement | null>(null);
+
+const MAX_GROUP_BG_BYTES = 2 * 1024 * 1024;
+
+const bgPreviewStyle = computed(() =>
+  groupBackgroundLayerStyle(
+    resolveGroupBackground({
+      backgroundImage: localBackgroundImage.value,
+      backgroundColorize: localBackgroundColorize.value,
+      color: localColor.value,
+    }),
+  ),
+);
 
 const colorInput = ref<HTMLInputElement | null>(null);
 const textColorInput = ref<HTMLInputElement | null>(null);
@@ -658,6 +717,8 @@ watch(
       localHideTasksInParent.value = false;
       localShortcut.value = false;
       localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
+      localBackgroundImage.value = null;
+      localBackgroundColorize.value = false;
       return;
     }
     try {
@@ -699,6 +760,9 @@ watch(
         localShareSubgroups.value = Boolean(src.shareSubgroups);
         localHideTasksInParent.value = Boolean(src.hideTasksFromParent);
         localShortcut.value = Boolean(src.shortcut);
+        const bg = readGroupBackgroundFields(src);
+        localBackgroundImage.value = bg.backgroundImage;
+        localBackgroundColorize.value = bg.backgroundColorize;
       }
     } catch (e) {
       void e;
@@ -706,6 +770,38 @@ watch(
   },
   { immediate: true }
 );
+
+function pickBackgroundImage() {
+  bgImageInput.value?.click();
+}
+
+function clearBackgroundImage() {
+  localBackgroundImage.value = null;
+  localBackgroundColorize.value = false;
+  if (bgImageInput.value) bgImageInput.value.value = "";
+}
+
+function onBackgroundImageSelected(ev: Event) {
+  const input = ev.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    appNotify("warning", "Please choose an image file.");
+    return;
+  }
+  if (file.size > MAX_GROUP_BG_BYTES) {
+    appNotify("warning", "Image is too large (max 2 MB).");
+    if (input) input.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const data = typeof reader.result === "string" ? reader.result : null;
+    if (data) localBackgroundImage.value = data;
+  };
+  reader.onerror = () => appNotify("negative", "Could not read image.");
+  reader.readAsDataURL(file);
+}
 
 function onColorInput(e: Event) {
   const t = e.target as HTMLInputElement | null;
@@ -872,6 +968,8 @@ function onSubmit() {
     shareSubgroups: localShareSubgroups.value,
     hideTasksFromParent: localHideTasksInParent.value,
     shortcut: localShortcut.value,
+    backgroundImage: localBackgroundImage.value || null,
+    backgroundColorize: localBackgroundColorize.value,
   };
   if (!payload.name) return;
   emit("submit", payload);
@@ -935,6 +1033,20 @@ function onCancel() {
 
 :deep(.gm-color-field.q-field--outlined .q-field__control) {
   overflow: visible !important;
+}
+
+.gm-bg-preview {
+  width: 88px;
+  height: 52px;
+  margin-left: auto;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.gm-bg-row {
+  flex-wrap: wrap;
 }
 
 </style>

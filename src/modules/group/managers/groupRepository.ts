@@ -17,11 +17,23 @@ export type CreateGroupInput = {
   hideTasksFromParent?: boolean | undefined;
   shortcut?: boolean | undefined;
   textColor?: string | undefined;
+  backgroundImage?: string | undefined;
+  backgroundColorize?: boolean | undefined;
 };
 
 export function addGroup(organiserData: OrganiserData | any[], payload: CreateGroupInput): Group {
-  const { name, parentId, color, icon, shareSubgroups, hideTasksFromParent, shortcut, textColor } =
-    payload;
+  const {
+    name,
+    parentId,
+    color,
+    icon,
+    shareSubgroups,
+    hideTasksFromParent,
+    shortcut,
+    textColor,
+    backgroundImage,
+    backgroundColorize,
+  } = payload;
   const now = new Date().toISOString();
   const group = new GroupClass({
     id: generateGroupId(name),
@@ -31,6 +43,8 @@ export function addGroup(organiserData: OrganiserData | any[], payload: CreateGr
     ...(color && { color }),
     ...(icon && { icon }),
     ...(textColor && { textColor }),
+    ...(backgroundImage && { backgroundImage }),
+    ...(typeof backgroundColorize === 'boolean' ? { backgroundColorize } : {}),
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
     ...(typeof shortcut === 'boolean' ? { shortcut } : {}),
@@ -60,6 +74,10 @@ export function updateGroup(
   const group = (groups || []).find((g: any) => g.id === groupId);
   if (!group) throw new Error('Group not found');
   Object.assign(group, updates);
+  if ('backgroundImage' in updates && !updates.backgroundImage) {
+    delete group.backgroundImage;
+    delete group.background_image;
+  }
 }
 
 export function deleteGroup(

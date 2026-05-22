@@ -1,5 +1,10 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="lHh Lpr lFf" class="co21-main-layout">
+    <Co21AppBackground
+      :visible-slot="visibleSlot"
+      :layer0="layer0"
+      :layer1="layer1"
+    />
     <q-header>
       <q-toolbar>
         <q-toolbar-title
@@ -184,7 +189,7 @@
 
 <script setup lang="ts">
 import "src/utils/logger-shim";
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch, nextTick, type Ref } from "vue";
 import { $text } from "src/modules/lang";
 import { app } from "src/services/appService";
 import {
@@ -199,6 +204,8 @@ import pkg from "../../package.json";
 import { useRouter, useRoute } from "vue-router";
 import NextEventNotification from "src/modules/task/components/list/NextEventNotification.vue";
 import CC from "src/CCAccess";
+import Co21AppBackground from "src/components/ui/Co21AppBackground.vue";
+import { useGroupPageBackground } from "src/composables/useGroupPageBackground";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
@@ -342,6 +349,11 @@ function onJoinMemberOpenRolesSetup(): void {
   showJoinMemberDialog.value = false;
   dispatchOpenRolesSetup();
 }
+const { visibleSlot, layer0, layer1 } = useGroupPageBackground(
+  CC.group.list.all as Ref<unknown[]>,
+  CC.group.active.activeGroup as Ref<unknown>,
+);
+
 const menuOpen = ref(false);
 const selectedLanguage = ref("en-US");
 const langSelect = ref<any>(null);
