@@ -1,16 +1,9 @@
 <template>
-  <div
-    v-if="resolveLabel()"
-    ref="rootEl"
-    :class="[
-      'co21-watermark',
-      `co21-watermark--${resolveSize()}`,
-      { 'co21-watermark--lcp-pending': !revealed },
-    ]"
-    :title="resolveLabel()"
-    :style="{ justifyContent: resolveJustify() }"
-    aria-hidden="true"
-  >
+  <div v-if="resolveLabel()" ref="rootEl" :class="[
+    'co21-watermark',
+    `co21-watermark--${resolveSize()}`,
+    { 'co21-watermark--lcp-pending': !revealed },
+  ]" :title="resolveLabel()" :style="{ justifyContent: resolveJustify() }" aria-hidden="true">
     <div v-if="resolveBackgroundStyle()" ref="bgEl" class="co21-watermark-bg"
       :style="bgFinalStyle || resolveBackgroundStyle()"></div>
     <div ref="textEl" class="co21-watermark-text" :style="{ color: resolveTextColor() }">
@@ -253,7 +246,7 @@ watch(
   justify-content: flex-end;
   pointer-events: none;
   /* don't block interaction */
-  z-index: 0;
+  z-index: 12345;
   top: 0;
   /* z-index: 0; */
 }
