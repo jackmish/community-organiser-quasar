@@ -69,8 +69,17 @@
                     border-radius: 6px;
                   ">
                   <div class="q-list">
-                    <q-item clickable role="button" @click="createDevice('Bluetooth')"
-                      style="padding: 8px 12px; cursor: pointer">
+                    <q-item
+                      :class="{ inactive: !bluetoothConnectionEnabled }"
+                      :clickable="bluetoothConnectionEnabled"
+                      :role="bluetoothConnectionEnabled ? 'button' : undefined"
+                      :aria-disabled="!bluetoothConnectionEnabled"
+                      :style="{
+                        padding: '8px 12px',
+                        cursor: bluetoothConnectionEnabled ? 'pointer' : 'default',
+                      }"
+                      @click="bluetoothConnectionEnabled && createDevice('Bluetooth')"
+                    >
                       <q-item-section avatar style="width: 32px">
                         <q-icon name="bluetooth" />
                       </q-item-section>
@@ -315,6 +324,7 @@ import {
   saveConnectionsBackupSettings,
   saveConnectionsRegistry,
 } from 'src/modules/storage/sync/connectionsDeviceStorage';
+import { BLUETOOTH_CONNECTION_ENABLED } from 'src/constants/connectionFeatures';
 import BluetoothScanModal from './BluetoothScanModal.vue';
 import LanPairingModal from './LanPairingModal.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
@@ -512,8 +522,8 @@ const addMenuStyle = ref<Record<string, string>>({
 });
 
 function createDevice(type: string) {
-  // For Bluetooth, open the scanner modal so user can choose a device
   if (type === 'Bluetooth') {
+    if (!bluetoothConnectionEnabled) return;
     showScanModal.value = true;
     addMenu.value = false;
     return;
@@ -569,6 +579,7 @@ function close() {
 
 // Scan modal handling
 const $q = useQuasar();
+const bluetoothConnectionEnabled = BLUETOOTH_CONNECTION_ENABLED;
 const showScanModal = ref(false);
 const showLanPairingModal = ref(false);
 const lanPairingPendingOffer = ref<LanPendingDetail | null>(null);

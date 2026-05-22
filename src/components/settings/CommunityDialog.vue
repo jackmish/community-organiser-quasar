@@ -38,7 +38,8 @@
             icon="bluetooth_searching"
             label="Scan"
             size="sm"
-            @click="showScanModal = true"
+            :disable="!bluetoothConnectionEnabled"
+            @click="bluetoothConnectionEnabled && (showScanModal = true)"
           />
         </div>
 
@@ -213,6 +214,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from "vue";
+import { BLUETOOTH_CONNECTION_ENABLED } from "src/constants/connectionFeatures";
 import BluetoothScanModal from "./BluetoothScanModal.vue";
 import { deviceRegistry } from "src/modules/storage/sync/DeviceRegistry";
 import { deviceId } from "src/modules/storage/sync/deviceId";
@@ -235,6 +237,8 @@ const visible = computed<boolean>({
   get: () => !!props.modelValue,
   set: (v: boolean) => emit("update:modelValue", v),
 });
+
+const bluetoothConnectionEnabled = BLUETOOTH_CONNECTION_ENABLED;
 
 // ── This device ───────────────────────────────────────────────────────────────
 
