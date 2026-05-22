@@ -1,180 +1,113 @@
 <template>
   <q-layout view="lHh Lpr lFf" class="co21-main-layout">
-    <Co21AppBackground
-      :visible-slot="visibleSlot"
-      :layer0="layer0"
-      :layer1="layer1"
-    />
-    <q-header>
-      <q-toolbar>
-        <q-toolbar-title
-          style="display: flex; align-items: center; gap: 12px; overflow: visible"
-        >
+    <Co21AppBackground :visible-slot="visibleSlot" :layer0="layer0" :layer1="layer1" />
+    <q-header class="co21-app-header" :style="mainToolbarStyle">
+      <q-toolbar class="co21-header-toolbar">
+        <q-toolbar-title style="display: flex; align-items: center; gap: 12px; overflow: visible">
           <div style="display: flex; align-items: center; gap: 12px">
-            <img
-              src="icons/co21-logo.png"
-              alt="CO21"
-              style="height: 28px; width: auto; display: inline-block"
-            />
+            <img src="icons/co21-logo.png" alt="CO21" style="height: 28px; width: auto; display: inline-block" />
           </div>
 
           <div id="co21-header-notifications" class="notification-wrapper">
-            <SyncContractIncomingNotification
-              :show="showIncomingContract"
-              :proposer-name="incomingProposerName"
-              @review="openIncomingContractReview"
-            />
+            <SyncContractIncomingNotification :show="showIncomingContract" :proposer-name="incomingProposerName"
+              @review="openIncomingContractReview" />
             <NextEventNotification style="min-width: 0; flex: 1" />
           </div>
           <div style="margin-left: auto; display: inline-block">
-            <q-btn
-              flat
-              dense
-              round
-              icon="menu"
-              color="primary"
-              text-color="white"
-              style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px"
-              :title="$text('ui.menu')"
-            >
-                <q-menu
-                  v-model="menuOpen"
-                  anchor="bottom right"
-                  self="top right"
-                  style="width: auto"
-                >
-                  <q-list style="min-width: 220px">
-                    <q-item>
-                      <q-item-section avatar>
-                        <q-icon name="language" />
-                      </q-item-section>
-                      <q-item-section>
-                        <q-select
-                          style="width: 100%"
-                          class="lang-select"
-                          use-input
-                          hide-selected
-                          fill-input
-                          dense
-                          borderless
-                          :input-style="{ paddingLeft: '0', paddingRight: '0' }"
-                          popup-content-class="lang-popup"
-                          ref="langSelect"
-                          v-model="selectedLanguage"
-                          :options="filteredLangOptions"
-                          option-label="label"
-                          option-value="value"
-                          v-model:input-value="langFilter"
-                          input-debounce="0"
-                          emit-value
-                          map-options
-                          bg-color="blue"
-                          @update:model-value="onLanguageChange"
-                        >
-                          <template v-slot:no-option>
-                            <q-item>
-                              <q-item-section class="text-grey">{{
-                                $text('ui.no_results')
-                              }}</q-item-section>
-                            </q-item>
-                          </template>
-                        </q-select>
-                      </q-item-section>
-                    </q-item>
-                    <q-separator />
-                    <q-item clickable v-ripple @click="openManageHeader">
-                      <q-item-section avatar>
-                        <q-icon name="folder_special" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
-                    </q-item>
-                    <q-item
-                      clickable
-                      v-ripple
-                      @click="
-                        () => {
-                          showConnectionsDialog = true;
-                          menuOpen = false;
-                        }
-                      "
-                    >
-                      <q-item-section avatar>
-                        <q-icon name="devices" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("menu.connections") }}</q-item-section>
-                    </q-item>
-                    <q-item
-                      v-if="pendingActionsCount > 0"
-                      clickable
-                      v-ripple
-                      @click="openPendingActionsFromMenu"
-                    >
-                      <q-item-section avatar>
-                        <q-icon name="hourglass_top" />
-                      </q-item-section>
-                      <q-item-section>{{ pendingActionsMenuLabel }}</q-item-section>
-                    </q-item>
-                    <q-item clickable v-ripple @click="openSettings">
-                      <q-item-section avatar>
-                        <q-icon name="settings" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("menu.settings") }}</q-item-section>
-                    </q-item>
+            <q-btn flat dense round icon="menu" class="co21-header-menu-btn"
+              style="min-width: 48px; height: 100%; padding: 6px; font-size: 18px" :title="$text('ui.menu')">
+              <q-menu v-model="menuOpen" anchor="bottom right" self="top right" style="width: auto">
+                <q-list style="min-width: 220px">
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-icon name="language" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-select style="width: 100%" class="lang-select" use-input hide-selected fill-input dense
+                        borderless :input-style="{ paddingLeft: '0', paddingRight: '0' }"
+                        popup-content-class="lang-popup" ref="langSelect" v-model="selectedLanguage"
+                        :options="filteredLangOptions" option-label="label" option-value="value"
+                        v-model:input-value="langFilter" input-debounce="0" emit-value map-options bg-color="blue"
+                        @update:model-value="onLanguageChange">
+                        <template v-slot:no-option>
+                          <q-item>
+                            <q-item-section class="text-grey">{{
+                              $text('ui.no_results')
+                            }}</q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item clickable v-ripple @click="openManageHeader">
+                    <q-item-section avatar>
+                      <q-icon name="folder_special" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
+                  </q-item>
+                  <q-item clickable v-ripple @click="
+                    () => {
+                      showConnectionsDialog = true;
+                      menuOpen = false;
+                    }
+                  ">
+                    <q-item-section avatar>
+                      <q-icon name="devices" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.connections") }}</q-item-section>
+                  </q-item>
+                  <q-item v-if="pendingActionsCount > 0" clickable v-ripple @click="openPendingActionsFromMenu">
+                    <q-item-section avatar>
+                      <q-icon name="hourglass_top" />
+                    </q-item-section>
+                    <q-item-section>{{ pendingActionsMenuLabel }}</q-item-section>
+                  </q-item>
+                  <q-item clickable v-ripple @click="openSettings">
+                    <q-item-section avatar>
+                      <q-icon name="settings" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.settings") }}</q-item-section>
+                  </q-item>
 
-                    <q-item
-                      clickable
-                      v-ripple
-                      @click="
-                        () => {
-                          showDebugDialog = true;
-                          menuOpen = false;
-                        }
-                      "
-                    >
-                      <q-item-section avatar>
-                        <q-icon name="build" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("menu.debug_tools") }}</q-item-section>
-                    </q-item>
+                  <q-item clickable v-ripple @click="
+                    () => {
+                      showDebugDialog = true;
+                      menuOpen = false;
+                    }
+                  ">
+                    <q-item-section avatar>
+                      <q-icon name="build" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.debug_tools") }}</q-item-section>
+                  </q-item>
 
-                    <q-item clickable v-ripple @click="reloadWithTestData">
-                      <q-item-section avatar>
-                        <q-icon name="help_outline" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("menu.explain_features") }}</q-item-section>
-                    </q-item>
-                    <q-item clickable v-ripple @click="openAbout">
-                      <q-item-section avatar>
-                        <q-icon name="info" />
-                      </q-item-section>
-                      <q-item-section>{{ $text("menu.about") }} v{{ appVersion }}</q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-menu>
-              </q-btn>
-            </div>
+                  <q-item clickable v-ripple @click="reloadWithTestData">
+                    <q-item-section avatar>
+                      <q-icon name="help_outline" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.explain_features") }}</q-item-section>
+                  </q-item>
+                  <q-item clickable v-ripple @click="openAbout">
+                    <q-item-section avatar>
+                      <q-icon name="info" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.about") }} v{{ appVersion }}</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+          </div>
         </q-toolbar-title>
 
         <AppConfigDialog v-model="showConfigDialog" />
         <ConnectionsDialog v-model="showConnectionsDialog" />
-        <RolesSetupDialog
-          v-model="showRolesSetupDialog"
-          :initial-action="rolesSetupInitialAction"
-          @saved="onRolesSetupSaved"
-          @open-role-assignment="onRolesSetupOpenRoleAssignment"
-        />
-        <JoinMemberDialog
-          v-model="showJoinMemberDialog"
-          @open-roles-setup="onJoinMemberOpenRolesSetup"
-        />
+        <RolesSetupDialog v-model="showRolesSetupDialog" :initial-action="rolesSetupInitialAction"
+          @saved="onRolesSetupSaved" @open-role-assignment="onRolesSetupOpenRoleAssignment" />
+        <JoinMemberDialog v-model="showJoinMemberDialog" @open-roles-setup="onJoinMemberOpenRolesSetup" />
         <SyncContractHost />
-        <PendingActionsDialog
-          v-model="showPendingActionsDialog"
-          :actions="pendingActionsList"
-          :sync-runs="syncRunsList"
-          @run-now="onPendingRunNow"
-          @cancel="onPendingCancel"
-        />
+        <PendingActionsDialog v-model="showPendingActionsDialog" :actions="pendingActionsList" :sync-runs="syncRunsList"
+          @run-now="onPendingRunNow" @cancel="onPendingCancel" />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
       </q-toolbar>
@@ -206,6 +139,7 @@ import NextEventNotification from "src/modules/task/components/list/NextEventNot
 import CC from "src/CCAccess";
 import Co21AppBackground from "src/components/ui/Co21AppBackground.vue";
 import { useGroupPageBackground } from "src/composables/useGroupPageBackground";
+import { useGroupColor } from "src/composables/useGroupColor";
 import AppConfigDialog from "src/components/settings/AppConfigDialog.vue";
 import AboutDialog from "src/components/settings/AboutDialog.vue";
 import ConnectionsDialog from "src/components/settings/ConnectionsDialog.vue";
@@ -352,6 +286,11 @@ function onJoinMemberOpenRolesSetup(): void {
 const { visibleSlot, layer0, layer1 } = useGroupPageBackground(
   CC.group.list.all as Ref<unknown[]>,
   CC.group.active.activeGroup as Ref<unknown>,
+);
+
+const { mainToolbarStyle } = useGroupColor(
+  CC.group.list.all as Ref<any[]>,
+  CC.group.active.activeGroup as Ref<{ label: string; value: string | null } | null>,
 );
 
 const menuOpen = ref(false);
@@ -684,7 +623,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.notification-wrapper > .sync-incoming-notice-btn {
+.notification-wrapper>.sync-incoming-notice-btn {
   flex: 0 0 auto;
   margin-right: 0;
 }
@@ -692,5 +631,15 @@ onUnmounted(() => {
 /* Ensure the select's background fills the parent but inner text is padded */
 .lang-select .q-field {
   background-clip: padding-box;
+}
+
+.co21-app-header :deep(.q-header__content),
+.co21-header-toolbar {
+  background: transparent !important;
+}
+
+.co21-header-toolbar :deep(.co21-header-menu-btn .q-icon),
+.co21-header-toolbar :deep(#co21-header-notifications .next-events-toggle .q-icon) {
+  color: var(--co21-header-fg) !important;
 }
 </style>

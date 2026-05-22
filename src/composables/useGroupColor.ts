@@ -25,6 +25,27 @@ export function useGroupColor(
     }
   });
 
+  const activeGroupTextColor = computed<string>(() => {
+    try {
+      const ag = activeGroup.value;
+      const gid = ag && typeof ag === 'object' ? ag.value : ag;
+      if (gid) {
+        const g = groups.value.find((x: any) => String(x.id) === String(gid));
+        const explicit = g?.textColor ?? g?.text_color ?? null;
+        if (explicit) return String(explicit);
+      }
+      return getContrastColor(activeGroupColor.value || '#1976d2');
+    } catch {
+      return getContrastColor(activeGroupColor.value || '#1976d2');
+    }
+  });
+
+  /** Main app header: darkened group color + CSS var for header icon tint. */
+  const mainToolbarStyle = computed(() => ({
+    backgroundColor: darkenHex(activeGroupColor.value, 0.15),
+    '--co21-header-fg': activeGroupTextColor.value,
+  }));
+
   const headerStyle = computed(() => ({
     background: activeGroupColor.value,
     color: getContrastColor(activeGroupColor.value),
@@ -38,14 +59,7 @@ export function useGroupColor(
 
   const watermarkTextColor = computed<string>(() => {
     try {
-      const ag = activeGroup.value;
-      const gid = ag && typeof ag === 'object' ? ag.value : ag;
-      let textHex: string = getContrastColor(activeGroupColor.value || '#1976d2');
-      if (gid) {
-        const g = groups.value.find((x: any) => String(x.id) === String(gid));
-        const explicit = g?.textColor ?? g?.text_color ?? null;
-        if (explicit) textHex = explicit as string;
-      }
+      const textHex = activeGroupTextColor.value;
       const rgb = hexToRgb(String(textHex));
       if (!rgb) return 'rgba(0,0,0,0.1)';
       return hexToRgba(textHex, 0.7);
@@ -54,5 +68,12 @@ export function useGroupColor(
     }
   });
 
-  return { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } as const;
+  return {
+    activeGroupColor,
+    activeGroupTextColor,
+    mainToolbarStyle,
+    headerStyle,
+    cardStyle,
+    watermarkTextColor,
+  } as const;
 }
