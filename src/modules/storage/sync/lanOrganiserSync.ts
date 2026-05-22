@@ -14,6 +14,7 @@ import { loadActiveContractForSync, type SyncContractSnapshot } from './syncCont
 import type { GroupRecord } from './deviceRoleAssignment';
 import { contractGroupIds } from './syncContractScope';
 import {
+  daysFromMergedTasks,
   groupPayloadFromLocal,
   mergeGroupsById,
   mergeTasksByNewest,
@@ -45,11 +46,6 @@ function asOptionalString(v: unknown): string {
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
   return '';
-}
-
-function taskDateKey(t: FlatTask): string {
-  const raw = asOptionalString(t.date) || asOptionalString(t.eventDate);
-  return raw.slice(0, 10) || new Date().toISOString().slice(0, 10);
 }
 
 /** Prefer canonical day storage over flat list (flat list can lag after LAN apply). */
@@ -188,10 +184,12 @@ export async function applyInboundSyncDelta(
 ): Promise<{ groupsApplied: number; tasksApplied: number }> {
   const localGroups = CC.group?.list?.all?.value ?? [];
   const mergedGroups = mergeGroupsById(localGroups, remoteGroups ?? []);
-  const mergedTasks = mergeTasksByNewest(collectFlatTasks(), remoteTasks ?? []);
-  const scopedTaskIds = new Set(
-    filterTasksInScope(mergedTasks, scope).map((t) => String(t.id)),
-  );
+  const localFlat = collectFlatTasks();
+  const remoteInScope = filterTasksInScope(
+    (remoteTasks ?? []) as FlatTask[],
+    scope,
+  ) as LanSyncExchangeRequest['tasks'];
+  const mergedTasks = mergeTasksByNewest(localFlat, remoteInScope ?? []);
 
   if (CC.group?.list?.setGroups) {
     CC.group.list.setGroups(mergedGroups);
@@ -199,16 +197,13 @@ export async function applyInboundSyncDelta(
 
   try {
     await withOrganiserSyncTriggerSuppressed(async () => {
-      const days = CC.task?.time?.days?.value ?? {};
-      const byDate: Record<string, { date: string; tasks: FlatTask[]; notes?: string }> = {};
-      for (const t of mergedTasks) {
-        if (!scopedTaskIds.has(String(t.id))) continue;
-        const dateKey = taskDateKey(t);
-        if (!byDate[dateKey]) byDate[dateKey] = { date: dateKey, tasks: [], notes: '' };
-        byDate[dateKey].tasks.push(t);
-      }
+      const days = (CC.task?.time?.days?.value ?? {}) as Record<
+        string,
+        { date: string; tasks: FlatTask[]; notes?: string }
+      >;
+      const nextDays = daysFromMergedTasks(days, mergedTasks);
       if (CC.task?.time?.days) {
-        CC.task.time.days.value = { ...days, ...byDate };
+        CC.task.time.days.value = nextDays;
       }
       refreshTaskFlatListFromDays();
       if (CC.storage?.saveData) {

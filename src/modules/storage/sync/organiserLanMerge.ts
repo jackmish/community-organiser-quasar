@@ -68,7 +68,26 @@ export type FlatTask = Record<string, unknown> & {
   createdAt?: string;
 };
 
-/** Same task id → keep the row with the newest updatedAt (no field-level merge). */
+export type OrganiserDayEntry = {
+  date: string;
+  tasks: FlatTask[];
+  notes?: string;
+};
+
+function taskDateString(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return '';
+}
+
+/** Calendar day key for a task (YYYY-MM-DD). */
+export function taskDateKeyFromFlat(t: FlatTask): string {
+  const raw = taskDateString(t.date) || taskDateString(t.eventDate);
+  return raw.slice(0, 10) || new Date().toISOString().slice(0, 10);
+}
+
+/** Same task id → keep the row with the newest updatedAt; remote only overwrites fields it sends. */
 export function mergeTasksByNewest(local: FlatTask[], remote: LanSyncTaskPayload[]): FlatTask[] {
   const byId = new Map(local.map((t) => [String(t.id), { ...t }]));
   for (const r of remote) {
@@ -81,11 +100,55 @@ export function mergeTasksByNewest(local: FlatTask[], remote: LanSyncTaskPayload
     }
     const remoteMs = tsMs(r.updatedAt);
     const localMs = tsMs(existing.updatedAt);
-    if (remoteMs >= localMs) {
-      byId.set(id, { ...existing, ...r, id });
+    if (remoteMs > localMs || (remoteMs === localMs && remoteMs > 0)) {
+      const patch: FlatTask = { id };
+      for (const [key, value] of Object.entries(r)) {
+        if (key === 'id' || value === undefined) continue;
+        patch[key] = value;
+      }
+      byId.set(id, { ...existing, ...patch });
     }
   }
   return [...byId.values()];
+}
+
+/**
+ * Rebuild day buckets from the merged task list (one row per task id).
+ * Preserves per-day notes; does not drop tasks on a day that are absent from a sync delta.
+ */
+export function daysFromMergedTasks(
+  existingDays: Record<string, OrganiserDayEntry>,
+  mergedTasks: FlatTask[],
+): Record<string, OrganiserDayEntry> {
+  const byId = new Map<string, FlatTask>();
+  for (const t of mergedTasks) {
+    const id = String(t.id || '').trim();
+    if (!id) continue;
+    const prev = byId.get(id);
+    if (!prev || tsMs(t.updatedAt) >= tsMs(prev.updatedAt)) {
+      byId.set(id, t);
+    }
+  }
+
+  const byDate: Record<string, OrganiserDayEntry> = {};
+  for (const t of byId.values()) {
+    const dateKey = taskDateKeyFromFlat(t);
+    if (!byDate[dateKey]) {
+      const prev = existingDays[dateKey];
+      byDate[dateKey] = { date: dateKey, tasks: [], notes: prev?.notes ?? '' };
+    }
+    byDate[dateKey].tasks.push(t);
+  }
+
+  for (const [dateKey, day] of Object.entries(existingDays)) {
+    if (byDate[dateKey]) continue;
+    const notes = String(day.notes ?? '').trim();
+    if (notes) {
+      byDate[dateKey] = { date: dateKey, tasks: [], notes: day.notes ?? '' };
+    }
+  }
+
+  return byDate;
 }
 
 export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {
