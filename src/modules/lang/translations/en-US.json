@@ -250,6 +250,7 @@
   "lan.pc_host_label": "PC IP or hostname (with or without port)",
   "lan.pc_host_hint": "e.g. 192.168.1.10 or 192.168.1.10:47321",
   "lan.request_pairing": "Request pairing",
+  "lan.pair_device": "Pair",
   "lan.cancel_pairing": "Cancel pairing",
   "lan.this_pc_addresses": "This PC on your Wi‑Fi",
   "lan.qr_share_hint": "On the phone: Connections → Router/LAN/Wifi → scan this QR, then Request pairing.",

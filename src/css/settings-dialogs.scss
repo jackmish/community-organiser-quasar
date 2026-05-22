@@ -160,16 +160,6 @@
   width: 100%;
 }
 
-/* Bonjour results span full dialog width while block stays in PC column */
-.lan-pairing-layout--split .lan-pairing-discovered-bleed {
-  width: calc(200% + 20px);
-  max-width: none;
-}
-
-.lan-pairing-layout--stacked .lan-pairing-discovered-bleed {
-  width: 100%;
-}
-
 .lan-pairing-pair-separator {
   opacity: 0.35;
 }
@@ -181,14 +171,41 @@
 
 .lan-pairing-discovered-list {
   background: #fff !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.lan-pairing-discovered-list .q-item {
+  min-width: 0;
+}
+
+.lan-pairing-discovered-list .q-item__section--main {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .lan-pairing-discovered-list .q-item__label {
   color: rgba(0, 0, 0, 0.87) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lan-pairing-discovered-list .q-item__label--caption {
   color: rgba(0, 0, 0, 0.55) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lan-pairing-discovered-pair-side {
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+.lan-pairing-discovered-pair-btn {
+  min-width: 4.5rem;
 }
 
 .lan-pairing-layout--single {

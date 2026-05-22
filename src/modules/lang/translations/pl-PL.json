@@ -260,6 +260,7 @@
   "lan.pc_host_label": "IP lub nazwa PC (z lub bez portu)",
   "lan.pc_host_hint": "Np. 192.168.1.10 lub 192.168.1.10:47321",
   "lan.request_pairing": "Wyślij parowanie",
+  "lan.pair_device": "Sparuj",
   "lan.cancel_pairing": "Anuluj parowanie",
   "lan.this_pc_addresses": "Ten PC w sieci Wi‑Fi",
   "lan.qr_share_hint": "Na telefonie: Połączenia → Router/LAN/Wifi → zeskanuj QR, potem Wyślij parowanie.",

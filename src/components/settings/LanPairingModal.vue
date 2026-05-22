@@ -122,21 +122,24 @@
                 bordered
                 separator
                 class="rounded-borders lan-pairing-discovered-list q-mb-md"
-                :class="{ 'lan-pairing-discovered-bleed': !isMobileViewport }"
               >
-                <q-item
-                  v-for="(d, idx) in discovered"
-                  :key="d.fqdn + idx"
-                  clickable
-                  v-ripple
-                  @click="pickDiscovered(d)"
-                >
+                <q-item v-for="(d, idx) in discovered" :key="d.fqdn + idx">
                   <q-item-section>
                     <q-item-label class="lan-pairing-list-label">{{ d.displayName }}</q-item-label>
                     <q-item-label caption>{{ d.connectHost }}:{{ d.port }}</q-item-label>
                   </q-item-section>
-                  <q-item-section side>
-                    <q-icon name="chevron_right" color="grey-7" />
+                  <q-item-section side class="lan-pairing-discovered-pair-side">
+                    <q-btn
+                      unelevated
+                      dense
+                      color="primary"
+                      size="sm"
+                      class="lan-pairing-discovered-pair-btn"
+                      :label="$text('lan.pair_device')"
+                      :disable="pairActive"
+                      :loading="pairActive && pairingTargetKey === discoveredPairKey(d, idx)"
+                      @click="pairWithDiscovered(d, idx)"
+                    />
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -683,11 +686,28 @@ async function onToggleListen(v: boolean) {
   }
 }
 
-function pickDiscovered(d: Co21DiscoveredHost) {
-  pcHost.value =
-    d.port && d.port !== port ? `${d.connectHost}:${d.port}` : d.connectHost;
-  pairHint.value = `Selected “${d.displayName}”. Tap “Request pairing” below.`;
-  pairHintClass.value = 'text-grey-7';
+function discoveredPairKey(d: Co21DiscoveredHost, idx: number): string {
+  return `${d.fqdn}#${idx}`;
+}
+
+function hostFromDiscovered(d: Co21DiscoveredHost): string {
+  return d.port && d.port !== port ? `${d.connectHost}:${d.port}` : d.connectHost;
+}
+
+const pairingTargetKey = ref<string | null>(null);
+
+async function pairWithDiscovered(d: Co21DiscoveredHost, idx: number): Promise<void> {
+  if (pairActive.value) return;
+  const key = discoveredPairKey(d, idx);
+  pairingTargetKey.value = key;
+  pcHost.value = hostFromDiscovered(d);
+  try {
+    await requestPairToPc();
+  } finally {
+    if (pairingTargetKey.value === key) {
+      pairingTargetKey.value = null;
+    }
+  }
 }
 
 function maybeStartBonjourDiscovery(): void {
