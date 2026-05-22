@@ -24,17 +24,40 @@ class GroupController implements Controllable {
 
   add = async (payload: CreateGroupInput) => {
     const group = groupRepository.addGroup(this.groups.value, payload);
+    if (payload.backgroundImage) {
+      const { persistGroupBackgroundImage } = await import(
+        'src/modules/group/utils/groupBackgroundStorage'
+      );
+      const ref = await persistGroupBackgroundImage(group.id, payload.backgroundImage);
+      if (ref) {
+        group.backgroundImage = ref;
+        delete (group as { background_image?: string }).background_image;
+      }
+    }
     await saveData();
     return group;
   };
 
   update = async (groupId: string, updates: Partial<Omit<Group, 'id' | 'createdAt'>>) => {
-    groupRepository.updateGroup(this.groups.value, groupId, updates);
+    const next = { ...updates };
+    if ('backgroundImage' in updates) {
+      const { persistGroupBackgroundImage } = await import(
+        'src/modules/group/utils/groupBackgroundStorage'
+      );
+      const ref = await persistGroupBackgroundImage(groupId, updates.backgroundImage ?? null);
+      if (ref) next.backgroundImage = ref;
+      else next.backgroundImage = undefined;
+    }
+    groupRepository.updateGroup(this.groups.value, groupId, next);
     await saveData();
   };
 
   delete = async (groupId: string) => {
     const res = groupRepository.deleteGroup(this.groups.value, groupId);
+    const { purgeGroupBackgroundFilesForGroup } = await import(
+      'src/modules/group/utils/groupBackgroundStorage'
+    );
+    await purgeGroupBackgroundFilesForGroup(groupId);
     await saveData();
     return res;
   };

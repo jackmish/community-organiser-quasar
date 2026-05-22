@@ -250,6 +250,9 @@ export async function getGroupFilesDirectory(): Promise<string> {
 export async function saveGroupsToFiles(groups: any[]): Promise<void> {
   if (window.electronAPI && window.electronAPI.writeFile && window.electronAPI.joinPath) {
     const appDataDir = await window.electronAPI.getAppDataPath();
+    const { prepareGroupBackgroundForDisk } = await import(
+      'src/modules/group/utils/groupBackgroundStorage'
+    );
     for (const group of groups) {
       // Do not mutate the original group object (may contain circular refs).
       const safeTasks = Array.isArray(group.tasks)
@@ -264,6 +267,11 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
         : undefined;
       const groupToWrite: any = Object.assign({}, group);
       if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
+      try {
+        await prepareGroupBackgroundForDisk(groupToWrite);
+      } catch (err) {
+        logger.warn('[saveGroupsToFiles] group background persist failed', group.id, err);
+      }
       const filename = getGroupFilename(group.id);
       const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
       await window.electronAPI.ensureDir(groupDir);

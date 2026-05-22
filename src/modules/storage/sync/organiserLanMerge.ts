@@ -1,5 +1,9 @@
 import { GroupModel, type Group } from 'src/modules/group/models/GroupModel';
-import type { LanSyncGroupPayload, LanSyncTaskPayload } from 'src/modules/lan/lanSyncAuth';
+import type {
+  LanSyncGroupPayload,
+  LanSyncTaskDeletionPayload,
+  LanSyncTaskPayload,
+} from 'src/modules/lan/lanSyncAuth';
 
 function tsMs(v: string | undefined): number {
   if (!v) return 0;
@@ -60,6 +64,30 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
     }
   }
   return [...byId.values()];
+}
+
+/** Apply remote task deletions before merging task payloads. */
+export function applyTaskDeletionsToFlatList(
+  local: FlatTask[],
+  deletions: LanSyncTaskDeletionPayload[] | undefined,
+): FlatTask[] {
+  if (!deletions?.length) return local;
+  const drop = new Set<string>();
+  const byId = new Map(local.map((t) => [String(t.id), t]));
+  for (const d of deletions) {
+    const id = String(d.id || '').trim();
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (!existing) {
+      drop.add(id);
+      continue;
+    }
+    const delMs = tsMs(d.deletedAt);
+    const localMs = tsMs(existing.updatedAt);
+    if (delMs >= localMs) drop.add(id);
+  }
+  if (!drop.size) return local;
+  return local.filter((t) => !drop.has(String(t.id)));
 }
 
 export type FlatTask = Record<string, unknown> & {
@@ -149,6 +177,16 @@ export function daysFromMergedTasks(
   }
 
   return byDate;
+}
+
+export async function groupPayloadFromLocalAsync(g: Group): Promise<LanSyncGroupPayload> {
+  const p = groupPayloadFromLocal(g);
+  const { readGroupBackgroundForSync } = await import(
+    'src/modules/group/utils/groupBackgroundStorage'
+  );
+  const img = await readGroupBackgroundForSync(g.backgroundImage);
+  if (img) p.backgroundImage = img;
+  return p;
 }
 
 export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {

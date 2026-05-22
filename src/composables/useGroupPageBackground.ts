@@ -1,9 +1,11 @@
 import { ref, watch, type Ref } from 'vue';
 import {
   groupBackgroundLayerStyle,
+  readGroupBackgroundFields,
   resolveGroupBackground,
   type GroupBackgroundState,
 } from 'src/modules/group/utils/groupBackground';
+import { resolveGroupBackgroundDisplayUrl } from 'src/modules/group/utils/groupBackgroundStorage';
 
 type ActiveGroupRef = { value?: string | null };
 
@@ -78,13 +80,22 @@ export function useGroupPageBackground(
     visibleSlot.value = next;
   }
 
-  function sync() {
+  async function sync() {
     const gid = activeGroupId(activeGroup.value);
     const group = findGroupById(groups.value, gid);
-    applyState(resolveGroupBackground(group));
+    const fields = readGroupBackgroundFields(group);
+    const displayUrl = await resolveGroupBackgroundDisplayUrl(fields.backgroundImage);
+    applyState(
+      resolveGroupBackground({
+        ...(group ?? {}),
+        backgroundImage: displayUrl,
+        backgroundColorize: fields.backgroundColorize,
+        color: fields.color,
+      }),
+    );
   }
 
-  watch([groups, activeGroup], sync, { deep: true, immediate: true });
+  watch([groups, activeGroup], () => void sync(), { deep: true, immediate: true });
 
   return { visibleSlot, layer0, layer1, sync };
 }

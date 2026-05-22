@@ -42,7 +42,21 @@ class TaskController implements Controllable {
   };
 
   readonly delete = async (date: string, id: string) => {
+    let groupId: string | undefined;
+    try {
+      const day = this.time.days?.value?.[date];
+      const task = day?.tasks?.find((t: { id?: string }) => String(t?.id) === String(id));
+      if (task?.groupId) groupId = String(task.groupId);
+    } catch {
+      void 0;
+    }
     const removed = this.taskRepo.deleteTask(date, id);
+    if (removed) {
+      const { recordTaskDeletion } = await import(
+        'src/modules/storage/sync/taskDeletionLog'
+      );
+      await recordTaskDeletion(id, groupId ? { groupId } : {});
+    }
     await saveData();
     return removed;
   };

@@ -439,6 +439,7 @@ import {
   readGroupBackgroundFields,
   resolveGroupBackground,
 } from "src/modules/group/utils/groupBackground";
+import { resolveGroupBackgroundDisplayUrl } from "src/modules/group/utils/groupBackgroundStorage";
 import { appNotify } from "src/utils/appNotify";
 import type { QTreeNode } from "quasar";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
@@ -761,8 +762,10 @@ watch(
         localHideTasksInParent.value = Boolean(src.hideTasksFromParent);
         localShortcut.value = Boolean(src.shortcut);
         const bg = readGroupBackgroundFields(src);
-        localBackgroundImage.value = bg.backgroundImage;
         localBackgroundColorize.value = bg.backgroundColorize;
+        void resolveGroupBackgroundDisplayUrl(bg.backgroundImage).then((url) => {
+          localBackgroundImage.value = url;
+        });
       }
     } catch (e) {
       void e;

@@ -20,6 +20,14 @@ export type LanSyncExchangeRequest = {
   /** Outbound delta from caller (groups/tasks in contract scope). */
   groups?: LanSyncGroupPayload[];
   tasks?: LanSyncTaskPayload[];
+  /** Task ids deleted since last sync (tombstones). */
+  deletedTasks?: LanSyncTaskDeletionPayload[];
+};
+
+export type LanSyncTaskDeletionPayload = {
+  id: string;
+  deletedAt: string;
+  groupId?: string;
 };
 
 export type LanSyncExchangeResponse = {
@@ -29,6 +37,7 @@ export type LanSyncExchangeResponse = {
   since: number;
   groups: LanSyncGroupPayload[];
   tasks: LanSyncTaskPayload[];
+  deletedTasks?: LanSyncTaskDeletionPayload[];
   error?: string;
 };
 

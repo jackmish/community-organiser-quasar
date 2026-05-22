@@ -14,13 +14,22 @@ import { loadActiveContractForSync, type SyncContractSnapshot } from './syncCont
 import type { GroupRecord } from './deviceRoleAssignment';
 import { contractGroupIds } from './syncContractScope';
 import {
+  applyTaskDeletionsToFlatList,
   daysFromMergedTasks,
-  groupPayloadFromLocal,
+  groupPayloadFromLocalAsync,
   mergeGroupsById,
   mergeTasksByNewest,
   taskPayloadFromFlat,
   type FlatTask,
 } from './organiserLanMerge';
+import { adoptInboundGroupBackground } from 'src/modules/group/utils/groupBackgroundStorage';
+import {
+  listTaskDeletionsForSync,
+  mergeRemoteTaskDeletions,
+  pruneTaskDeletionTombstones,
+  type TaskDeletionTombstone,
+} from './taskDeletionLog';
+import type { LanSyncTaskDeletionPayload } from 'src/modules/lan/lanSyncAuth';
 import {
   adoptNextSyncToken,
   ensurePeerSyncSession,
@@ -143,6 +152,7 @@ function markSyncedFlags(
   peer: SyncPeerRecord,
   groups: { id: string; updatedAt?: string }[],
   tasks: { id: string; updatedAt?: string }[],
+  deletions: LanSyncTaskDeletionPayload[] = [],
 ): SyncPeerRecord {
   const now = Date.now();
   const groupSyncedAt = { ...peer.groupSyncedAt };
@@ -153,27 +163,55 @@ function markSyncedFlags(
   for (const t of tasks) {
     taskSyncedAt[String(t.id)] = tsMs(t.updatedAt) || now;
   }
+  for (const d of deletions) {
+    taskSyncedAt[String(d.id)] = tsMs(d.deletedAt) || now;
+  }
   return { ...peer, groupSyncedAt, taskSyncedAt };
 }
 
-/** Build outbound delta for contract-scoped groups/tasks. */
-export function buildOutboundSyncDelta(opts: {
+async function adoptMergedGroupBackgrounds(
+  merged: Group[],
+  remote: LanSyncExchangeRequest['groups'],
+): Promise<void> {
+  const remoteById = new Map((remote ?? []).map((r) => [String(r.id), r]));
+  for (const g of merged) {
+    const r = remoteById.get(String(g.id));
+    if (!r || r.backgroundImage === undefined) continue;
+    const localMs = tsMs(g.updatedAt);
+    const remoteMs = tsMs(r.updatedAt);
+    if (remoteMs < localMs) continue;
+    const ref = await adoptInboundGroupBackground(String(g.id), r.backgroundImage ?? null);
+    if (ref) g.backgroundImage = ref;
+    else {
+      delete (g as { backgroundImage?: string }).backgroundImage;
+      delete (g as { background_image?: string }).background_image;
+    }
+  }
+}
+
+/** Build outbound delta for contract-scoped groups/tasks/deletions. */
+export async function buildOutboundSyncDelta(opts: {
   sinceMs: number;
   scope: Set<string>;
   peer?: SyncPeerRecord | null;
-}): { groups: ReturnType<typeof groupPayloadFromLocal>[]; tasks: ReturnType<typeof taskPayloadFromFlat>[] } {
+}): Promise<{
+  groups: Awaited<ReturnType<typeof groupPayloadFromLocalAsync>>[];
+  tasks: ReturnType<typeof taskPayloadFromFlat>[];
+  deletedTasks: TaskDeletionTombstone[];
+}> {
   const allGroups = CC.group?.list?.all?.value ?? [];
   const scopedGroups = filterGroupsInScope(allGroups, opts.scope);
   const scopedTasks = filterTasksInScope(collectFlatTasks(), opts.scope);
   const changedTasks = filterTasksForSyncOutbound(scopedTasks, opts.peer ?? null, opts.sinceMs);
-  const groupPayloads = scopedGroups.map((g) => groupPayloadFromLocal(g));
+  const groupPayloads = await Promise.all(scopedGroups.map((g) => groupPayloadFromLocalAsync(g)));
   const changedGroups = filterGroupsForSyncOutbound(
     groupPayloads,
     opts.peer ?? null,
     opts.sinceMs,
   );
   const tasks = changedTasks.map((t) => taskPayloadFromFlat(t));
-  return { groups: changedGroups, tasks };
+  const deletedTasks = await listTaskDeletionsForSync(opts.sinceMs, opts.scope);
+  return { groups: changedGroups, tasks, deletedTasks };
 }
 
 /** Apply remote payload into in-memory organiser + persist. */
@@ -181,10 +219,14 @@ export async function applyInboundSyncDelta(
   remoteGroups: LanSyncExchangeRequest['groups'],
   remoteTasks: LanSyncExchangeRequest['tasks'],
   scope: Set<string>,
-): Promise<{ groupsApplied: number; tasksApplied: number }> {
+  remoteDeletedTasks?: LanSyncTaskDeletionPayload[],
+): Promise<{ groupsApplied: number; tasksApplied: number; deletionsApplied: number }> {
+  const deletions = await mergeRemoteTaskDeletions(remoteDeletedTasks);
   const localGroups = CC.group?.list?.all?.value ?? [];
   const mergedGroups = mergeGroupsById(localGroups, remoteGroups ?? []);
-  const localFlat = collectFlatTasks();
+  await adoptMergedGroupBackgrounds(mergedGroups, remoteGroups);
+  let localFlat = collectFlatTasks();
+  localFlat = applyTaskDeletionsToFlatList(localFlat, deletions);
   const remoteInScope = filterTasksInScope(
     (remoteTasks ?? []) as FlatTask[],
     scope,
@@ -217,6 +259,7 @@ export async function applyInboundSyncDelta(
   return {
     groupsApplied: (remoteGroups ?? []).length,
     tasksApplied: (remoteTasks ?? []).length,
+    deletionsApplied: deletions.length,
   };
 }
 
@@ -273,13 +316,13 @@ export async function handleLanSyncExchangeRequest(
         ? peer.lastSyncAt
         : 0;
 
-  if (req.groups?.length || req.tasks?.length) {
-    await applyInboundSyncDelta(req.groups, req.tasks, scope);
-    peer = markSyncedFlags(peer, req.groups ?? [], req.tasks ?? []);
+  if (req.groups?.length || req.tasks?.length || req.deletedTasks?.length) {
+    await applyInboundSyncDelta(req.groups, req.tasks, scope, req.deletedTasks);
+    peer = markSyncedFlags(peer, req.groups ?? [], req.tasks ?? [], req.deletedTasks ?? []);
   }
 
-  const outbound = buildOutboundSyncDelta({ sinceMs, scope, peer });
-  peer = markSyncedFlags(peer, outbound.groups, outbound.tasks);
+  const outbound = await buildOutboundSyncDelta({ sinceMs, scope, peer });
+  peer = markSyncedFlags(peer, outbound.groups, outbound.tasks, outbound.deletedTasks);
   const nextToken = lanSyncExchangeNextToken();
   const now = Date.now();
   const peerPatch: Parameters<typeof upsertSyncPeerState>[0] = {
@@ -292,12 +335,17 @@ export async function handleLanSyncExchangeRequest(
   };
   await upsertSyncPeerState(peerPatch);
 
+  if (outbound.deletedTasks.length) {
+    await pruneTaskDeletionTombstones(outbound.deletedTasks.map((d) => d.id));
+  }
+
   return syncExchangeResponse({
     ok: true,
     nextToken,
     since: now,
     groups: outbound.groups,
     tasks: outbound.tasks,
+    deletedTasks: outbound.deletedTasks,
   });
 }
 
@@ -338,7 +386,7 @@ export async function runSyncWithPeer(opts: {
   }
 
   const sinceMs = incremental ? peer.lastSyncAt : 0;
-  const outbound = buildOutboundSyncDelta({ sinceMs, scope, peer });
+  const outbound = await buildOutboundSyncDelta({ sinceMs, scope, peer });
 
   try {
     const reqBody: LanSyncExchangeRequest = {
@@ -346,6 +394,7 @@ export async function runSyncWithPeer(opts: {
       token: peer.sessionToken,
       groups: outbound.groups,
       tasks: outbound.tasks,
+      deletedTasks: outbound.deletedTasks,
     };
     if (sinceMs > 0) reqBody.since = sinceMs;
     const res = await lanPostSyncExchange(base, reqBody);
@@ -363,11 +412,13 @@ export async function runSyncWithPeer(opts: {
       return false;
     }
 
-    await applyInboundSyncDelta(res.groups, res.tasks, scope);
-    const synced = markSyncedFlags(peer, [...outbound.groups, ...res.groups], [
-      ...outbound.tasks,
-      ...res.tasks,
-    ]);
+    await applyInboundSyncDelta(res.groups, res.tasks, scope, res.deletedTasks);
+    const synced = markSyncedFlags(
+      peer,
+      [...outbound.groups, ...res.groups],
+      [...outbound.tasks, ...res.tasks],
+      [...outbound.deletedTasks, ...(res.deletedTasks ?? [])],
+    );
     const now = Date.now();
     await upsertSyncPeerState({
       peerDeviceId: opts.peerDeviceId,
@@ -389,6 +440,11 @@ export async function runSyncWithPeer(opts: {
       tasksReceived: res.tasks.length,
       message: incremental ? 'incremental' : 'full',
     });
+    const prunedIds = [
+      ...outbound.deletedTasks.map((d) => d.id),
+      ...(res.deletedTasks ?? []).map((d) => d.id),
+    ];
+    if (prunedIds.length) await pruneTaskDeletionTombstones(prunedIds);
     return true;
   } catch (e) {
     logger.error('[lanOrganiserSync] runSyncWithPeer failed', e);

@@ -106,6 +106,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return true;
   },
 
+  writeFileBinary: async (filePath, base64, mime) => {
+    const buf = Buffer.from(String(base64 || ''), 'base64');
+    await fs.promises.writeFile(filePath, buf);
+    return { mime: mime || 'image/jpeg' };
+  },
+
+  readFileBase64: async (filePath) => {
+    const buf = await fs.promises.readFile(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    let mime = 'image/jpeg';
+    if (ext === '.png') mime = 'image/png';
+    else if (ext === '.webp') mime = 'image/webp';
+    else if (ext === '.gif') mime = 'image/gif';
+    return { base64: buf.toString('base64'), mime };
+  },
+
+  removePath: async (targetPath) => {
+    await fs.promises.rm(targetPath, { recursive: true, force: true });
+    return true;
+  },
+
   // Delete a file
   deleteFile: async (filePath) => {
     try {
