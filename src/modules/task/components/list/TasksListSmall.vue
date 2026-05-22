@@ -1,7 +1,7 @@
 <template>
   <div class="tasks-list-wrapper">
     <slot name="header" />
-    <div :class="['task-list', { 'with-preview': !!selectedTaskId }]">
+    <div class="task-list">
       <template v-if="mergedTasks.length > 0">
         <template v-for="(item, index) in mergedTasks" :key="item.id">
           <template v-if="item.__isReplenish">
@@ -482,15 +482,8 @@ function logIfUnrecognized(item: any) {
   position: relative;
 }
 
-/* When a task is selected (preview/edit open) allow wider cards */
-.task-list.with-preview {
-  /* remove the fixed min width so a selected/preview card can grow wider */
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) !important;
-}
-
 @media (max-width: 767px) {
-  .task-list,
-  .task-list.with-preview {
+  .task-list {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     padding-left: 8px;
     padding-right: 8px;
