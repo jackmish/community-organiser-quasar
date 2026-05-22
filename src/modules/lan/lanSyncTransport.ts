@@ -19,6 +19,7 @@ async function fetchWithTimeout(
 export async function lanPostSyncExchange(
   baseUrl: string,
   body: LanSyncExchangeRequest,
+  timeoutMs = 8_000,
 ): Promise<LanSyncExchangeResponse | null> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/sync/exchange`;
   try {
@@ -29,7 +30,7 @@ export async function lanPostSyncExchange(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       },
-      30_000,
+      timeoutMs,
     );
     if (!res.ok) return null;
     return (await res.json()) as LanSyncExchangeResponse;

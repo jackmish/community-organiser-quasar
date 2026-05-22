@@ -40,8 +40,10 @@ import {
 import { withOrganiserSyncTriggerSuppressed } from './lanOrganiserSyncTrigger';
 import { enqueueSyncRun, updateSyncRun } from './syncRunQueue';
 import { loadOwnDeviceMeta } from './deviceRoleAssignment';
+import { LAN_INFO_PROBE_MS, probeLanPeerInfo } from 'src/modules/lan/lanPeerConnectivity';
 import logger from 'src/utils/logger';
 import type { Group } from 'src/modules/group/models/GroupModel';
+import type { ConnectedDevice } from 'src/modules/storage/sync/deviceRoleAssignment';
 
 function tsMs(v: string | undefined): number {
   if (!v) return 0;
@@ -355,6 +357,9 @@ export async function runSyncWithPeer(opts: {
   peerDeviceName: string;
   lanHost: string;
   sessionToken?: string;
+  exchangeTimeoutMs?: number;
+  /** When true, caller already confirmed peer via GET /info. */
+  skipInfoProbe?: boolean;
 }): Promise<boolean> {
   const contract = await loadActiveContractForSync();
   if (!contract) {
@@ -385,6 +390,32 @@ export async function runSyncWithPeer(opts: {
     return false;
   }
 
+  if (!opts.skipInfoProbe) {
+    const probe = await probeLanPeerInfo(
+      {
+        id: opts.peerDeviceId,
+        name: opts.peerDeviceName,
+        lanHost: opts.lanHost,
+      } as ConnectedDevice,
+      LAN_INFO_PROBE_MS,
+    );
+    if (!probe.ok) {
+      await updateSyncRun(run.id, {
+        status: 'failed',
+        finishedAt: Date.now(),
+        message: 'peer_not_reachable',
+      });
+      await upsertSyncPeerState({
+        peerDeviceId: opts.peerDeviceId,
+        lastSyncStatus: 'failed',
+        lastSyncMessage: 'info_unreachable',
+        peerInRange: false,
+        peerCheckedAt: Date.now(),
+      });
+      return false;
+    }
+  }
+
   const sinceMs = incremental ? peer.lastSyncAt : 0;
   const outbound = await buildOutboundSyncDelta({ sinceMs, scope, peer });
 
@@ -397,7 +428,7 @@ export async function runSyncWithPeer(opts: {
       deletedTasks: outbound.deletedTasks,
     };
     if (sinceMs > 0) reqBody.since = sinceMs;
-    const res = await lanPostSyncExchange(base, reqBody);
+    const res = await lanPostSyncExchange(base, reqBody, opts.exchangeTimeoutMs ?? 8_000);
     if (!res?.ok) {
       await upsertSyncPeerState({
         peerDeviceId: opts.peerDeviceId,
@@ -476,11 +507,14 @@ export async function runFirstSyncAfterContractAccept(
 
   for (const d of remotes) {
     await ensurePeerSyncSession(d.id, d.name, token);
+    const probe = await probeLanPeerInfo(d, LAN_INFO_PROBE_MS);
+    if (!probe.ok) continue;
     await runSyncWithPeer({
       peerDeviceId: d.id,
       peerDeviceName: d.name,
       lanHost: (d.lanHost || '').trim(),
       ...(token ? { sessionToken: token } : {}),
+      skipInfoProbe: true,
     });
   }
 }

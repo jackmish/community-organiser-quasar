@@ -153,7 +153,10 @@ import PendingActionsDialog from "src/components/settings/PendingActionsDialog.v
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import { usePendingActions } from "src/composables/usePendingActions";
 import { useSyncRuns } from "src/composables/useSyncRuns";
-import { startLanDataSyncScheduler } from "src/modules/storage/sync/lanDataSyncScheduler";
+import {
+  startLanDataSyncScheduler,
+  stopLanDataSyncScheduler,
+} from "src/modules/storage/sync/lanDataSyncScheduler";
 import { appNotify } from "src/utils/appNotify";
 import { dispatchBaselineRestore } from "src/modules/storage/sync/syncContractUi";
 import {
@@ -395,7 +398,7 @@ onMounted(async () => {
     const settings = await loadCo21Settings();
     const ownName =
       typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
-    await refreshLanServerForConnections(devices, ownName);
+    await refreshLanServerForConnections(devices, ownName, { skipReconcileProbe: true });
   } catch {
     void 0;
   }
@@ -582,6 +585,7 @@ async function reloadWithTestData() {
 
 onUnmounted(() => {
   stopPendingActionsScheduler();
+  stopLanDataSyncScheduler();
   window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
   window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);

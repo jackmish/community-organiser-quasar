@@ -1,5 +1,5 @@
-import { co21LanBaseUrl } from './lanPairingConstants';
-import { lanFetchInfo } from './lanPairingClient';
+import type { LanPeerProbeResult } from './lanPeerConnectivity';
+import { probeLanPeerInfo } from './lanPeerConnectivity';
 import {
   dedupeConnectedDevicesByPeerId,
   normalizeDeviceId,
@@ -12,29 +12,28 @@ export type LanDeviceReconcileResult = {
   repaired: string[];
 };
 
+const DEFAULT_RECONCILE_PROBE_MS = 2_500;
+
 /**
  * Align stored `ConnectedDevice.id` with each peer's `/info` deviceId.
  * Wrong ids cause sync contracts to be rejected (trusted-device check).
  */
 export async function reconcileLanDeviceIds(
   devices: ConnectedDevice[],
+  opts?: { timeoutMs?: number; probeResults?: LanPeerProbeResult[] },
 ): Promise<LanDeviceReconcileResult> {
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_RECONCILE_PROBE_MS;
   const repaired: string[] = [];
   let next = [...devices];
 
-  for (const d of devices) {
-    if (d.isLocal) continue;
-    const host = (d.lanHost || '').trim();
-    if (!host) continue;
-    const base = co21LanBaseUrl(host);
-    if (!base) continue;
+  const remotes = devices.filter((d) => !d.isLocal && (d.lanHost || '').trim());
+  const probes =
+    opts?.probeResults ??
+    (await Promise.all(remotes.map((d) => probeLanPeerInfo(d, timeoutMs))));
 
-    let info: Awaited<ReturnType<typeof lanFetchInfo>> = null;
-    try {
-      info = await lanFetchInfo(base, { timeoutMs: 5000 });
-    } catch {
-      continue;
-    }
+  for (const row of probes) {
+    const d = row.device;
+    const info = row.ok ? row.info : null;
     if (!info?.deviceId) continue;
 
     const peerNorm = normalizeDeviceId(info.deviceId);

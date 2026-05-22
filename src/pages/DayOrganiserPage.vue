@@ -257,7 +257,7 @@ import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import CC from "src/CCAccess";
-import { runLanSyncBeforeOrganiserDisplay } from "src/modules/storage/sync/lanOrganiserSyncTrigger";
+import { scheduleBackgroundLanSyncAfterDisplay } from "src/modules/storage/sync/lanOrganiserSyncTrigger";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
@@ -1151,7 +1151,6 @@ useDayRollover({
 onMounted(async () => {
   try {
     await CC.storage.loadData();
-    await runLanSyncBeforeOrganiserDisplay();
     try {
       CC.task.refreshFlatListFromDays();
     } catch (e) {
@@ -1176,6 +1175,7 @@ onMounted(async () => {
     logger.error("Failed to load data on mount:", error);
   } finally {
     organiserReady.value = true;
+    scheduleBackgroundLanSyncAfterDisplay();
   }
 
   // Listen for global reload events (e.g. from MainLayout refresh button)

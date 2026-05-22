@@ -1,11 +1,13 @@
-/**
- * LAN organiser sync is triggered when local data is saved (see `lanOrganiserSyncTrigger.ts`).
- * Interval polling is intentionally disabled — contract interval is for agreement only.
- */
+import {
+  startLanPeerReconnectScheduler,
+  stopLanPeerReconnectScheduler,
+} from './lanOrganiserSyncTrigger';
+
+/** Periodic /info for offline peers; sync when connection is restored. */
 export function startLanDataSyncScheduler(): void {
-  // no-op: event-driven sync via StorageController.saveData
+  startLanPeerReconnectScheduler();
 }
 
 export function stopLanDataSyncScheduler(): void {
-  // no-op
+  stopLanPeerReconnectScheduler();
 }

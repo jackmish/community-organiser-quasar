@@ -137,7 +137,7 @@ export async function ensureLanServerForSync(
 export async function refreshLanServerForConnections(
   devices: ConnectedDevice[],
   ownDeviceName: string,
-  opts?: { restart?: boolean },
+  opts?: { restart?: boolean; skipReconcileProbe?: boolean },
 ): Promise<ConnectedDevice[]> {
   // Do not restart by default — restarting clears in-flight pairing tokens on this machine.
   await ensureLanServerForSync(ownDeviceName, { restart: opts?.restart ?? false });
@@ -146,7 +146,13 @@ export async function refreshLanServerForConnections(
   const localName = (ownDeviceName || '').trim() || local.name;
   const withLocal = mergeLocalDeviceIntoList(devices, { ...local, name: localName });
 
-  const { devices: reconciled, repaired } = await reconcileLanDeviceIds(withLocal);
+  let reconciled = withLocal;
+  let repaired: string[] = [];
+  if (!opts?.skipReconcileProbe) {
+    const result = await reconcileLanDeviceIds(withLocal);
+    reconciled = result.devices;
+    repaired = result.repaired;
+  }
   const out = mergeLocalDeviceIntoList(reconciled, { ...local, name: localName });
   if (repaired.length > 0) {
     logger.info('[lanServerManager] reconciled LAN device ids for', repaired.join(', '));
