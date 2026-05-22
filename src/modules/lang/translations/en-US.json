@@ -48,6 +48,7 @@
   "ui.shortcut": "Shortcut",
   "ui.manage_groups": "Manage Groups...",
   "ui.edit_group": "Edit group",
+  "ui.add_group": "Create new group",
   "ui.join_device": "Assign devices to groups",
   "ui.select_group": "Select group",
   "role.setup_title": "Roles & privileges",

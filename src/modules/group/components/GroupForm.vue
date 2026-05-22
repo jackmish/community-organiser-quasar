@@ -34,61 +34,58 @@
             size="24"
           />
         </div>
-        <div
-          v-if="iconMenuVisible"
-          :style="iconMenuStyle"
-          style="
-            background: var(--q-popup-bg, #fff);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-            padding: 8px;
-            border-radius: 6px;
-            z-index: 10010;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            max-width: 320px;
-          "
+        <q-menu
+          v-model="iconMenuVisible"
+          :target="gmIconPreview ?? undefined"
+          anchor="bottom left"
+          self="top left"
+          :offset="[0, 6]"
+          :content-style="iconPopupStyle"
+          content-class="gm-popup-menu"
+          no-parent-event
         >
-          <div
-            v-for="ic in iconOptions"
-            :key="ic"
-            class="gm-icon-item"
-            @click="selectIcon(ic)"
-            style="
-              width: 44px;
-              height: 44px;
-              border-radius: 8px;
-              cursor: pointer;
-              border: 1px solid #0002;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #f5f5f5;
-            "
-            :title="ic"
-          >
-            <q-icon :name="getIconName(ic)" size="24" />
-          </div>
-          <div style="flex-basis: 100%; height: 0"></div>
-          <div
-            style="
-              width: 100%;
-              margin-top: 6px;
-              display: flex;
-              gap: 6px;
-              align-items: center;
-            "
-          >
-            <q-btn
-              dense
-              unelevated
-              color="primary"
-              @click="resetIcon"
-              style="padding: 6px 10px"
-              >{{ $text('action.reset_icon') }}</q-btn
+          <div class="gm-icon-picker-panel">
+            <div
+              v-for="ic in iconOptions"
+              :key="ic"
+              class="gm-icon-item"
+              @click="selectIcon(ic)"
+              style="
+                width: 44px;
+                height: 44px;
+                border-radius: 8px;
+                cursor: pointer;
+                border: 1px solid #0002;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f5f5f5;
+              "
+              :title="ic"
             >
+              <q-icon :name="getIconName(ic)" size="24" />
+            </div>
+            <div style="flex-basis: 100%; height: 0"></div>
+            <div
+              style="
+                width: 100%;
+                margin-top: 6px;
+                display: flex;
+                gap: 6px;
+                align-items: center;
+              "
+            >
+              <q-btn
+                dense
+                unelevated
+                color="primary"
+                @click="resetIcon"
+                style="padding: 6px 10px"
+                >{{ $text('action.reset_icon') }}</q-btn
+              >
+            </div>
           </div>
-        </div>
+        </q-menu>
 
         <q-input
           v-model="localColor"
@@ -101,7 +98,8 @@
           <template #append>
             <div style="display: flex; align-items: center; gap: 8px">
               <div
-                @click.stop.prevent="menuVisible = !menuVisible"
+                ref="colorSwatchRef"
+                @click.stop.prevent="toggleColorMenu"
                 style="
                   width: 30px;
                   height: 30px;
@@ -112,82 +110,55 @@
                 "
                 :style="{ background: localColor }"
               ></div>
-              <div style="position: relative; display: inline-block">
-                <div
-                  v-if="menuVisible"
-                  style="
-                    position: absolute;
-                    right: 0;
-                    top: calc(100% + 6px);
-                    background: var(--q-popup-bg, #fff);
-                    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-                    padding: 8px;
-                    border-radius: 6px;
-                    z-index: 10010;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    max-width: 240px;
-                  "
-                >
-                  <div
-                    v-for="c in paletteColors"
-                    :key="c"
-                    @click="selectPaletteColor(c)"
-                    style="
-                      width: 28px;
-                      height: 28px;
-                      border-radius: 4px;
-                      cursor: pointer;
-                      border: 1px solid #0002;
-                    "
-                    :title="c"
-                    :style="{ background: c }"
-                  ></div>
-                  <div style="flex-basis: 100%; height: 0"></div>
-                  <div
-                    style="
-                      width: 100%;
-                      margin-top: 6px;
-                      display: flex;
-                      gap: 6px;
-                      align-items: center;
-                    "
-                  >
+              <q-menu
+                v-model="menuVisible"
+                :target="colorSwatchRef ?? undefined"
+                anchor="bottom right"
+                self="top right"
+                :offset="[0, 6]"
+                max-height="520px"
+                :content-style="colorPopupStyle"
+                content-class="gm-popup-menu gm-color-palette-menu"
+                no-parent-event
+              >
+                <div class="gm-color-palette">
+                  <div class="gm-color-palette__grid">
+                    <button
+                      v-for="c in paletteColors"
+                      :key="c"
+                      type="button"
+                      class="gm-color-palette__swatch"
+                      :title="c"
+                      :style="{ background: c }"
+                      :class="{ 'gm-color-palette__swatch--selected': localColor === c }"
+                      @click="selectPaletteColor(c)"
+                    />
+                  </div>
+                  <div class="gm-color-palette__actions">
                     <q-btn
                       dense
                       unelevated
                       color="primary"
                       @click="openCustom"
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        padding: 6px 10px;
-                      "
-                      ><div style="display: flex; align-items: center; gap: 8px">
-                        <span>{{ $text('action.custom') }}</span>
-                        <div
-                          :style="{
-                            width: '18px',
-                            height: '18px',
-                            background: localColor,
-                            borderRadius: '4px',
-                            border: '1px solid rgba(0,0,0,0.12)',
-                          }"
-                        ></div></div
-                    ></q-btn>
+                      class="gm-color-palette__action-btn"
+                    >
+                      <span>{{ $text('action.custom') }}</span>
+                      <div
+                        class="gm-color-palette__action-preview"
+                        :style="{ background: localColor }"
+                      />
+                    </q-btn>
                     <q-btn
                       dense
                       unelevated
                       color="negative"
+                      :label="$text('action.reset')"
+                      class="gm-color-palette__action-btn"
                       @click="resetColor"
-                      style="padding: 6px 10px"
-                      >{{ $text('action.reset') }}</q-btn
-                    >
+                    />
                   </div>
                 </div>
-              </div>
+              </q-menu>
             </div>
           </template>
         </q-input>
@@ -224,6 +195,7 @@
           <template #append>
             <div style="display: flex; align-items: center; gap: 8px">
               <div
+                ref="textColorSwatchRef"
                 :style="{
                   width: '30px',
                   height: '30px',
@@ -231,70 +203,54 @@
                   border: '1px solid rgba(0,0,0,0.12)',
                   background: localTextColor,
                   boxSizing: 'border-box',
+                  cursor: 'pointer',
                 }"
-                @click.stop.prevent="textMenuVisible = !textMenuVisible"
+                @click.stop.prevent="toggleTextColorMenu"
               ></div>
-              <div style="position: relative; display: inline-block">
-                <div
-                  v-if="textMenuVisible"
-                  style="
-                    position: absolute;
-                    right: 0;
-                    top: calc(100% + 6px);
-                    background: var(--q-popup-bg, #fff);
-                    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-                    padding: 8px;
-                    border-radius: 6px;
-                    z-index: 10010;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    max-width: 200px;
-                  "
-                >
-                  <div
-                    v-for="c in textPalette"
-                    :key="c"
-                    @click="selectTextPaletteColor(c)"
-                    style="
-                      width: 28px;
-                      height: 28px;
-                      border-radius: 4px;
-                      cursor: pointer;
-                      border: 1px solid #0002;
-                    "
-                    :title="c"
-                    :style="{ background: c }"
-                  ></div>
-                  <div style="flex-basis: 100%; height: 0"></div>
-                  <div
-                    style="
-                      width: 100%;
-                      margin-top: 6px;
-                      display: flex;
-                      gap: 6px;
-                      align-items: center;
-                    "
-                  >
+              <q-menu
+                v-model="textMenuVisible"
+                :target="textColorSwatchRef ?? undefined"
+                anchor="bottom right"
+                self="top right"
+                :offset="[0, 6]"
+                max-height="320px"
+                :content-style="textColorPopupStyle"
+                content-class="gm-popup-menu gm-color-palette-menu"
+                no-parent-event
+              >
+                <div class="gm-color-palette gm-color-palette--text">
+                  <div class="gm-color-palette__grid gm-color-palette__grid--text">
+                    <button
+                      v-for="c in textPalette"
+                      :key="c"
+                      type="button"
+                      class="gm-color-palette__swatch"
+                      :title="c"
+                      :style="{ background: c }"
+                      :class="{ 'gm-color-palette__swatch--selected': localTextColor === c }"
+                      @click="selectTextPaletteColor(c)"
+                    />
+                  </div>
+                  <div class="gm-color-palette__actions">
                     <q-btn
                       dense
                       unelevated
                       color="primary"
+                      :label="$text('action.custom')"
+                      class="gm-color-palette__action-btn"
                       @click="openTextCustom"
-                      style="padding: 6px 10px"
-                      >{{ $text('action.custom') }}</q-btn
-                    >
+                    />
                     <q-btn
                       dense
                       unelevated
                       color="negative"
+                      :label="$text('action.reset')"
+                      class="gm-color-palette__action-btn"
                       @click="resetTextColor"
-                      style="padding: 6px 10px"
-                      >{{ $text('action.reset') }}</q-btn
-                    >
+                    />
                   </div>
                 </div>
-              </div>
+              </q-menu>
             </div>
           </template>
         </q-input>
@@ -430,9 +386,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { $text } from "src/modules/lang";
 import CC from "src/CCAccess";
+import { popupZIndexAboveDialogs } from "src/utils/stackingZIndex";
+import {
+  GROUP_BACKGROUND_PALETTE,
+  GROUP_TEXT_PALETTE,
+} from "src/modules/group/constants/groupPaletteColors";
 import type { QTreeNode } from "quasar";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 import GroupTreeSelector from "./GroupTreeSelector.vue";
@@ -465,26 +426,22 @@ const localTextColor = ref("#ffffff");
 
 const colorInput = ref<HTMLInputElement | null>(null);
 const textColorInput = ref<HTMLInputElement | null>(null);
+const colorSwatchRef = ref<HTMLElement | null>(null);
+const textColorSwatchRef = ref<HTMLElement | null>(null);
 const menuVisible = ref(false);
 const textMenuVisible = ref(false);
-const paletteColors = [
-  "#1976d2",
-  "#e91e63",
-  "#9c27b0",
-  "#ff9800",
-  "#4caf50",
-  "#f44336",
-  "#795548",
-  "#607d8b",
-  "#ffffff",
-  "#000000",
-];
 
-const textPalette = computed(() => {
-  const front = ["#000000", "#ffffff"];
-  const rest = paletteColors.filter((c) => !front.includes(c));
-  return [...front, ...rest];
-});
+const colorPopupStyle = computed(() => ({
+  zIndex: popupZIndexAboveDialogs(colorSwatchRef.value),
+}));
+const textColorPopupStyle = computed(() => ({
+  zIndex: popupZIndexAboveDialogs(textColorSwatchRef.value),
+}));
+const iconPopupStyle = computed(() => ({
+  zIndex: popupZIndexAboveDialogs(gmIconPreview.value),
+}));
+const paletteColors = GROUP_BACKGROUND_PALETTE;
+const textPalette = GROUP_TEXT_PALETTE;
 
 const iconOptions = (() => {
   const set = new Set<string>();
@@ -584,11 +541,6 @@ const getIconName = (key?: string | null) => {
 
 const iconMenuVisible = ref(false);
 const gmIconPreview = ref<HTMLElement | null>(null);
-const iconMenuStyle = ref<Record<string, string>>({
-  position: "fixed",
-  left: "0px",
-  top: "0px",
-});
 const parentMenuStyle = ref<Record<string, string>>({
   position: "absolute",
   top: "calc(100% + 6px)",
@@ -603,25 +555,39 @@ const parentMenuStyle = ref<Record<string, string>>({
   zIndex: "12000",
 });
 
+function toggleColorMenu() {
+  textMenuVisible.value = false;
+  iconMenuVisible.value = false;
+  menuVisible.value = !menuVisible.value;
+}
+
+function toggleTextColorMenu() {
+  menuVisible.value = false;
+  iconMenuVisible.value = false;
+  textMenuVisible.value = !textMenuVisible.value;
+}
+
 function toggleIconMenu() {
+  menuVisible.value = false;
+  textMenuVisible.value = false;
+  iconMenuVisible.value = !iconMenuVisible.value;
+}
+
+function applyNativeColorInputStyle(el: HTMLInputElement, anchor?: HTMLElement | null) {
+  const z = popupZIndexAboveDialogs(anchor);
+  el.style.position = "fixed";
+  el.style.width = "1px";
+  el.style.height = "1px";
+  el.style.opacity = "0";
+  el.style.pointerEvents = "auto";
+  el.style.zIndex = z;
   try {
-    if (iconMenuVisible.value) {
-      iconMenuVisible.value = false;
-      return;
-    }
-    const el = gmIconPreview.value;
-    if (!el) {
-      iconMenuVisible.value = true;
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    const left = Math.min(window.innerWidth - 340, r.right - 44);
-    const top = Math.min(window.innerHeight - 200, r.bottom + 6);
-    iconMenuStyle.value = { position: "fixed", left: `${left}px`, top: `${top}px` };
-    iconMenuVisible.value = true;
-  } catch (e) {
-    void e;
-    iconMenuVisible.value = !iconMenuVisible.value;
+    const rect = (anchor ?? el).getBoundingClientRect();
+    el.style.left = `${Math.max(0, rect.left + 4)}px`;
+    el.style.top = `${Math.max(0, rect.bottom + 4)}px`;
+  } catch {
+    el.style.left = "0px";
+    el.style.top = "0px";
   }
 }
 function selectIcon(ic: string) {
@@ -766,22 +732,7 @@ function openTextColorPicker() {
       const orig = textColorInput.value;
       const clone = orig.cloneNode(true) as HTMLInputElement;
       clone.value = orig.value || localTextColor.value || "#ffffff";
-      clone.style.position = "fixed";
-      clone.style.width = "1px";
-      clone.style.height = "1px";
-      clone.style.opacity = "0";
-      clone.style.pointerEvents = "auto";
-      try {
-        const rect = orig.getBoundingClientRect();
-        const left = Math.max(0, rect.left + window.scrollX + 4);
-        const top = Math.max(0, rect.bottom + window.scrollY + 4);
-        clone.style.left = `${left}px`;
-        clone.style.top = `${top}px`;
-      } catch (e) {
-        void e;
-        clone.style.left = "0px";
-        clone.style.top = "0px";
-      }
+      applyNativeColorInputStyle(clone, textColorSwatchRef.value ?? orig);
       document.body.appendChild(clone);
       const onInputClone = (ev: Event) => {
         const tt = ev.target as HTMLInputElement | null;
@@ -807,13 +758,7 @@ function openTextColorPicker() {
     const temp = document.createElement("input");
     temp.type = "color";
     temp.value = localTextColor.value || "#ffffff";
-    temp.style.position = "fixed";
-    temp.style.left = "0";
-    temp.style.top = "0";
-    temp.style.width = "1px";
-    temp.style.height = "1px";
-    temp.style.opacity = "0";
-    temp.style.pointerEvents = "auto";
+    applyNativeColorInputStyle(temp, textColorSwatchRef.value);
     document.body.appendChild(temp);
 
     const onInput = (ev: Event) => {
@@ -860,22 +805,7 @@ function openColorPicker() {
       const orig = colorInput.value;
       const clone = orig.cloneNode(true) as HTMLInputElement;
       clone.value = orig.value || localColor.value || "#1976d2";
-      clone.style.position = "fixed";
-      clone.style.width = "1px";
-      clone.style.height = "1px";
-      clone.style.opacity = "0";
-      clone.style.pointerEvents = "auto";
-      try {
-        const rect = orig.getBoundingClientRect();
-        const left = Math.max(0, rect.left + window.scrollX + 4);
-        const top = Math.max(0, rect.bottom + window.scrollY + 4);
-        clone.style.left = `${left}px`;
-        clone.style.top = `${top}px`;
-      } catch (e) {
-        void e;
-        clone.style.left = "0px";
-        clone.style.top = "0px";
-      }
+      applyNativeColorInputStyle(clone, colorSwatchRef.value ?? orig);
       document.body.appendChild(clone);
       const onInputClone = (ev: Event) => {
         const tt = ev.target as HTMLInputElement | null;
@@ -901,13 +831,7 @@ function openColorPicker() {
     const temp = document.createElement("input");
     temp.type = "color";
     temp.value = localColor.value || "#1976d2";
-    temp.style.position = "fixed";
-    temp.style.left = "0";
-    temp.style.top = "0";
-    temp.style.width = "1px";
-    temp.style.height = "1px";
-    temp.style.opacity = "0";
-    temp.style.pointerEvents = "auto";
+    applyNativeColorInputStyle(temp, colorSwatchRef.value);
     document.body.appendChild(temp);
 
     const onInput = (ev: Event) => {
@@ -1005,5 +929,90 @@ function onCancel() {
 /* content-class for parent menu to ensure it stacks above overlays */
 .gm-parent-menu-content {
   z-index: 12000 !important;
+}
+
+:deep(.gm-color-field.q-field--outlined .q-field__control) {
+  overflow: visible !important;
+}
+
+</style>
+
+<style lang="scss">
+/* Unscoped: q-menu content is teleported outside the component */
+.gm-popup-menu {
+  z-index: 2147483540 !important;
+}
+
+.gm-color-palette-menu {
+  overflow: visible !important;
+}
+
+.gm-color-palette {
+  box-sizing: border-box;
+  min-width: 300px;
+  max-width: min(360px, 92vw);
+  padding: 10px 12px 12px;
+}
+
+.gm-color-palette--text {
+  min-width: 240px;
+  max-width: min(280px, 92vw);
+}
+
+.gm-color-palette__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 32px);
+  gap: 8px;
+  justify-content: start;
+}
+
+.gm-color-palette__grid--text {
+  grid-template-columns: repeat(6, 32px);
+}
+
+.gm-color-palette__swatch {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.gm-color-palette__swatch--selected {
+  border-color: #fff;
+  outline: 2px solid rgba(0, 0, 0, 0.55);
+  outline-offset: 1px;
+}
+
+.gm-color-palette__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.gm-color-palette__action-btn .q-btn__content {
+  gap: 8px;
+}
+
+.gm-color-palette__action-preview {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.gm-icon-picker-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 320px;
+  padding: 8px;
 }
 </style>

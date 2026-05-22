@@ -141,6 +141,8 @@
       v-model="showGroupDialog"
       :group-options="groupOptions"
       :group-tree="groupTree"
+      @create-group="openGroupEditDialog(null)"
+      @edit-group="openGroupEditDialog"
     />
     <!-- Group Edit Dialog (opened from options menu) -->
     <GroupEditDialog
@@ -490,6 +492,12 @@ const allTasks = computed(() => CC.task.list.items());
 const showGroupDialog = ref(false);
 const showGroupEditDialog = ref(false);
 const editDialogGroupId = ref<string | null>(null);
+
+function openGroupEditDialog(groupId: string | null) {
+  editDialogGroupId.value = groupId;
+  showGroupEditDialog.value = true;
+}
+
 // reset edit group id whenever that dialog is closed
 watch(showGroupEditDialog, (v) => {
   if (!v) editDialogGroupId.value = null;
@@ -1199,8 +1207,7 @@ onMounted(async () => {
   // allow TaskListOptionsMenu 'edit group' action to open the dedicated edit dialog
   organiserGroupManageEditHandler = (e: Event) => {
     const groupId = (e as CustomEvent<{ groupId?: string }>).detail?.groupId ?? null;
-    editDialogGroupId.value = groupId;
-    showGroupEditDialog.value = true;
+    openGroupEditDialog(groupId);
   };
   window.addEventListener(
     "group:manage-edit",

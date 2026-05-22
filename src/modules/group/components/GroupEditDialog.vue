@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 520px; max-width: 680px">
+  <q-dialog v-model="dialogVisible" class="group-edit-dialog">
+    <q-card class="group-edit-dialog__card" style="min-width: 520px; max-width: 680px">
       <q-card-section>
         <div class="text-h6">{{ editingGroupId ? $text('ui.edit_group') : $text('action.add') }}</div>
       </q-card-section>
@@ -112,3 +112,10 @@ async function handleSubmit(payload: any) {
   dialogVisible.value = false;
 }
 </script>
+
+<style scoped>
+.group-edit-dialog__card,
+:deep(.group-edit-dialog__card .q-card-section) {
+  overflow: visible;
+}
+</style>

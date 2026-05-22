@@ -2,14 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import GroupManagementDialog from '../../src/modules/group/components/GroupManagementDialog.vue';
 import CC from 'src/CCAccess';
-import * as groupRepository from '../../src/modules/group/managers/groupRepository';
-import * as storageUtils from '../../src/utils/storageUtils';
 
-describe('GroupManagementDialog submit handling', () => {
+describe('GroupManagementDialog', () => {
   let wrapper: any;
 
   beforeEach(() => {
-    // mount component with minimal props and stub GroupForm to emit submit
     wrapper = mount(GroupManagementDialog, {
       props: {
         modelValue: true,
@@ -17,11 +14,8 @@ describe('GroupManagementDialog submit handling', () => {
         groupTree: [],
       },
       global: {
-        components: {
-          GroupForm: {
-            template: '<div />',
-            emits: ['submit', 'cancel'],
-          },
+        stubs: {
+          GroupTreeSelector: { template: '<div class="group-tree-stub" />' },
         },
       },
     });
@@ -32,51 +26,22 @@ describe('GroupManagementDialog submit handling', () => {
     wrapper.unmount();
   });
 
-  it('calls CC.group.add when creating a new group (no editingGroupId)', async () => {
-    const addSpy = vi.spyOn(CC.group, 'add');
-    (addSpy as any).mockResolvedValue({ id: 'new' });
-
-    // emit submit from stubbed GroupForm
-    await wrapper.findComponent({ name: 'GroupForm' }).vm.$emit('submit', { name: 'X' });
-
-    // wait for promises
-    await wrapper.vm.$nextTick();
-
-    expect(addSpy).toHaveBeenCalled();
+  it('emits create-group when openCreateGroup is called', async () => {
+    await wrapper.vm.openCreateGroup();
+    expect(wrapper.emitted('create-group')).toBeTruthy();
   });
 
-  it('calls CC.group.update when editingGroupId is set', async () => {
-    const updateSpy = vi.spyOn(CC.group, 'update');
-    (updateSpy as any).mockResolvedValue(undefined);
-
-    // set editingGroupId on component instance
-    wrapper.vm.editingGroupId = 'g1';
-
-    await wrapper.findComponent({ name: 'GroupForm' }).vm.$emit('submit', { name: 'Edited' });
-    await wrapper.vm.$nextTick();
-
-    expect(updateSpy).toHaveBeenCalledWith('g1', expect.objectContaining({ name: 'Edited' }));
+  it('emits edit-group with node id when edit is triggered', async () => {
+    await wrapper.vm.openEditGroup({ id: 'g1', label: 'Test' });
+    expect(wrapper.emitted('edit-group')).toEqual([['g1']]);
   });
 
-  it('falls back to groupRepository.updateGroup when CC.group.update is missing', async () => {
-    // temporarily remove update
-    const orig = CC.group.update;
-    try {
-      // @ts-ignore
-      CC.group.update = undefined;
-      const gmSpy = vi.spyOn(groupRepository, 'updateGroup');
-      const saveSpy = vi.spyOn(storageUtils, 'saveData');
-
-      wrapper.vm.editingGroupId = 'g2';
-      await wrapper.findComponent({ name: 'GroupForm' }).vm.$emit('submit', { name: 'Fallback' });
-      await wrapper.vm.$nextTick();
-
-      expect(gmSpy).toHaveBeenCalled();
-      expect(saveSpy).toHaveBeenCalled();
-    } finally {
-      // restore
-      // @ts-ignore
-      CC.group.update = orig;
-    }
+  it('calls CC.group.delete on confirm delete', async () => {
+    const deleteSpy = vi.spyOn(CC.group, 'delete').mockResolvedValue(undefined as any);
+    wrapper.vm.privilegeMode = 'remove';
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.markPendingDelete('g-del');
+    await wrapper.vm.confirmDelete('g-del');
+    expect(deleteSpy).toHaveBeenCalledWith('g-del');
   });
 });

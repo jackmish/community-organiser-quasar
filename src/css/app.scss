@@ -249,6 +249,10 @@ html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-fi
   color: #ffffff !important;
 }
 
+html body .q-dialog:not(.day-organiser-task-panel-dialog) .gm-color-field.q-field--outlined .q-field__control {
+  overflow: visible !important;
+}
+
 html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field--outlined .q-field__control::before,
 html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card .q-field--outlined .q-field__control::after,
 html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner .q-field--outlined .q-field__control::before,
