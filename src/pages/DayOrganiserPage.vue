@@ -4,7 +4,7 @@
 
     <!-- Loading State -->
     <div
-      v-if="CC.storage.isLoading && CC.storage.isLoading.value"
+      v-if="!organiserReady || (CC.storage.isLoading && CC.storage.isLoading.value)"
       class="text-center q-pa-lg"
     >
       <q-spinner color="primary" size="3em" />
@@ -257,6 +257,7 @@ import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import CC from "src/CCAccess";
+import { runLanSyncBeforeOrganiserDisplay } from "src/modules/storage/sync/lanOrganiserSyncTrigger";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
@@ -518,6 +519,8 @@ const openDeleteMenu = ref<string | null>(null);
 const panelHidden = ref(true);
 
 const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
+/** False until disk load + startup LAN sync finish — keeps task list hidden until then. */
+const organiserReady = ref(false);
 const reloadKey = ref(0);
 const animatingLines = ref<number[]>([]);
 // child line animation handlers (API handles the data changes)
@@ -1153,6 +1156,12 @@ useDayRollover({
 onMounted(async () => {
   try {
     await CC.storage.loadData();
+    await runLanSyncBeforeOrganiserDisplay();
+    try {
+      CC.task.refreshFlatListFromDays();
+    } catch (e) {
+      void e;
+    }
     // Ensure the app starts on today's date if stored date is older or missing
     try {
       const todayStr = todayString();
@@ -1167,8 +1176,11 @@ onMounted(async () => {
     } catch (e) {
       void e;
     }
+    reloadKey.value += 1;
   } catch (error) {
     logger.error("Failed to load data on mount:", error);
+  } finally {
+    organiserReady.value = true;
   }
 
   // Listen for global reload events (e.g. from MainLayout refresh button)

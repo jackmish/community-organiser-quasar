@@ -1,3 +1,4 @@
+import { isPresentationModeActive } from 'src/composables/usePresentationGuard';
 import { loadActiveContractForSync } from './syncContractSettings';
 import {
   loadConnectedDevices,
@@ -39,6 +40,19 @@ export function scheduleLanSyncAfterOrganiserChange(): void {
     debounceTimer = null;
     void runLanSyncForAllPeers();
   }, DEBOUNCE_MS);
+}
+
+/** Await LAN exchange with all peers before showing the organiser task list (app launch). */
+export async function runLanSyncBeforeOrganiserDisplay(): Promise<void> {
+  if (isPresentationModeActive()) return;
+  if (!(window as Window & { electronLan?: unknown }).electronLan) return;
+  await withOrganiserSyncTriggerSuppressed(async () => {
+    await runLanSyncForAllPeers();
+  });
+}
+
+export async function runLanSyncForAllPeersNow(): Promise<void> {
+  await runLanSyncForAllPeers();
 }
 
 async function runLanSyncForAllPeers(): Promise<void> {
