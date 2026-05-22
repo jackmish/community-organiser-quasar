@@ -4,8 +4,8 @@
     <q-header class="co21-app-header" :style="mainToolbarStyle">
       <q-toolbar class="co21-header-toolbar">
         <q-toolbar-title style="display: flex; align-items: center; gap: 12px; overflow: visible">
-          <div style="display: flex; align-items: center; gap: 12px">
-            <img src="icons/co21-logo.png" alt="CO21" style="height: 28px; width: auto; display: inline-block" />
+          <div class="co21-header-logo">
+            <img src="icons/co21-logo.png" alt="CO21" />
           </div>
 
           <div id="co21-header-notifications" class="notification-wrapper">
@@ -638,8 +638,29 @@ onUnmounted(() => {
   background: transparent !important;
 }
 
+.co21-header-logo {
+  display: flex;
+  align-items: center;
+}
+
+.co21-header-logo img {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
+.co21-header-toolbar :deep(.co21-header-menu-btn) {
+  background: var(--co21-header-accent-bg) !important;
+  border-radius: 6px;
+}
+
 .co21-header-toolbar :deep(.co21-header-menu-btn .q-icon),
 .co21-header-toolbar :deep(#co21-header-notifications .next-events-toggle .q-icon) {
   color: var(--co21-header-fg) !important;
+}
+
+.co21-header-toolbar :deep(#co21-header-notifications .next-events-toggle) {
+  background: var(--co21-header-accent-bg) !important;
+  box-shadow: none;
 }
 </style>

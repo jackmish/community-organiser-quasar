@@ -40,10 +40,11 @@ export function useGroupColor(
     }
   });
 
-  /** Main app header: darkened group color + CSS var for header icon tint. */
+  /** Main app header: darkened bar + raw group bg for logo / menu / expand accents. */
   const mainToolbarStyle = computed(() => ({
     backgroundColor: darkenHex(activeGroupColor.value, 0.15),
     '--co21-header-fg': activeGroupTextColor.value,
+    '--co21-header-accent-bg': activeGroupColor.value,
   }));
 
   const headerStyle = computed(() => ({
