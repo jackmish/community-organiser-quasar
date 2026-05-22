@@ -11,6 +11,7 @@ import {
 } from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
 import { loadActiveContractForSync, type SyncContractSnapshot } from './syncContractSettings';
+import type { GroupRecord } from './deviceRoleAssignment';
 import { contractGroupIds } from './syncContractScope';
 import {
   groupPayloadFromLocal,
@@ -91,10 +92,42 @@ function filterTasksForSyncOutbound(
 ): FlatTask[] {
   if (!globalSinceMs) return tasks;
   return tasks.filter((t) => {
-    const perTask = peer?.taskSyncedAt[String(t.id)];
-    const wm = typeof perTask === 'number' && perTask > 0 ? perTask : globalSinceMs;
+    const id = String(t.id);
+    const perTask = peer?.taskSyncedAt[id];
+    if (perTask === undefined) return true;
+    const wm = perTask > 0 ? perTask : globalSinceMs;
     return tsMs(t.updatedAt) > wm;
   });
+}
+
+function filterGroupsForSyncOutbound<G extends { id: string; updatedAt?: string }>(
+  groups: G[],
+  peer: SyncPeerRecord | null,
+  globalSinceMs: number,
+): G[] {
+  if (!globalSinceMs) return groups;
+  return groups.filter((g) => {
+    const id = String(g.id);
+    const perGroup = peer?.groupSyncedAt[id];
+    if (perGroup === undefined) return true;
+    const wm = perGroup > 0 ? perGroup : globalSinceMs;
+    return tsMs(g.updatedAt) > wm;
+  });
+}
+
+function groupRecordsForScope(): GroupRecord[] {
+  return (CC.group?.list?.all?.value ?? []).map((g) => ({
+    id: String(g.id),
+    name: g.name ?? '',
+    parentId: g.parentId ?? null,
+  }));
+}
+
+async function resolveSyncScope(contract: SyncContractSnapshot): Promise<Set<string>> {
+  const groups = groupRecordsForScope();
+  const { loadConnectedDevices } = await import('./deviceRoleAssignment');
+  const devices = await loadConnectedDevices();
+  return contractGroupIds(contract, groups, devices);
 }
 
 function filterGroupsInScope(groups: Group[], scope: Set<string>): Group[] {
@@ -108,11 +141,6 @@ function filterTasksInScope(tasks: FlatTask[], scope: Set<string>): FlatTask[] {
     const gid = asOptionalString(t.groupId);
     return gid && scope.has(gid);
   });
-}
-
-function filterBySince<T extends { updatedAt?: string }>(rows: T[], sinceMs: number): T[] {
-  if (!sinceMs) return rows;
-  return rows.filter((r) => tsMs(r.updatedAt) > sinceMs);
 }
 
 function markSyncedFlags(
@@ -142,12 +170,14 @@ export function buildOutboundSyncDelta(opts: {
   const scopedGroups = filterGroupsInScope(allGroups, opts.scope);
   const scopedTasks = filterTasksInScope(collectFlatTasks(), opts.scope);
   const changedTasks = filterTasksForSyncOutbound(scopedTasks, opts.peer ?? null, opts.sinceMs);
-  const groups = filterBySince(
-    scopedGroups.map((g) => groupPayloadFromLocal(g)),
+  const groupPayloads = scopedGroups.map((g) => groupPayloadFromLocal(g));
+  const changedGroups = filterGroupsForSyncOutbound(
+    groupPayloads,
+    opts.peer ?? null,
     opts.sinceMs,
   );
   const tasks = changedTasks.map((t) => taskPayloadFromFlat(t));
-  return { groups, tasks };
+  return { groups: changedGroups, tasks };
 }
 
 /** Apply remote payload into in-memory organiser + persist. */
@@ -225,7 +255,7 @@ export async function handleLanSyncExchangeRequest(
       error: 'no_contract',
     });
   }
-  const scope = contractGroupIds(contract);
+  const scope = await resolveSyncScope(contract);
   let peer = await findSyncPeerState(req.deviceId);
   if (!peer) {
     peer = await ensurePeerSyncSession(req.deviceId, req.deviceId);
@@ -254,6 +284,7 @@ export async function handleLanSyncExchangeRequest(
   }
 
   const outbound = buildOutboundSyncDelta({ sinceMs, scope, peer });
+  peer = markSyncedFlags(peer, outbound.groups, outbound.tasks);
   const nextToken = lanSyncExchangeNextToken();
   const now = Date.now();
   const peerPatch: Parameters<typeof upsertSyncPeerState>[0] = {
@@ -261,6 +292,8 @@ export async function handleLanSyncExchangeRequest(
     peerDeviceId: peer.peerDeviceId,
     lastSyncAt: now,
     lastSyncStatus: 'ok',
+    groupSyncedAt: peer.groupSyncedAt,
+    taskSyncedAt: peer.taskSyncedAt,
   };
   await upsertSyncPeerState(peerPatch);
 
@@ -285,7 +318,7 @@ export async function runSyncWithPeer(opts: {
     logger.warn('[lanOrganiserSync] no active contract');
     return false;
   }
-  const scope = contractGroupIds(contract);
+  const scope = await resolveSyncScope(contract);
   const local = await loadOwnDeviceMeta();
   let peer = await findSyncPeerState(opts.peerDeviceId);
   if (!peer) {
@@ -336,6 +369,10 @@ export async function runSyncWithPeer(opts: {
     }
 
     await applyInboundSyncDelta(res.groups, res.tasks, scope);
+    const synced = markSyncedFlags(peer, [...outbound.groups, ...res.groups], [
+      ...outbound.tasks,
+      ...res.tasks,
+    ]);
     const now = Date.now();
     await upsertSyncPeerState({
       peerDeviceId: opts.peerDeviceId,
@@ -345,8 +382,8 @@ export async function runSyncWithPeer(opts: {
       lastSyncStatus: 'ok',
       peerInRange: true,
       peerCheckedAt: now,
-      groupSyncedAt: markSyncedFlags(peer, outbound.groups, outbound.tasks).groupSyncedAt,
-      taskSyncedAt: markSyncedFlags(peer, outbound.groups, outbound.tasks).taskSyncedAt,
+      groupSyncedAt: synced.groupSyncedAt,
+      taskSyncedAt: synced.taskSyncedAt,
     });
     await updateSyncRun(run.id, {
       status: 'ok',

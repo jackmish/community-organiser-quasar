@@ -73,7 +73,7 @@ export function updateGroup(
   const { groups } = _ensureGroupsAndDays(organiserData);
   const group = (groups || []).find((g: any) => g.id === groupId);
   if (!group) throw new Error('Group not found');
-  Object.assign(group, updates);
+  Object.assign(group, updates, { updatedAt: new Date().toISOString() });
   if ('backgroundImage' in updates && !updates.backgroundImage) {
     delete group.backgroundImage;
     delete group.background_image;

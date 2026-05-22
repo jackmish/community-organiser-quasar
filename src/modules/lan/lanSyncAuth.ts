@@ -37,6 +37,9 @@ export type LanSyncGroupPayload = {
   name: string;
   color?: string;
   icon?: string;
+  textColor?: string;
+  backgroundImage?: string;
+  backgroundColorize?: boolean;
   parentId?: string | null;
   hideTasksFromParent?: boolean;
   shareSubgroups?: boolean;

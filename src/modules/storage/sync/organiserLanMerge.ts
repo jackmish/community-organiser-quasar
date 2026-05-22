@@ -21,6 +21,9 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
       };
       if (r.color !== undefined) init.color = r.color;
       if (r.icon !== undefined) init.icon = r.icon;
+      if (r.textColor !== undefined) init.textColor = r.textColor;
+      if (r.backgroundImage !== undefined) init.backgroundImage = r.backgroundImage;
+      if (r.backgroundColorize !== undefined) init.backgroundColorize = r.backgroundColorize;
       if (r.parentId != null) init.parentId = r.parentId ?? undefined;
       if (r.hideTasksFromParent !== undefined) init.hideTasksFromParent = r.hideTasksFromParent;
       if (r.shareSubgroups !== undefined) init.shareSubgroups = r.shareSubgroups;
@@ -35,12 +38,23 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
     if (remoteMs >= localMs) {
       Object.assign(existing, {
         name: r.name ?? existing.name,
-        color: r.color ?? existing.color,
-        icon: r.icon ?? existing.icon,
-        parentId: r.parentId ?? existing.parentId,
-        hideTasksFromParent: r.hideTasksFromParent ?? existing.hideTasksFromParent,
-        shareSubgroups: r.shareSubgroups ?? existing.shareSubgroups,
-        shortcut: r.shortcut ?? existing.shortcut,
+        color: r.color !== undefined ? r.color : existing.color,
+        icon: r.icon !== undefined ? r.icon : existing.icon,
+        textColor: r.textColor !== undefined ? r.textColor : existing.textColor,
+        backgroundImage:
+          r.backgroundImage !== undefined ? r.backgroundImage : existing.backgroundImage,
+        backgroundColorize:
+          r.backgroundColorize !== undefined
+            ? r.backgroundColorize
+            : existing.backgroundColorize,
+        parentId: r.parentId !== undefined ? (r.parentId ?? undefined) : existing.parentId,
+        hideTasksFromParent:
+          r.hideTasksFromParent !== undefined
+            ? r.hideTasksFromParent
+            : existing.hideTasksFromParent,
+        shareSubgroups:
+          r.shareSubgroups !== undefined ? r.shareSubgroups : existing.shareSubgroups,
+        shortcut: r.shortcut !== undefined ? r.shortcut : existing.shortcut,
         updatedAt: r.updatedAt ?? existing.updatedAt,
       });
     }
@@ -84,6 +98,9 @@ export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {
   };
   if (g.color !== undefined) p.color = g.color;
   if (g.icon !== undefined) p.icon = g.icon;
+  if (g.textColor !== undefined) p.textColor = g.textColor;
+  if (g.backgroundImage !== undefined) p.backgroundImage = g.backgroundImage;
+  if (g.backgroundColorize !== undefined) p.backgroundColorize = g.backgroundColorize;
   if (g.hideTasksFromParent !== undefined) p.hideTasksFromParent = g.hideTasksFromParent;
   if (g.shareSubgroups !== undefined) p.shareSubgroups = g.shareSubgroups;
   if (g.shortcut !== undefined) p.shortcut = g.shortcut;
