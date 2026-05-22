@@ -473,7 +473,7 @@ const localBackgroundImage = ref<string | null>(null);
 const localBackgroundColorize = ref(false);
 const bgImageInput = ref<HTMLInputElement | null>(null);
 
-const MAX_GROUP_BG_BYTES = 2 * 1024 * 1024;
+const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
 
 const bgPreviewStyle = computed(() =>
   groupBackgroundLayerStyle(
@@ -790,7 +790,7 @@ function onBackgroundImageSelected(ev: Event) {
     return;
   }
   if (file.size > MAX_GROUP_BG_BYTES) {
-    appNotify("warning", "Image is too large (max 2 MB).");
+    appNotify("warning", "Image is too large (max 5 MB).");
     if (input) input.value = "";
     return;
   }
