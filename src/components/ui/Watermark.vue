@@ -1,6 +1,16 @@
 <template>
-  <div v-if="resolveLabel()" ref="rootEl" :class="['co21-watermark', `co21-watermark--${resolveSize()}`]"
-    :title="resolveLabel()" :style="{ justifyContent: resolveJustify() }">
+  <div
+    v-if="resolveLabel()"
+    ref="rootEl"
+    :class="[
+      'co21-watermark',
+      `co21-watermark--${resolveSize()}`,
+      { 'co21-watermark--lcp-pending': !revealed },
+    ]"
+    :title="resolveLabel()"
+    :style="{ justifyContent: resolveJustify() }"
+    aria-hidden="true"
+  >
     <div v-if="resolveBackgroundStyle()" ref="bgEl" class="co21-watermark-bg"
       :style="bgFinalStyle || resolveBackgroundStyle()"></div>
     <div ref="textEl" class="co21-watermark-text" :style="{ color: resolveTextColor() }">
@@ -21,6 +31,11 @@ const props = defineProps<{
   justifyContent?: string | Ref<string>;
   background?: string | Ref<string>;
   size?: string | Ref<string>;
+  /**
+   * When true (default for size=large), keep watermark out of LCP until the user
+   * interacts — avoids late LCP when activeGroup label arrives after storage load.
+   */
+  deferUntilInteraction?: boolean;
 }>();
 
 const rootEl = ref<HTMLElement | null>(null);
@@ -29,6 +44,38 @@ const bgEl = ref<HTMLElement | null>(null);
 const bgFinalStyle = ref<Record<string, string> | null>(null);
 
 let ro: ResizeObserver | null = null;
+
+function shouldDeferUntilInteraction(): boolean {
+  if (props.deferUntilInteraction === true) return true;
+  if (props.deferUntilInteraction === false) return false;
+  return resolveSize() === "large";
+}
+
+const revealed = ref(!shouldDeferUntilInteraction());
+
+const LCP_REVEAL_EVENTS = ["pointerdown", "keydown", "touchstart"] as const;
+
+function revealWatermark() {
+  if (revealed.value) return;
+  revealed.value = true;
+  nextTick(() => {
+    computeBgPosition();
+    attachResizeObserver();
+  });
+}
+
+function registerLcpRevealListeners() {
+  const opts: AddEventListenerOptions = { once: true, capture: true, passive: true };
+  for (const ev of LCP_REVEAL_EVENTS) {
+    window.addEventListener(ev, revealWatermark, opts);
+  }
+}
+
+function unregisterLcpRevealListeners() {
+  for (const ev of LCP_REVEAL_EVENTS) {
+    window.removeEventListener(ev, revealWatermark, true);
+  }
+}
 
 function resolveLabel() {
   const explicit = (props as any).label;
@@ -132,16 +179,41 @@ function computeBgPosition() {
   bgFinalStyle.value = style;
 }
 
-onMounted(() => {
-  nextTick(() => computeBgPosition());
-  if (rootEl.value) {
-    ro = new ResizeObserver(() => computeBgPosition());
-    ro.observe(rootEl.value);
-    if (textEl.value) ro.observe(textEl.value);
+function attachResizeObserver() {
+  if (!rootEl.value) return;
+  if (ro) {
+    try {
+      ro.disconnect();
+    } catch (e) {
+      void e;
+    }
   }
+  ro = new ResizeObserver(() => computeBgPosition());
+  ro.observe(rootEl.value);
+  if (textEl.value) ro.observe(textEl.value);
+}
+
+onMounted(() => {
+  if (shouldDeferUntilInteraction()) {
+    registerLcpRevealListeners();
+    return;
+  }
+  nextTick(() => {
+    computeBgPosition();
+    attachResizeObserver();
+  });
 });
 
+watch(
+  () => resolveLabel(),
+  (label) => {
+    if (!label || revealed.value) return;
+    nextTick(computeBgPosition);
+  }
+);
+
 onBeforeUnmount(() => {
+  unregisterLcpRevealListeners();
   if (ro) {
     try {
       ro.disconnect();
@@ -153,7 +225,21 @@ onBeforeUnmount(() => {
 
 watch(
   () => [resolveLabel(), (props as any).background, (props as any).color],
-  () => nextTick().then(computeBgPosition)
+  () => {
+    if (!revealed.value) return;
+    nextTick().then(computeBgPosition);
+  }
+);
+
+watch(
+  () => [props.deferUntilInteraction, props.size],
+  () => {
+    if (shouldDeferUntilInteraction()) {
+      if (!revealed.value) registerLcpRevealListeners();
+      return;
+    }
+    revealWatermark();
+  }
 );
 </script>
 
@@ -167,8 +253,7 @@ watch(
   justify-content: flex-end;
   pointer-events: none;
   /* don't block interaction */
-  z-index: 999999999;
-  /* top layer but below modal overlays if needed */
+  z-index: 0;
   top: 0;
   /* z-index: 0; */
 }
@@ -176,6 +261,7 @@ watch(
 .co21-watermark-text {
   /* color: rgba(0, 0, 0, 1); */
   color: rgba(0, 255, 255, 0.1);
+  font-family: inherit;
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
@@ -226,12 +312,22 @@ watch(
 
 .co21-watermark--large {
   .co21-watermark-text {
-    font-size: 75px;
+    font-size: clamp(1.25rem, 3.5vw, 2.5rem);
+    max-width: min(100%, 28rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   @media (max-width: 1200px) {
     display: none !important;
   }
+}
+
+/* Excluded from LCP while pending (see web.dev/lcp — content-visibility: hidden) */
+.co21-watermark--lcp-pending .co21-watermark-text,
+.co21-watermark--lcp-pending .co21-watermark-bg {
+  content-visibility: hidden;
+  opacity: 0;
 }
 
 .co21-watermark {
