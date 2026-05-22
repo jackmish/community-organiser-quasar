@@ -527,7 +527,7 @@ const animatingLines = ref<number[]>([]);
 const { onLineCollapsed, onLineExpanded } = useLineEventHandlers();
 
 // task UI handlers moved to module
-const { setTaskToEdit, editTask, clearTaskToEdit } = useTaskUiHandlers({
+const { setTaskToEdit, editTask, clearTaskToEdit, closeTaskPanel } = useTaskUiHandlers({
   activeTask: CC.task.active.task,
   activeMode: CC.task.active.mode,
   setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) =>
@@ -576,16 +576,6 @@ onBeforeUnmount(() => {
     // ignore
   }
 });
-
-// Ensure we return to 'add' mode when no task is selected
-watch(
-  () => CC.task.active.task.value,
-  (val) => {
-    if (!val && CC.task.active.mode.value !== "add") {
-      CC.task.active.mode.value = "add";
-    }
-  }
-);
 
 // When the current date changes (via calendar or prev/next arrows), switch to creation mode
 watch(
@@ -821,11 +811,16 @@ const handleDeleteTask = async (payload: any) => {
       if (payload.date) date = payload.date;
     }
     if (!id) return;
+    const wasActive =
+      CC.task.active.task.value && String(CC.task.active.task.value.id) === String(id);
     await CC.task.delete(date, id);
-    // If the deleted task was currently selected for preview/edit, switch back to create mode
-    if (CC.task.active.task.value && CC.task.active.task.value.id === id) {
-      CC.task.active.setTask(null);
-      CC.task.active.setMode("add");
+    if (wasActive) {
+      closeTaskPanel();
+      try {
+        closeFloatingPreview();
+      } catch (e) {
+        void e;
+      }
     }
   } finally {
     openDeleteMenu.value = null;

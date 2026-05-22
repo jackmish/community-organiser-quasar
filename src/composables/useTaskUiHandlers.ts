@@ -36,14 +36,19 @@ export function useTaskUiHandlers(args: {
     panelHidden.value = false;
   }
 
-  function clearTaskToEdit() {
+  /** Close preview/edit without opening the new-task form. */
+  function closeTaskPanel() {
     if (setActiveTask) setActiveTask(null);
     else activeTask.value = null;
-    activeMode.value = 'add';
-    panelHidden.value = false;
+    activeMode.value = 'preview';
+    panelHidden.value = true;
   }
 
-  return { setTaskToEdit, editTask, clearTaskToEdit } as const;
+  function clearTaskToEdit() {
+    closeTaskPanel();
+  }
+
+  return { setTaskToEdit, editTask, clearTaskToEdit, closeTaskPanel } as const;
 }
 
 /** @deprecated Import from src/composables/useTaskUiHandlers instead. */
