@@ -4,7 +4,12 @@ import type {
   LanSyncExchangeRequest,
   LanSyncExchangeResponse,
 } from 'src/modules/lan/lanSyncAuth';
-import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
+import {
+  adoptLanSyncNextToken,
+  isLanSyncTokenValid,
+  lanSyncExchangeNextToken,
+  LAN_SYNC_TOKEN_DISABLED,
+} from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
 import { loadActiveContractForSync, type SyncContractSnapshot } from './syncContractSettings';
 import { contractGroupIds } from './syncContractScope';
@@ -170,14 +175,21 @@ export async function handleLanSyncExchangeRequest(
 ): Promise<LanSyncExchangeResponse> {
   const contract = await resolveContractForExchange(req.serverContract);
   if (!contract) {
-    return { ok: false, nextToken: req.token, since: Date.now(), groups: [], tasks: [], error: 'no_contract' };
+    return {
+      ok: false,
+      nextToken: LAN_SYNC_TOKEN_DISABLED,
+      since: Date.now(),
+      groups: [],
+      tasks: [],
+      error: 'no_contract',
+    };
   }
   const scope = contractGroupIds(contract);
   let peer = await findSyncPeerState(req.deviceId);
   if (!peer) {
     peer = await ensurePeerSyncSession(req.deviceId, req.deviceId);
   }
-  if (peer.sessionToken !== req.token) {
+  if (!isLanSyncTokenValid(peer.sessionToken, req.token)) {
     return {
       ok: false,
       nextToken: peer.sessionToken,
@@ -201,7 +213,7 @@ export async function handleLanSyncExchangeRequest(
   }
 
   const outbound = buildOutboundSyncDelta({ sinceMs, scope });
-  const nextToken = createLanSyncToken();
+  const nextToken = lanSyncExchangeNextToken();
   const now = Date.now();
   const peerPatch: Parameters<typeof upsertSyncPeerState>[0] = {
     ...adoptNextSyncToken(peer, nextToken),
@@ -287,7 +299,7 @@ export async function runSyncWithPeer(opts: {
     await upsertSyncPeerState({
       peerDeviceId: opts.peerDeviceId,
       peerDeviceName: opts.peerDeviceName,
-      sessionToken: res.nextToken,
+      sessionToken: adoptLanSyncNextToken(peer.sessionToken, res.nextToken),
       lastSyncAt: now,
       lastSyncStatus: 'ok',
       peerInRange: true,

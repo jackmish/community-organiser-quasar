@@ -1,4 +1,4 @@
-import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
+import { adoptLanSyncNextToken, createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import { normalizeDeviceId } from './deviceRoleAssignment';
 
@@ -133,5 +133,8 @@ export async function ensurePeerSyncSession(
 }
 
 export function adoptNextSyncToken(peer: SyncPeerRecord, nextToken: string): SyncPeerRecord {
-  return { ...peer, sessionToken: nextToken };
+  return {
+    ...peer,
+    sessionToken: adoptLanSyncNextToken(peer.sessionToken, nextToken),
+  };
 }

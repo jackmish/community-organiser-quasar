@@ -1,4 +1,11 @@
-/** Rotating LAN sync session token (one per paired peer, advanced on each exchange). */
+/**
+ * Rotating LAN sync session token (one per paired peer, advanced on each exchange).
+ * Set to `true` when re-enabling per-request token validation and rotation.
+ */
+export const LAN_SYNC_ROTATING_TOKEN_ENABLED = false;
+
+/** Placeholder token while {@link LAN_SYNC_ROTATING_TOKEN_ENABLED} is off. */
+export const LAN_SYNC_TOKEN_DISABLED = '';
 
 import type { SyncContractSnapshot } from 'src/modules/storage/sync/syncContractSettings';
 
@@ -61,6 +68,29 @@ export type LanSyncTaskPayload = {
   [key: string]: unknown;
 };
 
+export function isLanSyncTokenCheckEnabled(): boolean {
+  return LAN_SYNC_ROTATING_TOKEN_ENABLED;
+}
+
+export function isLanSyncTokenValid(stored: string, provided: string): boolean {
+  if (!LAN_SYNC_ROTATING_TOKEN_ENABLED) return true;
+  return stored.trim() === provided.trim();
+}
+
+/** Token to send on the next exchange (after peer response). */
+export function adoptLanSyncNextToken(_current: string, nextFromPeer: string): string {
+  if (!LAN_SYNC_ROTATING_TOKEN_ENABLED) return LAN_SYNC_TOKEN_DISABLED;
+  const next = nextFromPeer.trim();
+  return next || createLanSyncToken();
+}
+
+/** Token to return to peer after handling an inbound exchange. */
+export function lanSyncExchangeNextToken(): string {
+  if (!LAN_SYNC_ROTATING_TOKEN_ENABLED) return LAN_SYNC_TOKEN_DISABLED;
+  return createLanSyncToken();
+}
+
 export function createLanSyncToken(): string {
+  if (!LAN_SYNC_ROTATING_TOKEN_ENABLED) return LAN_SYNC_TOKEN_DISABLED;
   return crypto.randomUUID();
 }
