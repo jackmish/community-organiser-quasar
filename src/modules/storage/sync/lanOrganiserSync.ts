@@ -50,9 +50,20 @@ function taskDateKey(t: FlatTask): string {
   return raw.slice(0, 10) || new Date().toISOString().slice(0, 10);
 }
 
+/** Prefer canonical day storage over flat list (flat list can lag after LAN apply). */
 function collectFlatTasks(): FlatTask[] {
   const out: FlatTask[] = [];
   try {
+    const days = CC.task?.time?.days?.value ?? {};
+    for (const day of Object.values(days) as { tasks?: unknown[] }[]) {
+      if (!Array.isArray(day?.tasks)) continue;
+      for (const t of day.tasks) {
+        if (t && typeof t === 'object' && (t as FlatTask).id) {
+          out.push(t as FlatTask);
+        }
+      }
+    }
+    if (out.length) return out;
     const items = CC.task?.list?.items?.() ?? [];
     for (const t of items) {
       const row = t as unknown as FlatTask;
@@ -62,6 +73,27 @@ function collectFlatTasks(): FlatTask[] {
     void 0;
   }
   return out;
+}
+
+function refreshTaskFlatListFromDays(): void {
+  try {
+    CC.task?.refreshFlatListFromDays?.();
+  } catch {
+    void 0;
+  }
+}
+
+function filterTasksForSyncOutbound(
+  tasks: FlatTask[],
+  peer: SyncPeerRecord | null,
+  globalSinceMs: number,
+): FlatTask[] {
+  if (!globalSinceMs) return tasks;
+  return tasks.filter((t) => {
+    const perTask = peer?.taskSyncedAt[String(t.id)];
+    const wm = typeof perTask === 'number' && perTask > 0 ? perTask : globalSinceMs;
+    return tsMs(t.updatedAt) > wm;
+  });
 }
 
 function filterGroupsInScope(groups: Group[], scope: Set<string>): Group[] {
@@ -103,15 +135,17 @@ function markSyncedFlags(
 export function buildOutboundSyncDelta(opts: {
   sinceMs: number;
   scope: Set<string>;
+  peer?: SyncPeerRecord | null;
 }): { groups: ReturnType<typeof groupPayloadFromLocal>[]; tasks: ReturnType<typeof taskPayloadFromFlat>[] } {
   const allGroups = CC.group?.list?.all?.value ?? [];
   const scopedGroups = filterGroupsInScope(allGroups, opts.scope);
   const scopedTasks = filterTasksInScope(collectFlatTasks(), opts.scope);
+  const changedTasks = filterTasksForSyncOutbound(scopedTasks, opts.peer ?? null, opts.sinceMs);
   const groups = filterBySince(
     scopedGroups.map((g) => groupPayloadFromLocal(g)),
     opts.sinceMs,
   );
-  const tasks = filterBySince(scopedTasks.map((t) => taskPayloadFromFlat(t)), opts.sinceMs);
+  const tasks = changedTasks.map((t) => taskPayloadFromFlat(t));
   return { groups, tasks };
 }
 
@@ -144,6 +178,7 @@ export async function applyInboundSyncDelta(
     if (CC.task?.time?.days) {
       CC.task.time.days.value = { ...days, ...byDate };
     }
+    refreshTaskFlatListFromDays();
     if (CC.storage?.saveData) {
       await CC.storage.saveData();
     }
@@ -215,7 +250,7 @@ export async function handleLanSyncExchangeRequest(
     peer = markSyncedFlags(peer, req.groups ?? [], req.tasks ?? []);
   }
 
-  const outbound = buildOutboundSyncDelta({ sinceMs, scope });
+  const outbound = buildOutboundSyncDelta({ sinceMs, scope, peer });
   const nextToken = lanSyncExchangeNextToken();
   const now = Date.now();
   const peerPatch: Parameters<typeof upsertSyncPeerState>[0] = {
@@ -272,7 +307,7 @@ export async function runSyncWithPeer(opts: {
   }
 
   const sinceMs = incremental ? peer.lastSyncAt : 0;
-  const outbound = buildOutboundSyncDelta({ sinceMs, scope });
+  const outbound = buildOutboundSyncDelta({ sinceMs, scope, peer });
 
   try {
     const reqBody: LanSyncExchangeRequest = {

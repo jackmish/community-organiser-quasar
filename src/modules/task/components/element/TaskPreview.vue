@@ -393,11 +393,21 @@ const groups = CC.group.list.all;
 // track pending transition fallback timers per element
 const transitionFallbacks = new Map<HTMLElement, number>();
 
-function selectPriority(p: string) {
+async function selectPriority(p: string) {
   try {
-    const t: Task = { ...toRaw(activeTask.value) } as Task;
-    t.priority = p as Task["priority"];
-    emit("update-task", t);
+    const task = activeTask.value;
+    if (!task?.id) return;
+    const date =
+      (task.date || task.eventDate || CC.task.time.currentDate.value || "").trim();
+    if (!date) return;
+    await CC.task.update(date, task.id, { priority: p as Task["priority"] });
+    const updated =
+      CC.task.list.items().find((t) => String(t.id) === String(task.id)) ?? null;
+    if (updated && activeTask.value) {
+      activeTask.value = updated;
+    }
+  } catch (e) {
+    logger.error("Failed to update task priority", e);
   } finally {
     priorityMenu.value = false;
   }

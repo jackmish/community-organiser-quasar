@@ -46,6 +46,17 @@ class TaskController implements Controllable {
     await saveData();
     return removed;
   };
+
+  /** Rebuild flat task list from `time.days` (e.g. after LAN sync wrote days directly). */
+  readonly refreshFlatListFromDays = (): void => {
+    try {
+      const days = this.time?.days?.value ?? {};
+      const newList = this.taskRepo.listFromDays(days);
+      this.taskRepo.flatTasksRef.value.splice(0, this.taskRepo.flatTasksRef.value.length, ...newList);
+    } catch {
+      void 0;
+    }
+  };
 }
 
 export const TaskStoreController = defineStore('task', () => new TaskController());

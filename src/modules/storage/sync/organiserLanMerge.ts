@@ -112,11 +112,27 @@ const TASK_SYNC_PAYLOAD_KEYS = [
   'updatedAt',
 ] as const;
 
+function plainTaskFields(t: FlatTask): Record<string, unknown> {
+  try {
+    return JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
+  } catch {
+    return { ...(t as Record<string, unknown>) };
+  }
+}
+
+function taskIdString(v: unknown): string {
+  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return '';
+}
+
 export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
-  const out: LanSyncTaskPayload = { id: String(t.id) };
+  const raw = plainTaskFields(t);
+  const out: LanSyncTaskPayload = { id: taskIdString(raw.id) || taskIdString(t.id) };
   for (const key of TASK_SYNC_PAYLOAD_KEYS) {
     if (key === 'id') continue;
-    const v = t[key];
+    if (!(key in raw)) continue;
+    const v = raw[key];
     if (v === undefined) continue;
     if (key === 'tags' && Array.isArray(v)) {
       out.tags = v.map((x) => String(x));
@@ -124,6 +140,10 @@ export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
     }
     if (key === 'repeat' && (v === null || (typeof v === 'object' && !Array.isArray(v)))) {
       out.repeat = v as Record<string, unknown> | null;
+      continue;
+    }
+    if (key === 'status_id') {
+      if (v !== undefined && v !== null) out.status_id = v as number | string;
       continue;
     }
     if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
