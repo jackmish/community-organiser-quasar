@@ -150,14 +150,21 @@ export function getOverlayColorForMonth(
   monthLike: string | number | Date,
 ): [bg: string, color: string] {
   const overlayColorArray: Array<string | [string, string]> = [
-    ['#4cfff0', '#fff'],
-    ['#9ff800', '#000'],
+    ['#ffffff', '#fff'],
+    ['#4cafe0', '#000'],
+    ['#9ff800', '#fff'],
     ['#ff9800', '#fff'],
     ['#9c27b0', '#fff'],
     ['#009688', '#fff'],
-    ['#e91e63', '#fff'],
     ['#3f51b5', '#fff'],
   ];
+  // ['#4cfff0', '#fff'],
+  // ['#9ff800', '#000'],
+  // ['#ff9800', '#fff'],
+  // ['#9c27b0', '#fff'],
+  // ['#009688', '#fff'],
+  // ['#e91e63', '#fff'],
+  // ['#3f51b5', '#fff'],
 
   let monthNum: number;
   if (typeof monthLike === 'number') monthNum = monthLike;

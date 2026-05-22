@@ -1,3 +1,7 @@
+/** Defaults when creating a new group. */
+export const GROUP_DEFAULT_BACKGROUND = '#ffffff';
+export const GROUP_DEFAULT_TEXT_COLOR = '#000000';
+
 /** Preset background colors for group icons (hex). */
 export const GROUP_BACKGROUND_PALETTE: readonly string[] = [
   '#0d47a1',

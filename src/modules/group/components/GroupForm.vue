@@ -392,6 +392,8 @@ import CC from "src/CCAccess";
 import { popupZIndexAboveDialogs } from "src/utils/stackingZIndex";
 import {
   GROUP_BACKGROUND_PALETTE,
+  GROUP_DEFAULT_BACKGROUND,
+  GROUP_DEFAULT_TEXT_COLOR,
   GROUP_TEXT_PALETTE,
 } from "src/modules/group/constants/groupPaletteColors";
 import type { QTreeNode } from "quasar";
@@ -417,12 +419,12 @@ const localParent = ref<string | null>(null);
 const parentMenuOpen = ref(false);
 const localParentIcon = ref<string | null>(null);
 const localParentColor = ref<string | null>(null);
-const localColor = ref("#1976d2");
+const localColor = ref(GROUP_DEFAULT_BACKGROUND);
 const localIcon = ref<string | null>("folder");
 const localShareSubgroups = ref(false);
 const localHideTasksInParent = ref(false);
 const localShortcut = ref(false);
-const localTextColor = ref("#ffffff");
+const localTextColor = ref(GROUP_DEFAULT_TEXT_COLOR);
 
 const colorInput = ref<HTMLInputElement | null>(null);
 const textColorInput = ref<HTMLInputElement | null>(null);
@@ -650,12 +652,12 @@ watch(
     if (!id) {
       localName.value = "";
       localParent.value = null;
-      localColor.value = "#1976d2";
+      localColor.value = GROUP_DEFAULT_BACKGROUND;
       localIcon.value = "folder";
       localShareSubgroups.value = false;
       localHideTasksInParent.value = false;
       localShortcut.value = false;
-      localTextColor.value = "#ffffff";
+      localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
       return;
     }
     try {
@@ -691,7 +693,7 @@ watch(
       if (src) {
         localName.value = src.name || src.label || "";
         localParent.value = src.parentId || src.parent_id || null;
-        localColor.value = src.color || "#1976d2";
+        localColor.value = src.color || GROUP_DEFAULT_BACKGROUND;
         localTextColor.value = src.textColor || src.text_color || localTextColor.value;
         localIcon.value = src.icon || "folder";
         localShareSubgroups.value = Boolean(src.shareSubgroups);
@@ -718,7 +720,7 @@ function selectTextPaletteColor(c: string) {
   textMenuVisible.value = false;
 }
 function resetTextColor() {
-  localTextColor.value = "#ffffff";
+  localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
   textMenuVisible.value = false;
 }
 function openTextCustom() {
@@ -731,7 +733,7 @@ function openTextColorPicker() {
     if (textColorInput.value) {
       const orig = textColorInput.value;
       const clone = orig.cloneNode(true) as HTMLInputElement;
-      clone.value = orig.value || localTextColor.value || "#ffffff";
+      clone.value = orig.value || localTextColor.value || GROUP_DEFAULT_TEXT_COLOR;
       applyNativeColorInputStyle(clone, textColorSwatchRef.value ?? orig);
       document.body.appendChild(clone);
       const onInputClone = (ev: Event) => {
@@ -757,7 +759,7 @@ function openTextColorPicker() {
 
     const temp = document.createElement("input");
     temp.type = "color";
-    temp.value = localTextColor.value || "#ffffff";
+    temp.value = localTextColor.value || GROUP_DEFAULT_TEXT_COLOR;
     applyNativeColorInputStyle(temp, textColorSwatchRef.value);
     document.body.appendChild(temp);
 
@@ -791,7 +793,7 @@ function selectPaletteColor(c: string) {
   menuVisible.value = false;
 }
 function resetColor() {
-  localColor.value = "#1976d2";
+  localColor.value = GROUP_DEFAULT_BACKGROUND;
   menuVisible.value = false;
 }
 function openCustom() {
@@ -804,7 +806,7 @@ function openColorPicker() {
     if (colorInput.value) {
       const orig = colorInput.value;
       const clone = orig.cloneNode(true) as HTMLInputElement;
-      clone.value = orig.value || localColor.value || "#1976d2";
+      clone.value = orig.value || localColor.value || GROUP_DEFAULT_BACKGROUND;
       applyNativeColorInputStyle(clone, colorSwatchRef.value ?? orig);
       document.body.appendChild(clone);
       const onInputClone = (ev: Event) => {
@@ -830,7 +832,7 @@ function openColorPicker() {
 
     const temp = document.createElement("input");
     temp.type = "color";
-    temp.value = localColor.value || "#1976d2";
+    temp.value = localColor.value || GROUP_DEFAULT_BACKGROUND;
     applyNativeColorInputStyle(temp, colorSwatchRef.value);
     document.body.appendChild(temp);
 
