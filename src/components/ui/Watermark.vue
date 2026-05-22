@@ -309,6 +309,8 @@ watch(
     max-width: min(100%, 28rem);
     overflow: hidden;
     text-overflow: ellipsis;
+    top: 18px;
+    left: 20px;
   }
 
   @media (max-width: 1200px) {
