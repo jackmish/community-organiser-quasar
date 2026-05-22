@@ -90,6 +90,45 @@ export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {
   return p;
 }
 
+const TASK_SYNC_PAYLOAD_KEYS = [
+  'id',
+  'groupId',
+  'name',
+  'description',
+  'date',
+  'eventDate',
+  'status_id',
+  'type_id',
+  'type',
+  'priority',
+  'category',
+  'eventTime',
+  'tags',
+  'repeat',
+  'timeMode',
+  'timeOffsetDays',
+  'color_set',
+  'createdAt',
+  'updatedAt',
+] as const;
+
 export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
-  return { ...t, id: String(t.id) } as LanSyncTaskPayload;
+  const out: LanSyncTaskPayload = { id: String(t.id) };
+  for (const key of TASK_SYNC_PAYLOAD_KEYS) {
+    if (key === 'id') continue;
+    const v = t[key];
+    if (v === undefined) continue;
+    if (key === 'tags' && Array.isArray(v)) {
+      out.tags = v.map((x) => String(x));
+      continue;
+    }
+    if (key === 'repeat' && (v === null || (typeof v === 'object' && !Array.isArray(v)))) {
+      out.repeat = v as Record<string, unknown> | null;
+      continue;
+    }
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      (out as Record<string, unknown>)[key] = v;
+    }
+  }
+  return out;
 }

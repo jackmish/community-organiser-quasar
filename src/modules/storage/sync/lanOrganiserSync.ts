@@ -1,14 +1,13 @@
 import CC from 'src/CCAccess';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
-import type {
-  LanSyncExchangeRequest,
-  LanSyncExchangeResponse,
-} from 'src/modules/lan/lanSyncAuth';
 import {
   adoptLanSyncNextToken,
   isLanSyncTokenValid,
   lanSyncExchangeNextToken,
   LAN_SYNC_TOKEN_DISABLED,
+  toPlainLanSyncExchangeResponse,
+  type LanSyncExchangeRequest,
+  type LanSyncExchangeResponse,
 } from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
 import { loadActiveContractForSync, type SyncContractSnapshot } from './syncContractSettings';
@@ -169,20 +168,24 @@ async function resolveContractForExchange(
   return null;
 }
 
+function syncExchangeResponse(res: LanSyncExchangeResponse): LanSyncExchangeResponse {
+  return toPlainLanSyncExchangeResponse(res);
+}
+
 /** Handle inbound HTTP sync exchange (renderer bridge). */
 export async function handleLanSyncExchangeRequest(
   req: LanSyncExchangeRequest,
 ): Promise<LanSyncExchangeResponse> {
   const contract = await resolveContractForExchange(req.serverContract);
   if (!contract) {
-    return {
+    return syncExchangeResponse({
       ok: false,
       nextToken: LAN_SYNC_TOKEN_DISABLED,
       since: Date.now(),
       groups: [],
       tasks: [],
       error: 'no_contract',
-    };
+    });
   }
   const scope = contractGroupIds(contract);
   let peer = await findSyncPeerState(req.deviceId);
@@ -190,14 +193,14 @@ export async function handleLanSyncExchangeRequest(
     peer = await ensurePeerSyncSession(req.deviceId, req.deviceId);
   }
   if (!isLanSyncTokenValid(peer.sessionToken, req.token)) {
-    return {
+    return syncExchangeResponse({
       ok: false,
       nextToken: peer.sessionToken,
       since: Date.now(),
       groups: [],
       tasks: [],
       error: 'invalid_token',
-    };
+    });
   }
 
   const sinceMs =
@@ -223,13 +226,13 @@ export async function handleLanSyncExchangeRequest(
   };
   await upsertSyncPeerState(peerPatch);
 
-  return {
+  return syncExchangeResponse({
     ok: true,
     nextToken,
     since: now,
     groups: outbound.groups,
     tasks: outbound.tasks,
-  };
+  });
 }
 
 /** Initiator: sync with a paired peer over LAN (device id + token only; contract is local). */

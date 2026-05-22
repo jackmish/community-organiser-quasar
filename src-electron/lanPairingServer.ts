@@ -15,6 +15,7 @@ import {
   CO21_LAN_PAIRING_PORT,
   lanHostMatchKeys,
 } from 'src/modules/lan/lanPairingConstants';
+import { LAN_SYNC_ROTATING_TOKEN_ENABLED } from 'src/modules/lan/lanSyncAuth';
 import {
   isUsableLanHost,
   parseLanReachableAddresses,
@@ -394,7 +395,7 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
     }
     const deviceId = typeof parsed.deviceId === 'string' ? parsed.deviceId.trim() : '';
     const token = typeof parsed.token === 'string' ? parsed.token.trim() : '';
-    if (!deviceId || !token) {
+    if (!deviceId || (LAN_SYNC_ROTATING_TOKEN_ENABLED && !token)) {
       sendJson(res, 400, { error: 'invalid_sync_request' });
       return;
     }
@@ -418,9 +419,17 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
         `(async () => { const fn = globalThis.__co21LanSyncExchange; if (typeof fn !== 'function') return { ok: false, error: 'bridge_off', nextToken: '', since: Date.now(), groups: [], tasks: [] }; return await fn(${payload}); })()`,
         true,
       );
-      const code =
-        result && typeof result === 'object' && (result as { ok?: boolean }).ok ? 200 : 400;
-      sendJson(res, code, result ?? { ok: false, error: 'empty_response' });
+      let plain: Record<string, unknown>;
+      try {
+        plain = JSON.parse(
+          JSON.stringify(result ?? { ok: false, error: 'empty_response' }),
+        ) as Record<string, unknown>;
+      } catch {
+        sendJson(res, 500, { ok: false, error: 'bridge_not_serializable' });
+        return;
+      }
+      const code = plain.ok === true ? 200 : 400;
+      sendJson(res, code, plain);
     } catch (e) {
       logger.error('[lanPairingServer] sync exchange bridge failed', e);
       sendJson(res, 500, { error: 'bridge_error' });

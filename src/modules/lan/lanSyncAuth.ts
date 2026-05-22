@@ -94,3 +94,8 @@ export function createLanSyncToken(): string {
   if (!LAN_SYNC_ROTATING_TOKEN_ENABLED) return LAN_SYNC_TOKEN_DISABLED;
   return crypto.randomUUID();
 }
+
+/** Electron `executeJavaScript` / IPC cannot clone Vue proxies — plain JSON only. */
+export function toPlainLanSyncExchangeResponse(res: LanSyncExchangeResponse): LanSyncExchangeResponse {
+  return JSON.parse(JSON.stringify(res)) as LanSyncExchangeResponse;
+}
