@@ -262,6 +262,10 @@ export class StorageController {
         payload = { days, groups, lastModified };
       }
       await backendStorage.saveData(payload);
+      const { scheduleLanSyncAfterOrganiserChange } = await import(
+        './sync/lanOrganiserSyncTrigger'
+      );
+      scheduleLanSyncAfterOrganiserChange();
     } catch (err) {
       logger.error('StorageController.saveData failed', err);
       throw err;

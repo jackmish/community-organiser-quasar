@@ -26,6 +26,7 @@ import {
   upsertSyncPeerState,
   type SyncPeerRecord,
 } from './syncPeerState';
+import { withOrganiserSyncTriggerSuppressed } from './lanOrganiserSyncTrigger';
 import { enqueueSyncRun, updateSyncRun } from './syncRunQueue';
 import { loadOwnDeviceMeta } from './deviceRoleAssignment';
 import logger from 'src/utils/logger';
@@ -167,21 +168,23 @@ export async function applyInboundSyncDelta(
   }
 
   try {
-    const days = CC.task?.time?.days?.value ?? {};
-    const byDate: Record<string, { date: string; tasks: FlatTask[]; notes?: string }> = {};
-    for (const t of mergedTasks) {
-      if (!scopedTaskIds.has(String(t.id))) continue;
-      const dateKey = taskDateKey(t);
-      if (!byDate[dateKey]) byDate[dateKey] = { date: dateKey, tasks: [], notes: '' };
-      byDate[dateKey].tasks.push(t);
-    }
-    if (CC.task?.time?.days) {
-      CC.task.time.days.value = { ...days, ...byDate };
-    }
-    refreshTaskFlatListFromDays();
-    if (CC.storage?.saveData) {
-      await CC.storage.saveData();
-    }
+    await withOrganiserSyncTriggerSuppressed(async () => {
+      const days = CC.task?.time?.days?.value ?? {};
+      const byDate: Record<string, { date: string; tasks: FlatTask[]; notes?: string }> = {};
+      for (const t of mergedTasks) {
+        if (!scopedTaskIds.has(String(t.id))) continue;
+        const dateKey = taskDateKey(t);
+        if (!byDate[dateKey]) byDate[dateKey] = { date: dateKey, tasks: [], notes: '' };
+        byDate[dateKey].tasks.push(t);
+      }
+      if (CC.task?.time?.days) {
+        CC.task.time.days.value = { ...days, ...byDate };
+      }
+      refreshTaskFlatListFromDays();
+      if (CC.storage?.saveData) {
+        await CC.storage.saveData();
+      }
+    });
   } catch (e) {
     logger.error('[lanOrganiserSync] persist failed', e);
   }
