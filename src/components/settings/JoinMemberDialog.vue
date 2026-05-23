@@ -281,6 +281,7 @@ const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
+import { saveConnectionsRegistry } from 'src/modules/storage/sync/connectionsDeviceStorage';
 import { syncFunctionAccess, type RoleFunctionId } from 'src/modules/storage/sync/roleFunctionCatalog';
 import {
   devicesDirectlyOnRole,
@@ -291,7 +292,6 @@ import {
   normalizeGroupsFromCc,
   resolveEffectiveRoleWithDefault,
   rolesApplicableToGroup,
-  saveConnectedDevices,
   sortRolesByRestrictiveness,
   type ConnectedDevice,
   type GroupRecord,
@@ -490,7 +490,7 @@ function assignableDeviceOptions(roleProfileId: string) {
 }
 
 async function persistDevices(): Promise<void> {
-  await saveConnectedDevices(devices.value);
+  await saveConnectionsRegistry(devices.value);
 }
 
 async function assignDeviceToRole(deviceId: string, roleProfileId: string): Promise<void> {

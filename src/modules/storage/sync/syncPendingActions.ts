@@ -1,10 +1,7 @@
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import type { ConnectedDevice } from './deviceRoleAssignment';
-import {
-  loadOwnDeviceMeta,
-  mergeLocalDeviceIntoList,
-  saveConnectedDevices,
-} from './deviceRoleAssignment';
+import { saveConnectedDevices } from './deviceRoleAssignment';
+import { loadConnectionsDevices } from './connectionsDeviceStorage';
 import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
 import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
@@ -156,22 +153,19 @@ export async function findSendContractAction(): Promise<SyncPendingAction | null
 
 export async function tryDeliverAction(
   action: SyncPendingAction,
-  devices: ConnectedDevice[],
+  _devices: ConnectedDevice[],
   opts?: { skipReconcile?: boolean },
 ): Promise<boolean> {
-  let rows = devices;
+  let rows = await loadConnectionsDevices();
   if (!opts?.skipReconcile) {
-    const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices);
+    const { devices: reconciled, repaired } = await reconcileLanDeviceIds(rows);
     if (repaired.length > 0) {
       await saveConnectedDevices(reconciled);
       await syncLanTrustedContractDevices(reconciled);
     }
     rows = reconciled;
   }
-  const local = await loadOwnDeviceMeta();
-  const merged = mergeLocalDeviceIntoList(rows, local);
-  await saveConnectedDevices(merged);
-  const deviceRows = await prepareRemotesForLanOps({ persistHosts: true, devices: merged });
+  const deviceRows = await prepareRemotesForLanOps({ persistHosts: true, devices: rows });
   if (!deviceRows.length) {
     logger.warn('[syncPendingActions] no remote peer with LAN host — cannot deliver to PC');
     const now = Date.now();

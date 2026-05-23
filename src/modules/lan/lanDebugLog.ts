@@ -11,7 +11,7 @@ export type LanDebugEntry = {
   title: string;
   method?: string;
   url?: string;
-  transport?: 'xhr' | 'fetch';
+  transport?: 'capacitor-native' | 'xhr' | 'fetch';
   requestHeaders?: Record<string, string>;
   requestBody?: string;
   status?: number;
@@ -109,8 +109,9 @@ export function formatLanDebugJson(raw: string): string {
 
 export function lanDebugPlatformHint(): string {
   const platform = Capacitor.getPlatform();
-  const transport =
-    platform === 'android' ? 'XMLHttpRequest (Android WebView)' : 'fetch';
+  const transport = Capacitor.isNativePlatform()
+    ? 'CapacitorHttp (native)'
+    : 'fetch';
   return `${platform} · ${transport}`;
 }
 
@@ -131,7 +132,7 @@ function deriveLanHttpErrorCode(status: number, error?: string): string {
 export function pushLanHttpDebugStart(opts: {
   method: string;
   url: string;
-  transport: 'xhr' | 'fetch';
+  transport: 'capacitor-native' | 'xhr' | 'fetch';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;

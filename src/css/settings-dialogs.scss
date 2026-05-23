@@ -371,6 +371,31 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
+.connections-local-name__hint {
+  color: rgba(0, 0, 0, 0.5);
+  line-height: 1.35;
+  padding-left: 2px;
+}
+
+.settings-dialog-card .connections-device-name-input .q-field__inner,
+.settings-dialog-card .connections-device-name-input .q-field__bottom {
+  min-height: 40px;
+  background: transparent !important;
+}
+
+/* Local device name sits on the light card — dark text (not sync-interval white-on-blue). */
+.connections-device-card--local .connections-device-name-input input,
+.connections-device-card--local .connections-device-name-input .q-field__native,
+.connections-device-card--local .connections-device-name-input .q-field__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+  caret-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.connections-device-card--local .connections-device-name-input .q-field__label {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
 .connections-check-btn {
   min-width: 88px;
   padding: 6px 12px;

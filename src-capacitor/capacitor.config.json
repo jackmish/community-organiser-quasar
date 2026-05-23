@@ -1,5 +1,10 @@
 {
   "appId": "community.organiser",
   "appName": "Community Organiser",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
 }

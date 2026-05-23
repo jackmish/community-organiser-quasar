@@ -1,4 +1,9 @@
 import logger from 'src/utils/logger';
+import {
+  readCo21SettingsBlob,
+  writeCo21SettingsBlob,
+  type Co21SettingsJson,
+} from './co21SettingsPersistence';
 import type { AccessRange, RolePrivilege } from './RoleModel';
 import { PRIVILEGE_ORDER } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
@@ -109,6 +114,16 @@ export function sortRolesByRestrictiveness(profiles: RoleProfileData[]): RolePro
   });
 }
 
+/** Persist the user's label for this PC/phone (Connections → Your device name → Save). */
+export async function saveOwnDeviceNameSetting(name: string): Promise<boolean> {
+  const trimmed = name.trim();
+  if (!trimmed || GENERIC_DEVICE_NAMES.has(trimmed.toLowerCase())) {
+    logger.warn('[deviceRegistry] refused to save generic/empty ownDeviceName');
+    return false;
+  }
+  return writeCo21SettingsBlob({ ownDeviceName: trimmed });
+}
+
 export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }> {
   let id = deviceId.getSync() ?? '';
   if (!id) {
@@ -129,9 +144,21 @@ export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }>
   return { id, name };
 }
 
+const GENERIC_DEVICE_NAMES = new Set(['device', 'lan device', 'unknown', 'localhost', 'lan']);
+
+function deviceDisplayNameScore(name: string, deviceId: string): number {
+  const n = name.trim().toLowerCase();
+  if (!n) return 0;
+  if (GENERIC_DEVICE_NAMES.has(n)) return 1;
+  const idNorm = normalizeDeviceId(deviceId).toLowerCase();
+  if (n === idNorm || n === deviceId.trim().toLowerCase()) return 2;
+  return 10 + Math.min(n.length, 40);
+}
+
 function deviceRowMergeScore(d: ConnectedDevice): number {
   let score = 0;
   if ((d.lanHost || '').trim()) score += 10;
+  score += deviceDisplayNameScore(d.name || '', d.id);
   if (d.rolesByGroup && Object.keys(d.rolesByGroup).length > 0) score += 5;
   if (d.defaultRoleProfileId) score += 2;
   if (typeof d.syncIntervalSeconds === 'number') score += 1;
@@ -142,8 +169,10 @@ function mergePeerDeviceRows(primary: ConnectedDevice, secondary: ConnectedDevic
   const merged: ConnectedDevice = { ...primary };
   const host = (secondary.lanHost || '').trim();
   if (host && !(merged.lanHost || '').trim()) merged.lanHost = host;
-  const name = (secondary.name || '').trim();
-  if (name && !(merged.name || '').trim()) merged.name = secondary.name;
+  const pNameScore = deviceDisplayNameScore(merged.name || '', merged.id);
+  const sNameScore = deviceDisplayNameScore(secondary.name || '', secondary.id);
+  if (sNameScore > pNameScore) merged.name = (secondary.name || '').trim();
+  else if (!merged.name?.trim() && secondary.name?.trim()) merged.name = secondary.name.trim();
   if (secondary.rolesByGroup) {
     merged.rolesByGroup = { ...(merged.rolesByGroup ?? {}), ...secondary.rolesByGroup };
   }
@@ -497,23 +526,66 @@ export type SaveConnectedDevicesOptions = {
   ownDeviceName?: string;
 };
 
+async function migrateLegacyDevicesFromStorageSettings(
+  data: Co21SettingsJson,
+): Promise<Co21SettingsJson> {
+  if (parseDevicesFromSettingsData(data).length) return data;
+
+  const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
+  if (!api || typeof api.getAppDataPath !== 'function' || typeof api.readJsonFile !== 'function') {
+    return data;
+  }
+
+  try {
+    const appPath = await (api.getAppDataPath as () => Promise<string>)();
+    const legacyFile = (api.joinPath as (a: string, b: string) => string)(
+      (api.joinPath as (a: string, b: string) => string)(appPath, 'storage'),
+      'settings.json',
+    );
+    if (typeof api.fileExists === 'function') {
+      const exists = await (api.fileExists as (p: string) => Promise<boolean>)(legacyFile);
+      if (!exists) return data;
+    }
+    const legacy = await (api.readJsonFile as (p: string) => Promise<unknown>)(legacyFile);
+    if (!legacy || typeof legacy !== 'object') return data;
+
+    const legacyObj = legacy as Record<string, unknown>;
+    const legacyRows = Array.isArray(legacyObj.devices)
+      ? (legacyObj.devices as Record<string, unknown>[])
+      : [];
+    const legacyName =
+      typeof legacyObj.ownDeviceName === 'string' ? legacyObj.ownDeviceName.trim() : '';
+    const hasStoredName =
+      typeof data.ownDeviceName === 'string' && data.ownDeviceName.trim().length > 0;
+
+    const patch: Co21SettingsJson = { ...data };
+    let migrated = false;
+
+    if (legacyRows.length && !parseDevicesFromSettingsData(data).length) {
+      const parsed = legacyRows.map((d) => parseConnectedDevice(d));
+      patch.devices = parsed.map(toDeviceJson);
+      migrated = true;
+      logger.info('[deviceRegistry] migrating paired devices from storage/settings.json');
+    }
+    if (legacyName && !hasStoredName) {
+      patch.ownDeviceName = legacyName;
+      migrated = true;
+      logger.info('[deviceRegistry] migrating ownDeviceName from storage/settings.json');
+    }
+    if (!migrated) return data;
+
+    await writeCo21SettingsBlob(patch);
+    return patch;
+  } catch (e) {
+    logger.warn('[deviceRegistry] legacy device migration skipped', e);
+    return data;
+  }
+}
+
 export async function loadConnectedDevices(): Promise<ConnectedDevice[]> {
   try {
-    const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
-    if (!api || typeof api.getAppDataPath !== 'function') return [];
-    const appPath = await (api.getAppDataPath as () => Promise<string>)();
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(settingsDir, 'settings.json');
-    const exists = await (api.fileExists as (p: string) => Promise<boolean>)(settingsFile);
-    if (!exists) return [];
-    const data = await (api.readJsonFile as (p: string) => Promise<unknown>)(settingsFile);
-    if (!data || typeof data !== 'object' || !Array.isArray((data as { devices?: unknown }).devices)) {
-      return [];
-    }
-    const parsed = ((data as { devices: Record<string, unknown>[] }).devices).map(
-      parseConnectedDevice,
-    );
-    return dedupeConnectedDevicesByPeerId(parsed);
+    const data = await migrateLegacyDevicesFromStorageSettings(await readCo21SettingsBlob());
+    return parseDevicesFromSettingsData(data);
   } catch {
     return [];
   }
@@ -525,32 +597,25 @@ export async function saveConnectedDevices(
   opts?: SaveConnectedDevicesOptions,
 ): Promise<boolean> {
   try {
-    const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
-    if (!api || typeof api.getAppDataPath !== 'function') return false;
-    const appPath = await (api.getAppDataPath as () => Promise<string>)();
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(settingsDir, 'settings.json');
-    await (api.ensureDir as (p: string) => Promise<void>)(settingsDir);
-    const existing =
-      ((await (api.readJsonFile as (p: string) => Promise<unknown>)(settingsFile)) as Record<
-        string,
-        unknown
-      > | null) ?? {};
+    const existing = await readCo21SettingsBlob();
     const onDisk = parseDevicesFromSettingsData(existing);
     const toWrite = mergeDeviceRegistryPreservingRemotes(
       devices,
       onDisk,
       !!opts?.allowRemoteRemoval,
     );
-    const payload = JSON.parse(
-      JSON.stringify({
-        ...existing,
-        devices: toWrite.map(toDeviceJson),
-        ...(opts?.ownDeviceName !== undefined ? { ownDeviceName: opts.ownDeviceName } : {}),
-      }),
-    ) as Record<string, unknown>;
-    await (api.writeJsonFile as (p: string, d: unknown) => Promise<void>)(settingsFile, payload);
-    return true;
+    const devicePatch: Co21SettingsJson = { devices: toWrite.map(toDeviceJson) };
+    if (opts?.ownDeviceName !== undefined) {
+      const trimmed = opts.ownDeviceName.trim();
+      if (trimmed && !GENERIC_DEVICE_NAMES.has(trimmed.toLowerCase())) {
+        devicePatch.ownDeviceName = trimmed;
+      }
+    }
+    const ok = await writeCo21SettingsBlob(devicePatch);
+    if (!ok) {
+      logger.error('[deviceRegistry] saveConnectedDevices: persistence returned false');
+    }
+    return ok;
   } catch (e) {
     logger.error('[deviceRegistry] saveConnectedDevices failed', e);
     return false;

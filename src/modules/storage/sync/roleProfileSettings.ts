@@ -1,4 +1,9 @@
 import logger from 'src/utils/logger';
+import {
+  readCo21SettingsBlob,
+  writeCo21SettingsBlob,
+  type Co21SettingsJson,
+} from './co21SettingsPersistence';
 
 import type { AccessRange, RolePrivilege } from './RoleModel';
 
@@ -15,7 +20,7 @@ function isRoleFunctionId(id: string): id is RoleFunctionId {
 
 
 
-type SettingsJson = Record<string, unknown>;
+type SettingsJson = Co21SettingsJson;
 
 
 
@@ -60,77 +65,16 @@ function serializeRoleProfiles(profiles: RoleProfileData[]): RoleProfileData[] {
 
 
 async function readSettingsFile(): Promise<SettingsJson | null> {
-
   try {
-
-    const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
-
-    if (!api || typeof api.getAppDataPath !== 'function') return null;
-
-    const appPath = await (api.getAppDataPath as () => Promise<string>)();
-
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(settingsDir, 'settings.json');
-
-    const exists = await (api.fileExists as (p: string) => Promise<boolean>)(settingsFile);
-
-    if (!exists) return {};
-
-    const data = await (api.readJsonFile as (p: string) => Promise<unknown>)(settingsFile);
-
-    return data && typeof data === 'object' ? (data as SettingsJson) : {};
-
+    return await readCo21SettingsBlob();
   } catch (e) {
-
     logger.warn('[roleProfileSettings] read failed', e);
-
     return null;
-
   }
-
 }
 
-
-
 async function writeSettingsFile(patch: SettingsJson): Promise<boolean> {
-
-  try {
-
-    const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
-
-    if (!api || typeof api.getAppDataPath !== 'function') return false;
-
-    const appPath = await (api.getAppDataPath as () => Promise<string>)();
-
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(settingsDir, 'settings.json');
-
-    await (api.ensureDir as (p: string) => Promise<void>)(settingsDir);
-
-    const existing = (await readSettingsFile()) ?? {};
-
-    const payload = toPlainJson({
-
-      ...existing,
-
-      ...patch,
-
-    });
-
-    await (api.writeJsonFile as (p: string, d: unknown) => Promise<void>)(settingsFile, payload);
-
-    return true;
-
-  } catch (e) {
-
-    logger.error('[roleProfileSettings] write failed', e);
-
-    return false;
-
-  }
-
+  return writeCo21SettingsBlob(toPlainJson(patch));
 }
 
 

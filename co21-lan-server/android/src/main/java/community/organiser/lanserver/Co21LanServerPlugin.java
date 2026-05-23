@@ -246,9 +246,21 @@ public class Co21LanServerPlugin extends Plugin {
           return jsonResponse(400, errorBody("bad_request"));
         }
 
-        String path = uri.split("\\?")[0];
+        String path = normalizeApiPath(uri.split("\\?")[0]);
         Method method = session.getMethod();
         String remoteAddr = normalizeClientIp(session.getRemoteIpAddress());
+
+        if (method == Method.GET && (path.equals("/") || path.equals(API_PREFIX))) {
+          try {
+            JSONObject body = new JSONObject();
+            body.put("service", "CO21 LAN");
+            body.put("info", API_PREFIX + "/info");
+            body.put("port", PORT);
+            return jsonResponse(200, body);
+          } catch (JSONException e) {
+            return jsonResponse(500, errorBody("internal"));
+          }
+        }
 
         if (method == Method.GET && path.equals(API_PREFIX + "/info")) {
           return handleInfo();
@@ -656,6 +668,20 @@ public class Co21LanServerPlugin extends Plugin {
       return body;
     }
     return session.getQueryParameterString();
+  }
+
+  static String normalizeApiPath(String raw) {
+    if (raw == null || raw.isEmpty()) {
+      return "/";
+    }
+    String p = raw.trim();
+    if (p.length() > 1 && p.endsWith("/")) {
+      p = p.substring(0, p.length() - 1);
+    }
+    if (p.equals("/info")) {
+      return API_PREFIX + "/info";
+    }
+    return p;
   }
 
   static String normalizeClientIp(String raw) {

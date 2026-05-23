@@ -23,6 +23,15 @@
         <q-btn
           flat
           :dense="!mobile"
+          icon="troubleshoot"
+          label="Diagnose"
+          class="lan-debug-log__clear-btn"
+          :loading="diagnosing"
+          @click="onDiagnose"
+        />
+        <q-btn
+          flat
+          :dense="!mobile"
           icon="delete_sweep"
           label="Clear"
           class="lan-debug-log__clear-btn"
@@ -139,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   lanDebugEntries,
   clearLanDebugLog,
@@ -148,12 +157,23 @@ import {
   lanDebugPlatformHint,
   type LanDebugEntry,
 } from 'src/modules/lan/lanDebugLog';
+import { runLanNetworkDiagnose } from 'src/modules/lan/lanDiagnostics';
 
 defineProps<{ mobile?: boolean }>();
 
 const entries = lanDebugEntries;
 const platformHint = lanDebugPlatformHint();
 const buildInfo = computed(() => getLanDebugBuildInfo());
+const diagnosing = ref(false);
+
+async function onDiagnose(): Promise<void> {
+  diagnosing.value = true;
+  try {
+    await runLanNetworkDiagnose();
+  } finally {
+    diagnosing.value = false;
+  }
+}
 
 function formatTime(at: number): string {
   return new Date(at).toLocaleTimeString();

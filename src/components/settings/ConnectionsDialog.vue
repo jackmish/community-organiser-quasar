@@ -117,16 +117,36 @@
                     <q-icon :name="deviceIcon(d)" size="22px" class="connections-device-card__icon q-mt-xs" />
                     <div class="col" style="min-width: 0">
                       <template v-if="d.isLocal">
-                        <q-badge dense color="grey-7" class="q-mb-xs" :label="$text('connections.this_device')" />
-                        <div class="row items-center q-gutter-sm">
-                          <q-input v-model="ownDeviceName" class="col connections-device-sync-input" dense outlined
-                            label="Your device name" @keyup.enter="saveOwnDeviceName" />
-                          <q-btn class="col-auto" dense unelevated
-                            :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
-                            :icon="ownDeviceNameShowSaved ? 'check' : 'save'"
-                            :label="ownDeviceNameShowSaved ? 'Saved' : 'Save'"
-                            :disable="!ownDeviceNameDirty || ownDeviceNameSaving" :loading="ownDeviceNameSaving"
-                            @click="saveOwnDeviceName" />
+                        <div class="connections-local-name column q-gutter-xs">
+                          <div class="row items-center q-gutter-sm">
+                            <q-input
+                              v-model="ownDeviceName"
+                              class="col connections-device-name-input"
+                              dense
+                              outlined
+                              hide-bottom-space
+                              :label="$text('connections.your_device_name')"
+                              @keyup.enter="saveOwnDeviceName"
+                              @blur="onOwnDeviceNameBlur"
+                            />
+                            <q-btn
+                              class="col-auto"
+                              dense
+                              unelevated
+                              :color="ownDeviceNameShowSaved ? 'positive' : 'primary'"
+                              :icon="ownDeviceNameShowSaved ? 'check' : 'save'"
+                              :label="ownDeviceNameShowSaved ? $text('connections.name_saved') : $text('connections.name_save')"
+                              :disable="!ownDeviceNameDirty || ownDeviceNameSaving"
+                              :loading="ownDeviceNameSaving"
+                              @click="saveOwnDeviceName"
+                            />
+                          </div>
+                          <div
+                            v-if="savedOwnDeviceName"
+                            class="text-caption connections-local-name__hint"
+                          >
+                            {{ $text('connections.device_name_persisted') }}
+                          </div>
                         </div>
                       </template>
                       <div v-else class="text-subtitle2 text-weight-medium connections-device-card__name">
@@ -298,6 +318,8 @@ import { isLanDebugCaptureActive, lanDebugNote } from 'src/modules/lan/lanDebugL
 import {
   loadOwnDeviceMeta,
   normalizeDeviceId,
+  parseConnectedDevice,
+  saveOwnDeviceNameSetting,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
@@ -677,11 +699,10 @@ async function loadSettings(): Promise<void> {
   devicesRegistryLoaded.value = false;
   try {
     const data = await loadCo21Settings();
-    const local = await loadOwnDeviceMeta();
     const storedName =
       typeof data.ownDeviceName === 'string' ? data.ownDeviceName.trim() : '';
-    ownDeviceName.value = storedName || local.name;
-    savedOwnDeviceName.value = ownDeviceName.value;
+    ownDeviceName.value = storedName;
+    savedOwnDeviceName.value = storedName;
     ownDeviceNameShowSaved.value = false;
     if (typeof data.autoBackupEnabled === 'boolean') {
       autoBackupEnabled.value = data.autoBackupEnabled;
@@ -732,9 +753,8 @@ async function loadGroupsFromAppData(): Promise<any[]> {
 async function saveDevicesToStorage(): Promise<boolean> {
   if (!devicesRegistryLoaded.value) return false;
   try {
-    return await saveConnectionsRegistry(devices.value, {
-      ownDeviceName: ownDeviceName.value.trim(),
-    });
+    // Device list only — never bundle ownDeviceName (that was wiping the saved label).
+    return await saveConnectionsRegistry(devices.value);
   } catch (e) {
     logger.error('saveDevicesToStorage failed', e);
     return false;
@@ -755,14 +775,26 @@ async function saveBackupSettings(): Promise<boolean> {
   }
 }
 
+async function onOwnDeviceNameBlur(): Promise<void> {
+  if (!devicesRegistryLoaded.value || !ownDeviceNameDirty.value) return;
+  await saveOwnDeviceName();
+}
+
 async function saveOwnDeviceName() {
   if (!ownDeviceNameDirty.value || ownDeviceNameSaving.value) return;
+  const trimmed = ownDeviceName.value.trim();
+  if (!trimmed) {
+    toast('warning', $text('connections.device_name_required'));
+    return;
+  }
   ownDeviceNameSaving.value = true;
   try {
-    const ok = await saveDevicesToStorage();
+    const ok = await saveOwnDeviceNameSetting(trimmed);
     if (ok) {
-      savedOwnDeviceName.value = ownDeviceName.value.trim();
+      savedOwnDeviceName.value = trimmed;
       ownDeviceNameShowSaved.value = true;
+      const ownName = trimmed || (await loadOwnDeviceMeta()).name;
+      devices.value = await refreshLanServerForConnections(devices.value, ownName);
     } else {
       toast('negative', 'Failed to save device name');
     }
@@ -1010,11 +1042,10 @@ const onFileSelected = (e: Event) => {
       }
       const parsed = JSON.parse(txt || '{}');
       if (parsed && Array.isArray(parsed.devices)) {
-        devices.value = parsed.devices.map((d: any) => ({
-          id: String(d.id),
-          name: String(d.name || d.id),
-          type: d.type || 'imported',
-        }));
+        devices.value = parsed.devices.map((d: unknown) =>
+          parseConnectedDevice(d as Record<string, unknown>),
+        );
+        void saveDevicesToStorage();
         toast('positive', 'Imported connections');
       } else {
         toast('negative', 'Invalid backup format');

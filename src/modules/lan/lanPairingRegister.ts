@@ -26,7 +26,7 @@ export function sanitizeConnectionDevices(devices: ConnectedDevice[]): Connected
     const name = String(d.name || '').trim().toLowerCase();
     const host = String(d.lanHost || '').trim();
     if (name === 'localhost' && !isUsableLanHost(host)) return false;
-    if (host && !isUsableLanHost(host)) return false;
+    // Keep peers with stale/unreachable hosts — do not drop from the registry on save.
     return true;
   });
   return dedupeConnectedDevicesByPeerId(filtered);

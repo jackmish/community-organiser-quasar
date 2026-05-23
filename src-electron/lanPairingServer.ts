@@ -12,8 +12,10 @@ import logger from 'src/utils/logger';
 
 import {
   CO21_LAN_API_PREFIX,
+  CO21_LAN_INFO_PATH,
   CO21_LAN_PAIRING_PORT,
   lanHostMatchKeys,
+  normalizeLanApiPath,
 } from 'src/modules/lan/lanPairingConstants';
 import { LAN_SYNC_ROTATING_TOKEN_ENABLED } from 'src/modules/lan/lanSyncAuth';
 import {
@@ -641,7 +643,7 @@ export function startLanPairingServer(
           sendJson(res, 400, { error: 'bad_request' });
           return;
         }
-        const pathOnly = req.url.split('?')[0] || '';
+        const pathOnly = normalizeLanApiPath(req.url);
 
         if (req.method === 'OPTIONS') {
           res.writeHead(204, corsHeaders());
@@ -649,7 +651,19 @@ export function startLanPairingServer(
           return;
         }
 
-        if (req.method === 'GET' && pathOnly === `${CO21_LAN_API_PREFIX}/info`) {
+        if (
+          req.method === 'GET' &&
+          (pathOnly === '/' || pathOnly === CO21_LAN_API_PREFIX)
+        ) {
+          sendJson(res, 200, {
+            service: 'CO21 LAN',
+            info: CO21_LAN_INFO_PATH,
+            port: CO21_LAN_PAIRING_PORT,
+          });
+          return;
+        }
+
+        if (req.method === 'GET' && pathOnly === CO21_LAN_INFO_PATH) {
           if (!identity) {
             sendJson(res, 503, { error: 'not_ready' });
             return;

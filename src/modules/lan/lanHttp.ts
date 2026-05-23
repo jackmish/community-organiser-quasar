@@ -1,4 +1,5 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import type { HttpOptions } from '@capacitor/core';
 import logger from 'src/utils/logger';
 import {
   pushLanHttpDebugFinish,
@@ -23,9 +24,108 @@ export class LanHttpError extends Error {
   }
 }
 
+function pickLanTransport(): 'capacitor-native' | 'fetch' {
+  return Capacitor.isNativePlatform() ? 'capacitor-native' : 'fetch';
+}
+
+function httpResponseDataToBody(data: unknown): string {
+  if (typeof data === 'string') return data;
+  if (data == null) return '';
+  if (typeof data === 'number' && Number.isFinite(data)) return String(data);
+  if (typeof data === 'boolean') return data ? 'true' : 'false';
+  if (typeof data === 'object') {
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
+function raceAbort<T>(
+  signal: AbortSignal | undefined,
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  if (signal?.aborted) {
+    return Promise.reject(new LanHttpError('Pairing cancelled', 0, ''));
+  }
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new LanHttpError(`Connection timed out (${Math.round(timeoutMs / 1000)}s)`, 0, ''));
+    }, timeoutMs);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new LanHttpError('Pairing cancelled', 0, ''));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    promise
+      .then((v) => {
+        window.clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+        resolve(v);
+      })
+      .catch((e: unknown) => {
+        window.clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+        reject(
+          e instanceof Error
+            ? e
+            : new LanHttpError(typeof e === 'string' ? e : 'Request failed', 0, ''),
+        );
+      });
+  });
+}
+
 /**
- * HTTP for LAN APIs. On Android uses XMLHttpRequest (WebView fetch often fails for
- * http://192.168.x.x even with cleartext permitted).
+ * Native HTTP (OkHttp on Android). Bypasses WebView mixed-content block on http://LAN.
+ * Chrome browser works; https://localhost WebView cannot call http://192.168.x.x via XHR.
+ */
+async function capacitorLanRequest(opts: {
+  url: string;
+  method: 'GET' | 'POST' | 'OPTIONS';
+  headers?: Record<string, string>;
+  body?: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}): Promise<LanHttpResponse> {
+  const headers: Record<string, string> = { ...opts.headers };
+  if (opts.body && !headers['Content-Type'] && !headers['content-type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const httpOpts: HttpOptions = {
+    url: opts.url,
+    method: opts.method,
+    headers,
+    connectTimeout: opts.timeoutMs,
+    readTimeout: opts.timeoutMs,
+    responseType: 'text',
+  };
+  if (opts.body !== undefined) {
+    httpOpts.data = opts.body;
+  }
+
+  try {
+    const res = await raceAbort(opts.signal, CapacitorHttp.request(httpOpts), opts.timeoutMs);
+    const body = httpResponseDataToBody(res.data);
+    const status = res.status ?? 0;
+    return {
+      status,
+      body,
+      ok: status >= 200 && status < 300,
+    };
+  } catch (e: unknown) {
+    if (e instanceof LanHttpError) throw e;
+    const msg = e instanceof Error ? e.message : String(e);
+    logger.warn('[lanHttp] CapacitorHttp error', opts.method, opts.url, msg);
+    throw new LanHttpError(msg, 0, '');
+  }
+}
+
+/**
+ * HTTP for LAN APIs. Native Capacitor HTTP on Android/iOS; fetch on Electron/web.
  */
 export async function lanHttpRequest(opts: {
   url: string;
@@ -35,7 +135,7 @@ export async function lanHttpRequest(opts: {
   timeoutMs: number;
   signal?: AbortSignal;
 }): Promise<LanHttpResponse> {
-  const transport = Capacitor.getPlatform() === 'android' ? 'xhr' : 'fetch';
+  const transport = pickLanTransport();
   const logId = pushLanHttpDebugStart({
     method: opts.method,
     url: opts.url,
@@ -55,7 +155,9 @@ export async function lanHttpRequest(opts: {
   };
   try {
     const res =
-      transport === 'xhr' ? await xhrLanRequest(opts) : await fetchLanRequest(opts);
+      transport === 'capacitor-native'
+        ? await capacitorLanRequest(opts)
+        : await fetchLanRequest(opts);
     finish({ status: res.status, body: res.body });
     return res;
   } catch (e: unknown) {
@@ -108,88 +210,4 @@ async function fetchLanRequest(opts: {
     window.clearTimeout(timer);
     opts.signal?.removeEventListener('abort', onAbort);
   }
-}
-
-function xhrLanRequest(opts: {
-  url: string;
-  method: 'GET' | 'POST' | 'OPTIONS';
-  headers?: Record<string, string>;
-  body?: string;
-  timeoutMs: number;
-  signal?: AbortSignal;
-}): Promise<LanHttpResponse> {
-  return new Promise((resolve, reject) => {
-    if (opts.signal?.aborted) {
-      reject(new LanHttpError('Pairing cancelled', 0, ''));
-      return;
-    }
-    const xhr = new XMLHttpRequest();
-    xhr.open(opts.method, opts.url, true);
-    xhr.timeout = opts.timeoutMs;
-    const headers = { ...opts.headers };
-    if (opts.body && !headers['Content-Type'] && !headers['content-type']) {
-      headers['Content-Type'] = 'application/json';
-    }
-    for (const [k, v] of Object.entries(headers)) {
-      if (v) xhr.setRequestHeader(k, v);
-    }
-    const finishAbort = () => {
-      try {
-        xhr.abort();
-      } catch {
-        void 0;
-      }
-      reject(new LanHttpError('Pairing cancelled', 0, xhr.responseText ?? ''));
-    };
-    if (opts.signal) opts.signal.addEventListener('abort', finishAbort, { once: true });
-
-    const snapshot = (): { status: number; body: string } => ({
-      status: xhr.status || 0,
-      body: xhr.responseText ?? '',
-    });
-
-    xhr.onload = () => {
-      opts.signal?.removeEventListener('abort', finishAbort);
-      const { status, body } = snapshot();
-      resolve({
-        status,
-        body,
-        ok: status >= 200 && status < 300,
-      });
-    };
-    xhr.onerror = () => {
-      opts.signal?.removeEventListener('abort', finishAbort);
-      const { status, body } = snapshot();
-      logger.warn('[lanHttp] XHR error', opts.method, opts.url, status);
-      reject(
-        new LanHttpError(
-          `Network error calling ${opts.url} (status ${status || 0})`,
-          status,
-          body,
-        ),
-      );
-    };
-    xhr.ontimeout = () => {
-      opts.signal?.removeEventListener('abort', finishAbort);
-      const { status, body } = snapshot();
-      reject(
-        new LanHttpError(
-          `Connection timed out (${Math.round(opts.timeoutMs / 1000)}s)`,
-          status,
-          body,
-        ),
-      );
-    };
-    try {
-      xhr.send(opts.body ?? null);
-    } catch (e: unknown) {
-      opts.signal?.removeEventListener('abort', finishAbort);
-      const { status, body } = snapshot();
-      reject(
-        e instanceof LanHttpError
-          ? e
-          : new LanHttpError(e instanceof Error ? e.message : String(e), status, body),
-      );
-    }
-  });
 }

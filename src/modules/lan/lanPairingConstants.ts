@@ -6,6 +6,19 @@ export const CO21_MDNS_SERVICE_TYPE = 'co21-organiser';
 
 export const CO21_LAN_API_PREFIX = '/co21-lan/v1';
 
+export const CO21_LAN_INFO_PATH = `${CO21_LAN_API_PREFIX}/info`;
+
+/**
+ * Normalize request path (trailing slash, short `/info` alias).
+ * Used by Electron/Android LAN servers and diagnostics.
+ */
+export function normalizeLanApiPath(urlOrPath: string): string {
+  let p = String(urlOrPath || '/').split('?')[0]?.trim() || '/';
+  if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+  if (p === '/info') return CO21_LAN_INFO_PATH;
+  return p;
+}
+
 /** Normalize stored `lanHost` before {@link co21LanBaseUrl}. */
 export function normalizeLanHostInput(host: string): string {
   let h = String(host || '').trim();
