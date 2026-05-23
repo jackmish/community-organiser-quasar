@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
-      <q-card-section>
+      <q-card-section :class="headerClass">
         <div class="text-h6">Connections and data</div>
       </q-card-section>
 
@@ -57,52 +57,17 @@
 
           <div class="row items-center q-gutter-sm" :class="{ 'column items-stretch': isMobile }">
             <div :class="isMobile ? 'col-12' : 'col'">{{ devicesSummary }}</div>
-            <div class="col-auto" style="position: relative">
-              <q-btn ref="addBtn" dense label="Add Device" color="primary" @click="openAddMenu" />
-
-              <div v-if="addMenu" :style="addMenuStyle" class="connections-menu use-default">
-                <div style="
-                    padding: 6px 0;
-                    width: 220px;
-                    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-                    background: var(--q-popup-bg, #fff);
-                    border-radius: 6px;
-                  ">
-                  <div class="q-list">
-                    <q-item
-                      :class="{ inactive: !bluetoothConnectionEnabled }"
-                      :clickable="bluetoothConnectionEnabled"
-                      :role="bluetoothConnectionEnabled ? 'button' : undefined"
-                      :aria-disabled="!bluetoothConnectionEnabled"
-                      :style="{
-                        padding: '8px 12px',
-                        cursor: bluetoothConnectionEnabled ? 'pointer' : 'default',
-                      }"
-                      @click="bluetoothConnectionEnabled && createDevice('Bluetooth')"
-                    >
-                      <q-item-section avatar style="width: 32px">
-                        <q-icon name="bluetooth" />
-                      </q-item-section>
-                      <q-item-section>Bluetooth</q-item-section>
-                    </q-item>
-
-                    <q-item clickable role="button" @click="createDevice('LAN')"
-                      style="padding: 8px 12px; cursor: pointer">
-                      <q-item-section avatar style="width: 32px">
-                        <q-icon name="wifi" />
-                      </q-item-section>
-                      <q-item-section>Wi‑Fi area / LAN</q-item-section>
-                    </q-item>
-
-                    <q-item class="inactive" aria-disabled="true" style="padding: 8px 12px">
-                      <q-item-section avatar style="width: 32px">
-                        <q-icon name="cloud" />
-                      </q-item-section>
-                      <q-item-section>Internet</q-item-section>
-                    </q-item>
-                  </div>
-                </div>
-              </div>
+            <div :class="isMobile ? 'col-12' : 'col-auto'">
+              <q-btn
+                unelevated
+                color="positive"
+                class="connections-add-device-btn full-width"
+                @click="openAddConnectionDialog('lan')"
+              >
+                <q-icon name="add" size="20px" class="q-mr-xs" />
+                <q-icon name="devices" size="20px" class="q-mr-sm" />
+                {{ $text('connections.add_device') }}
+              </q-btn>
             </div>
           </div>
           <div class="connections-devices-panel q-mt-md">
@@ -296,9 +261,14 @@
       </q-card-actions>
       <input ref="fileInput" type="file" accept="application/json" style="display: none" @change="onFileSelected" />
     </q-card>
-    <BluetoothScanModal v-model:modelValue="showScanModal" @connect="onDeviceSelected" />
-    <LanPairingModal v-model="showLanPairingModal" :own-device-name="ownDeviceName"
-      :pending-offer="lanPairingPendingOffer" @paired="onLanPairedFromModal" />
+    <AddConnectionDialog
+      v-model="showAddConnectionDialog"
+      :own-device-name="ownDeviceName"
+      :pending-offer="lanPairingPendingOffer"
+      :initial-tab="addConnectionTab"
+      @paired="onLanPairedFromModal"
+      @bluetooth-connect="onDeviceSelected"
+    />
     <JoinMemberDialog v-model="showJoinMemberDialog" @open-roles-setup="onOpenRolesSetup" />
 
     <SyncContractPreviewDialog v-model="showPreviewDialog" v-model:interval-seconds="confirmIntervalSeconds"
@@ -354,9 +324,7 @@ import {
   saveConnectionsBackupSettings,
   saveConnectionsRegistry,
 } from 'src/modules/storage/sync/connectionsDeviceStorage';
-import { BLUETOOTH_CONNECTION_ENABLED } from 'src/constants/connectionFeatures';
-import BluetoothScanModal from './BluetoothScanModal.vue';
-import LanPairingModal from './LanPairingModal.vue';
+import AddConnectionDialog, { type AddConnectionTab } from './AddConnectionDialog.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
@@ -369,8 +337,8 @@ import {
 } from 'src/modules/storage/sync/syncContractSettings';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(520);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(520, 680);
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -541,59 +509,12 @@ function setDeviceSyncInterval(deviceId: string, v: string | number | null): voi
     d.id === deviceId ? { ...d, syncIntervalSeconds: n } : d,
   );
 }
-const addMenu = ref(false);
-const addBtn = ref<any>(null);
-const addMenuStyle = ref<Record<string, string>>({
-  position: 'fixed',
-  left: '0px',
-  top: '0px',
-  zIndex: '20020',
-});
+const showAddConnectionDialog = ref(false);
+const addConnectionTab = ref<AddConnectionTab>('lan');
 
-function createDevice(type: string) {
-  if (type === 'Bluetooth') {
-    if (!bluetoothConnectionEnabled) return;
-    showScanModal.value = true;
-    addMenu.value = false;
-    return;
-  }
-  if (type === 'LAN') {
-    showLanPairingModal.value = true;
-    addMenu.value = false;
-    return;
-  }
-  const id = String(Date.now());
-  devices.value.push({ id, name: `${type} Device ${devices.value.length + 1}`, type });
-  addMenu.value = false;
-  void saveDevicesToStorage();
-}
-
-function openAddMenu() {
-  try {
-    const el = addBtn.value;
-    let dom: HTMLElement | null = null;
-    if (!el) {
-      dom = null;
-    } else if (el.$el && typeof el.$el.getBoundingClientRect === 'function') {
-      dom = el.$el as HTMLElement;
-    } else if (typeof el.getBoundingClientRect === 'function') {
-      dom = el as HTMLElement;
-    }
-
-    if (!dom) {
-      addMenuStyle.value = { position: 'fixed', left: '8px', top: '8px', zIndex: '20020' };
-      addMenu.value = true;
-      return;
-    }
-    const r = dom.getBoundingClientRect();
-    const width = 220;
-    const left = Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8);
-    const top = Math.min(window.innerHeight - 40, r.bottom + 6);
-    addMenuStyle.value = { position: 'fixed', left: `${left}px`, top: `${top}px`, zIndex: '20020' };
-    addMenu.value = true;
-  } catch (e) {
-    addMenu.value = true;
-  }
+function openAddConnectionDialog(tab: AddConnectionTab = 'lan'): void {
+  addConnectionTab.value = tab;
+  showAddConnectionDialog.value = true;
 }
 
 function removeDevice(id: string) {
@@ -608,9 +529,6 @@ function close() {
 
 // Scan modal handling
 const $q = useQuasar();
-const bluetoothConnectionEnabled = BLUETOOTH_CONNECTION_ENABLED;
-const showScanModal = ref(false);
-const showLanPairingModal = ref(false);
 const lanPairingPendingOffer = ref<LanPendingDetail | null>(null);
 const showJoinMemberDialog = ref(false);
 
@@ -824,7 +742,7 @@ function openLanPairingWithOffer(detail: LanPendingDetail | null): void {
   if (detail) stashLanPendingOffer(detail);
   lanPairingPendingOffer.value = detail;
   dialogVisible.value = true;
-  showLanPairingModal.value = true;
+  openAddConnectionDialog('lan');
 }
 
 function onLanPairingPendingEvent(ev: Event): void {
@@ -844,7 +762,7 @@ watch(dialogVisible, (open) => {
     const pending = peekLanPendingOffer();
     if (pending) {
       lanPairingPendingOffer.value = pending;
-      showLanPairingModal.value = true;
+      openAddConnectionDialog('lan');
     }
     void loadSettings().then(async () => {
       await refreshRoleProfiles();
@@ -1081,7 +999,7 @@ function onDeviceSelected(device: any) {
     return;
   }
   devices.value.push({ id: device.id, name: device.name || device.id, type: 'Bluetooth' });
-  showScanModal.value = false;
+  void saveDevicesToStorage();
   toast('positive', `Added device ${device.name || device.id}`);
 }
 

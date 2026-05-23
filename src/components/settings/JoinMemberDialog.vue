@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="[cardClass, 'join-member-dialog-card']" :style="cardStyle">
-      <q-card-section class="q-pb-none">
+      <q-card-section :class="[headerClass, 'q-pb-none']">
         <div class="text-h6">{{ $text('ui.join_device') }}</div>
       </q-card-section>
 
@@ -276,8 +276,8 @@ import GroupTreeSelector from 'src/modules/group/components/GroupTreeSelector.vu
 import SyncDialogBanner from './SyncDialogBanner.vue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(720);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720, 920);
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';

@@ -1,7 +1,7 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 360px; max-width: 90vw">
-      <q-card-section>
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
+      <q-card-section :class="headerClass">
         <div class="text-h6">About Community Organiser</div>
         <div class="text-subtitle2 q-mt-sm">Version {{ version }}</div>
       </q-card-section>
@@ -20,6 +20,9 @@
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue';
 import pkg from '../../../package.json';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, headerClass } = useSettingsDialogLayout(360, 480);
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();

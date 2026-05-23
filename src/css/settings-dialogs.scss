@@ -20,14 +20,38 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Desktop: respect per-dialog min/max from useSettingsDialogLayout (inline + CSS vars). */
+.settings-dialog-card.co21-dialog-card:not(.settings-dialog-card--mobile) {
+  width: auto;
+  min-width: min(var(--co21-dialog-min, 520px), 94vw);
+  max-width: min(var(--co21-dialog-max, 720px), 94vw);
+  max-height: 92vh;
+  box-sizing: border-box;
+}
+
 .settings-dialog-card {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+}
+
+.settings-dialog-header {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.settings-dialog-footer {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .settings-dialog-body {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .settings-dialog-header-actions {
@@ -124,6 +148,174 @@
 /* Input + button on one line: label is outside q-field (no floating-label offset) */
 .lan-pairing-pair-label {
   color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.lan-pairing-panel--client .lan-pairing-pair-label,
+.add-connection-dialog-body .lan-pairing-pair-label {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.lan-pairing-panel {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.lan-pairing-panel--client .connections-device-sync-input input,
+.lan-pairing-panel--client .connections-device-sync-input .q-field__native,
+.lan-pairing-panel--client .connections-device-sync-input .q-field__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.lan-pairing-panel--client .connections-device-sync-input .q-field__label {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.add-connection-dialog-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Phone / native: full height, scrollable body (same pattern as debug-tools) */
+.add-connection-dialog-card--compact,
+.add-connection-dialog-card.settings-dialog-card--mobile {
+  height: 100dvh;
+  max-height: 100dvh;
+  width: 100%;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden;
+}
+
+.add-connection-tabs-section {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.add-connection-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 16px 16px;
+  box-sizing: border-box;
+}
+
+.add-connection-dialog-card--compact .add-connection-scroll-body,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-scroll-body {
+  padding: 8px 12px 12px;
+}
+
+.add-connection-dialog-card .add-connection-tabs {
+  width: 100%;
+  max-width: 100%;
+}
+
+.add-connection-tab-panel {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Light panel on compact layouts — readable fields (not white-on-blue) */
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #e8ecf0;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel__text,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel__text {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-panel,
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-dialog-body,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-panel,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-dialog-body {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input input,
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__native,
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__input,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input input,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__native,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__label,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__label {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-muted,
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-pair-label,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-muted,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-pair-label {
+  color: rgba(0, 0, 0, 0.58) !important;
+}
+
+.add-connection-dialog-card--compact .add-connection-tab-panel--lan .settings-dialog-surface-btn,
+.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .settings-dialog-surface-btn {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.lan-pairing-panel--embedded {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  padding: 0;
+  position: relative;
+  left: auto;
+  transform: none;
+}
+
+.lan-pairing-panel--embedded .lan-pairing-layout,
+.lan-pairing-panel--embedded .lan-pairing-col {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.connections-add-device-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lan-pairing-mobile-divider {
+  opacity: 0.35;
+}
+
+.lan-pairing-layout--split > .lan-pairing-col--mobile .lan-pairing-mobile-divider {
+  display: none;
+}
+
+.lan-pairing-layout--split > .lan-pairing-col--mobile {
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+  padding-left: 16px;
+  margin-left: 4px;
+}
+
+.bluetooth-scan-list {
+  background: #fff;
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
 }
 
 .lan-pairing-pair-row:not(.column) {
@@ -251,7 +443,13 @@
 .lan-pairing-layout--split > .lan-pairing-col--mobile {
   flex: 0 0 38%;
   max-width: 42%;
-  min-width: 240px;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .lan-pairing-layout--split > .lan-pairing-col--mobile {
+    min-width: 200px;
+  }
 }
 
 .lan-pairing-layout--stacked {
@@ -320,6 +518,19 @@
 /* Connections dialog: readable list panel on blue card chrome */
 .connections-dialog-body {
   color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.group-management-dialog-card .group-management-dialog__body,
+.group-edit-dialog__card .group-edit-dialog__body {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.group-management-dialog-card.settings-dialog-card--mobile .group-management-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Readable outline/flat buttons on blue settings-dialog-card chrome */

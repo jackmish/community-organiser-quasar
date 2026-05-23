@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle" class="pending-actions-card">
-      <q-card-section class="row items-center q-gutter-sm q-pb-none">
+      <q-card-section class="row items-center q-gutter-sm q-pb-none" :class="headerClass">
         <q-icon name="hourglass_top" color="primary" size="28px" />
         <div class="text-h6">{{ $text('sync.pending_actions_title') }}</div>
       </q-card-section>
@@ -132,7 +132,8 @@ const emit = defineEmits<{
   (e: 'cancel', id: string): void;
 }>();
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle } = useSettingsDialogLayout(760);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(760, 900);
 
 const dialogVisible = computed({
   get: () => !!props.modelValue,

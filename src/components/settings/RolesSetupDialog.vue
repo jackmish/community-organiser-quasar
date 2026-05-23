@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
-      <q-card-section class="row items-center q-pb-none">
+      <q-card-section class="row items-center q-pb-none" :class="headerClass">
         <div class="text-h6">{{ $text('role.setup_title') }}</div>
         <q-space />
         <q-btn flat round dense icon="close" @click="dialogVisible = false" />
@@ -185,8 +185,8 @@ import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 import { dispatchCaptureSyncBaseline } from 'src/modules/storage/sync/syncContractUi';
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(720);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720, 900);
 
 const props = withDefaults(
   defineProps<{ modelValue: boolean; initialAction?: 'none' | 'new' }>(),

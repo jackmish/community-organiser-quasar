@@ -1,11 +1,11 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 420px; max-width: 90vw">
-      <q-card-section>
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
+      <q-card-section :class="headerClass">
         <div class="text-h6">App Settings</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-sm">
+      <q-card-section class="q-pt-sm" :class="bodyClass" :style="bodyStyle">
             <div class="q-gutter-md">
               <q-toggle v-model="notifications" label="Enable notifications" dense />
               <q-toggle v-model="darkMode" label="Use dark theme" dense />
@@ -23,6 +23,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(420, 520);
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();

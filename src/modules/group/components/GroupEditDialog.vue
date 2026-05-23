@@ -1,11 +1,11 @@
 <template>
-  <q-dialog v-model="dialogVisible" class="group-edit-dialog">
-    <q-card class="group-edit-dialog__card" style="min-width: 520px; max-width: 680px">
-      <q-card-section>
+  <q-dialog v-model="dialogVisible" class="group-edit-dialog" v-bind="dialogBind">
+    <q-card :class="[cardClass, 'group-edit-dialog__card']" :style="cardStyle">
+      <q-card-section :class="headerClass">
         <div class="text-h6">{{ editingGroupId ? $text('ui.edit_group') : $text('action.add') }}</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-none">
+      <q-card-section class="q-pt-none group-edit-dialog__body" :class="bodyClass" :style="bodyStyle">
         <GroupForm
           :group-tree="groupTree"
           :group-options="groupOptions"
@@ -26,6 +26,10 @@ import logger from 'src/utils/logger';
 import { saveData } from 'src/utils/storageUtils';
 import * as groupRepository from 'src/modules/group/managers/groupRepository';
 import GroupForm from './GroupForm.vue';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(520, 680);
 
 const props = defineProps<{
   modelValue: boolean;

@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" persistent v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
-      <q-card-section class="q-pb-none">
+      <q-card-section class="q-pb-none" :class="headerClass">
         <div class="text-subtitle1 text-weight-medium">{{ $text('sync.contract_preview_title') }}</div>
       </q-card-section>
 
@@ -208,7 +208,8 @@ const emit = defineEmits<{
 
 const incoming = computed(() => !!props.incoming);
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle } = useSettingsDialogLayout(560);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(560, 720);
 
 const dialogVisible = computed({
   get: () => !!props.modelValue,

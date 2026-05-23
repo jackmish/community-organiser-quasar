@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialogVisible" persistent v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
-      <q-card-section class="row items-center q-gutter-sm">
+      <q-card-section class="row items-center q-gutter-sm" :class="headerClass">
         <q-icon name="handshake" color="primary" size="28px" />
         <div class="text-h6">{{ $text('sync.contract_peer_title') }}</div>
       </q-card-section>
@@ -64,7 +64,7 @@ const emit = defineEmits<{
   (e: 'cancel'): void;
 }>();
 
-const { dialogBind, cardClass, cardStyle } = useSettingsDialogLayout(420);
+const { dialogBind, cardClass, cardStyle, headerClass } = useSettingsDialogLayout(420);
 
 const dialogVisible = computed({
   get: () => !!props.modelValue,

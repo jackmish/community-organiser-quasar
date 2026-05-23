@@ -1,11 +1,16 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 440px; max-width: 560px">
-      <q-card-section>
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
+      <q-card-section :class="headerClass">
         <div class="text-h6">{{ editingId ? $text('role.edit_role') : $text('role.new_role') }}</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-none q-gutter-md" style="display: flex; flex-direction: column; gap: 16px">
+      <q-card-section
+        class="q-pt-none q-gutter-md"
+        :class="bodyClass"
+        :style="bodyStyle"
+        style="display: flex; flex-direction: column; gap: 16px"
+      >
         <!-- Role name -->
         <q-input
           v-model="name"
@@ -56,6 +61,10 @@
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(440, 560);
 
 const props = defineProps<{
   modelValue: boolean;

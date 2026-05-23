@@ -1,42 +1,50 @@
 <template>
-  <q-dialog v-model="dialogVisible">
-    <q-card style="min-width: 720px; max-width: 900px">
-      <q-card-section>
-        <div class="row items-center" style="gap: 12px">
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="[cardClass, 'group-management-dialog-card']" :style="cardStyle">
+      <q-card-section :class="headerClass" class="q-pb-sm">
+        <div
+          class="row items-center group-management-dialog__header"
+          :class="{ 'group-management-dialog__header--stacked': isMobile }"
+        >
           <div class="text-h6">{{ $text('ui.manage_groups') }}</div>
-          <div style="margin-left: auto; display: flex; gap: 6px; align-items: center">
-            {{ $text('ui.privilege_mode') }}
-            <q-btn
-              dense
-              :flat="privilegeMode !== 'preview'"
-              :unelevated="privilegeMode === 'preview'"
-              :label="$text('action.preview')"
-              @click.prevent="privilegeMode = 'preview'"
-              class="mode-btn"
-              :class="{ active: privilegeMode === 'preview' }"
-            />
-            <q-btn
-              dense
-              :flat="privilegeMode !== 'edit'"
-              :unelevated="privilegeMode === 'edit'"
-              :label="$text('action.edit')"
-              @click.prevent="privilegeMode = 'edit'"
-              class="mode-btn"
-              :class="{ active: privilegeMode === 'edit' }"
-            />
-            <q-btn
-              dense
-              :flat="privilegeMode !== 'remove'"
-              :unelevated="privilegeMode === 'remove'"
-              :label="$text('action.remove')"
-              @click.prevent="privilegeMode = 'remove'"
-              class="mode-btn"
-              :class="{ active: privilegeMode === 'remove' }"
-            />
+          <div
+            class="group-management-dialog__modes"
+            :class="{ 'group-management-dialog__modes--full': isMobile }"
+          >
+            <span class="group-management-dialog__modes-label">{{ $text('ui.privilege_mode') }}</span>
+            <div class="group-management-dialog__mode-btns">
+              <q-btn
+                dense
+                :flat="privilegeMode !== 'preview'"
+                :unelevated="privilegeMode === 'preview'"
+                :label="$text('action.preview')"
+                @click.prevent="privilegeMode = 'preview'"
+                class="mode-btn"
+                :class="{ active: privilegeMode === 'preview' }"
+              />
+              <q-btn
+                dense
+                :flat="privilegeMode !== 'edit'"
+                :unelevated="privilegeMode === 'edit'"
+                :label="$text('action.edit')"
+                @click.prevent="privilegeMode = 'edit'"
+                class="mode-btn"
+                :class="{ active: privilegeMode === 'edit' }"
+              />
+              <q-btn
+                dense
+                :flat="privilegeMode !== 'remove'"
+                :unelevated="privilegeMode === 'remove'"
+                :label="$text('action.remove')"
+                @click.prevent="privilegeMode = 'remove'"
+                class="mode-btn"
+                :class="{ active: privilegeMode === 'remove' }"
+              />
+            </div>
           </div>
         </div>
 
-        <div v-if="privilegeMode === 'edit'" class="row justify-end q-mt-sm q-mb-sm">
+        <div v-if="privilegeMode === 'edit'" class="row justify-end q-mt-sm">
           <q-btn
             dense
             unelevated
@@ -46,7 +54,12 @@
             @click="openCreateGroup"
           />
         </div>
+      </q-card-section>
 
+      <q-card-section
+        :class="[bodyClass, 'group-management-dialog__body', 'q-pt-none']"
+        :style="bodyStyle"
+      >
         <GroupTreeSelector :nodes="lockedGroupTree">
           <template #header="prop">
             <div class="row items-center full-width">
@@ -55,8 +68,7 @@
                 class="q-mr-sm"
                 :style="{ color: prop.node.color }"
               />
-              <span>{{ prop.node.label }}</span>
-              <q-space />
+              <span class="col ellipsis">{{ prop.node.label }}</span>
               <q-btn
                 v-if="privilegeMode !== 'preview'"
                 flat
@@ -68,7 +80,7 @@
                 class="q-mr-sm"
               />
 
-              <div style="display: flex; gap: 6px; align-items: center">
+              <div class="group-management-dialog__row-actions">
                 <template
                   v-if="privilegeMode === 'remove' && pendingDeleteId === prop.node.id"
                 >
@@ -104,7 +116,7 @@
         </GroupTreeSelector>
       </q-card-section>
 
-      <q-card-actions align="right">
+      <q-card-actions align="right" class="settings-dialog-footer">
         <q-btn flat :label="$text('action.close')" color="primary" @click="close" />
       </q-card-actions>
     </q-card>
@@ -112,12 +124,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
-import { $text } from "src/modules/lang";
-import logger from "src/utils/logger";
-import CC from "src/CCAccess";
-import GroupTreeSelector from "./GroupTreeSelector.vue";
-import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
+import { ref, watch, computed } from 'vue';
+import { $text } from 'src/modules/lang';
+import logger from 'src/utils/logger';
+import CC from 'src/CCAccess';
+import GroupTreeSelector from './GroupTreeSelector.vue';
+import { treeNodesExpandedOnly } from 'src/modules/group/utils/treeUi';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720, 900);
 
 const props = defineProps<{
   modelValue: boolean;
@@ -128,58 +144,58 @@ const props = defineProps<{
 const lockedGroupTree = computed(() => treeNodesExpandedOnly(props.groupTree || []));
 
 const emit = defineEmits<{
-  (e: "update:modelValue", v: boolean): void;
-  (e: "create-group"): void;
-  (e: "edit-group", id: string): void;
-  (e: "delete-group", id: string): void;
+  (e: 'update:modelValue', v: boolean): void;
+  (e: 'create-group'): void;
+  (e: 'edit-group', id: string): void;
+  (e: 'delete-group', id: string): void;
 }>();
 
 const pendingDeleteId = ref<string | null>(null);
-const privilegeMode = ref<"preview" | "edit" | "remove">("edit");
+const privilegeMode = ref<'preview' | 'edit' | 'remove'>('edit');
 
 const iconAlias: Record<string, string> = {
-  house: "home",
-  skyscraper: "location_city",
-  factory: "factory",
-  tree: "park",
-  car: "directions_car",
-  truck: "local_shipping",
-  road: "alt_route",
+  house: 'home',
+  skyscraper: 'location_city',
+  factory: 'factory',
+  tree: 'park',
+  car: 'directions_car',
+  truck: 'local_shipping',
+  road: 'alt_route',
 };
 
 function getIconName(key?: string | null) {
-  if (!key) return "folder";
+  if (!key) return 'folder';
   return (iconAlias as any)[key] || key;
 }
 
 watch(
   () => privilegeMode.value,
   (m) => {
-    if (m !== "remove") pendingDeleteId.value = null;
+    if (m !== 'remove') pendingDeleteId.value = null;
   },
 );
 
 const dialogVisible = computed({
   get: () => !!props.modelValue,
-  set: (v: boolean) => emit("update:modelValue", v),
+  set: (v: boolean) => emit('update:modelValue', v),
 });
 
 function openCreateGroup() {
-  emit("create-group");
+  emit('create-group');
 }
 
 function openEditGroup(node: any) {
   const id = node?.id ?? node?.key;
   if (!id) return;
-  emit("edit-group", String(id));
+  emit('edit-group', String(id));
 }
 
 async function onDeleteGroup(id: string) {
   try {
     await CC.group.delete(id);
-    emit("delete-group", id);
+    emit('delete-group', id);
   } catch (e) {
-    logger.error("deleteGroup failed", e);
+    logger.error('deleteGroup failed', e);
   }
 }
 
@@ -209,8 +225,51 @@ function close() {
 }
 </script>
 
-<style scoped>
-/* Mode buttons: ensure active one has visible background */
+<style scoped lang="scss">
+.group-management-dialog__header {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.group-management-dialog__header--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.group-management-dialog__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.group-management-dialog__header--stacked .group-management-dialog__modes {
+  margin-left: 0;
+}
+
+.group-management-dialog__modes--full {
+  width: 100%;
+}
+
+.group-management-dialog__mode-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.group-management-dialog__row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.group-management-dialog__body {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
 .mode-btn {
   border-radius: 4px;
   padding: 4px 8px;

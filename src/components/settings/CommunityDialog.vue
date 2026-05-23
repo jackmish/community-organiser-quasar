@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="visible" persistent>
-    <q-card style="min-width: 520px; max-width: 94vw">
+  <q-dialog v-model="visible" persistent v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
       <!-- ── Header ───────────────────────────────────────────────────── -->
       <q-card-section class="row items-center q-pb-none">
         <div>
@@ -227,6 +227,9 @@ import type {
 import CC from "src/CCAccess";
 import { treeNodesExpandedOnly, type GroupTreeNode } from "src/modules/group/utils/treeUi";
 import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
+import { useSettingsDialogLayout } from "src/composables/useSettingsDialogLayout";
+
+const { dialogBind, cardClass, cardStyle } = useSettingsDialogLayout(520, 720);
 
 // ── Props / emit ──────────────────────────────────────────────────────────────
 

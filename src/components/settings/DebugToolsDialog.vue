@@ -1,7 +1,10 @@
 <template>
   <q-dialog v-model="show" v-bind="dialogBind">
     <q-card :class="['debug-tools-dialog', cardClass]" :style="cardStyle">
-      <q-card-section class="row items-center q-pb-none debug-tools-dialog__header col-auto">
+      <q-card-section
+        class="row items-center q-pb-none debug-tools-dialog__header"
+        :class="headerClass"
+      >
         <div class="text-h6">Debug tools</div>
         <q-space />
         <q-btn flat round dense icon="close" aria-label="Close" @click="close" />
@@ -53,8 +56,8 @@ import { watch } from 'vue';
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', value: boolean): void }>();
 
-const { dialogBind, cardClass, cardStyle, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(720);
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720, 800);
 
 watch(
   () => props.modelValue,
