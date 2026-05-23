@@ -1,10 +1,16 @@
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import type { ConnectedDevice } from './deviceRoleAssignment';
-import { loadOwnDeviceMeta, saveConnectedDevices } from './deviceRoleAssignment';
+import {
+  loadOwnDeviceMeta,
+  mergeLocalDeviceIntoList,
+  saveConnectedDevices,
+} from './deviceRoleAssignment';
 import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
 import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
 import { pushSyncContractToLanPeers } from 'src/modules/lan/lanSyncContract';
+import { prepareRemotesForLanOps } from 'src/modules/lan/lanRemoteHost';
 import { syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager';
+import logger from 'src/utils/logger';
 import {
   normalizeSyncDuplicateResolution,
   savePendingOutgoingContract,
@@ -162,8 +168,27 @@ export async function tryDeliverAction(
     }
     rows = reconciled;
   }
-  const deviceRows = rows.filter((d) => !d.isLocal);
   const local = await loadOwnDeviceMeta();
+  const merged = mergeLocalDeviceIntoList(rows, local);
+  await saveConnectedDevices(merged);
+  const deviceRows = await prepareRemotesForLanOps({ persistHosts: true, devices: merged });
+  if (!deviceRows.length) {
+    logger.warn('[syncPendingActions] no remote peer with LAN host — cannot deliver to PC');
+    const now = Date.now();
+    const list = await loadPendingActions();
+    const idx = list.findIndex((a) => a.id === action.id);
+    const current = list[idx];
+    if (idx >= 0 && current) {
+      list[idx] = {
+        ...current,
+        lastAttemptAt: now,
+        deliveryFailCount: (current.deliveryFailCount ?? 0) + 1,
+      };
+      await savePendingActions(list);
+      dispatchPendingActionsChanged();
+    }
+    return false;
+  }
   const pendingToSend = {
     ...action.pending,
     proposerDeviceId: local.id,
@@ -188,15 +213,19 @@ export async function tryDeliverAction(
   if (ok && action.kind === 'send_contract') {
     const { runSyncWithPeer } = await import('./lanOrganiserSync');
     const delayMs = 400;
+    const syncTargets = deviceRows.map((d) => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      lanHost: (d.lanHost || '').trim(),
+    }));
     setTimeout(() => {
       void (async () => {
-        for (const t of action.targets) {
-          const host = (t.lanHost || '').trim();
-          if (!host) continue;
+        for (const t of syncTargets) {
+          if (!t.lanHost) continue;
           const syncOpts = {
             peerDeviceId: t.deviceId,
             peerDeviceName: t.deviceName,
-            lanHost: host,
+            lanHost: t.lanHost,
           };
           const st = action.pending.syncSessionToken;
           await runSyncWithPeer(st ? { ...syncOpts, sessionToken: st } : syncOpts);

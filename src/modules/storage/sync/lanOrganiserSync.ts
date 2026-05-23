@@ -380,15 +380,7 @@ export async function runSyncWithPeer(opts: {
   });
   await updateSyncRun(run.id, { status: 'running', startedAt: Date.now() });
 
-  const base = co21LanBaseUrl(opts.lanHost);
-  if (!base) {
-    await updateSyncRun(run.id, {
-      status: 'failed',
-      finishedAt: Date.now(),
-      message: 'invalid_host',
-    });
-    return false;
-  }
+  let effectiveHost = (opts.lanHost || '').trim();
 
   if (!opts.skipInfoProbe) {
     const probe = await probeLanPeerInfo(
@@ -414,6 +406,17 @@ export async function runSyncWithPeer(opts: {
       });
       return false;
     }
+    effectiveHost = (probe.device.lanHost || effectiveHost).trim();
+  }
+
+  const base = co21LanBaseUrl(effectiveHost);
+  if (!base) {
+    await updateSyncRun(run.id, {
+      status: 'failed',
+      finishedAt: Date.now(),
+      message: 'invalid_host',
+    });
+    return false;
   }
 
   const sinceMs = incremental ? peer.lastSyncAt : 0;
@@ -499,10 +502,8 @@ export async function runSyncWithPeer(opts: {
 export async function runFirstSyncAfterContractAccept(
   sessionToken?: string,
 ): Promise<void> {
-  const { loadConnectedDevices, mergeLocalDeviceIntoList } = await import('./deviceRoleAssignment');
-  const local = await loadOwnDeviceMeta();
-  const devices = mergeLocalDeviceIntoList(await loadConnectedDevices(), local);
-  const remotes = devices.filter((d) => !d.isLocal && (d.lanHost || '').trim());
+  const { prepareRemotesForLanOps } = await import('src/modules/lan/lanRemoteHost');
+  const remotes = await prepareRemotesForLanOps({ persistHosts: true });
   const token = sessionToken?.trim() || undefined;
 
   for (const d of remotes) {
@@ -512,7 +513,7 @@ export async function runFirstSyncAfterContractAccept(
     await runSyncWithPeer({
       peerDeviceId: d.id,
       peerDeviceName: d.name,
-      lanHost: (d.lanHost || '').trim(),
+      lanHost: (probe.device.lanHost || d.lanHost || '').trim(),
       ...(token ? { sessionToken: token } : {}),
       skipInfoProbe: true,
     });

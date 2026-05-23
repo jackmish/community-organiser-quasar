@@ -177,6 +177,14 @@ export function setLanTrustedContractPeers(peers: LanTrustedContractPeer[]): voi
   );
 }
 
+/** Remember a peer that connected over LAN (id + IP) for contract/sync auth. */
+export function registerLanPeerConnection(deviceId: string, remoteAddr: string): void {
+  const prop = normalizeTrustedDeviceId(deviceId);
+  if (prop) trustedContractDeviceIds.add(prop);
+  const rip = normalizeClientIp(remoteAddr).toLowerCase();
+  if (rip) trustedContractLanKeys.add(rip);
+}
+
 function isContractProposerTrusted(proposerDeviceId: string, remoteAddr: string): boolean {
   if (trustedContractDeviceIds.size === 0 && trustedContractLanKeys.size === 0) {
     return true;
@@ -281,6 +289,7 @@ function handleSyncContractPropose(
       return;
     }
     const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(proposerDeviceId, remoteAddr);
     if (!isContractProposerTrusted(proposerDeviceId, remoteAddr)) {
       logger.warn(
         `[lanPairingServer] contract rejected proposer=${proposerDeviceId} from=${remoteAddr} trustedIds=${trustedContractDeviceIds.size} trustedHosts=${trustedContractLanKeys.size}`,
@@ -400,6 +409,7 @@ function handleSyncExchange(req: http.IncomingMessage, res: http.ServerResponse)
       return;
     }
     const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(deviceId, remoteAddr);
     if (!isContractProposerTrusted(deviceId, remoteAddr)) {
       sendJson(res, 403, { error: 'device_not_registered' });
       return;
@@ -487,6 +497,8 @@ function handlePairRequest(
       sendJson(res, 400, { error: 'missing_deviceId' });
       return;
     }
+
+    registerLanPeerConnection(remoteDeviceId, remoteAddr);
 
     const socketAddr = normalizeClientIp(remoteAddr);
     const bodyAddrs = parseLanReachableAddresses(parsed.lanReachableAddresses);

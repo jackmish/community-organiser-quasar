@@ -1,0 +1,32 @@
+{
+  "name": "co21-lan-server",
+  "version": "1.0.0",
+  "description": "CO21 LAN HTTP server (port 47321) for Capacitor Android",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "dist/"
+  ],
+  "author": "CO21",
+  "license": "MIT",
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^8.0.0",
+    "typescript": "~5.6.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  }
+}

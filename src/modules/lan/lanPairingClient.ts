@@ -1,5 +1,6 @@
 import { CO21_LAN_API_PREFIX, co21LanBaseUrl } from './lanPairingConstants';
 import { parseLanReachableAddresses } from './lanPairingHosts';
+import { lanHttpRequest } from './lanHttp';
 
 export type LanPeerInfo = {
   deviceId: string;
@@ -22,8 +23,7 @@ export type LanPairPollResult = {
   peer?: LanPeerInfo & { lanAddresses?: string[] };
 };
 
-async function parseJson(res: Response): Promise<unknown> {
-  const text = await res.text();
+function parseJsonBody(text: string): unknown {
   if (!text) return null;
   try {
     return JSON.parse(text);
@@ -66,34 +66,20 @@ function sleepMs(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-function mergeAbortSignal(parent?: AbortSignal): AbortController {
-  const controller = new AbortController();
-  if (parent?.aborted) {
-    controller.abort();
-    return controller;
-  }
-  parent?.addEventListener('abort', () => controller.abort(), { once: true });
-  return controller;
-}
-
-async function fetchWithTimeout(
+async function lanFetchResponse(
   url: string,
-  init: RequestInit,
+  init: { method: 'GET' | 'POST'; headers?: Record<string, string>; body?: string },
   timeoutMs: number,
   parentSignal?: AbortSignal,
-): Promise<Response> {
-  const controller = mergeAbortSignal(parentSignal);
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (e: unknown) {
-    if (controller.signal.aborted && !(parentSignal?.aborted)) {
-      throw new Error(`Connection timed out (${Math.round(timeoutMs / 1000)}s)`);
-    }
-    throw e;
-  } finally {
-    window.clearTimeout(timer);
-  }
+) {
+  return lanHttpRequest({
+    url,
+    method: init.method,
+    timeoutMs,
+    ...(init.headers ? { headers: init.headers } : {}),
+    ...(init.body !== undefined ? { body: init.body } : {}),
+    ...(parentSignal ? { signal: parentSignal } : {}),
+  });
 }
 
 export async function lanFetchInfo(
@@ -102,16 +88,16 @@ export async function lanFetchInfo(
 ): Promise<LanPeerInfo | null> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/info`;
   const timeoutMs = opts.timeoutMs ?? 5000;
-  let res: Response;
+  let res;
   try {
-    res = await fetchWithTimeout(url, { method: 'GET' }, timeoutMs, opts.signal);
+    res = await lanFetchResponse(url, { method: 'GET' }, timeoutMs, opts.signal);
   } catch (e: unknown) {
     if (opts.signal?.aborted) throw new Error('Pairing cancelled');
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(`Could not connect to ${url} (${msg})`);
   }
   if (!res.ok) return null;
-  const data = await parseJson(res);
+  const data = parseJsonBody(res.body);
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
   const deviceId = jsonStringField(o.deviceId, '').trim();
@@ -164,9 +150,9 @@ export async function lanPostPairRequest(
 ): Promise<LanPairRequestResponse | null> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/request`;
   const timeoutMs = opts.timeoutMs ?? 5000;
-  let res: Response;
+  let res;
   try {
-    res = await fetchWithTimeout(
+    res = await lanFetchResponse(
       url,
       {
         method: 'POST',
@@ -182,7 +168,7 @@ export async function lanPostPairRequest(
     throw new Error(`Could not connect to ${url} (${msg})`);
   }
   if (!res.ok) return null;
-  const data = await parseJson(res);
+  const data = parseJsonBody(res.body);
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
   const token = jsonStringField(o.token, '');
@@ -201,15 +187,15 @@ export async function lanGetPairStatus(
 ): Promise<LanPairPollResult> {
   const tokenPath = encodeURIComponent(token.trim());
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/status/${tokenPath}`;
-  let res: Response;
+  let res;
   try {
-    res = await fetchWithTimeout(url, { method: 'GET' }, opts.timeoutMs ?? 5000, opts.signal);
+    res = await lanFetchResponse(url, { method: 'GET' }, opts.timeoutMs ?? 5000, opts.signal);
   } catch {
     if (opts.signal?.aborted) return { status: 'unknown' };
     return { status: 'unknown' };
   }
   if (!res.ok) return { status: 'unknown' };
-  const data = await parseJson(res);
+  const data = parseJsonBody(res.body);
   if (!data || typeof data !== 'object') return { status: 'unknown' };
   const root = data as Record<string, unknown>;
   if (typeof root.status !== 'string') return { status: 'unknown' };
@@ -302,7 +288,7 @@ export async function lanNotifyProposerAccepted(
       if (!base) continue;
       const url = `${base.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/pair/notify-accepted`;
       try {
-        const res = await fetchWithTimeout(
+        const res = await lanFetchResponse(
           url,
           {
             method: 'POST',

@@ -6,6 +6,20 @@
   border-radius: 0;
 }
 
+/* Debug tools: full-screen white panel on phones (scroll in body, not nested list) */
+.debug-tools-dialog.settings-dialog-card--mobile {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.debug-tools-dialog.settings-dialog-card--mobile .debug-tools-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .settings-dialog-card {
   display: flex;
   flex-direction: column;

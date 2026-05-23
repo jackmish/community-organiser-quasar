@@ -8,6 +8,13 @@ import {
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { findSyncPeerState, upsertSyncPeerState } from 'src/modules/storage/sync/syncPeerState';
+import {
+  listCandidateHostsForDevice,
+  patchPeerLanHostInConnections,
+  prepareRemotesForLanOps,
+  rememberPeerLanHost,
+} from './lanRemoteHost';
+import { isLanDebugCaptureActive, lanDebugNote } from './lanDebugLog';
 
 /** GET /info — sole check that a peer is reachable before any sync exchange. */
 export const LAN_INFO_PROBE_MS = 2_500;
@@ -34,13 +41,21 @@ export async function probeLanPeerInfo(
   device: ConnectedDevice,
   timeoutMs = LAN_INFO_PROBE_MS,
 ): Promise<LanPeerProbeResult> {
-  const lanHost = (device.lanHost || '').trim();
-  const base = co21LanBaseUrl(lanHost);
+  const candidates = await listCandidateHostsForDevice(device);
   const now = Date.now();
   const prior = await findSyncPeerState(device.id);
   const wasConnected = prior?.peerInRange === true;
 
-  if (!base) {
+  if (isLanDebugCaptureActive()) {
+    lanDebugNote(
+      `Probe ${device.name}`,
+      candidates.length
+        ? `Trying hosts: ${candidates.join(', ')}`
+        : 'No LAN host candidates (pair again or set IP in Connections)',
+    );
+  }
+
+  if (!candidates.length) {
     await upsertSyncPeerState({
       peerDeviceId: device.id,
       peerDeviceName: device.name,
@@ -50,39 +65,63 @@ export async function probeLanPeerInfo(
     return { device, ok: false, info: null, reconnected: false };
   }
 
-  try {
-    const info = await lanFetchInfo(base, { timeoutMs });
-    const ok = !!info?.deviceId;
-    await upsertSyncPeerState({
-      peerDeviceId: device.id,
-      peerDeviceName: device.name,
-      peerInRange: ok,
-      peerCheckedAt: now,
-      ...(ok ? {} : { lastSyncMessage: 'info_unreachable' }),
-    });
-    return {
-      device,
-      ok,
-      info: ok ? info : null,
-      reconnected: ok && !wasConnected,
-    };
-  } catch {
-    await upsertSyncPeerState({
-      peerDeviceId: device.id,
-      peerDeviceName: device.name,
-      peerInRange: false,
-      peerCheckedAt: now,
-      lastSyncMessage: 'info_unreachable',
-    });
-    return { device, ok: false, info: null, reconnected: false };
+  for (const lanHost of candidates) {
+    const base = co21LanBaseUrl(lanHost);
+    if (!base) continue;
+    try {
+      const info = await lanFetchInfo(base, { timeoutMs });
+      const ok = !!info?.deviceId;
+      if (!ok) {
+        if (isLanDebugCaptureActive()) {
+          lanDebugNote(`/info failed`, `No deviceId from ${lanHost}`);
+        }
+        continue;
+      }
+      if (isLanDebugCaptureActive()) {
+        lanDebugNote(`Probe OK`, `${device.name} reachable at ${lanHost}`);
+      }
+      await rememberPeerLanHost(device.id, lanHost);
+      await patchPeerLanHostInConnections(device.id, lanHost);
+      const resolvedDevice = { ...device, lanHost };
+      await upsertSyncPeerState({
+        peerDeviceId: device.id,
+        peerDeviceName: device.name,
+        peerInRange: true,
+        peerCheckedAt: now,
+      });
+      return {
+        device: resolvedDevice,
+        ok: true,
+        info,
+        reconnected: !wasConnected,
+      };
+    } catch (e: unknown) {
+      if (isLanDebugCaptureActive()) {
+        const msg = e instanceof Error ? e.message : String(e);
+        lanDebugNote(`/info error`, `${lanHost}: ${msg}`);
+      }
+    }
   }
+
+  if (isLanDebugCaptureActive()) {
+    lanDebugNote(`Probe failed`, `${device.name}: none of ${candidates.length} host(s) answered`);
+  }
+
+  await upsertSyncPeerState({
+    peerDeviceId: device.id,
+    peerDeviceName: device.name,
+    peerInRange: false,
+    peerCheckedAt: now,
+    lastSyncMessage: 'info_unreachable',
+  });
+  return { device, ok: false, info: null, reconnected: false };
 }
 
 /** Parallel /info for all remotes (startup or full refresh). */
 export async function probeAllLanPeers(
   timeoutMs = LAN_INFO_PROBE_MS,
 ): Promise<LanPeerProbeResult[]> {
-  const remotes = await listRemoteLanDevices();
+  const remotes = await prepareRemotesForLanOps({ persistHosts: true });
   if (!remotes.length) return [];
   return Promise.all(remotes.map((d) => probeLanPeerInfo(d, timeoutMs)));
 }

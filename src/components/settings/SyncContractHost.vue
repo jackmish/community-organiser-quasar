@@ -34,6 +34,8 @@ import {
   saveConnectedDevices,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
+import { getCo21LanApi } from 'src/modules/lan/co21LanRuntime';
+import { rememberPeerLanHost } from 'src/modules/lan/lanRemoteHost';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
 import { lanPostSyncContractReject } from 'src/modules/lan/lanSyncContract';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
@@ -138,6 +140,7 @@ async function ensureProposerInConnections(pending: SyncContractPending): Promis
     },
   ];
   await saveConnectedDevices(devices);
+  if (lanHost) await rememberPeerLanHost(pending.proposerDeviceId, lanHost);
   const settings = await loadCo21Settings();
   const ownName =
     typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
@@ -304,14 +307,7 @@ onMounted(() => {
   window.addEventListener('co21:sync-contract-signed', onIncomingEvent);
   window.addEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);
 
-  const lan = (
-    window as Window & {
-      electronLan?: {
-        onSyncContractIncoming?: (cb: (d: unknown) => void) => () => void;
-        onSyncContractRejected?: (cb: (d: unknown) => void) => () => void;
-      };
-    }
-  ).electronLan;
+  const lan = getCo21LanApi();
   if (lan?.onSyncContractIncoming) {
     lanIncomingUnsub = lan.onSyncContractIncoming((detail) => {
       void persistIncomingFromLan(detail);

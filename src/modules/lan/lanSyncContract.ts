@@ -2,20 +2,13 @@ import { co21LanBaseUrl } from './lanPairingConstants';
 import { CO21_LAN_API_PREFIX } from './lanPairingConstants';
 import type { ConnectedDevice } from 'src/modules/storage/sync/deviceRoleAssignment';
 import type { SyncContractPending } from 'src/modules/storage/sync/syncContractSettings';
-
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
-  } finally {
-    clearTimeout(t);
-  }
-}
+import logger from 'src/utils/logger';
+import { lanHttpRequest } from './lanHttp';
+import {
+  listCandidateHostsForDevice,
+  rememberPeerLanHost,
+  patchPeerLanHostInConnections,
+} from './lanRemoteHost';
 
 export type SyncContractRejectPayload = {
   rejectorDeviceId: string;
@@ -31,15 +24,13 @@ export async function lanPostSyncContractReject(
 ): Promise<boolean> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/sync/contract/reject`;
   try {
-    const res = await fetchWithTimeout(
+    const res = await lanHttpRequest({
       url,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      },
-      8000,
-    );
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      timeoutMs: 8000,
+    });
     return res.ok;
   } catch {
     return false;
@@ -53,17 +44,19 @@ export async function lanPostSyncContractPropose(
 ): Promise<boolean> {
   const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/sync/contract/propose`;
   try {
-    const res = await fetchWithTimeout(
+    const res = await lanHttpRequest({
       url,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pending),
-      },
-      8000,
-    );
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pending),
+      timeoutMs: 8000,
+    });
+    if (!res.ok) {
+      logger.warn('[lanSyncContract] propose failed', res.status, baseUrl);
+    }
     return res.ok;
-  } catch {
+  } catch (e) {
+    logger.warn('[lanSyncContract] propose error', baseUrl, e);
     return false;
   }
 }
@@ -79,12 +72,20 @@ export async function pushSyncContractToLanPeers(
   let anyHost = false;
   const results = await Promise.all(
     remotes.map(async (d) => {
-      const host = (d.lanHost || '').trim();
-      if (!host) return false;
+      const hosts = await listCandidateHostsForDevice(d);
+      if (!hosts.length) return false;
       anyHost = true;
-      const base = co21LanBaseUrl(host);
-      if (!base) return false;
-      return lanPostSyncContractPropose(base, pending);
+      for (const host of hosts) {
+        const base = co21LanBaseUrl(host);
+        if (!base) continue;
+        const ok = await lanPostSyncContractPropose(base, pending);
+        if (ok) {
+          await rememberPeerLanHost(d.id, host);
+          await patchPeerLanHostInConnections(d.id, host);
+          return true;
+        }
+      }
+      return false;
     }),
   );
   if (!anyHost) return false;

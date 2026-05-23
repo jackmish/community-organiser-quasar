@@ -292,7 +292,9 @@ import { useQuasar } from 'quasar';
 import { appNotify } from 'src/utils/appNotify';
 import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
-import { jsonStringField, lanFetchInfo, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
+import { jsonStringField, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
+import { probeLanPeerInfo } from 'src/modules/lan/lanPeerConnectivity';
+import { isLanDebugCaptureActive, lanDebugNote } from 'src/modules/lan/lanDebugLog';
 import {
   loadOwnDeviceMeta,
   normalizeDeviceId,
@@ -331,7 +333,6 @@ import JoinMemberDialog from './JoinMemberDialog.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
-import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
 import {
   DEFAULT_SYNC_INTERVAL_SECONDS,
@@ -400,23 +401,19 @@ async function onCheckDevice(d: ConnectedDevice): Promise<void> {
   deviceCheckById[rowId] = 'checking';
   let successKey = rowId;
   try {
-    const host = (d.lanHost || '').trim();
-    if (!host) {
+    if (isLanDebugCaptureActive()) {
+      lanDebugNote(`Check ${d.name}`, `deviceId=${d.id} · lanHost=${(d.lanHost || '').trim() || '(none)'}`);
+    }
+    const probe = await probeLanPeerInfo(d, 8000);
+    if (!probe.ok || !probe.info) {
+      if (isLanDebugCaptureActive()) {
+        lanDebugNote(`Check failed`, `${d.name}: no reachable /info`);
+      }
       toast('warning', $text('connections.check_no_host'));
       deviceCheckById[rowId] = 'fail';
       return;
     }
-    const base = co21LanBaseUrl(host);
-    if (!base) {
-      toast('warning', $text('connections.check_no_host'));
-      deviceCheckById[rowId] = 'fail';
-      return;
-    }
-    const info = await lanFetchInfo(base, { timeoutMs: 8000 });
-    if (!info?.deviceId) {
-      deviceCheckById[rowId] = 'fail';
-      return;
-    }
+    const info = probe.info;
     const peerNorm = normalizeDeviceId(info.deviceId);
     const storedNorm = normalizeDeviceId(d.id);
     if (peerNorm !== storedNorm) {
@@ -440,7 +437,11 @@ async function onCheckDevice(d: ConnectedDevice): Promise<void> {
       toast('positive', $text('connections.check_toast_ok'));
     }
     deviceCheckById[successKey] = 'success';
-  } catch {
+  } catch (e: unknown) {
+    if (isLanDebugCaptureActive()) {
+      const msg = e instanceof Error ? e.message : String(e);
+      lanDebugNote(`Check error`, `${d.name}: ${msg}`);
+    }
     deviceCheckById[rowId] = 'fail';
   }
 }

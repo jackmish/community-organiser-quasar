@@ -1,5 +1,10 @@
 import { refreshLanServerForConnections } from './lanServerManager';
-import { isUsableLanHost, pickReachableLanHost } from './lanPairingHosts';
+import { isUsableLanHost } from './lanPairingHosts';
+import {
+  pickLanHostFromCandidates,
+  rememberPeerLanHost,
+  rememberPeerLanHostCandidates,
+} from './lanRemoteHost';
 import type { LanPairedDevicePayload } from './lanPairingUi';
 import {
   dedupeConnectedDevicesByPeerId,
@@ -29,7 +34,6 @@ export function sanitizeConnectionDevices(devices: ConnectedDevice[]): Connected
 
 /** Add or update a LAN peer after pairing (both initiator and acceptor). */
 export async function persistPairedLanDevice(payload: LanPairedDevicePayload): Promise<void> {
-  const lanHost = pickReachableLanHost([payload.lanHost]);
   const local = await loadOwnDeviceMeta();
   const loaded = await loadConnectedDevices();
   let devices = sanitizeConnectionDevices(mergeLocalDeviceIntoList(loaded, local));
@@ -37,23 +41,33 @@ export async function persistPairedLanDevice(payload: LanPairedDevicePayload): P
   const idx = devices.findIndex(
     (d) => !d.isLocal && normalizeDeviceId(d.id) === peerNorm,
   );
+  const prev = idx >= 0 ? devices[idx] : undefined;
+  const candidateList = [
+    ...(payload.lanHostCandidates ?? []),
+    payload.lanHost,
+    prev?.lanHost,
+  ];
+  let lanHost = pickLanHostFromCandidates(candidateList);
+  const prevHost = (prev?.lanHost || '').trim();
+  if (!lanHost && prevHost) lanHost = prevHost;
   const row: ConnectedDevice = {
     id: payload.id,
     name: payload.name || payload.id,
     type: payload.type || 'LAN',
-    syncIntervalSeconds: DEFAULT_SYNC_INTERVAL_SECONDS,
+    syncIntervalSeconds: prev?.syncIntervalSeconds ?? DEFAULT_SYNC_INTERVAL_SECONDS,
     ...(lanHost ? { lanHost } : {}),
   };
   if (idx >= 0) {
-    const prev = devices[idx]!;
     const updated: ConnectedDevice = { ...row };
-    if (prev.rolesByGroup && Object.keys(prev.rolesByGroup).length > 0) {
+    if (prev?.rolesByGroup && Object.keys(prev.rolesByGroup).length > 0) {
       updated.rolesByGroup = { ...prev.rolesByGroup };
     }
     devices = devices.map((d, i) => (i === idx ? updated : d));
   } else {
     devices = [...devices, row];
   }
+  if (candidateList.length) await rememberPeerLanHostCandidates(payload.id, candidateList);
+  else if (lanHost) await rememberPeerLanHost(payload.id, lanHost);
   devices = dedupeConnectedDevicesByPeerId(devices);
   await saveConnectedDevices(devices);
   const settings = await loadCo21Settings();

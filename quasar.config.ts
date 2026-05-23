@@ -3,7 +3,8 @@
 
 import { defineConfig } from '#q-app/wrappers';
 
-export default defineConfig((/* ctx */) => {
+export default defineConfig((ctx) => {
+  const co21LanDebug = ctx.dev || ctx.debug ? '1' : '0';
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -11,7 +12,7 @@ export default defineConfig((/* ctx */) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['deviceId', 'pinia', 'locale'],
+    boot: ['deviceId', 'pinia', 'locale', 'co21LanServer', 'co21LanDebug'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -52,7 +53,9 @@ export default defineConfig((/* ctx */) => {
 
       // publicPath: '/',
       // analyze: true,
-      // env: {},
+      env: {
+        CO21_LAN_DEBUG: co21LanDebug,
+      },
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
@@ -79,7 +82,10 @@ export default defineConfig((/* ctx */) => {
         viteConf.css = viteConf.css || {};
         // enable CSS dev sourcemaps so browser inspector can map rules back to SCSS files
         (viteConf.css as any).devSourcemap = true;
-        // no additional Vite watch configuration here
+        viteConf.define = {
+          ...(typeof viteConf.define === 'object' ? viteConf.define : {}),
+          'import.meta.env.CO21_LAN_DEBUG': JSON.stringify(co21LanDebug),
+        };
       },
     },
 

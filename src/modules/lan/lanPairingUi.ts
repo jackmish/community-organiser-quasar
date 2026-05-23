@@ -1,5 +1,7 @@
 import { jsonStringField } from './lanPairingClient';
+import { parseCapacitorStringArray } from './lanCapacitorPayload';
 import { pickReachableLanHost, parseLanReachableAddresses } from './lanPairingHosts';
+import { pickLanHostFromCandidates } from './lanRemoteHost';
 
 /** Pending LAN pairing request shown in the Wi‑Fi / LAN pairing dialog. */
 export type LanPendingDetail = {
@@ -19,6 +21,8 @@ export type LanPairedDevicePayload = {
   name: string;
   type: string;
   lanHost: string;
+  /** All LAN IPs seen at pair time (desktop may expose several adapters). */
+  lanHostCandidates?: string[];
   appVersion?: string;
 };
 
@@ -53,7 +57,7 @@ export function parseLanPendingDetail(raw: Record<string, unknown>): LanPendingD
   if (ver) detail.remoteAppVersion = ver;
   const addr = jsonStringField(raw.remoteAddress, '');
   if (addr) detail.remoteAddress = addr;
-  const addrs = parseLanReachableAddresses(raw.remoteLanAddresses);
+  const addrs = parseCapacitorStringArray(raw.remoteLanAddresses);
   if (addrs.length) detail.remoteLanAddresses = addrs;
   return detail;
 }
@@ -63,16 +67,18 @@ export function parseLanPairedPayload(raw: Record<string, unknown>): LanPairedDe
   const id =
     jsonStringField(raw.id, '').trim() || jsonStringField(raw.deviceId, '').trim();
   if (!id) return null;
-  const lanHost = pickReachableLanHost([
+  const candidates = parseLanReachableAddresses([
     ...parseLanReachableAddresses(raw.lanReachableAddresses),
     ...parseLanReachableAddresses(raw.lanAddresses),
     jsonStringField(raw.lanHost, ''),
   ]);
+  const lanHost = pickReachableLanHost(candidates);
   const row: LanPairedDevicePayload = {
     id,
     name: jsonStringField(raw.name, '') || jsonStringField(raw.deviceName, id),
     type: jsonStringField(raw.type, 'LAN') || 'LAN',
     lanHost,
+    ...(candidates.length ? { lanHostCandidates: candidates } : {}),
   };
   const ver = jsonStringField(raw.appVersion, '');
   if (ver) row.appVersion = ver;
@@ -93,15 +99,17 @@ export function dispatchLanPairingPending(detail: LanPendingDetail): void {
 }
 
 export function buildLanPairedPayloadFromPending(p: LanPendingDetail): LanPairedDevicePayload {
-  const lanHost = pickReachableLanHost([
+  const candidates = parseLanReachableAddresses([
     ...(p.remoteLanAddresses ?? []),
     p.remoteAddress,
   ]);
+  const lanHost = pickLanHostFromCandidates(candidates);
   const row: LanPairedDevicePayload = {
     id: p.remoteDeviceId,
     name: p.remoteName,
     type: 'LAN',
     lanHost,
+    ...(candidates.length ? { lanHostCandidates: candidates } : {}),
   };
   if (p.remoteAppVersion) row.appVersion = p.remoteAppVersion;
   return row;
@@ -112,11 +120,16 @@ export function buildLanPairedFromPollPeer(
   peer: { deviceId: string; deviceName: string; appVersion?: string; lanAddresses?: string[] },
   remoteHostHint: string,
 ): LanPairedDevicePayload {
+  const candidates = parseLanReachableAddresses([
+    ...(peer.lanAddresses ?? []),
+    remoteHostHint,
+  ]);
   const row: LanPairedDevicePayload = {
     id: peer.deviceId.trim(),
     name: (peer.deviceName || '').trim() || peer.deviceId,
     type: 'LAN',
     lanHost: pickLanHostFromPeer(peer, remoteHostHint),
+    ...(candidates.length ? { lanHostCandidates: candidates } : {}),
   };
   if (peer.appVersion) row.appVersion = peer.appVersion;
   return row;

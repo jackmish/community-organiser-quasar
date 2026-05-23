@@ -376,9 +376,7 @@ onMounted(async () => {
     const loaded = await loadConnectedDevices();
     return mergeLocalDeviceIntoList(loaded, local);
   });
-  if ((window as Window & { electronLan?: unknown }).electronLan) {
-    startLanDataSyncScheduler();
-  }
+  startLanDataSyncScheduler();
   window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
   window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
   window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);

@@ -7,23 +7,11 @@ import {
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
 import { reconcileLanDeviceIds } from './lanDeviceReconcile';
+import { getCo21LanApi } from './co21LanRuntime';
 import logger from 'src/utils/logger';
 
-type ElectronLan = {
-  startServer?: (identity: {
-    deviceId: string;
-    deviceName: string;
-    appVersion: string;
-  }) => Promise<{ ok?: boolean; error?: string; addresses?: string[] }>;
-  stopServer?: () => Promise<unknown>;
-  status?: () => Promise<{ listening?: boolean; addresses?: string[] }>;
-  setTrustedContractDevices?: (
-    peers: Array<string | { deviceId: string; lanHost?: string }>,
-  ) => Promise<unknown>;
-};
-
-function electronLan(): ElectronLan | undefined {
-  return (window as Window & { electronLan?: ElectronLan }).electronLan;
+function co21Lan() {
+  return getCo21LanApi();
 }
 
 /** Default on: keep LAN server ready for sync contracts from paired devices. */
@@ -55,7 +43,7 @@ export function registeredRemoteLanPeers(
 
 /** Tell main process which peers may POST sync contracts (empty = allow any). */
 export async function syncLanTrustedContractDevices(devices: ConnectedDevice[]): Promise<void> {
-  const elan = electronLan();
+  const elan = co21Lan();
   if (!elan?.setTrustedContractDevices) return;
   const peers = registeredRemoteLanPeers(devices);
   try {
@@ -66,7 +54,7 @@ export async function syncLanTrustedContractDevices(devices: ConnectedDevice[]):
 }
 
 export async function isLanServerListening(): Promise<boolean> {
-  const elan = electronLan();
+  const elan = co21Lan();
   if (!elan?.status) return false;
   try {
     const s = await elan.status();
@@ -84,9 +72,9 @@ export async function ensureLanServerForSync(
   ownDeviceName: string,
   opts?: { force?: boolean; restart?: boolean },
 ): Promise<{ listening: boolean; error?: string }> {
-  const elan = electronLan();
+  const elan = co21Lan();
   if (!elan?.startServer) {
-    return { listening: false, error: 'not_electron' };
+    return { listening: false, error: 'not_native' };
   }
 
   const autoListen = opts?.force ? true : await loadLanAutoListen();

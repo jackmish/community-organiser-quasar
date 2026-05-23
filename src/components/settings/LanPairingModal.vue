@@ -283,6 +283,7 @@ import {
 import { isUsableLanHost, parseLanReachableAddresses } from 'src/modules/lan/lanPairingHosts';
 import { persistPairedLanDevice } from 'src/modules/lan/lanPairingRegister';
 import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
+import { hasCo21LanServer } from 'src/modules/lan/co21LanRuntime';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
@@ -306,10 +307,7 @@ const port = CO21_LAN_PAIRING_PORT;
 const showQrCameraButton = canUseLanQrCamera();
 
 const hasElectronLan = computed(
-  () =>
-    typeof window !== 'undefined' &&
-    !!(window as unknown as { electronLan?: { startServer?: unknown; browseCo21?: unknown } })
-      .electronLan?.startServer,
+  () => typeof window !== 'undefined' && hasCo21LanServer(),
 );
 
 /** Desktop Electron: host QR/Bonjour + accept incoming. Phone/tablet: connect-to-PC only. */
@@ -432,6 +430,18 @@ async function acceptIncoming(): Promise<void> {
       return;
     }
     const localPayload = buildLanPairedPayloadFromPending(p);
+    const { rememberPeerLanHostCandidates } = await import('src/modules/lan/lanRemoteHost');
+    const hostCandidates = [
+      ...(localPayload.lanHostCandidates ?? []),
+      localPayload.lanHost,
+      ...parseLanReachableAddresses([
+        ...(p.remoteLanAddresses ?? []),
+        p.remoteAddress,
+      ]),
+    ];
+    if (hostCandidates.length) {
+      await rememberPeerLanHostCandidates(localPayload.id, hostCandidates);
+    }
     void notifyProposerWeAccepted(p);
     await completePairing(localPayload);
     incomingPending.value = null;

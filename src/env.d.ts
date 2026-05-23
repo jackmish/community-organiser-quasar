@@ -5,3 +5,11 @@ declare namespace NodeJS {
     VUE_ROUTER_BASE: string | undefined;
   }
 }
+
+interface ImportMetaEnv {
+  readonly CO21_LAN_DEBUG: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

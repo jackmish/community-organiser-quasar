@@ -7,7 +7,9 @@ import {
   probeLanPeerInfo,
 } from 'src/modules/lan/lanPeerConnectivity';
 import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
-import { syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager';
+import { prepareRemotesForLanOps } from 'src/modules/lan/lanRemoteHost';
+import { ensureLanServerForSync, syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager';
+import { loadCo21Settings } from './roleProfileSettings';
 import { loadActiveContractForSync } from './syncContractSettings';
 import {
   loadConnectedDevices,
@@ -64,13 +66,20 @@ export function scheduleLanSyncAfterOrganiserChange(): void {
 /** GET /info + device-id reconcile (background only — never blocks UI). */
 async function runLanStartupProbeAndReconcile(): Promise<void> {
   if (isPresentationModeActive()) return;
-  if (!(window as Window & { electronLan?: unknown }).electronLan) return;
   if (!(await loadActiveContractForSync())) return;
+
+  const local = await loadOwnDeviceMeta();
+  const settings = await loadCo21Settings();
+  const ownName =
+    typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName.trim() : local.name;
+  await ensureLanServerForSync(ownName || local.name);
+
+  await prepareRemotesForLanOps({ persistHosts: true });
 
   const probes = await probeAllLanPeers(LAN_INFO_PROBE_MS);
   try {
-    const local = await loadOwnDeviceMeta();
-    const devices = mergeLocalDeviceIntoList(await loadConnectedDevices(), local);
+    const local2 = await loadOwnDeviceMeta();
+    const devices = mergeLocalDeviceIntoList(await loadConnectedDevices(), local2);
     const { devices: reconciled, repaired } = await reconcileLanDeviceIds(devices, {
       probeResults: probes,
     });
@@ -89,7 +98,6 @@ async function runLanStartupProbeAndReconcile(): Promise<void> {
  */
 export function scheduleBackgroundLanSyncAfterDisplay(): void {
   if (isPresentationModeActive()) return;
-  if (!(window as Window & { electronLan?: unknown }).electronLan) return;
   void withOrganiserSyncTriggerSuppressed(async () => {
     await runLanStartupProbeAndReconcile();
     await runLanSyncForConfirmedPeers();
@@ -118,12 +126,11 @@ export function stopLanPeerReconnectScheduler(): void {
 async function tickLanPeerReconnect(): Promise<void> {
   if (reconnectTickRunning || syncRunning || suppressCount > 0) return;
   if (isPresentationModeActive()) return;
-  if (!(window as Window & { electronLan?: unknown }).electronLan) return;
   if (!(await loadActiveContractForSync())) return;
 
   reconnectTickRunning = true;
   try {
-    const remotes = await listRemoteLanDevices();
+    const remotes = await prepareRemotesForLanOps({ persistHosts: false });
     if (!remotes.length) return;
 
     const states = await loadSyncPeerStates();
@@ -193,7 +200,7 @@ async function runLanSyncForAllPeers(opts?: { exchangeTimeoutMs?: number }): Pro
   try {
     if (!(await loadActiveContractForSync())) return;
 
-    const remotes = await listRemoteLanDevices();
+    const remotes = await prepareRemotesForLanOps({ persistHosts: true });
     if (!remotes.length) return;
 
     const exchangeTimeoutMs = opts?.exchangeTimeoutMs ?? SYNC_EXCHANGE_MS;
