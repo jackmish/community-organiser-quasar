@@ -61,6 +61,8 @@
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
+import { rolePrivilegeSelectOptions } from 'src/modules/storage/sync/RoleModel';
+import { labelRolePrivilege } from 'src/modules/storage/sync/rolePrivilegeLabels';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
@@ -105,11 +107,7 @@ const accessRangeOptions = computed(() => [
   { label: $text('role.range_all'), value: 'max' },
 ]);
 
-const privilegeOptions = computed(() => [
-  { label: $text('role.priv_show'), value: 'preview' },
-  { label: $text('role.priv_edit'), value: 'edit' },
-  { label: $text('role.priv_owner'), value: 'full' },
-]);
+const privilegeOptions = computed(() => rolePrivilegeSelectOptions(labelRolePrivilege));
 
 function onSave() {
   if (!name.value.trim()) return;

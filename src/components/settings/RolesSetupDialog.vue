@@ -169,6 +169,8 @@ import { Notify } from 'quasar';
 import type { QInput } from 'quasar';
 import { $text } from 'src/modules/lang';
 import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
+import { rolePrivilegeSelectOptions } from 'src/modules/storage/sync/RoleModel';
+import { labelRolePrivilege } from 'src/modules/storage/sync/rolePrivilegeLabels';
 import {
   createRoleProfile,
   type FunctionAccessRule,
@@ -227,11 +229,7 @@ const rangeOptions = computed(() => [
   { label: $text('role.range_all'), value: 'max' as AccessRange },
 ]);
 
-const privilegeOptions = computed(() => [
-  { label: $text('role.priv_show'), value: 'preview' as RolePrivilege },
-  { label: $text('role.priv_edit'), value: 'edit' as RolePrivilege },
-  { label: $text('role.priv_owner'), value: 'full' as RolePrivilege },
-]);
+const privilegeOptions = computed(() => rolePrivilegeSelectOptions(labelRolePrivilege));
 
 const functionRows = computed(() =>
   ROLE_FUNCTION_IDS.map((id) => ({

@@ -37,7 +37,7 @@ function parseAccessRange(v: unknown): AccessRange | null {
 }
 
 function parsePrivilege(v: unknown): RolePrivilege | null {
-  if (v === 'preview' || v === 'edit' || v === 'full') return v;
+  if (v === 'preview' || v === 'work' || v === 'edit' || v === 'full') return v;
   return null;
 }
 

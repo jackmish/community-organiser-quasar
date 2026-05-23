@@ -151,7 +151,8 @@ const emit = defineEmits<{
 }>();
 
 const pendingDeleteId = ref<string | null>(null);
-const privilegeMode = ref<'preview' | 'edit' | 'remove'>('edit');
+/** Weakest → strongest: preview, then edit, then remove. */
+const privilegeMode = ref<'preview' | 'edit' | 'remove'>('preview');
 
 const iconAlias: Record<string, string> = {
   house: 'home',

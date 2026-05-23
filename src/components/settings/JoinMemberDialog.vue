@@ -37,34 +37,6 @@
               : 'join-member-roles-col column join-member-roles-panel'
           "
         >
-          <SyncDialogBanner
-            v-if="showIncomingContract"
-            class="q-mb-sm"
-            icon="sync"
-            :message="incomingContractMessage"
-            :button-label="$text('sync.incoming_review_btn')"
-            :mobile="isMobile"
-            @action="openIncomingContractReview"
-          />
-          <SyncDialogBanner
-            v-else-if="hasPendingSendAction"
-            class="q-mb-sm"
-            icon="hourglass_top"
-            :message="$text('sync.pending_send_banner')"
-            :button-label="pendingActionsMenuLabel"
-            :mobile="isMobile"
-            @action="openPendingActionsDialog"
-          />
-          <SyncDialogBanner
-            v-else-if="hasPendingChanges"
-            class="q-mb-sm"
-            icon="sync"
-            :message="$text('sync.confirm_pending_banner')"
-            :button-label="$text('sync.confirm_changes_btn')"
-            :mobile="isMobile"
-            @action="startConfirmChanges"
-          />
-
           <div class="join-member-assignment-surface column col">
           <div
             v-if="selectedGroupName"
@@ -228,7 +200,37 @@
         </div>
       </q-card-section>
 
-      <q-card-actions align="right">
+      <q-card-section
+        v-if="showIncomingContract || hasPendingSendAction || hasPendingChanges"
+        class="q-pt-none join-member-dialog__footer-banner"
+      >
+        <SyncDialogBanner
+          v-if="showIncomingContract"
+          icon="sync"
+          :message="incomingContractMessage"
+          :button-label="$text('sync.incoming_review_btn')"
+          :mobile="isMobile"
+          @action="openIncomingContractReview"
+        />
+        <SyncDialogBanner
+          v-else-if="hasPendingSendAction"
+          icon="hourglass_top"
+          :message="$text('sync.pending_send_banner')"
+          :button-label="pendingActionsMenuLabel"
+          :mobile="isMobile"
+          @action="openPendingActionsDialog"
+        />
+        <SyncDialogBanner
+          v-else-if="hasPendingChanges"
+          icon="sync"
+          :message="$text('sync.confirm_pending_banner')"
+          :button-label="$text('sync.confirm_changes_btn')"
+          :mobile="isMobile"
+          @action="startConfirmChanges"
+        />
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pt-none">
         <q-btn flat :label="$text('action.close')" color="primary" @click="dialogVisible = false" />
       </q-card-actions>
     </q-card>
@@ -275,10 +277,8 @@ import {
 import GroupTreeSelector from 'src/modules/group/components/GroupTreeSelector.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
-
-const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
-  useSettingsDialogLayout(720, 920);
-import type { AccessRange, RolePrivilege } from 'src/modules/storage/sync/RoleModel';
+import type { AccessRange } from 'src/modules/storage/sync/RoleModel';
+import { labelRolePrivilege } from 'src/modules/storage/sync/rolePrivilegeLabels';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import { saveConnectionsRegistry } from 'src/modules/storage/sync/connectionsDeviceStorage';
@@ -296,6 +296,9 @@ import {
   type ConnectedDevice,
   type GroupRecord,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle, isMobile } =
+  useSettingsDialogLayout(720, 920);
 
 const props = defineProps<{
   modelValue: boolean;
@@ -434,12 +437,6 @@ function labelRange(r: AccessRange): string {
   return $text('role.range_all');
 }
 
-function labelPriv(p: RolePrivilege): string {
-  if (p === 'preview') return $text('role.priv_show');
-  if (p === 'edit') return $text('role.priv_edit');
-  return $text('role.priv_owner');
-}
-
 function labelFunction(functionId: RoleFunctionId): string {
   const key = `func.${functionId}`;
   const t = $text(key);
@@ -451,7 +448,7 @@ function roleAccessTooltip(role: RoleProfileData): string {
   const lines = [labelRange(role.accessRange)];
   for (const f of syncFunctionAccess(role.functionAccess)) {
     if (f.enabled) {
-      lines.push(`${labelFunction(f.functionId)}: ${labelPriv(f.privilege)}`);
+      lines.push(`${labelFunction(f.functionId)}: ${labelRolePrivilege(f.privilege)}`);
     }
   }
   if (lines.length === 1) {
@@ -576,7 +573,11 @@ function ensureGroupSelected(): void {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.join-member-dialog__footer-banner {
+  flex: 0 0 auto;
+  width: 100%;
+}
 .join-member-role-card__title {
   color: rgba(0, 0, 0, 0.87);
 }

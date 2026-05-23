@@ -7,14 +7,15 @@
  *   child  — access includes the selected group and its direct children
  *   single — access limited to the single selected group only
  *
- * Privilege:
- *   preview — read-only view
- *   edit    — can add/modify tasks
- *   full    — full control (create sub-groups, delete, manage roles)
+ * Privilege (weakest → strongest):
+ *   preview — read-only view, no task status changes
+ *   work    — operate assigned work (e.g. task status), no create/delete tasks or group admin
+ *   edit    — create/edit/remove tasks on that function; not group structure / members
+ *   full    — full control on that function (groups, connections, etc.)
  */
 
 export type AccessRange = 'max' | 'child' | 'single';
-export type RolePrivilege = 'preview' | 'edit' | 'full';
+export type RolePrivilege = 'preview' | 'work' | 'edit' | 'full';
 
 export interface RoleData {
   id: string;
@@ -32,9 +33,27 @@ export interface RoleData {
 /** Numeric rank for each privilege level (higher = more access). */
 export const PRIVILEGE_ORDER: Record<RolePrivilege, number> = {
   preview: 1,
-  edit: 2,
-  full: 3,
+  work: 2,
+  edit: 3,
+  full: 4,
 };
+
+/** Default privilege levels weakest → strongest (for selects and option groups). */
+export const ROLE_PRIVILEGE_LEVELS: readonly RolePrivilege[] = [
+  'preview',
+  'work',
+  'edit',
+  'full',
+];
+
+export function rolePrivilegeSelectOptions(
+  labelPriv: (p: RolePrivilege) => string,
+): { label: string; value: RolePrivilege }[] {
+  return ROLE_PRIVILEGE_LEVELS.map((value) => ({
+    value,
+    label: labelPriv(value),
+  }));
+}
 
 /** Numeric rank for each access range (higher = more access). */
 export const RANGE_ORDER: Record<AccessRange, number> = {
@@ -53,9 +72,9 @@ export function roleAccessScore(privilege: RolePrivilege, accessRange: AccessRan
 
 /**
  * Score for the implicit "Creator" default (no explicit role set on the group).
- * Equals full(3)*10 + max(3) = 33, the maximum explicit slot.
+ * Equals full(4)*10 + max(3) = 43, the maximum explicit slot.
  */
-export const CREATOR_ACCESS_SCORE = 33;
+export const CREATOR_ACCESS_SCORE = 43;
 
 // ── Change detection ─────────────────────────────────────────────────────────
 

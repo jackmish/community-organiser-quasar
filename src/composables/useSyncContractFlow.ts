@@ -6,7 +6,7 @@ import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import {
   buildSyncContractPreview,
   buildSyncContractSnapshot,
-  hasSnapshotChanges,
+  hasMeaningfulContractChanges,
   type SyncContractPreview,
 } from 'src/modules/storage/sync/syncContractPreview';
 import {
@@ -80,12 +80,13 @@ export function useSyncContractFlow() {
   }
 
   function hasChanges(devices: ConnectedDevice[], profiles: RoleProfileData[]): boolean {
+    if (!baselineSnapshot) return false;
     const current = buildSyncContractSnapshot(
       devices,
       profiles,
       confirmDuplicateResolution.value,
     );
-    return hasSnapshotChanges(baselineSnapshot, current);
+    return hasMeaningfulContractChanges(baselineSnapshot, current, devices);
   }
 
   function defaultIntervalFromDevices(devices: ConnectedDevice[]): number {
@@ -105,7 +106,7 @@ export function useSyncContractFlow() {
       confirmDuplicateResolution.value,
     );
     const previous = baselineSnapshot;
-    if (!hasSnapshotChanges(previous, current)) {
+    if (!hasMeaningfulContractChanges(previous, current, devices)) {
       return false;
     }
 

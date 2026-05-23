@@ -14,8 +14,6 @@ import { $text } from 'src/modules/lang';
 import { SYNC_BASELINE_RESTORE_EVENT } from 'src/modules/storage/sync/syncContractUi';
 import {
   loadActiveContractForSync,
-  loadLastContractSnapshot,
-  normalizeSyncDuplicateResolution,
   saveSyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import {
@@ -54,16 +52,10 @@ export function useSyncContractInDialog(
     return sync.hasChanges(devices.value, roleProfiles.value);
   });
 
+  /** Snapshot current assignments so the banner only appears after edits in this session. */
   async function captureBaseline(): Promise<void> {
-    const last = await loadLastContractSnapshot();
-    if (last?.duplicateResolution) {
-      sync.confirmDuplicateResolution.value = normalizeSyncDuplicateResolution(
-        last.duplicateResolution,
-      );
-    } else {
-      await sync.initDuplicateResolutionFromSettings();
-    }
-    sync.captureBaselineFrom(devices.value, roleProfiles.value, last);
+    await sync.initDuplicateResolutionFromSettings();
+    sync.captureBaselineFrom(devices.value, roleProfiles.value, null);
   }
 
   async function startConfirmChanges(): Promise<void> {
@@ -129,6 +121,7 @@ export function useSyncContractInDialog(
       }
     }
     sync.onPreviewAcceptedPending();
+    sync.captureBaselineFrom(devices.value, roleProfiles.value, null);
     await refreshPendingSend();
   }
 

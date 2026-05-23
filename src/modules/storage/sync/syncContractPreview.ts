@@ -17,6 +17,7 @@ import {
   type ConnectedDevice,
   type GroupRecord,
 } from './deviceRoleAssignment';
+import { labelRolePrivilege } from './rolePrivilegeLabels';
 
 export type SyncGroupVisual = {
   id: string;
@@ -57,12 +58,6 @@ export type AssignmentChangeLine = {
   fromLabel: string;
   toLabel: string;
 };
-
-function labelPriv(p: RolePrivilege): string {
-  if (p === 'preview') return $text('role.priv_show');
-  if (p === 'edit') return $text('role.priv_edit');
-  return $text('role.priv_owner');
-}
 
 function labelRange(r: AccessRange): string {
   if (r === 'single') return $text('role.range_strict');
@@ -151,7 +146,7 @@ function labelExplicitAccess(
 ): string {
   const eff = resolveEffectiveRole({ ...device, rolesByGroup }, groups, profiles, groupId);
   if (!eff) return $text('sync.contract_no_access');
-  return `${eff.roleName} (${labelPriv(eff.privilege)})`;
+  return `${eff.roleName} (${labelRolePrivilege(eff.privilege)})`;
 }
 
 export function buildSyncContractSnapshot(
@@ -183,9 +178,47 @@ export function buildSyncContractSnapshot(
   };
 }
 
+function sortRolesByGroup(rolesByGroup: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const gid of Object.keys(rolesByGroup).sort()) {
+    out[gid] = rolesByGroup[gid]!;
+  }
+  return out;
+}
+
+/** Contract terms only (ignores volatile fields like savedAt / profile updatedAt / device display names). */
+function normalizeContractSnapshotForCompare(snap: SyncContractSnapshot) {
+  return {
+    duplicateResolution: normalizeSyncDuplicateResolution(snap.duplicateResolution),
+    devices: [...snap.devices]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((d) => ({
+        id: d.id,
+        rolesByGroup: sortRolesByGroup(d.rolesByGroup ?? {}),
+      })),
+    roleProfiles: [...snap.roleProfiles]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        accessRange: p.accessRange,
+        functionAccess: [...p.functionAccess]
+          .sort((a, b) => a.functionId.localeCompare(b.functionId))
+          .map((f) => ({
+            functionId: f.functionId,
+            enabled: f.enabled,
+            privilege: f.privilege,
+          })),
+      })),
+  };
+}
+
 function snapshotsEqual(a: SyncContractSnapshot | null, b: SyncContractSnapshot): boolean {
   if (!a) return false;
-  return JSON.stringify(a) === JSON.stringify(b);
+  return (
+    JSON.stringify(normalizeContractSnapshotForCompare(a)) ===
+    JSON.stringify(normalizeContractSnapshotForCompare(b))
+  );
 }
 
 export function hasSnapshotChanges(
@@ -193,6 +226,20 @@ export function hasSnapshotChanges(
   current: SyncContractSnapshot,
 ): boolean {
   return !snapshotsEqual(previous, current);
+}
+
+/**
+ * True when there are sync-contract terms to propose to remote device(s):
+ * role assignments, role definitions, or duplicate-handling — not snapshot timestamps.
+ */
+export function hasMeaningfulContractChanges(
+  previous: SyncContractSnapshot | null,
+  current: SyncContractSnapshot,
+  devices: ConnectedDevice[],
+): boolean {
+  if (!previous) return false;
+  if (!devices.some((d) => !d.isLocal)) return false;
+  return hasSnapshotChanges(previous, current);
 }
 
 export function computeAssignmentChanges(
@@ -250,8 +297,18 @@ export function computeProfilePrivilegeChanges(
     const oldScore = profileScore(oldProfile);
     const newScore = profileScore(newProfile);
     if (oldScore === newScore) continue;
-    const fromLabel = roleProfileSummaryLabel(oldProfile, labelRange, labelPriv, labelFunction);
-    const toLabel = roleProfileSummaryLabel(newProfile, labelRange, labelPriv, labelFunction);
+    const fromLabel = roleProfileSummaryLabel(
+      oldProfile,
+      labelRange,
+      labelRolePrivilege,
+      labelFunction,
+    );
+    const toLabel = roleProfileSummaryLabel(
+      newProfile,
+      labelRange,
+      labelRolePrivilege,
+      labelFunction,
+    );
     changes.push({
       roleName: cur.name,
       changeType: newScore < oldScore ? 'reduction' : 'extension',
@@ -267,7 +324,7 @@ export function computeProfilePrivilegeChanges(
         fromLabel: roleProfileSummaryLabel(
           snapshotProfileToData(prev),
           labelRange,
-          labelPriv,
+          labelRolePrivilege,
           labelFunction,
         ),
         toLabel: $text('sync.contract_role_removed'),

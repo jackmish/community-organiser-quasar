@@ -12,7 +12,7 @@ import type { FunctionAccessRule, GroupAccessRule, RoleProfileData } from './Rol
 import { migrateLegacyGroupAccess } from './RoleProfileModel';
 
 import { ROLE_FUNCTION_IDS, syncFunctionAccess, type RoleFunctionId } from './roleFunctionCatalog';
-import { ensureDefaultRoleProfiles } from './defaultRoleProfiles';
+import { ensureDefaultRoleProfiles, syncBuiltInRoleProfileTemplates } from './defaultRoleProfiles';
 
 function isRoleFunctionId(id: string): id is RoleFunctionId {
   return (ROLE_FUNCTION_IDS as readonly string[]).includes(id);
@@ -99,7 +99,14 @@ function parseFunctionAccess(raw: unknown): FunctionAccessRule[] {
 
     const privilege = o.privilege;
 
-    if (privilege !== 'preview' && privilege !== 'edit' && privilege !== 'full') continue;
+    if (
+      privilege !== 'preview' &&
+      privilege !== 'work' &&
+      privilege !== 'edit' &&
+      privilege !== 'full'
+    ) {
+      continue;
+    }
 
     rules.push({
 
@@ -141,7 +148,14 @@ function parseLegacyGroupAccess(raw: unknown): GroupAccessRule[] {
 
     if (accessRange !== 'single' && accessRange !== 'child' && accessRange !== 'max') continue;
 
-    if (privilege !== 'preview' && privilege !== 'edit' && privilege !== 'full') continue;
+    if (
+      privilege !== 'preview' &&
+      privilege !== 'work' &&
+      privilege !== 'edit' &&
+      privilege !== 'full'
+    ) {
+      continue;
+    }
 
     groupAccess.push({
 
@@ -239,8 +253,12 @@ export async function loadCo21Settings(): Promise<SettingsJson> {
 export async function loadRoleProfiles(): Promise<RoleProfileData[]> {
   const data = await readSettingsFile();
   const parsed = parseProfiles(data?.roleProfiles);
-  const profiles = ensureDefaultRoleProfiles(parsed);
+  let profiles = ensureDefaultRoleProfiles(parsed);
+  const synced = syncBuiltInRoleProfileTemplates(profiles);
+  profiles = synced.profiles;
   if (!parsed.length && profiles.length > 0) {
+    await saveRoleProfiles(profiles);
+  } else if (synced.changed) {
     await saveRoleProfiles(profiles);
   }
   return profiles;

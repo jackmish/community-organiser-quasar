@@ -6,12 +6,13 @@ import {
 } from './co21SettingsPersistence';
 import { getSuggestedHostDeviceLabel } from './hostDeviceLabel';
 import type { AccessRange, RolePrivilege } from './RoleModel';
-import { PRIVILEGE_ORDER } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
 import { loadCo21Settings } from './roleProfileSettings';
 import { deviceId } from './deviceId';
 import {
   maxPrivilegeFromProfile,
+  roleProfileStrengthScore,
+  sortRoleProfilesByStrength,
   roleHasEnabledFunctions,
   type RoleFunctionId,
 } from './roleFunctionCatalog';
@@ -98,9 +99,9 @@ export function pickDefaultRestrictiveRoleProfile(profiles: RoleProfileData[]): 
   const applicable = profiles.filter((p) => roleHasEnabledFunctions(p));
   if (!applicable.length) return null;
   let best = applicable[0]!;
-  let bestScore = PRIVILEGE_ORDER[maxPrivilegeFromProfile(best)];
+  let bestScore = roleProfileStrengthScore(best);
   for (const p of applicable) {
-    const score = PRIVILEGE_ORDER[maxPrivilegeFromProfile(p)];
+    const score = roleProfileStrengthScore(p);
     if (score < bestScore) {
       bestScore = score;
       best = p;
@@ -110,9 +111,7 @@ export function pickDefaultRestrictiveRoleProfile(profiles: RoleProfileData[]): 
 }
 
 export function sortRolesByRestrictiveness(profiles: RoleProfileData[]): RoleProfileData[] {
-  return [...profiles].filter((p) => roleHasEnabledFunctions(p)).sort((a, b) => {
-    return PRIVILEGE_ORDER[maxPrivilegeFromProfile(a)] - PRIVILEGE_ORDER[maxPrivilegeFromProfile(b)];
-  });
+  return sortRoleProfilesByStrength(profiles);
 }
 
 /** Persist the user's label for this PC/phone (Connections → Your device name → Save). */

@@ -39,7 +39,7 @@ function profile(
   return { id, name, accessRange, functionAccess, createdAt: now, updatedAt: now };
 }
 
-/** Four starter roles shown when none exist in settings yet. */
+/** Four starter roles (weakest → strongest): Infoscreen, Task taker, Editor, Owner. */
 export function createDefaultRoleProfiles(): RoleProfileData[] {
   const now = Date.now();
   return [
@@ -62,10 +62,10 @@ export function createDefaultRoleProfiles(): RoleProfileData[] {
       'child',
       buildFunctionAccess({
         tasks: { enabled: true, privilege: 'edit' },
-        groups: { enabled: true, privilege: 'edit' },
+        groups: { enabled: true, privilege: 'preview' },
         calendar: { enabled: true, privilege: 'edit' },
         connections: { enabled: true, privilege: 'preview' },
-        community: { enabled: true, privilege: 'edit' },
+        community: { enabled: true, privilege: 'preview' },
       }),
       now,
     ),
@@ -74,7 +74,7 @@ export function createDefaultRoleProfiles(): RoleProfileData[] {
       'Task taker',
       'child',
       buildFunctionAccess({
-        tasks: { enabled: true, privilege: 'edit' },
+        tasks: { enabled: true, privilege: 'work' },
         groups: { enabled: true, privilege: 'preview' },
         calendar: { enabled: true, privilege: 'preview' },
       }),
@@ -83,7 +83,7 @@ export function createDefaultRoleProfiles(): RoleProfileData[] {
     profile(
       DEFAULT_ROLE_PROFILE_IDS.infoscreen,
       'Infoscreen',
-      'single',
+      'child',
       buildFunctionAccess({
         tasks: { enabled: true, privilege: 'preview' },
         calendar: { enabled: true, privilege: 'preview' },
@@ -97,4 +97,30 @@ export function createDefaultRoleProfiles(): RoleProfileData[] {
 export function ensureDefaultRoleProfiles(existing: RoleProfileData[]): RoleProfileData[] {
   if (existing.length > 0) return existing;
   return createDefaultRoleProfiles();
+}
+
+/** Refresh built-in role templates (keeps custom roles and names). */
+export function syncBuiltInRoleProfileTemplates(profiles: RoleProfileData[]): {
+  profiles: RoleProfileData[];
+  changed: boolean;
+} {
+  const templates = new Map(createDefaultRoleProfiles().map((p) => [p.id, p]));
+  let changed = false;
+  const out = profiles.map((p) => {
+    const tpl = templates.get(p.id);
+    if (!tpl) return p;
+    const nextAccess = tpl.functionAccess;
+    const accessSame =
+      JSON.stringify(p.functionAccess) === JSON.stringify(nextAccess) &&
+      p.accessRange === tpl.accessRange;
+    if (accessSame) return p;
+    changed = true;
+    return {
+      ...p,
+      accessRange: tpl.accessRange,
+      functionAccess: nextAccess.map((f) => ({ ...f })),
+      updatedAt: Date.now(),
+    };
+  });
+  return { profiles: out, changed };
 }
