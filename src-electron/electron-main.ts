@@ -150,6 +150,48 @@ ipcMain.handle('get-app-data-path', () => {
   return app.getPath('userData');
 });
 
+/** Windows COMPUTERNAME / hostname — often matches the router device list. */
+ipcMain.handle('system:host-device-label', () => {
+  const candidates: string[] = [];
+  if (process.platform === 'win32') {
+    const pc = process.env.COMPUTERNAME;
+    if (pc) candidates.push(pc);
+  }
+  try {
+    candidates.push(os.hostname());
+  } catch {
+    void 0;
+  }
+  const hostEnv = process.env.HOSTNAME;
+  if (hostEnv) candidates.push(hostEnv);
+
+  for (const raw of candidates) {
+    const label = sanitizeHostDeviceLabelForMain(raw);
+    if (label) return label;
+  }
+  return '';
+});
+
+function sanitizeHostDeviceLabelForMain(raw: string | undefined): string {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (!s) return '';
+  const dot = s.indexOf('.');
+  if (dot > 0) s = s.slice(0, dot);
+  s = s.replace(/[^\w\s._-]+/g, '').trim();
+  if (!s || s.length < 2) return '';
+  const lower = s.toLowerCase();
+  if (
+    lower === 'localhost' ||
+    lower === 'localdomain' ||
+    lower === 'workgroup' ||
+    lower === 'unknown'
+  ) {
+    return '';
+  }
+  return s.length > 64 ? s.slice(0, 64) : s;
+}
+
 ipcMain.handle('lan:start-server', async (_evt, identity: LanIdentityPublic) => {
   try {
     const r = await startLanPairingServer(identity);

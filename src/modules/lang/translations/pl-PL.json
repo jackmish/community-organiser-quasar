@@ -246,6 +246,7 @@
   "connections.name_save": "Zapisz",
   "connections.name_saved": "Zapisano",
   "connections.device_name_persisted": "Zapisana na tym urządzeniu — nie zmienia się przy edycji synchronizacji ani listy połączeń.",
+  "connections.device_name_from_system": "Uzupełniona z nazwy tego komputera. Możesz ją zmienić, jeśli chcesz inną etykietę w sieci.",
   "connections.device_name_required": "Wpisz nazwę urządzenia i zapisz.",
   "connections.check_btn": "Sprawdź",
   "connections.check_success": "Sukces",

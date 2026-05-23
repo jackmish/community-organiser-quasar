@@ -145,7 +145,11 @@
                             v-if="savedOwnDeviceName"
                             class="text-caption connections-local-name__hint"
                           >
-                            {{ $text('connections.device_name_persisted') }}
+                            {{
+                              ownDeviceNameFromHost
+                                ? $text('connections.device_name_from_system')
+                                : $text('connections.device_name_persisted')
+                            }}
                           </div>
                         </div>
                       </template>
@@ -319,9 +323,11 @@ import {
   loadOwnDeviceMeta,
   normalizeDeviceId,
   parseConnectedDevice,
+  maybeSeedOwnDeviceNameFromHost,
   saveOwnDeviceNameSetting,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
+import { getSuggestedHostDeviceLabel } from 'src/modules/storage/sync/hostDeviceLabel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
 import { useSyncContractInDialog } from 'src/composables/useSyncContractInDialog';
@@ -633,6 +639,8 @@ const ownDeviceName = ref<string>('');
 const savedOwnDeviceName = ref<string>('');
 const ownDeviceNameShowSaved = ref(false);
 const ownDeviceNameSaving = ref(false);
+/** True when the saved label matches the OS computer / hostname. */
+const ownDeviceNameFromHost = ref(false);
 
 const ownDeviceNameDirty = computed(
   () => ownDeviceName.value.trim() !== savedOwnDeviceName.value.trim(),
@@ -698,11 +706,20 @@ function normalizePrefix(name: string) {
 async function loadSettings(): Promise<void> {
   devicesRegistryLoaded.value = false;
   try {
+    await maybeSeedOwnDeviceNameFromHost();
     const data = await loadCo21Settings();
-    const storedName =
+    const suggestedHost = await getSuggestedHostDeviceLabel();
+    let storedName =
       typeof data.ownDeviceName === 'string' ? data.ownDeviceName.trim() : '';
+    if (!storedName) {
+      storedName = suggestedHost || '';
+    }
     ownDeviceName.value = storedName;
     savedOwnDeviceName.value = storedName;
+    ownDeviceNameFromHost.value =
+      !!storedName &&
+      !!suggestedHost &&
+      storedName.toLowerCase() === suggestedHost.toLowerCase();
     ownDeviceNameShowSaved.value = false;
     if (typeof data.autoBackupEnabled === 'boolean') {
       autoBackupEnabled.value = data.autoBackupEnabled;

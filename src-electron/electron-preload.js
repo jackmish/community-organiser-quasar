@@ -151,6 +151,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Get app data path
   getAppDataPath: () => ipcRenderer.invoke('get-app-data-path'),
 
+  /** OS computer name / hostname (router-style device label on Windows). */
+  getHostDeviceLabel: () => ipcRenderer.invoke('system:host-device-label'),
+
   // Show native folder chooser (returns selected folder path or null)
   showOpenFolder: async () => {
     try {

@@ -4,6 +4,7 @@ import {
   writeCo21SettingsBlob,
   type Co21SettingsJson,
 } from './co21SettingsPersistence';
+import { getSuggestedHostDeviceLabel } from './hostDeviceLabel';
 import type { AccessRange, RolePrivilege } from './RoleModel';
 import { PRIVILEGE_ORDER } from './RoleModel';
 import type { RoleProfileData } from './RoleProfileModel';
@@ -124,6 +125,30 @@ export async function saveOwnDeviceNameSetting(name: string): Promise<boolean> {
   return writeCo21SettingsBlob({ ownDeviceName: trimmed });
 }
 
+export async function readOwnDeviceNameFromSettings(): Promise<string> {
+  const settings = await loadCo21Settings();
+  return typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName.trim() : '';
+}
+
+/**
+ * If the user never set a name, seed once from the OS computer name (router list)
+ * and persist so LAN + Connections stay in sync.
+ */
+export async function maybeSeedOwnDeviceNameFromHost(): Promise<string | null> {
+  const existing = await readOwnDeviceNameFromSettings();
+  if (existing) return existing;
+
+  const suggested = await getSuggestedHostDeviceLabel();
+  if (!suggested) return null;
+
+  const ok = await saveOwnDeviceNameSetting(suggested);
+  if (ok) {
+    logger.info('[deviceRegistry] seeded ownDeviceName from OS host label', suggested);
+    return suggested;
+  }
+  return null;
+}
+
 export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }> {
   let id = deviceId.getSync() ?? '';
   if (!id) {
@@ -133,11 +158,11 @@ export async function loadOwnDeviceMeta(): Promise<{ id: string; name: string }>
       id = '';
     }
   }
-  const settings = await loadCo21Settings();
-  const name =
-    typeof settings.ownDeviceName === 'string' && settings.ownDeviceName.trim()
-      ? settings.ownDeviceName.trim()
-      : 'This device';
+  const saved = await readOwnDeviceNameFromSettings();
+  let name = saved;
+  if (!name) {
+    name = (await getSuggestedHostDeviceLabel()) || 'This device';
+  }
   if (!id) {
     id = await deviceId.get();
   }

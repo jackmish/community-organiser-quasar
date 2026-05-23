@@ -1,6 +1,6 @@
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
 import type { ConnectedDevice } from './deviceRoleAssignment';
-import { saveConnectedDevices } from './deviceRoleAssignment';
+import { loadOwnDeviceMeta, saveConnectedDevices } from './deviceRoleAssignment';
 import { loadConnectionsDevices } from './connectionsDeviceStorage';
 import { reconcileLanDeviceIds } from 'src/modules/lan/lanDeviceReconcile';
 import { createLanSyncToken } from 'src/modules/lan/lanSyncAuth';
@@ -183,6 +183,7 @@ export async function tryDeliverAction(
     }
     return false;
   }
+  const local = await loadOwnDeviceMeta();
   const pendingToSend = {
     ...action.pending,
     proposerDeviceId: local.id,
