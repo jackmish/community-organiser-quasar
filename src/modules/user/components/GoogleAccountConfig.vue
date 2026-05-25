@@ -297,9 +297,9 @@ const syncResult = ref<{ synced: boolean; count: number } | null>(null);
 function getSyncRange(): { from: string; to: string } {
   const now = new Date();
   const from = new Date(now);
-  from.setDate(from.getDate() - 7);
+  from.setMonth(from.getMonth() - 3);
   const to = new Date(now);
-  to.setDate(to.getDate() + 21);
+  to.setMonth(to.getMonth() + 3);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   return { from: fmt(from), to: fmt(to) };
 }

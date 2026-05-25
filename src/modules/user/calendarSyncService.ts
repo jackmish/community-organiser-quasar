@@ -138,45 +138,90 @@ export function stopSyncScheduler(): void {
 
 // ── Google Calendar API ──────────────────────────────────────────────────
 
+interface GCalCalendarEntry {
+  id: string;
+  summary?: string;
+  accessRole?: string;
+  selected?: boolean;
+}
+
+async function fetchAllCalendarIds(accessToken: string): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ minAccessRole: 'reader' });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const res = await fetch(
+      `${CALENDAR_API}/users/me/calendarList?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+
+    if (!res.ok) break;
+
+    const data = (await res.json()) as { items?: GCalCalendarEntry[]; nextPageToken?: string };
+    if (data.items) {
+      for (const cal of data.items) {
+        if (cal.id) ids.push(cal.id);
+      }
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  if (ids.length === 0) ids.push('primary');
+  return ids;
+}
+
 async function fetchCalendarEvents(
   accessToken: string,
   timeMin: string,
   timeMax: string,
 ): Promise<GCalEvent[]> {
+  const calendarIds = await fetchAllCalendarIds(accessToken);
   const allEvents: GCalEvent[] = [];
-  let pageToken: string | undefined;
 
   const minDate = new Date(timeMin + 'T00:00:00Z').toISOString();
   const maxDate = new Date(timeMax + 'T23:59:59Z').toISOString();
 
-  do {
-    const params = new URLSearchParams({
-      timeMin: minDate,
-      timeMax: maxDate,
-      singleEvents: 'true',
-      orderBy: 'startTime',
-      maxResults: '250',
-    });
-    if (pageToken) params.set('pageToken', pageToken);
+  for (const calId of calendarIds) {
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        timeMin: minDate,
+        timeMax: maxDate,
+        singleEvents: 'true',
+        orderBy: 'startTime',
+        maxResults: '250',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
 
-    const res = await fetch(
-      `${CALENDAR_API}/calendars/primary/events?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+      const encodedCalId = encodeURIComponent(calId);
+      const res = await fetch(
+        `${CALENDAR_API}/calendars/${encodedCalId}/events?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Calendar API error (${res.status}): ${text}`);
-    }
+      if (!res.ok) {
+        logger.warn(`[CalendarSync] Failed to fetch from calendar "${calId}" (${res.status})`);
+        break;
+      }
 
-    const data = (await res.json()) as GCalListResponse;
-    if (data.items) {
-      allEvents.push(...data.items.filter((e) => e.status !== 'cancelled'));
-    }
-    pageToken = data.nextPageToken;
-  } while (pageToken);
+      const data = (await res.json()) as GCalListResponse;
+      if (data.items) {
+        allEvents.push(...data.items.filter((e) => e.status !== 'cancelled'));
+      }
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+  }
 
-  return allEvents;
+  // Deduplicate by event ID (same event can appear in multiple calendars)
+  const seen = new Set<string>();
+  return allEvents.filter((ev) => {
+    if (!ev.id || seen.has(ev.id)) return false;
+    seen.add(ev.id);
+    return true;
+  });
 }
 
 // ── Event → Task conversion ─────────────────────────────────────────────

@@ -585,9 +585,9 @@ function triggerCalendarSync() {
     if (!cur) return;
     const d = new Date(cur);
     const from = new Date(d);
-    from.setDate(from.getDate() - 7);
+    from.setMonth(from.getMonth() - 3);
     const to = new Date(d);
-    to.setDate(to.getDate() + 21);
+    to.setMonth(to.getMonth() + 3);
     const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
     void checkAndSync(fmt(from), fmt(to));
   } catch {
