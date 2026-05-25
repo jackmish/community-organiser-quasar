@@ -192,18 +192,20 @@ async function upsertEventsAsTasks(
     const dateKey = extractDateKey(ev);
     if (!dateKey) continue;
 
-    const taskId = `gcal-${ev.id}`;
-    const existing = findExistingTask(taskId, dateKey);
+    const existing = findExistingTaskBySourceId(ev.id);
+
+    const name = ev.summary || '(No title)';
 
     if (existing) {
       const needsUpdate =
-        existing.title !== (ev.summary || '(No title)') ||
+        existing.name !== name ||
         existing.description !== (ev.description || '');
 
       if (needsUpdate) {
         await CC.task.update(dateKey, existing.id, {
-          title: ev.summary || '(No title)',
+          name,
           description: ev.description || '',
+          date: dateKey,
           eventDate: dateKey,
           eventTime: extractTime(ev),
         });
@@ -211,16 +213,19 @@ async function upsertEventsAsTasks(
       }
     } else {
       await CC.task.add(dateKey, {
-        id: taskId,
-        title: ev.summary || '(No title)',
+        name,
         description: ev.description || '',
-        type: 'event',
+        date: dateKey,
+        type: 'TimeEvent',
+        type_id: 'TimeEvent',
+        category: 'other',
+        priority: 'medium',
         groupId,
         eventDate: dateKey,
         eventTime: extractTime(ev),
         source: 'google-calendar',
         sourceId: ev.id,
-      });
+      } as any);
       count++;
     }
   }
@@ -245,12 +250,18 @@ function extractTime(ev: GCalEvent): string | null {
   return match?.[1] ?? null;
 }
 
-function findExistingTask(taskId: string, dateKey: string): any {
+function findExistingTaskBySourceId(googleEventId: string): any {
   try {
-    const time = CC.task.time;
-    const day = time?.days?.value?.[dateKey];
-    if (!day?.tasks) return null;
-    return day.tasks.find((t: any) => String(t.id) === taskId) || null;
+    const days = CC.task.time?.days?.value ?? {};
+    for (const key of Object.keys(days)) {
+      const day = days[key];
+      if (!day?.tasks) continue;
+      const found = day.tasks.find(
+        (t: any) => t.sourceId === googleEventId || t.source_id === googleEventId,
+      );
+      if (found) return found;
+    }
+    return null;
   } catch {
     return null;
   }

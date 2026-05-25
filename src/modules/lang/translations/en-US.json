@@ -358,5 +358,8 @@
   "accounts.confirm_sync": "Confirm & enable sync",
   "accounts.sync_active": "Sync active",
   "accounts.revoke_sync": "Pause sync",
-  "accounts.select_group_first": "Select a group first to enable sync"
+  "accounts.select_group_first": "Select a group first to enable sync",
+  "accounts.sync_now": "Sync now",
+  "accounts.sync_done": "Synced {count} events",
+  "accounts.sync_skipped": "Already up to date"
 }

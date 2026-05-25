@@ -49,7 +49,7 @@
         <!-- Google Calendar (expandable) -->
         <q-expansion-item icon="event" :label="$text('accounts.feature_calendar')"
           :caption="$text('accounts.feature_calendar_desc')" header-class="text-green-9"
-          :default-opened="isCalendarEnabled">
+          v-model="calendarExpanded">
           <template #header>
             <q-item-section avatar>
               <q-icon name="event" color="green-7" size="28px" />
@@ -106,14 +106,22 @@
               <q-btn v-if="!calendarSync.confirmed" unelevated color="green-7" icon="check_circle"
                 :label="$text('accounts.confirm_sync')"
                 :disable="!props.googleAccount?.calendarGroupId"
-                @click="$emit('confirmSync')" />
+                @click="onConfirmAndSync" :loading="syncing" />
               <div v-else class="row items-center q-gutter-sm">
                 <q-badge color="positive" class="q-pa-sm">
                   <q-icon name="check" class="q-mr-xs" size="14px" />
                   {{ $text('accounts.sync_active') }}
                 </q-badge>
+                <q-btn flat dense color="primary" icon="sync" :label="$text('accounts.sync_now')"
+                  @click="onSyncNow" :loading="syncing" />
                 <q-btn flat dense color="grey-7" :label="$text('accounts.revoke_sync')"
                   @click="$emit('revokeSync')" />
+              </div>
+              <div v-if="syncResult" class="text-caption q-mt-xs"
+                :class="syncResult.synced ? 'text-positive' : 'text-grey-7'">
+                {{ syncResult.synced
+                  ? $text('accounts.sync_done').replace('{count}', String(syncResult.count))
+                  : $text('accounts.sync_skipped') }}
               </div>
               <div v-if="!props.googleAccount?.calendarGroupId && !calendarSync.confirmed"
                 class="text-caption text-orange-8 q-mt-xs">
@@ -218,11 +226,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { GoogleAccountLink, GoogleFeature } from '../models/UserAccount';
 import { DEFAULT_CALENDAR_SYNC } from '../models/UserAccount';
 import { signInWithGoogle } from '../googleAuthService';
+import { runSync } from '../calendarSyncService';
 import GroupPicker from 'src/modules/group/components/GroupPicker.vue';
 import CC from 'src/CCAccess';
 
@@ -253,6 +262,12 @@ const isCalendarEnabled = computed(() =>
   props.googleAccount?.enabledFeatures.includes('calendar') ?? false,
 );
 
+const calendarExpanded = ref(isCalendarEnabled.value);
+
+watch(isCalendarEnabled, (enabled) => {
+  if (enabled) calendarExpanded.value = true;
+});
+
 const calendarSync = computed(() =>
   props.googleAccount?.calendarSync ?? { ...DEFAULT_CALENDAR_SYNC },
 );
@@ -273,6 +288,37 @@ function formatSyncDate(iso: string | null): string {
     return new Date(iso).toLocaleString();
   } catch {
     return iso;
+  }
+}
+
+const syncing = ref(false);
+const syncResult = ref<{ synced: boolean; count: number } | null>(null);
+
+function getSyncRange(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - 7);
+  const to = new Date(now);
+  to.setDate(to.getDate() + 21);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: fmt(from), to: fmt(to) };
+}
+
+async function onConfirmAndSync() {
+  emit('confirmSync');
+  await onSyncNow();
+}
+
+async function onSyncNow() {
+  syncing.value = true;
+  syncResult.value = null;
+  try {
+    const { from, to } = getSyncRange();
+    syncResult.value = await runSync(from, to);
+  } catch {
+    syncResult.value = { synced: false, count: 0 };
+  } finally {
+    syncing.value = false;
   }
 }
 

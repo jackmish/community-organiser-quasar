@@ -406,5 +406,8 @@
   "accounts.confirm_sync": "Potwierdź i włącz synchronizację",
   "accounts.sync_active": "Synchronizacja aktywna",
   "accounts.revoke_sync": "Wstrzymaj synchronizację",
-  "accounts.select_group_first": "Najpierw wybierz grupę, aby włączyć synchronizację"
+  "accounts.select_group_first": "Najpierw wybierz grupę, aby włączyć synchronizację",
+  "accounts.sync_now": "Synchronizuj teraz",
+  "accounts.sync_done": "Zsynchronizowano {count} wydarzeń",
+  "accounts.sync_skipped": "Już aktualne"
 }
