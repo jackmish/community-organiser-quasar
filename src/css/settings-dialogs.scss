@@ -175,14 +175,20 @@
 
 .add-connection-dialog-card {
   overflow: hidden;
+}
+
+.add-connection-dialog-card:not(.add-connection-dialog-card--compact) {
   display: flex;
   flex-direction: column;
 }
 
-/* Phone / native: full height, scrollable body (same pattern as debug-tools) */
+/* Phone / native: full height, block flow so children stack vertically */
 .add-connection-dialog-card--compact,
 .add-connection-dialog-card.settings-dialog-card--mobile {
+  display: block;
+  height: 100vh;
   height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   width: 100%;
   max-width: 100% !important;
@@ -211,6 +217,8 @@
 .add-connection-dialog-card--compact .add-connection-scroll-body,
 .add-connection-dialog-card.settings-dialog-card--mobile .add-connection-scroll-body {
   padding: 8px 12px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .add-connection-dialog-card .add-connection-tabs {
