@@ -888,29 +888,46 @@ async function exportAsJsonDownload(): Promise<void> {
     const blob = new Blob([payload], { type: 'application/json' });
     const file = new File([blob], name, { type: 'application/json' });
 
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'CO21 Backup' });
-      exportState.value = 'done';
-      exportMessage.value = 'Shared successfully';
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      exportState.value = 'done';
-      exportMessage.value = `Exported as ${name}`;
+    let shared = false;
+    if (typeof navigator.share === 'function') {
+      try {
+        const canShareFiles = navigator.canShare?.({ files: [file] });
+        if (canShareFiles) {
+          await navigator.share({ files: [file], title: 'CO21 Backup' });
+          shared = true;
+        } else {
+          await navigator.share({ title: 'CO21 Backup', text: payload });
+          shared = true;
+        }
+      } catch (shareErr: any) {
+        if (shareErr?.name === 'AbortError') {
+          exportState.value = 'idle';
+          exportMessage.value = '';
+          return;
+        }
+      }
     }
-    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
+
+    if (!shared) {
+      $q.dialog({
+        title: 'Backup data',
+        message: 'Copy the text below and save it as a .json file.',
+        prompt: { model: payload, type: 'textarea' },
+        cancel: true,
+        ok: 'Copy to clipboard',
+        persistent: true,
+      }).onOk(() => {
+        navigator.clipboard?.writeText(payload).then(
+          () => toast('positive', 'Copied to clipboard'),
+          () => toast('warning', 'Could not copy — select and copy manually'),
+        );
+      });
+    }
+
+    exportState.value = shared ? 'done' : 'idle';
+    exportMessage.value = shared ? 'Shared successfully' : '';
+    if (shared) setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
   } catch (e: any) {
-    if (e?.name === 'AbortError') {
-      exportState.value = 'idle';
-      exportMessage.value = '';
-      return;
-    }
     exportState.value = 'error';
     exportMessage.value = `Export failed: ${e?.message || e}`;
     setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 5000);
