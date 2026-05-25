@@ -295,7 +295,7 @@ import {
 import { isUsableLanHost, parseLanReachableAddresses } from 'src/modules/lan/lanPairingHosts';
 import { persistPairedLanDevice } from 'src/modules/lan/lanPairingRegister';
 import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
-import { hasCo21LanServer } from 'src/modules/lan/co21LanRuntime';
+import { getCo21LanApi, hasCo21LanServer } from 'src/modules/lan/co21LanRuntime';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
@@ -323,7 +323,15 @@ const port = CO21_LAN_PAIRING_PORT;
 
 const showQrCameraButton = canUseLanQrCamera();
 
+/** True only when the Electron preload `window.electronLan` API is available (desktop). */
 const hasElectronLan = computed(
+  () =>
+    typeof window !== 'undefined' &&
+    !!(window as Window & { electronLan?: { startServer?: unknown } }).electronLan?.startServer,
+);
+
+/** True when any LAN server API exists (Electron desktop OR Android Capacitor plugin). */
+const hasAnyLanServer = computed(
   () => typeof window !== 'undefined' && hasCo21LanServer(),
 );
 
@@ -331,7 +339,7 @@ const hasElectronLan = computed(
 const showHostPanel = computed(() => hasElectronLan.value);
 
 const lanLayoutClass = computed(() => {
-  if (!showHostPanel.value || isMobileViewport.value || props.embedded) {
+  if (!showHostPanel.value || isMobileViewport.value) {
     return 'lan-pairing-layout lan-pairing-layout--single';
   }
   return 'lan-pairing-layout lan-pairing-layout--split';
@@ -399,10 +407,8 @@ async function resolveMyLanReachableAddresses(): Promise<string[]> {
   for (const a of deviceLanAddrs.value) push(a);
   for (const a of serverAddrs.value) push(a);
   try {
-    const elan = (window as unknown as {
-      electronLan?: { status?: () => Promise<{ addresses?: string[] }> };
-    }).electronLan;
-    const st = await elan?.status?.();
+    const api = getCo21LanApi();
+    const st = await api?.status?.();
     for (const a of st?.addresses ?? []) push(String(a));
   } catch {
     void 0;
@@ -468,22 +474,13 @@ async function acceptIncoming(): Promise<void> {
   }
 }
 
-/** Push acceptor identity to initiator so it registers us even if its poll stopped. */
+/** Start the LAN server (Electron or Android) so the peer can reach us back. */
 async function ensureLanListeningForPairing(): Promise<void> {
-  if (!hasElectronLan.value) return;
-  const elan = (window as unknown as {
-    electronLan?: {
-      status?: () => Promise<{ listening?: boolean }>;
-      startServer?: (i: {
-        deviceId: string;
-        deviceName: string;
-        appVersion: string;
-      }) => Promise<unknown>;
-    };
-  }).electronLan;
-  if (!elan?.startServer) return;
+  if (!hasAnyLanServer.value) return;
+  const api = getCo21LanApi();
+  if (!api?.startServer) return;
   try {
-    const st = await elan.status?.();
+    const st = await api.status?.();
     if (st?.listening) return;
     const id = await deviceId.get();
     const name = (props.ownDeviceName || '').trim() || 'This device';
@@ -491,8 +488,8 @@ async function ensureLanListeningForPairing(): Promise<void> {
       typeof (window as unknown as { APP_VERSION?: string }).APP_VERSION === 'string'
         ? String((window as unknown as { APP_VERSION?: string }).APP_VERSION)
         : '';
-    await elan.startServer({ deviceId: id, deviceName: name, appVersion: ver });
-    await refreshStatus();
+    await api.startServer({ deviceId: id, deviceName: name, appVersion: ver });
+    if (hasElectronLan.value) await refreshStatus();
   } catch (e) {
     logger.warn('[LanPairingModal] ensure LAN listen failed', e);
   }
