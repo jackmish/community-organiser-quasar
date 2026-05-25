@@ -177,12 +177,9 @@
                   }
                   ">
                   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px">
-                    <q-btn v-if="hasElectronAPI" dense unelevated color="primary" label="Export" @click="exportWithPicker" />
+                    <q-btn dense unelevated color="primary" label="Export" @click="hasElectronAPI ? exportWithPicker() : exportAsJsonDownload()" />
                     <q-btn dense outline color="secondary" label="Merge" @click="triggerImport" />
                     <q-btn v-if="hasElectronAPI" dense unelevated color="negative" label="Override" @click="overrideBackup" />
-                  </div>
-                  <div v-if="!hasElectronAPI" class="text-caption q-mt-xs" style="opacity: 0.7">
-                    Export &amp; override are available on the desktop app.
                   </div>
                   <div v-if="exportState !== 'idle'" style="margin-top: 6px; width: 100%; text-align: left">
                     <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
@@ -879,6 +876,34 @@ const exportWithPicker = async () => {
     }, 5000);
   }
 };
+
+async function exportAsJsonDownload(): Promise<void> {
+  try {
+    exportState.value = 'exporting';
+    exportMessage.value = 'Exporting...';
+    const groups = await loadGroupsFromAppData();
+    const payload = JSON.stringify({ groups: Array.isArray(groups) ? groups : [] }, null, 2);
+    const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
+    const name = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    exportState.value = 'done';
+    exportMessage.value = 'Exported';
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 3500);
+  } catch (e: any) {
+    exportState.value = 'error';
+    exportMessage.value = `Export failed: ${e?.message || e}`;
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 5000);
+  }
+}
+
 const triggerImport = () => {
   const el = fileInput.value;
   if (el) {
