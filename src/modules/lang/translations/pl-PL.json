@@ -397,5 +397,7 @@
   "accounts.google_what_you_get": "Dostępne z kontem Google",
   "accounts.connect_google_btn": "Połącz konto Google",
   "accounts.disconnect_confirm_title": "Odłączyć konto Google?",
-  "accounts.disconnect_confirm_body": "Wszystkie funkcje Google zostaną wyłączone. Twoje konto CO21 i dane pozostaną nienaruszone."
+  "accounts.disconnect_confirm_body": "Wszystkie funkcje Google zostaną wyłączone. Twoje konto CO21 i dane pozostaną nienaruszone.",
+  "accounts.calendar_group_label": "Zapisuj wydarzenia kalendarza w grupie",
+  "accounts.calendar_group_select": "Wybierz grupę…"
 }

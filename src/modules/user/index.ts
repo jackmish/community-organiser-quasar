@@ -19,3 +19,8 @@ export type {
 } from './models/UserAccount';
 
 export { UserStoreController as useUser } from './UserController';
+export {
+  signInWithGoogle,
+  getAccessToken,
+  clearGoogleTokens,
+} from './googleAuthService';

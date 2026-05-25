@@ -41,8 +41,8 @@
             <q-item-label caption>{{ $text('accounts.feature_auth_desc') }}</q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-toggle :model-value="isAuthEnabled" @update:model-value="(v: boolean) => $emit('toggleFeature', 'auth', v)"
-              color="primary" />
+            <q-toggle :model-value="isAuthEnabled"
+              @update:model-value="(v: boolean) => $emit('toggleFeature', 'auth', v)" color="primary" />
           </q-item-section>
         </q-item>
 
@@ -58,6 +58,29 @@
           <q-item-section side>
             <q-toggle :model-value="isCalendarEnabled"
               @update:model-value="(v: boolean) => $emit('toggleFeature', 'calendar', v)" color="green-7" />
+          </q-item-section>
+        </q-item>
+
+        <!-- Calendar group picker (visible when calendar enabled) -->
+        <q-item v-if="isCalendarEnabled">
+          <q-item-section avatar />
+          <q-item-section>
+            <q-item-label class="q-mb-xs text-weight-medium">
+              {{ $text('accounts.calendar_group_label') }}
+            </q-item-label>
+            <div class="calendar-group-picker-wrapper">
+              <q-btn outline dense no-caps
+                :label="calendarGroupName || $text('accounts.calendar_group_select')"
+                :icon="calendarGroupName ? 'folder' : 'add'" :color="calendarGroupName ? 'green-7' : 'grey-7'">
+                <q-menu v-model="showCalendarGroupMenu" anchor="bottom left" self="top left">
+                  <q-card style="min-width: 280px; max-width: 400px">
+                    <GroupPicker :selected="props.googleAccount?.calendarGroupId ?? null" :show-all-groups="false"
+                      max-height="40vh" @update:selected="onCalendarGroupSelect"
+                      @create-group="onCalendarCreateGroup" />
+                  </q-card>
+                </q-menu>
+              </q-btn>
+            </div>
           </q-item-section>
         </q-item>
 
@@ -120,9 +143,16 @@
         </q-item>
       </q-list>
 
+      <q-banner v-if="connectError" class="bg-red-1 text-negative rounded-borders q-mb-md">
+        <template v-slot:avatar>
+          <q-icon name="error" color="negative" />
+        </template>
+        {{ connectError }}
+      </q-banner>
+
       <div class="text-center">
-        <q-btn color="primary" icon="login" :label="$text('accounts.connect_google_btn')"
-          @click="simulateGoogleConnect" unelevated class="q-px-lg" />
+        <q-btn color="primary" icon="login" :label="$text('accounts.connect_google_btn')" @click="startGoogleConnect"
+          :loading="connecting" unelevated class="q-px-lg" />
       </div>
     </template>
 
@@ -148,6 +178,9 @@
 import { computed, ref } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { GoogleAccountLink, GoogleFeature } from '../models/UserAccount';
+import { signInWithGoogle } from '../googleAuthService';
+import GroupPicker from 'src/modules/group/components/GroupPicker.vue';
+import CC from 'src/CCAccess';
 
 const props = defineProps<{
   googleAccount: GoogleAccountLink | null;
@@ -158,9 +191,13 @@ const emit = defineEmits<{
   (e: 'connect', link: Omit<GoogleAccountLink, 'connectedAt'>): void;
   (e: 'disconnect'): void;
   (e: 'toggleFeature', feature: GoogleFeature, enabled: boolean): void;
+  (e: 'calendarGroup', groupId: string | null): void;
 }>();
 
 const confirmDisconnect = ref(false);
+const connecting = ref(false);
+const connectError = ref('');
+const showCalendarGroupMenu = ref(false);
 
 const isAuthEnabled = computed(() =>
   props.googleAccount?.enabledFeatures.includes('auth') ?? false,
@@ -169,15 +206,41 @@ const isCalendarEnabled = computed(() =>
   props.googleAccount?.enabledFeatures.includes('calendar') ?? false,
 );
 
-function simulateGoogleConnect() {
-  // Placeholder — real OAuth flow will replace this.
-  // For now we simulate a successful connection so the UI is testable.
-  emit('connect', {
-    email: 'user@gmail.com',
-    displayName: 'Google User',
-    avatarUrl: null,
-    enabledFeatures: ['auth'],
-  });
+const calendarGroupName = computed(() => {
+  const gid = props.googleAccount?.calendarGroupId;
+  if (!gid) return null;
+  const groups = CC.group.list.all.value || [];
+  const found = groups.find((g: any) => String(g.id) === String(gid));
+  return found ? String(found.name) : null;
+});
+
+function onCalendarGroupSelect(groupId: string | null) {
+  showCalendarGroupMenu.value = false;
+  emit('calendarGroup', groupId);
+}
+
+function onCalendarCreateGroup() {
+  showCalendarGroupMenu.value = false;
+  window.dispatchEvent(new CustomEvent('group:manage-edit', { detail: { groupId: null } }));
+}
+
+async function startGoogleConnect() {
+  connecting.value = true;
+  connectError.value = '';
+  try {
+    const user = await signInWithGoogle();
+    emit('connect', {
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      enabledFeatures: ['auth'],
+      calendarGroupId: null,
+    });
+  } catch (err) {
+    connectError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    connecting.value = false;
+  }
 }
 
 function doDisconnect() {

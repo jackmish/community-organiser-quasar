@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { loadDotEnv } from './loadDotEnv';
+loadDotEnv();
 import {
   startLanPairingServer,
   setLanTrustedContractDeviceIds,
@@ -13,6 +15,7 @@ import {
 } from './lanPairingServer';
 import { CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
 import { browseCo21Organisers, destroyBonjour } from './lanMdns';
+import { startGoogleAuthFlow, refreshAccessToken } from './googleAuth';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -344,6 +347,27 @@ ipcMain.handle(
     }
   },
 );
+
+// ── Google OAuth IPC ──────────────────────────────────────────────────────
+ipcMain.handle('google:auth-start', async () => {
+  try {
+    const result = await startGoogleAuthFlow();
+    return { ok: true as const, ...result };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('google:auth-refresh', async (_evt, refreshToken: string) => {
+  try {
+    const tokens = await refreshAccessToken(refreshToken);
+    return { ok: true as const, tokens };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
 
 app.whenReady().then(createWindow);
 

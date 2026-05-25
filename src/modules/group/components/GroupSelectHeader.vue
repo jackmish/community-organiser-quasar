@@ -52,50 +52,14 @@
           </q-btn>
 
           <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
-            <q-list padding>
-              <q-item clickable v-ripple @click="onSelectAll">
-                <q-item-section>
-                  <q-icon name="folder_open" />
-                </q-item-section>
-                <q-item-section>{{ $text("ui.all_groups") }}</q-item-section>
-              </q-item>
-            </q-list>
-
-            <q-separator />
-
-            <GroupTreeSelector
-              class="q-mt-sm"
-              :nodes="treeNodes"
-              :selected="selectedKeyArray"
-              max-height="48vh"
+            <GroupPicker
+              :selected="localValue"
+              :show-all-groups="true"
               @update:selected="onTreeSelect"
-            >
-              <template #header="prop">
-                <div class="row items-center full-width">
-                  <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
-                  <span>{{ prop.node.label }}</span>
-                  <q-space />
-                  <span v-if="isNodeShortcut(prop.node)" flat dense style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      text-transform: none;
-                    " class="q-ml-sm" @click.stop.prevent="activateTreeShortcut(prop.node)">
-                    <q-icon :name="prop.node.icon || 'folder'" :style="{ color: prop.node.color }" />
-
-                    <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
-                  </span>
-                </div>
-              </template>
-            </GroupTreeSelector>
-
-            <q-separator />
-
-            <q-list padding>
-              <q-item clickable v-ripple @click="openManage">
-                <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
-              </q-item>
-            </q-list>
+              @select-all="onSelectAll"
+              @create-group="onCreateGroup"
+              @manage="menuOpen = false"
+            />
           </q-menu>
         </div>
 
@@ -134,7 +98,7 @@ import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
 import { groupsToTreeNodes } from "src/modules/group/utils/treeUi";
-import GroupTreeSelector from "./GroupTreeSelector.vue";
+import GroupPicker from "./GroupPicker.vue";
 
 const $q = useQuasar();
 
@@ -344,6 +308,11 @@ function onTreeSelect(val: any) {
 function openManage() {
   window.dispatchEvent(new Event("group:manage-request"));
   menuOpen.value = false;
+}
+
+function onCreateGroup() {
+  menuOpen.value = false;
+  window.dispatchEvent(new CustomEvent("group:manage-edit", { detail: { groupId: null } }));
 }
 
 const parentButtonVisible = computed(() => Boolean(parentGroup.value));

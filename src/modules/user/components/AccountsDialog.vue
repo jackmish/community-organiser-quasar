@@ -113,7 +113,7 @@
       <!-- Google Config sub-view -->
       <GoogleAccountConfig v-if="showGoogleConfig" :google-account="googleAccount"
         @back="showGoogleConfig = false" @connect="onGoogleConnect" @disconnect="onGoogleDisconnect"
-        @toggle-feature="onToggleFeature" />
+        @toggle-feature="onToggleFeature" @calendar-group="onCalendarGroup" />
     </q-card>
   </q-dialog>
 </template>
@@ -124,6 +124,7 @@ import { $text } from 'src/modules/lang';
 import { UserStoreController } from '../UserController';
 import GoogleAccountConfig from './GoogleAccountConfig.vue';
 import type { GoogleFeature, GoogleAccountLink } from '../models/UserAccount';
+import { clearGoogleTokens } from '../googleAuthService';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -199,12 +200,17 @@ async function onGoogleConnect(link: Omit<GoogleAccountLink, 'connectedAt'>) {
 }
 
 async function onGoogleDisconnect() {
+  await clearGoogleTokens();
   await user.disconnectGoogle();
   showGoogleConfig.value = false;
 }
 
 async function onToggleFeature(feature: GoogleFeature, enabled: boolean) {
   await user.toggleGoogleFeature(feature, enabled);
+}
+
+async function onCalendarGroup(groupId: string | null) {
+  await user.setCalendarGroup(groupId);
 }
 </script>
 

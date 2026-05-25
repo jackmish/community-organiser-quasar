@@ -349,5 +349,7 @@
   "accounts.google_what_you_get": "Available with Google Account",
   "accounts.connect_google_btn": "Connect Google Account",
   "accounts.disconnect_confirm_title": "Disconnect Google Account?",
-  "accounts.disconnect_confirm_body": "All Google features will be disabled. Your CO21 account and data stay untouched."
+  "accounts.disconnect_confirm_body": "All Google features will be disabled. Your CO21 account and data stay untouched.",
+  "accounts.calendar_group_label": "Store calendar events in group",
+  "accounts.calendar_group_select": "Select group…"
 }

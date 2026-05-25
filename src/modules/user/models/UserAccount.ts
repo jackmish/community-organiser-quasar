@@ -17,6 +17,8 @@ export interface GoogleAccountLink {
   connectedAt: string;
   /** Which features are enabled */
   enabledFeatures: GoogleFeature[];
+  /** Group ID where calendar events are stored */
+  calendarGroupId: string | null;
 }
 
 export interface UserProfile {

@@ -135,6 +135,16 @@ class UserController implements Controllable {
     await this.save();
   };
 
+  readonly calendarGroupId = computed(
+    () => this.profile.value?.google?.calendarGroupId ?? null,
+  );
+
+  readonly setCalendarGroup = async (groupId: string | null): Promise<void> => {
+    if (!this.profile.value?.google) return;
+    this.profile.value.google.calendarGroupId = groupId;
+    await this.save();
+  };
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   private readonly resolveDeviceId = async (): Promise<string> => {

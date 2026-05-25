@@ -170,6 +170,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export:zip', folder, zipName, jsonString),
 });
 
+// ── Google Auth bridge ──────────────────────────────────────────────────────
+contextBridge.exposeInMainWorld('electronGoogleAuth', {
+  /** Start the full OAuth loopback flow. Opens system browser. */
+  startAuth: () => ipcRenderer.invoke('google:auth-start'),
+  /** Refresh an access token using a stored refresh token. */
+  refreshToken: (refreshToken) => ipcRenderer.invoke('google:auth-refresh', refreshToken),
+});
+
 // BLE bridge: IPC for main-process BLE adapter and Web Bluetooth helpers for renderer
 let _webScan = null;
 let _webScanHandler = null;
