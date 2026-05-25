@@ -26,6 +26,8 @@ interface GCalEvent {
   end?: { dateTime?: string; date?: string };
   updated?: string;
   status?: string;
+  /** Injected by sync: true when event comes from a holiday calendar */
+  _isHoliday?: boolean;
 }
 
 interface GCalListResponse {
@@ -185,6 +187,7 @@ async function fetchCalendarEvents(
   const maxDate = new Date(timeMax + 'T23:59:59Z').toISOString();
 
   for (const calId of calendarIds) {
+    const isHolidayCal = calId.includes('holiday@group') || calId.includes('#holiday');
     let pageToken: string | undefined;
     do {
       const params = new URLSearchParams({
@@ -209,7 +212,11 @@ async function fetchCalendarEvents(
 
       const data = (await res.json()) as GCalListResponse;
       if (data.items) {
-        allEvents.push(...data.items.filter((e) => e.status !== 'cancelled'));
+        const events = data.items.filter((e) => e.status !== 'cancelled');
+        if (isHolidayCal) {
+          for (const ev of events) ev._isHoliday = true;
+        }
+        allEvents.push(...events);
       }
       pageToken = data.nextPageToken;
     } while (pageToken);
@@ -239,35 +246,44 @@ async function upsertEventsAsTasks(
 
     const existing = findExistingTaskBySourceId(ev.id);
 
-    const name = ev.summary || '(No title)';
+    const summary = ev.summary || '(No title)';
+    const isHoliday = !!ev._isHoliday;
+    const timeMode = isHoliday ? 'holiday' : 'event';
+    const desc = ev.description
+      ? `${summary}\n${ev.description}`
+      : summary;
 
     if (existing) {
       const needsUpdate =
-        existing.name !== name ||
-        existing.description !== (ev.description || '');
+        existing.description !== desc ||
+        existing.timeMode !== timeMode;
 
       if (needsUpdate) {
         await CC.task.update(dateKey, existing.id, {
-          name,
-          description: ev.description || '',
+          name: summary,
+          description: desc,
           date: dateKey,
           eventDate: dateKey,
           eventTime: extractTime(ev),
+          type: 'TimeEvent',
+          type_id: 'TimeEvent',
+          timeMode,
         });
         count++;
       }
     } else {
       await CC.task.add(dateKey, {
-        name,
-        description: ev.description || '',
+        name: summary,
+        description: desc,
         date: dateKey,
         type: 'TimeEvent',
         type_id: 'TimeEvent',
+        timeMode,
         category: 'other',
-        priority: 'medium',
+        priority: isHoliday ? 'low' : 'medium',
         groupId,
         eventDate: dateKey,
-        eventTime: extractTime(ev),
+        eventTime: isHoliday ? null : extractTime(ev),
         source: 'google-calendar',
         sourceId: ev.id,
       } as any);

@@ -200,9 +200,9 @@
                           <div
                             v-for="ev in getEventsForDay(day)"
                             :key="ev.id + '-' + (ev.eventTime || '')"
-                            class="calendar-event-pill q-pa-xs"
+                            :class="ev.timeMode === 'holiday' ? 'calendar-holiday-pill q-pa-xs' : 'calendar-event-pill q-pa-xs'"
                             :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
-                            :style="{
+                            :style="ev.timeMode === 'holiday' ? {} : {
                               backgroundColor: themePriorityColors[ev.priority] || '#888',
                               color: themePriorityTextColor
                                 ? themePriorityTextColor(ev.priority)
@@ -211,7 +211,7 @@
                           >
                             <span
                               class="event-time"
-                              v-if="ev.eventTime"
+                              v-if="ev.eventTime && ev.timeMode !== 'holiday'"
                               @pointerdown="() => startLongPress(ev)"
                               @pointerup="() => onEventPointerUp(ev)"
                               @pointercancel="cancelLongPress"
@@ -1172,8 +1172,15 @@ async function fetchHolidays(year: number) {
   }
 }
 
-// Check if a date is a holiday
+function hasHolidayTask(dateString: string): boolean {
+  if (!props.tasks?.length) return false;
+  return props.tasks.some(
+    (t: any) => t.timeMode === 'holiday' && (t.date === dateString || t.eventDate === dateString),
+  );
+}
+
 function getHoliday(dateString: string): Holiday | undefined {
+  if (hasHolidayTask(dateString)) return undefined;
   return holidays.value.get(dateString);
 }
 

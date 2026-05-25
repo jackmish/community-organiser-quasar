@@ -214,7 +214,7 @@ type TaskType = {
   eventTime: string;
   // timeMode controls how the time is interpreted in the UI
   // 'event' = normal event (default), 'prepare' = preparation time, 'expiration' = expiration time
-  timeMode?: "event" | "prepare" | "expiration";
+  timeMode?: "event" | "prepare" | "expiration" | "holiday";
   // number of days before the event (used for prepare/expiration modes)
   timeOffsetDays?: number | null;
 };
@@ -1451,7 +1451,7 @@ function onSubmit(event: Event) {
                         </div>
                       </div>
                       <div
-                        v-if="eventTimeMode !== 'event'"
+                        v-if="eventTimeMode === 'prepare' || eventTimeMode === 'expiration'"
                         class="row q-mt-xs items-center"
                         style="gap: 8px; align-items: center"
                       >

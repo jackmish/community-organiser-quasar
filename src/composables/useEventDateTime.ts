@@ -22,7 +22,7 @@ import { useTimeDiff } from 'src/composables/useTimeDiff';
 export interface EventDateTimeTask {
   eventDate: string;
   eventTime: string;
-  timeMode?: 'event' | 'prepare' | 'expiration';
+  timeMode?: 'event' | 'prepare' | 'expiration' | 'holiday';
   timeOffsetDays?: number | null;
 }
 
@@ -41,6 +41,7 @@ export function useEventDateTime(localNewTask: Ref<EventDateTimeTask>) {
     { label: 'Event', value: 'event', icon: 'event' },
     { label: 'Prepare', value: 'prepare', icon: 'local_shipping' },
     { label: 'Expiration', value: 'expiration', icon: 'hourglass_empty' },
+    { label: 'Holiday', value: 'holiday', icon: 'celebration' },
   ];
 
   // Auto-increment year checkbox state (returned so template can v-model it)
@@ -120,7 +121,7 @@ export function useEventDateTime(localNewTask: Ref<EventDateTimeTask>) {
 
   // ─── Time mode & offset days ────────────────────────────────────────────────
 
-  const eventTimeMode = computed<'event' | 'prepare' | 'expiration'>({
+  const eventTimeMode = computed<'event' | 'prepare' | 'expiration' | 'holiday'>({
     get() {
       return localNewTask.value.timeMode ?? 'event';
     },
