@@ -63,6 +63,12 @@
                     </q-item-section>
                     <q-item-section>{{ pendingActionsMenuLabel }}</q-item-section>
                   </q-item>
+                  <q-item clickable v-ripple @click="openAccounts">
+                    <q-item-section avatar>
+                      <q-icon name="manage_accounts" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.accounts") }}</q-item-section>
+                  </q-item>
                   <q-item clickable v-ripple @click="openSettings">
                     <q-item-section avatar>
                       <q-icon name="settings" />
@@ -110,6 +116,7 @@
           @run-now="onPendingRunNow" @cancel="onPendingCancel" />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
+        <AccountsDialog v-model="showAccountsDialog" />
       </q-toolbar>
 
     </q-header>
@@ -151,6 +158,7 @@ import SyncContractIncomingNotification from "src/components/settings/SyncContra
 import { useSyncContractIncomingNotice } from "src/composables/useSyncContractIncomingNotice";
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
+import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
 import { usePendingActions } from "src/composables/usePendingActions";
 import { useSyncRuns } from "src/composables/useSyncRuns";
 import {
@@ -192,6 +200,7 @@ const showRolesSetupDialog = ref(false);
 const showJoinMemberDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
+const showAccountsDialog = ref(false);
 const showPendingActionsDialog = ref(false);
 
 const {
@@ -492,6 +501,11 @@ async function onLanguageChange(lang: string) {
     langFilter.value = "";
     menuOpen.value = false;
   }
+}
+
+function openAccounts() {
+  showAccountsDialog.value = true;
+  menuOpen.value = false;
 }
 
 function openSettings() {
