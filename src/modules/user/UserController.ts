@@ -10,8 +10,9 @@ import type {
   Co21Account,
   GoogleAccountLink,
   GoogleFeature,
+  CalendarSyncSettings,
 } from './models/UserAccount';
-import { createDefaultProfile } from './models/UserAccount';
+import { createDefaultProfile, DEFAULT_CALENDAR_SYNC } from './models/UserAccount';
 import logger from 'src/utils/logger';
 
 const STORAGE_KEY = 'co21_user_profile';
@@ -144,6 +145,66 @@ class UserController implements Controllable {
     this.profile.value.google.calendarGroupId = groupId;
     await this.save();
   };
+
+  // ── Calendar Sync ────────────────────────────────────────────────────────
+
+  readonly calendarSync = computed<CalendarSyncSettings>(
+    () => this.profile.value?.google?.calendarSync ?? { ...DEFAULT_CALENDAR_SYNC },
+  );
+
+  readonly isCalendarSyncConfirmed = computed(
+    () => this.profile.value?.google?.calendarSync?.confirmed ?? false,
+  );
+
+  readonly isCalendarSyncReady = computed(() => {
+    const g = this.profile.value?.google;
+    if (!g) return false;
+    return (
+      g.enabledFeatures.includes('calendar') &&
+      !!g.calendarGroupId &&
+      g.calendarSync.confirmed
+    );
+  });
+
+  readonly setCalendarSyncInterval = async (hours: number): Promise<void> => {
+    if (!this.profile.value?.google) return;
+    this.ensureCalendarSync();
+    this.profile.value.google.calendarSync.intervalHours = Math.max(1, hours);
+    this.profile.value.google.calendarSync.confirmed = false;
+    await this.save();
+  };
+
+  readonly confirmCalendarSync = async (): Promise<void> => {
+    if (!this.profile.value?.google) return;
+    this.ensureCalendarSync();
+    this.profile.value.google.calendarSync.confirmed = true;
+    await this.save();
+  };
+
+  readonly revokeCalendarSync = async (): Promise<void> => {
+    if (!this.profile.value?.google) return;
+    this.ensureCalendarSync();
+    this.profile.value.google.calendarSync.confirmed = false;
+    await this.save();
+  };
+
+  readonly updateCalendarSyncMeta = async (
+    lastSyncAt: string,
+    lastSyncRange: string,
+  ): Promise<void> => {
+    if (!this.profile.value?.google) return;
+    this.ensureCalendarSync();
+    this.profile.value.google.calendarSync.lastSyncAt = lastSyncAt;
+    this.profile.value.google.calendarSync.lastSyncRange = lastSyncRange;
+    await this.save();
+  };
+
+  private ensureCalendarSync(): void {
+    if (!this.profile.value?.google) return;
+    if (!this.profile.value.google.calendarSync) {
+      this.profile.value.google.calendarSync = { ...DEFAULT_CALENDAR_SYNC };
+    }
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 

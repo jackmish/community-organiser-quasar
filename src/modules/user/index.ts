@@ -24,3 +24,10 @@ export {
   getAccessToken,
   clearGoogleTokens,
 } from './googleAuthService';
+
+export {
+  checkAndSync,
+  runSync,
+  startSyncScheduler,
+  stopSyncScheduler,
+} from './calendarSyncService';

@@ -351,5 +351,12 @@
   "accounts.disconnect_confirm_title": "Disconnect Google Account?",
   "accounts.disconnect_confirm_body": "All Google features will be disabled. Your CO21 account and data stay untouched.",
   "accounts.calendar_group_label": "Store calendar events in group",
-  "accounts.calendar_group_select": "Select group…"
+  "accounts.calendar_group_select": "Select group…",
+  "accounts.sync_interval_label": "Sync interval",
+  "accounts.sync_interval_unit_hours": "hours",
+  "accounts.last_sync": "Last sync",
+  "accounts.confirm_sync": "Confirm & enable sync",
+  "accounts.sync_active": "Sync active",
+  "accounts.revoke_sync": "Pause sync",
+  "accounts.select_group_first": "Select a group first to enable sync"
 }

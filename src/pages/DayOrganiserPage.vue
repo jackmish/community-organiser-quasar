@@ -252,6 +252,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide } from "vue";
 import { useMobileOrganiserScrollToggle } from "src/composables/useMobileOrganiserScrollToggle";
+import { checkAndSync, startSyncScheduler, stopSyncScheduler } from "src/modules/user/calendarSyncService";
 import { $text } from "src/modules/lang";
 import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
@@ -575,7 +576,30 @@ onBeforeUnmount(() => {
   } catch (e) {
     // ignore
   }
+  stopSyncScheduler();
 });
+
+function triggerCalendarSync() {
+  try {
+    const cur = CC.task.time.currentDate?.value;
+    if (!cur) return;
+    const d = new Date(cur);
+    const from = new Date(d);
+    from.setDate(from.getDate() - 7);
+    const to = new Date(d);
+    to.setDate(to.getDate() + 21);
+    const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+    void checkAndSync(fmt(from), fmt(to));
+  } catch {
+    void 0;
+  }
+}
+
+// Trigger calendar sync when navigating dates
+watch(
+  () => CC.task.time.currentDate.value,
+  () => { triggerCalendarSync(); },
+);
 
 // When the current date changes (via calendar or prev/next arrows), switch to creation mode
 watch(
@@ -1176,6 +1200,8 @@ onMounted(async () => {
   } finally {
     organiserReady.value = true;
     scheduleBackgroundLanSyncAfterDisplay();
+    triggerCalendarSync();
+    startSyncScheduler();
   }
 
   // Listen for global reload events (e.g. from MainLayout refresh button)

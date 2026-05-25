@@ -113,7 +113,8 @@
       <!-- Google Config sub-view -->
       <GoogleAccountConfig v-if="showGoogleConfig" :google-account="googleAccount"
         @back="showGoogleConfig = false" @connect="onGoogleConnect" @disconnect="onGoogleDisconnect"
-        @toggle-feature="onToggleFeature" @calendar-group="onCalendarGroup" />
+        @toggle-feature="onToggleFeature" @calendar-group="onCalendarGroup"
+        @sync-interval="onSyncInterval" @confirm-sync="onConfirmSync" @revoke-sync="onRevokeSync" />
     </q-card>
   </q-dialog>
 </template>
@@ -211,6 +212,18 @@ async function onToggleFeature(feature: GoogleFeature, enabled: boolean) {
 
 async function onCalendarGroup(groupId: string | null) {
   await user.setCalendarGroup(groupId);
+}
+
+async function onSyncInterval(hours: number) {
+  await user.setCalendarSyncInterval(hours);
+}
+
+async function onConfirmSync() {
+  await user.confirmCalendarSync();
+}
+
+async function onRevokeSync() {
+  await user.revokeCalendarSync();
 }
 </script>
 

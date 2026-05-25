@@ -46,29 +46,32 @@
           </q-item-section>
         </q-item>
 
-        <!-- Google Calendar -->
-        <q-item tag="label">
-          <q-item-section avatar>
-            <q-icon name="event" color="green-7" size="28px" />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>{{ $text('accounts.feature_calendar') }}</q-item-label>
-            <q-item-label caption>{{ $text('accounts.feature_calendar_desc') }}</q-item-label>
-          </q-item-section>
-          <q-item-section side>
-            <q-toggle :model-value="isCalendarEnabled"
-              @update:model-value="(v: boolean) => $emit('toggleFeature', 'calendar', v)" color="green-7" />
-          </q-item-section>
-        </q-item>
+        <!-- Google Calendar (expandable) -->
+        <q-expansion-item icon="event" :label="$text('accounts.feature_calendar')"
+          :caption="$text('accounts.feature_calendar_desc')" header-class="text-green-9"
+          :default-opened="isCalendarEnabled">
+          <template #header>
+            <q-item-section avatar>
+              <q-icon name="event" color="green-7" size="28px" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ $text('accounts.feature_calendar') }}</q-item-label>
+              <q-item-label caption>{{ $text('accounts.feature_calendar_desc') }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <div class="row items-center no-wrap q-gutter-xs">
+                <q-badge v-if="calendarSync.confirmed" color="positive" label="ON" />
+                <q-toggle :model-value="isCalendarEnabled"
+                  @update:model-value="(v: boolean) => $emit('toggleFeature', 'calendar', v)"
+                  @click.stop color="green-7" />
+              </div>
+            </q-item-section>
+          </template>
 
-        <!-- Calendar group picker (visible when calendar enabled) -->
-        <q-item v-if="isCalendarEnabled">
-          <q-item-section avatar />
-          <q-item-section>
-            <q-item-label class="q-mb-xs text-weight-medium">
-              {{ $text('accounts.calendar_group_label') }}
-            </q-item-label>
-            <div class="calendar-group-picker-wrapper">
+          <div v-if="isCalendarEnabled" class="q-pl-lg q-pr-md q-pb-md">
+            <!-- Group picker -->
+            <div class="q-mb-md">
+              <div class="text-caption text-weight-medium q-mb-xs">{{ $text('accounts.calendar_group_label') }}</div>
               <q-btn outline dense no-caps
                 :label="calendarGroupName || $text('accounts.calendar_group_select')"
                 :icon="calendarGroupName ? 'folder' : 'add'" :color="calendarGroupName ? 'green-7' : 'grey-7'">
@@ -81,8 +84,48 @@
                 </q-menu>
               </q-btn>
             </div>
-          </q-item-section>
-        </q-item>
+
+            <!-- Sync interval -->
+            <div class="q-mb-md">
+              <div class="text-caption text-weight-medium q-mb-xs">{{ $text('accounts.sync_interval_label') }}</div>
+              <div class="row items-center q-gutter-sm">
+                <q-input v-model.number="syncIntervalDraft" type="number" dense outlined
+                  :min="1" :max="168" style="max-width: 100px"
+                  @update:model-value="onIntervalChange" />
+                <span class="text-body2 text-grey-7">{{ $text('accounts.sync_interval_unit_hours') }}</span>
+              </div>
+            </div>
+
+            <!-- Last sync info -->
+            <div v-if="calendarSync.lastSyncAt" class="text-caption text-grey-7 q-mb-sm">
+              {{ $text('accounts.last_sync') }}: {{ formatSyncDate(calendarSync.lastSyncAt) }}
+            </div>
+
+            <!-- Confirm / Revoke sync -->
+            <div>
+              <q-btn v-if="!calendarSync.confirmed" unelevated color="green-7" icon="check_circle"
+                :label="$text('accounts.confirm_sync')"
+                :disable="!props.googleAccount?.calendarGroupId"
+                @click="$emit('confirmSync')" />
+              <div v-else class="row items-center q-gutter-sm">
+                <q-badge color="positive" class="q-pa-sm">
+                  <q-icon name="check" class="q-mr-xs" size="14px" />
+                  {{ $text('accounts.sync_active') }}
+                </q-badge>
+                <q-btn flat dense color="grey-7" :label="$text('accounts.revoke_sync')"
+                  @click="$emit('revokeSync')" />
+              </div>
+              <div v-if="!props.googleAccount?.calendarGroupId && !calendarSync.confirmed"
+                class="text-caption text-orange-8 q-mt-xs">
+                {{ $text('accounts.select_group_first') }}
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="q-pa-md text-grey-6 text-caption">
+            {{ $text('accounts.feature_calendar_desc') }}
+          </div>
+        </q-expansion-item>
 
         <!-- Google Drive (disabled) -->
         <q-item tag="label" class="text-grey-5">
@@ -178,6 +221,7 @@
 import { computed, ref } from 'vue';
 import { $text } from 'src/modules/lang';
 import type { GoogleAccountLink, GoogleFeature } from '../models/UserAccount';
+import { DEFAULT_CALENDAR_SYNC } from '../models/UserAccount';
 import { signInWithGoogle } from '../googleAuthService';
 import GroupPicker from 'src/modules/group/components/GroupPicker.vue';
 import CC from 'src/CCAccess';
@@ -192,6 +236,9 @@ const emit = defineEmits<{
   (e: 'disconnect'): void;
   (e: 'toggleFeature', feature: GoogleFeature, enabled: boolean): void;
   (e: 'calendarGroup', groupId: string | null): void;
+  (e: 'syncInterval', hours: number): void;
+  (e: 'confirmSync'): void;
+  (e: 'revokeSync'): void;
 }>();
 
 const confirmDisconnect = ref(false);
@@ -205,6 +252,29 @@ const isAuthEnabled = computed(() =>
 const isCalendarEnabled = computed(() =>
   props.googleAccount?.enabledFeatures.includes('calendar') ?? false,
 );
+
+const calendarSync = computed(() =>
+  props.googleAccount?.calendarSync ?? { ...DEFAULT_CALENDAR_SYNC },
+);
+
+const syncIntervalDraft = ref(
+  props.googleAccount?.calendarSync?.intervalHours ?? DEFAULT_CALENDAR_SYNC.intervalHours,
+);
+
+function onIntervalChange(val: string | number | null) {
+  const hours = Math.max(1, Math.min(168, Number(val) || 12));
+  syncIntervalDraft.value = hours;
+  emit('syncInterval', hours);
+}
+
+function formatSyncDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
 
 const calendarGroupName = computed(() => {
   const gid = props.googleAccount?.calendarGroupId;
@@ -235,6 +305,7 @@ async function startGoogleConnect() {
       avatarUrl: user.avatarUrl,
       enabledFeatures: ['auth'],
       calendarGroupId: null,
+      calendarSync: { ...DEFAULT_CALENDAR_SYNC },
     });
   } catch (err) {
     connectError.value = err instanceof Error ? err.message : String(err);

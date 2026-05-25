@@ -9,6 +9,24 @@ export interface Co21Account {
 
 export type GoogleFeature = 'auth' | 'calendar' | 'drive';
 
+export interface CalendarSyncSettings {
+  /** Sync interval in hours */
+  intervalHours: number;
+  /** User confirmed settings — sync is only active when true */
+  confirmed: boolean;
+  /** ISO timestamp of last successful sync */
+  lastSyncAt: string | null;
+  /** ISO date range of last synced window (e.g. "2026-05-01/2026-06-15") */
+  lastSyncRange: string | null;
+}
+
+export const DEFAULT_CALENDAR_SYNC: CalendarSyncSettings = {
+  intervalHours: 12,
+  confirmed: false,
+  lastSyncAt: null,
+  lastSyncRange: null,
+};
+
 export interface GoogleAccountLink {
   /** Google email address */
   email: string;
@@ -19,6 +37,8 @@ export interface GoogleAccountLink {
   enabledFeatures: GoogleFeature[];
   /** Group ID where calendar events are stored */
   calendarGroupId: string | null;
+  /** Calendar sync configuration */
+  calendarSync: CalendarSyncSettings;
 }
 
 export interface UserProfile {

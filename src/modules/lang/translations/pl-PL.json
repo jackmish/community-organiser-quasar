@@ -399,5 +399,12 @@
   "accounts.disconnect_confirm_title": "Odłączyć konto Google?",
   "accounts.disconnect_confirm_body": "Wszystkie funkcje Google zostaną wyłączone. Twoje konto CO21 i dane pozostaną nienaruszone.",
   "accounts.calendar_group_label": "Zapisuj wydarzenia kalendarza w grupie",
-  "accounts.calendar_group_select": "Wybierz grupę…"
+  "accounts.calendar_group_select": "Wybierz grupę…",
+  "accounts.sync_interval_label": "Częstotliwość synchronizacji",
+  "accounts.sync_interval_unit_hours": "godzin",
+  "accounts.last_sync": "Ostatnia synchronizacja",
+  "accounts.confirm_sync": "Potwierdź i włącz synchronizację",
+  "accounts.sync_active": "Synchronizacja aktywna",
+  "accounts.revoke_sync": "Wstrzymaj synchronizację",
+  "accounts.select_group_first": "Najpierw wybierz grupę, aby włączyć synchronizację"
 }
