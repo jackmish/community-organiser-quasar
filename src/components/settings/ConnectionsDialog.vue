@@ -886,18 +886,31 @@ async function exportAsJsonDownload(): Promise<void> {
     const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
     const name = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    exportState.value = 'done';
-    exportMessage.value = 'Exported';
-    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 3500);
+    const file = new File([blob], name, { type: 'application/json' });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'CO21 Backup' });
+      exportState.value = 'done';
+      exportMessage.value = 'Shared successfully';
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      exportState.value = 'done';
+      exportMessage.value = `Exported as ${name}`;
+    }
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
   } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      exportState.value = 'idle';
+      exportMessage.value = '';
+      return;
+    }
     exportState.value = 'error';
     exportMessage.value = `Export failed: ${e?.message || e}`;
     setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 5000);
