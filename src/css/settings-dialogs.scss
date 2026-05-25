@@ -182,10 +182,12 @@
   flex-direction: column;
 }
 
-/* Phone / native: full height, block flow so children stack vertically */
+/* Phone / native: full height, flex column so scroll body fills remaining space */
 .add-connection-dialog-card--compact,
 .add-connection-dialog-card.settings-dialog-card--mobile {
-  display: block;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
   height: 100vh;
   height: 100dvh;
   max-height: 100vh;
@@ -364,6 +366,18 @@ html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel
   padding-bottom: 0;
   margin-top: 7px;
   margin-bottom: 0;
+}
+
+.lan-pairing-pair-row.column .lan-pairing-pair-input,
+.lan-pairing-pair-row.column .lan-pairing-pair-btn {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 0 0 auto;
+}
+
+.lan-pairing-pair-row.column .lan-pairing-pair-btn {
+  margin-top: 4px;
 }
 
 .lan-pairing-tool-row {

@@ -909,24 +909,21 @@ async function exportAsJsonDownload(): Promise<void> {
     }
 
     if (!shared) {
-      $q.dialog({
-        title: 'Backup data',
-        message: 'Copy the text below and save it as a .json file.',
-        prompt: { model: payload, type: 'textarea' },
-        cancel: true,
-        ok: 'Copy to clipboard',
-        persistent: true,
-      }).onOk(() => {
-        navigator.clipboard?.writeText(payload).then(
-          () => toast('positive', 'Copied to clipboard'),
-          () => toast('warning', 'Could not copy — select and copy manually'),
-        );
-      });
+      try {
+        await navigator.clipboard.writeText(payload);
+        exportState.value = 'done';
+        exportMessage.value = 'Backup copied to clipboard — paste it into a file to save';
+      } catch {
+        exportState.value = 'error';
+        exportMessage.value = 'Could not share or copy backup';
+      }
+      setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 6000);
+      return;
     }
 
-    exportState.value = shared ? 'done' : 'idle';
-    exportMessage.value = shared ? 'Shared successfully' : '';
-    if (shared) setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
+    exportState.value = 'done';
+    exportMessage.value = 'Shared successfully';
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
   } catch (e: any) {
     exportState.value = 'error';
     exportMessage.value = `Export failed: ${e?.message || e}`;
