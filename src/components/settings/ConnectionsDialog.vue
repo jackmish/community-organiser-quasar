@@ -176,10 +176,13 @@
                     justifyContent: 'center',
                   }
                   ">
-                  <div style="display: flex; align-items: center">
-                    <q-btn dense unelevated color="primary" label="Export" class="q-mr-sm" @click="exportWithPicker" />
-                    <q-btn dense outline color="secondary" label="Merge" class="q-mr-sm" @click="triggerImport" />
-                    <q-btn dense unelevated color="negative" label="Override" class="q-ml-sm" @click="overrideBackup" />
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px">
+                    <q-btn v-if="hasElectronAPI" dense unelevated color="primary" label="Export" @click="exportWithPicker" />
+                    <q-btn dense outline color="secondary" label="Merge" @click="triggerImport" />
+                    <q-btn v-if="hasElectronAPI" dense unelevated color="negative" label="Override" @click="overrideBackup" />
+                  </div>
+                  <div v-if="!hasElectronAPI" class="text-caption q-mt-xs" style="opacity: 0.7">
+                    Export &amp; override are available on the desktop app.
                   </div>
                   <div v-if="exportState !== 'idle'" style="margin-top: 6px; width: 100%; text-align: left">
                     <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
@@ -191,7 +194,7 @@
                   </div>
                 </div>
               </div>
-              <div class="q-mt-md">
+              <div v-if="hasElectronAPI" class="q-mt-md">
                 <div class="row items-center q-gutter-sm">
                   <div class="col">
                     Automatic local backup
@@ -286,6 +289,8 @@ import { useQuasar } from 'quasar';
 import { appNotify } from 'src/utils/appNotify';
 import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
+
+const hasElectronAPI = typeof window !== 'undefined' && !!(window as any).electronAPI;
 import { jsonStringField, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import { probeLanPeerInfo } from 'src/modules/lan/lanPeerConnectivity';
 import { isLanDebugCaptureActive, lanDebugNote } from 'src/modules/lan/lanDebugLog';
@@ -661,24 +666,30 @@ async function loadSettings(): Promise<void> {
 async function loadGroupsFromAppData(): Promise<any[]> {
   try {
     const api = (window as any).electronAPI;
-    if (!api || typeof api.getAppDataPath !== 'function') return [];
-    const appPath = await api.getAppDataPath();
-    const groupDir = api.joinPath(appPath, 'storage', 'group');
-    await api.ensureDir(groupDir);
-    const groups: any[] = [];
-    const files: string[] = await api.readDir(groupDir);
-    for (const f of files || []) {
-      if (typeof f === 'string' && f.startsWith('group-') && f.endsWith('.json')) {
-        try {
-          const p = api.joinPath(groupDir, f);
-          const data = await api.readJsonFile(p);
-          groups.push(data);
-        } catch (e) {
-          logger.error('Error reading group file', f, e);
+    if (api && typeof api.getAppDataPath === 'function') {
+      const appPath = await api.getAppDataPath();
+      const groupDir = api.joinPath(appPath, 'storage', 'group');
+      await api.ensureDir(groupDir);
+      const groups: any[] = [];
+      const files: string[] = await api.readDir(groupDir);
+      for (const f of files || []) {
+        if (typeof f === 'string' && f.startsWith('group-') && f.endsWith('.json')) {
+          try {
+            const p = api.joinPath(groupDir, f);
+            const data = await api.readJsonFile(p);
+            groups.push(data);
+          } catch (e) {
+            logger.error('Error reading group file', f, e);
+          }
         }
       }
+      return groups;
     }
-    return groups;
+    const stored = localStorage.getItem('day-organiser-groups');
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return []; }
+    }
+    return [];
   } catch (e) {
     logger.error('loadGroupsFromAppData failed', e);
     return [];
@@ -888,6 +899,7 @@ function getAutoPeriodMinutes() {
 }
 
 async function performAutoBackup() {
+  if (!hasElectronAPI) return;
   try {
     autoBackupStatus.value = 'exporting';
     const api = (window as any).electronAPI;
