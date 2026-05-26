@@ -101,11 +101,13 @@ export function useSyncContractFlow() {
     intervalSeconds?: number,
   ): boolean {
     const ccGroups = CC.group?.list?.all?.value ?? [];
+    const taskCounts = countTasksByGroup();
     const current = buildSyncContractSnapshot(
       devices,
       profiles,
       confirmDuplicateResolution.value,
       ccGroups,
+      taskCounts,
     );
     const previous = baselineSnapshot;
     if (!hasMeaningfulContractChanges(previous, current, devices)) {
@@ -118,7 +120,7 @@ export function useSyncContractFlow() {
       devices,
       profiles,
       ccGroups,
-      countTasksByGroup(),
+      taskCounts,
     );
 
     pendingSnapshot.value = current;
@@ -175,11 +177,13 @@ export function useSyncContractFlow() {
       }
     }
     const ccGroups = CC.group?.list?.all?.value ?? [];
+    const taskCounts = countTasksByGroup();
     const current = buildSyncContractSnapshot(
       devices,
       profiles,
       confirmDuplicateResolution.value,
       ccGroups,
+      taskCounts,
     );
     const previous = baselineSnapshot;
     const built = buildSyncContractPreview(
@@ -188,7 +192,7 @@ export function useSyncContractFlow() {
       devices,
       profiles,
       ccGroups,
-      countTasksByGroup(),
+      taskCounts,
     );
     pendingSnapshot.value = current;
     preview.value = built;

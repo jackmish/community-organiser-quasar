@@ -154,6 +154,7 @@ export function buildSyncContractSnapshot(
   profiles: RoleProfileData[],
   duplicateResolution: SyncDuplicateResolution = DEFAULT_SYNC_DUPLICATE_RESOLUTION,
   groupsRaw?: unknown[],
+  taskCountByGroup?: Record<string, number>,
 ): SyncContractSnapshot {
   const assignedGroupIds = new Set<string>();
   for (const d of devices) {
@@ -170,12 +171,14 @@ export function buildSyncContractSnapshot(
       const id = typeof g.id === 'string' || typeof g.id === 'number' ? String(g.id) : '';
       if (!id || !assignedGroupIds.has(id)) continue;
       const name = typeof g.name === 'string' && g.name ? g.name : id;
-      const entry: { id: string; name: string; icon?: string; color?: string; parentId?: string | null } = { id, name };
+      const entry: { id: string; name: string; icon?: string; color?: string; parentId?: string | null; taskCount?: number } = { id, name };
       if (typeof g.icon === 'string' && g.icon) entry.icon = g.icon;
       if (typeof g.color === 'string' && g.color) entry.color = g.color;
       const pid = g.parentId ?? g.parent_id;
       if (typeof pid === 'string' && pid) entry.parentId = pid;
       else entry.parentId = null;
+      const tc = taskCountByGroup?.[id];
+      if (typeof tc === 'number' && tc > 0) entry.taskCount = tc;
       groups.push(entry);
     }
   }
@@ -499,14 +502,8 @@ function buildPreviewSections(
   return sections.sort((a, b) => a.roleName.localeCompare(b.roleName));
 }
 
-/** Short chip label e.g. "CO21 - 11 tasks" */
+/** Short chip label — group name only. */
 export function syncGroupChipLabel(chip: SyncGroupChip): string {
-  if (chip.tasksEnabled) {
-    return fmt('sync.preview_tasks_short', {
-      name: chip.group.name,
-      count: String(chip.taskCount),
-    });
-  }
   return chip.group.name;
 }
 
@@ -533,24 +530,29 @@ export function syncInheritedScopeText(sourceGroup: SyncGroupVisual): string {
 }
 
 /**
- * Fill in group records and visual entries from a snapshot's embedded `groups`
- * metadata for any group IDs not already present in the local lists.
+ * Fill in group records, visual entries, and task counts from a snapshot's
+ * embedded `groups` metadata for any data not already present locally.
  */
 function mergeSnapshotGroupsInto(
   snapshot: SyncContractSnapshot,
   groups: GroupRecord[],
   visualMap: Map<string, SyncGroupVisual>,
+  taskCountByGroup?: Record<string, number>,
 ): void {
   if (!snapshot.groups?.length) return;
   const knownIds = new Set(groups.map((g) => g.id));
   for (const sg of snapshot.groups) {
-    if (knownIds.has(sg.id)) continue;
-    groups.push({ id: sg.id, name: sg.name, parentId: sg.parentId ?? null });
-    knownIds.add(sg.id);
+    if (!knownIds.has(sg.id)) {
+      groups.push({ id: sg.id, name: sg.name, parentId: sg.parentId ?? null });
+      knownIds.add(sg.id);
+    }
     if (!visualMap.has(sg.id)) {
       const vis: SyncGroupVisual = { id: sg.id, name: sg.name, icon: sg.icon || 'folder' };
       if (sg.color) vis.color = sg.color;
       visualMap.set(sg.id, vis);
+    }
+    if (taskCountByGroup && typeof sg.taskCount === 'number' && sg.taskCount > 0) {
+      if (!taskCountByGroup[sg.id]) taskCountByGroup[sg.id] = sg.taskCount;
     }
   }
 }
@@ -572,8 +574,8 @@ export function buildSyncContractPreview(
   const groups = normalizeGroupsFromCc(Array.isArray(groupsRaw) ? groupsRaw : []);
   const visualMap = buildGroupVisualMap(groupsRaw);
 
-  mergeSnapshotGroupsInto(current, groups, visualMap);
-  if (previous) mergeSnapshotGroupsInto(previous, groups, visualMap);
+  mergeSnapshotGroupsInto(current, groups, visualMap, taskCountByGroup);
+  if (previous) mergeSnapshotGroupsInto(previous, groups, visualMap, taskCountByGroup);
 
   const sectionDevices = options?.includeAllDevicesInSections
     ? devices

@@ -1,5 +1,6 @@
 import { computed, type StyleValue } from 'vue';
 import { useQuasar } from 'quasar';
+import { Capacitor } from '@capacitor/core';
 
 export type SettingsDialogLayoutOptions = {
   /** Minimum card width on desktop (px). */
@@ -7,6 +8,8 @@ export type SettingsDialogLayoutOptions = {
   /** Maximum card width on desktop (px). Defaults to minWidth. */
   maxWidth?: number;
 };
+
+const isNative = Capacitor.isNativePlatform();
 
 /** Responsive layout for settings, connection, group, and role dialogs. */
 export function useSettingsDialogLayout(
@@ -26,20 +29,23 @@ export function useSettingsDialogLayout(
   /** Phones only — not tablet / narrow desktop (Quasar md = 1024px was too aggressive). */
   const isMobile = computed(() => $q.screen.lt.sm);
 
+  /** Native mobile OR narrow viewport — always maximise to avoid floating overflow. */
+  const isCompact = computed(() => isMobile.value || isNative);
+
   const dialogBind = computed(() => ({
-    maximized: isMobile.value,
-    transitionShow: isMobile.value ? 'slide-up' : 'scale',
-    transitionHide: isMobile.value ? 'slide-down' : 'scale',
+    maximized: isCompact.value,
+    transitionShow: isCompact.value ? 'slide-up' : 'scale',
+    transitionHide: isCompact.value ? 'slide-down' : 'scale',
   }));
 
   const cardClass = computed(() =>
-    isMobile.value
-      ? 'column co21-dialog-card settings-dialog-card settings-dialog-card--mobile'
+    isCompact.value
+      ? 'co21-dialog-card settings-dialog-card settings-dialog-card--mobile'
       : 'column co21-dialog-card settings-dialog-card',
   );
 
   const cardStyle = computed((): StyleValue | undefined => {
-    if (isMobile.value) return undefined;
+    if (isCompact.value) return undefined;
     return {
       '--co21-dialog-min': `${minWidth}px`,
       '--co21-dialog-max': `${maxWidth}px`,
@@ -59,11 +65,12 @@ export function useSettingsDialogLayout(
   const bodyStyle = computed((): StyleValue => ({
     minHeight: 0,
     overflow: 'auto',
-    ...(isMobile.value ? {} : { maxHeight: 'calc(92vh - 120px)' }),
+    ...(isCompact.value ? {} : { maxHeight: 'calc(92vh - 120px)' }),
   }));
 
   return {
     isMobile,
+    isCompact,
     dialogBind,
     cardClass,
     cardStyle,

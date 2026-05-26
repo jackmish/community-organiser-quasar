@@ -1,9 +1,24 @@
 .settings-dialog-card--mobile {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
   width: 100%;
   max-width: 100% !important;
   min-width: 0 !important;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   border-radius: 0;
+  overflow: hidden;
+}
+
+.settings-dialog-card--mobile .settings-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Debug tools: full-screen white panel on phones (scroll in body, not nested list) */

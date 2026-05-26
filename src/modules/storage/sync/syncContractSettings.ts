@@ -23,7 +23,7 @@ export type SyncContractSnapshot = {
     functionAccess: Array<{ functionId: string; enabled: boolean; privilege: string }>;
   }>;
   /** Group metadata for display on the receiving device (optional, backward-compat). */
-  groups?: Array<{ id: string; name: string; icon?: string; color?: string; parentId?: string | null }>;
+  groups?: Array<{ id: string; name: string; icon?: string; color?: string; parentId?: string | null; taskCount?: number }>;
 };
 
 export type SyncContractPending = {

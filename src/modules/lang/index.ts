@@ -9,14 +9,16 @@ const fallback = ref<Translations>({});
 
 import { getSetting, setSetting } from 'src/modules/storage/backend/electron/electronBackend';
 
-async function loadJson(path: string): Promise<Translations | null> {
-  try {
-    // Dynamic import for JSON works with Vite
-    const mod = await import(/* @vite-ignore */ path);
-    return mod.default ?? mod;
-  } catch (e) {
-    return null;
+const translationModules = import.meta.glob<{ default: Translations }>(
+  './translations/*.json',
+  { eager: true },
+);
+
+function resolveTranslation(tag: string): Translations | null {
+  for (const [path, mod] of Object.entries(translationModules)) {
+    if (path.endsWith(`/${tag}.json`)) return mod.default;
   }
+  return null;
 }
 
 export async function setLocale(locale: string) {
@@ -27,8 +29,8 @@ export async function setLocale(locale: string) {
     const region = (parts[1] || (lang === 'pl' ? 'PL' : 'US')).toUpperCase();
     currentCountry = region;
 
-    const primary = await loadJson(`./translations/${lang}-${region}.json`);
-    const en = await loadJson(`./translations/en-US.json`);
+    const primary = resolveTranslation(`${lang}-${region}`);
+    const en = resolveTranslation('en-US');
     dict.value = primary || {};
     fallback.value = en || {};
   } catch (e) {
