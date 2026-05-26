@@ -394,4 +394,17 @@ contextBridge.exposeInMainWorld('electronLan', {
     ipcRenderer.on('lan:sync-contract-rejected', fn);
     return () => ipcRenderer.removeListener('lan:sync-contract-rejected', fn);
   },
+  onSyncContractAccepted: (callback) => {
+    const fn = (_e, detail) => {
+      void (async () => {
+        try {
+          await callback(detail);
+        } catch (err) {
+          console.error('electronLan onSyncContractAccepted callback', err);
+        }
+      })();
+    };
+    ipcRenderer.on('lan:sync-contract-accepted', fn);
+    return () => ipcRenderer.removeListener('lan:sync-contract-accepted', fn);
+  },
 });

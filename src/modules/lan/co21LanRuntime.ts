@@ -24,6 +24,7 @@ export type Co21LanApi = {
   onPairingComplete: (callback: (detail: Record<string, unknown>) => void) => () => void;
   onSyncContractIncoming: (callback: (detail: unknown) => void | Promise<void>) => () => void;
   onSyncContractRejected: (callback: (detail: unknown) => void | Promise<void>) => () => void;
+  onSyncContractAccepted?: (callback: (detail: unknown) => void | Promise<void>) => () => void;
 };
 
 let capacitorBridgeInstalled = false;
@@ -82,6 +83,15 @@ function installCapacitorLanBridge(): void {
     }
   });
 
+  void Co21LanServer.addListener('syncContractAccepted', (ev) => {
+    const detail = normalizeLanListenerDetail(ev);
+    for (const cb of syncAcceptedCallbacks) {
+      void Promise.resolve(cb(detail)).catch((e) =>
+        logger.warn('[co21LanRuntime] syncContractAccepted', e),
+      );
+    }
+  });
+
   void Co21LanServer.addListener('syncExchangeRequest', (ev) => {
     void handleSyncExchangeRequest(ev as { requestId?: string; body?: string });
   });
@@ -127,11 +137,16 @@ function installCapacitorLanBridge(): void {
       syncRejectedCallbacks.add(callback);
       return () => syncRejectedCallbacks.delete(callback);
     },
+    onSyncContractAccepted: (callback) => {
+      syncAcceptedCallbacks.add(callback);
+      return () => syncAcceptedCallbacks.delete(callback);
+    },
   };
 }
 
 const syncIncomingCallbacks = new Set<(d: unknown) => void | Promise<void>>();
 const syncRejectedCallbacks = new Set<(d: unknown) => void | Promise<void>>();
+const syncAcceptedCallbacks = new Set<(d: unknown) => void | Promise<void>>();
 
 async function handleSyncExchangeRequest(ev: { requestId?: string; body?: string }): Promise<void> {
   const requestId = String(ev.requestId || '').trim();

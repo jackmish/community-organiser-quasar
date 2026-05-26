@@ -10,7 +10,9 @@ import { syncLanTrustedContractDevices } from 'src/modules/lan/lanServerManager'
 import logger from 'src/utils/logger';
 import {
   normalizeSyncDuplicateResolution,
+  loadPendingOutgoingContract,
   savePendingOutgoingContract,
+  saveLastContractSnapshot,
   type SyncContractPending,
   type SyncContractSnapshot,
   type SyncDuplicateResolution,
@@ -149,6 +151,42 @@ export async function createSendContractAction(opts: {
 export async function findSendContractAction(): Promise<SyncPendingAction | null> {
   const list = await loadPendingActions();
   return list.find((a) => a.kind === 'send_contract') ?? null;
+}
+
+let promotionInProgress = false;
+
+/**
+ * After a successful sync exchange, promote the outgoing pending contract
+ * to a saved (accepted) contract and remove the send_contract action.
+ * This is the implicit "peer accepted" signal.
+ */
+export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
+  if (promotionInProgress) return false;
+  promotionInProgress = true;
+  try {
+    const outgoing = await loadPendingOutgoingContract();
+    if (!outgoing?.snapshot) return false;
+    const action = await findSendContractAction();
+    if (!action) return false;
+    await saveLastContractSnapshot({
+      ...outgoing.snapshot,
+      ...(outgoing.duplicateResolution
+        ? { duplicateResolution: outgoing.duplicateResolution }
+        : {}),
+    });
+    await savePendingOutgoingContract(null);
+    const list = await loadPendingActions();
+    await savePendingActions(list.filter((a) => a.kind !== 'send_contract'));
+    dispatchPendingActionsChanged();
+    window.dispatchEvent(new Event('co21:sync-contract-signed'));
+    logger.info('[syncPendingActions] outgoing contract promoted — peer accepted');
+    return true;
+  } catch (e) {
+    logger.warn('[syncPendingActions] promoteOutgoingContract failed', e);
+    return false;
+  } finally {
+    promotionInProgress = false;
+  }
 }
 
 export async function tryDeliverAction(

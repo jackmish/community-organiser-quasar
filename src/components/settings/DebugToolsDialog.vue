@@ -14,7 +14,7 @@
         :class="[bodyClass, 'debug-tools-dialog__body', 'q-pt-sm']"
         :style="bodyStyle"
       >
-        <LanDebugLogPanel :mobile="isMobile" />
+        <LanDebugLogPanel :mobile="isMobile" @retry-contract="onRetryContract" />
 
         <q-separator class="q-my-md debug-tools-dialog__sep" />
 
@@ -49,8 +49,9 @@ import CC from 'src/CCAccess';
 import { fixInvalidDatesInDays } from 'src/utils/dateUtils';
 import { saveData } from 'src/utils/storageUtils';
 import LanDebugLogPanel from './LanDebugLogPanel.vue';
-import { setLanDebugForceCapture } from 'src/modules/lan/lanDebugLog';
+import { setLanDebugForceCapture, type LanDebugEntry } from 'src/modules/lan/lanDebugLog';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+import { Notify } from 'quasar';
 import { watch } from 'vue';
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -94,6 +95,25 @@ async function runFixDates() {
     fixResult.value = 0;
   } finally {
     fixing.value = false;
+  }
+}
+
+async function onRetryContract(entry: LanDebugEntry) {
+  const url = entry.url;
+  if (!url) return;
+  try {
+    const { lanHttpRequest } = await import('src/modules/lan/lanHttp');
+    const body = entry.requestBody ?? '';
+    await lanHttpRequest({
+      url,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      timeoutMs: 15000,
+    });
+    Notify.create({ type: 'positive', message: 'Retry sent', timeout: 2000 });
+  } catch {
+    Notify.create({ type: 'negative', message: 'Retry failed', timeout: 2000 });
   }
 }
 

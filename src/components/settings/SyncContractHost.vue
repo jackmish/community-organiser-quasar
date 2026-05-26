@@ -37,7 +37,8 @@ import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager
 import { getCo21LanApi } from 'src/modules/lan/co21LanRuntime';
 import { rememberPeerLanHost } from 'src/modules/lan/lanRemoteHost';
 import { co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
-import { lanPostSyncContractReject } from 'src/modules/lan/lanSyncContract';
+import { lanPostSyncContractReject, lanPostSyncContractAccept } from 'src/modules/lan/lanSyncContract';
+import type { SyncContractAcceptPayload } from 'src/modules/lan/lanSyncContract';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import logger from 'src/utils/logger';
 import type { SyncContractPending } from 'src/modules/storage/sync/syncContractSettings';
@@ -196,17 +197,46 @@ async function clearIncomingState(): Promise<void> {
   dispatchSyncContractIncoming();
 }
 
+async function sendAcceptToProposer(
+  pending: SyncContractPending,
+): Promise<boolean> {
+  const local = await loadOwnDeviceMeta();
+  const host = await resolveProposerLanHost(pending);
+  const base = host ? co21LanBaseUrl(host) : '';
+  if (!base) return false;
+  const payload: SyncContractAcceptPayload = {
+    acceptorDeviceId: local.id,
+    acceptorDeviceName: local.name,
+    proposerDeviceId: pending.proposerDeviceId,
+    createdAt: pending.createdAt,
+  };
+  return lanPostSyncContractAccept(base, payload);
+}
+
+let pendingAcceptRetry: SyncContractPending | null = null;
+
+async function retryPendingAcceptIfNeeded(): Promise<void> {
+  if (!pendingAcceptRetry) return;
+  const pending = pendingAcceptRetry;
+  const ok = await sendAcceptToProposer(pending);
+  if (ok) {
+    pendingAcceptRetry = null;
+    logger.info('[SyncContractHost] accept retry succeeded');
+  }
+}
+
 async function onIncomingPreviewAccept(): Promise<void> {
   if (!pendingIncomingContract?.snapshot) return;
   const token = pendingIncomingContract.syncSessionToken;
+  const pending = pendingIncomingContract;
   await saveSyncDuplicateResolution(incomingDuplicateResolution.value);
   await saveLastContractSnapshot({
-    ...pendingIncomingContract.snapshot,
+    ...pending.snapshot,
     duplicateResolution: incomingDuplicateResolution.value,
   });
   await ensurePeerSyncSession(
-    pendingIncomingContract.proposerDeviceId,
-    pendingIncomingContract.proposerDeviceName,
+    pending.proposerDeviceId,
+    pending.proposerDeviceName,
     token,
   );
   await savePendingOutgoingContract(null);
@@ -221,6 +251,12 @@ async function onIncomingPreviewAccept(): Promise<void> {
     timeout: 2500,
   });
   window.dispatchEvent(new Event('co21:sync-contract-signed'));
+
+  const accepted = await sendAcceptToProposer(pending);
+  if (!accepted) {
+    pendingAcceptRetry = pending;
+    logger.warn('[SyncContractHost] accept delivery failed — will retry on next peer discovery');
+  }
   void runFirstSyncAfterContractAccept(token);
 }
 
@@ -281,8 +317,30 @@ async function handlePeerRejectedContract(detail: unknown): Promise<void> {
   window.dispatchEvent(new Event(SYNC_CONTRACT_REJECTED_EVENT));
 }
 
+async function handlePeerAcceptedContract(detail: unknown): Promise<void> {
+  if (!detail || typeof detail !== 'object') return;
+  const d = detail as Record<string, unknown>;
+  const acceptorName =
+    typeof d.acceptorDeviceName === 'string' ? d.acceptorDeviceName.trim() : '';
+  logger.info('[SyncContractHost] peer accepted contract', acceptorName);
+  const { promoteOutgoingContractIfNeeded } = await import(
+    'src/modules/storage/sync/syncPendingActions'
+  );
+  const promoted = await promoteOutgoingContractIfNeeded();
+  if (promoted) {
+    Notify.create({
+      type: 'positive',
+      message: $text('sync.contract_signed_ok'),
+      timeout: 2500,
+    });
+  }
+}
+
+let acceptRetryTimer: ReturnType<typeof setInterval> | null = null;
+
 let lanIncomingUnsub: (() => void) | undefined;
 let lanRejectedUnsub: (() => void) | undefined;
+let lanAcceptedUnsub: (() => void) | undefined;
 
 const onIncomingEvent = () => {
   void refreshIncomingBanner();
@@ -318,6 +376,12 @@ onMounted(() => {
       void handlePeerRejectedContract(detail);
     });
   }
+  if (lan?.onSyncContractAccepted) {
+    lanAcceptedUnsub = lan.onSyncContractAccepted((detail) => {
+      void handlePeerAcceptedContract(detail);
+    });
+  }
+  acceptRetryTimer = setInterval(() => void retryPendingAcceptIfNeeded(), 15_000);
 });
 
 onBeforeUnmount(() => {
@@ -328,6 +392,11 @@ onBeforeUnmount(() => {
   window.removeEventListener(OPEN_INCOMING_SYNC_REVIEW_EVENT, onOpenReviewEvent);
   lanIncomingUnsub?.();
   lanRejectedUnsub?.();
+  lanAcceptedUnsub?.();
+  if (acceptRetryTimer) {
+    clearInterval(acceptRetryTimer);
+    acceptRetryTimer = null;
+  }
 });
 
 defineExpose({ refreshIncomingBanner });

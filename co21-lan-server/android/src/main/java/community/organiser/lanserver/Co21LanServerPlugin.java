@@ -283,6 +283,10 @@ public class Co21LanServerPlugin extends Plugin {
           return handleContractPropose(session, remoteAddr);
         }
 
+        if (method == Method.POST && path.equals(API_PREFIX + "/sync/contract/accept")) {
+          return handleContractAccept(session, remoteAddr);
+        }
+
         if (method == Method.POST && path.equals(API_PREFIX + "/sync/contract/reject")) {
           return handleContractReject(session, remoteAddr);
         }
@@ -481,6 +485,29 @@ public class Co21LanServerPlugin extends Plugin {
       JSObject detail = JSObject.fromJSONObject(parsed);
       detail.put("proposerLanHost", remoteAddr);
       notifyListeners("syncContractIncoming", detail);
+      JSONObject ok = new JSONObject();
+      ok.put("ok", true);
+      return jsonResponse(200, ok);
+    } catch (JSONException e) {
+      return jsonResponse(400, errorBody("invalid_json"));
+    } catch (Exception e) {
+      return jsonResponse(400, errorBody("bad_body"));
+    }
+  }
+
+  private NanoHTTPD.Response handleContractAccept(NanoHTTPD.IHTTPSession session, String remoteAddr) {
+    try {
+      String raw = readBody(session);
+      JSONObject parsed = new JSONObject(raw != null && !raw.isEmpty() ? raw : "{}");
+      String acceptorDeviceId = parsed.optString("acceptorDeviceId", "").trim();
+      if (acceptorDeviceId.isEmpty()) {
+        return jsonResponse(400, errorBody("invalid_accept"));
+      }
+      if (!isTrusted(acceptorDeviceId, remoteAddr)) {
+        return jsonResponse(403, errorBody("acceptor_not_registered"));
+      }
+      JSObject detail = JSObject.fromJSONObject(parsed);
+      notifyListeners("syncContractAccepted", detail);
       JSONObject ok = new JSONObject();
       ok.put("ok", true);
       return jsonResponse(200, ok);

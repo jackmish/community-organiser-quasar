@@ -431,7 +431,7 @@ export async function runSyncWithPeer(opts: {
       deletedTasks: outbound.deletedTasks,
     };
     if (sinceMs > 0) reqBody.since = sinceMs;
-    const res = await lanPostSyncExchange(base, reqBody, opts.exchangeTimeoutMs ?? 8_000);
+    const res = await lanPostSyncExchange(base, reqBody, opts.exchangeTimeoutMs ?? 20_000);
     if (!res?.ok) {
       await upsertSyncPeerState({
         peerDeviceId: opts.peerDeviceId,
