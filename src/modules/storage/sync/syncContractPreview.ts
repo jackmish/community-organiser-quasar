@@ -153,7 +153,33 @@ export function buildSyncContractSnapshot(
   devices: ConnectedDevice[],
   profiles: RoleProfileData[],
   duplicateResolution: SyncDuplicateResolution = DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  groupsRaw?: unknown[],
 ): SyncContractSnapshot {
+  const assignedGroupIds = new Set<string>();
+  for (const d of devices) {
+    if (d.rolesByGroup) {
+      for (const gid of Object.keys(d.rolesByGroup)) assignedGroupIds.add(gid);
+    }
+  }
+
+  const groups: SyncContractSnapshot['groups'] = [];
+  if (Array.isArray(groupsRaw)) {
+    for (const item of groupsRaw) {
+      if (!item || typeof item !== 'object') continue;
+      const g = item as Record<string, unknown>;
+      const id = typeof g.id === 'string' || typeof g.id === 'number' ? String(g.id) : '';
+      if (!id || !assignedGroupIds.has(id)) continue;
+      const name = typeof g.name === 'string' && g.name ? g.name : id;
+      const entry: { id: string; name: string; icon?: string; color?: string; parentId?: string | null } = { id, name };
+      if (typeof g.icon === 'string' && g.icon) entry.icon = g.icon;
+      if (typeof g.color === 'string' && g.color) entry.color = g.color;
+      const pid = g.parentId ?? g.parent_id;
+      if (typeof pid === 'string' && pid) entry.parentId = pid;
+      else entry.parentId = null;
+      groups.push(entry);
+    }
+  }
+
   return {
     savedAt: Date.now(),
     duplicateResolution: normalizeSyncDuplicateResolution(duplicateResolution),
@@ -175,6 +201,7 @@ export function buildSyncContractSnapshot(
         privilege: f.privilege,
       })),
     })),
+    groups,
   };
 }
 
@@ -505,6 +532,29 @@ export function syncInheritedScopeText(sourceGroup: SyncGroupVisual): string {
   return fmt('sync.preview_inherited_scope', { group: sourceGroup.name });
 }
 
+/**
+ * Fill in group records and visual entries from a snapshot's embedded `groups`
+ * metadata for any group IDs not already present in the local lists.
+ */
+function mergeSnapshotGroupsInto(
+  snapshot: SyncContractSnapshot,
+  groups: GroupRecord[],
+  visualMap: Map<string, SyncGroupVisual>,
+): void {
+  if (!snapshot.groups?.length) return;
+  const knownIds = new Set(groups.map((g) => g.id));
+  for (const sg of snapshot.groups) {
+    if (knownIds.has(sg.id)) continue;
+    groups.push({ id: sg.id, name: sg.name, parentId: sg.parentId ?? null });
+    knownIds.add(sg.id);
+    if (!visualMap.has(sg.id)) {
+      const vis: SyncGroupVisual = { id: sg.id, name: sg.name, icon: sg.icon || 'folder' };
+      if (sg.color) vis.color = sg.color;
+      visualMap.set(sg.id, vis);
+    }
+  }
+}
+
 export type BuildSyncContractPreviewOptions = {
   /** Incoming peer contract: show roles for all devices in the proposal (including this device). */
   includeAllDevicesInSections?: boolean;
@@ -521,6 +571,10 @@ export function buildSyncContractPreview(
 ): SyncContractPreview {
   const groups = normalizeGroupsFromCc(Array.isArray(groupsRaw) ? groupsRaw : []);
   const visualMap = buildGroupVisualMap(groupsRaw);
+
+  mergeSnapshotGroupsInto(current, groups, visualMap);
+  if (previous) mergeSnapshotGroupsInto(previous, groups, visualMap);
+
   const sectionDevices = options?.includeAllDevicesInSections
     ? devices
     : devices.filter((d) => !d.isLocal);
