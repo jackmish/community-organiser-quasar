@@ -11,43 +11,13 @@
           {{ $text('sync.pending_actions_empty') }}
         </div>
 
-        <div v-if="syncRuns.length" class="q-mb-md">
-          <div class="text-subtitle2 text-weight-medium q-mb-sm">
-            {{ $text('sync.runs_section_title') }}
-          </div>
-          <div class="pending-actions-list column q-gutter-sm">
-            <div v-for="run in syncRunsNewestFirst" :key="run.id" class="pending-action-card">
-              <div class="row items-center q-gutter-sm q-mb-xs">
-                <div class="text-subtitle2 text-weight-medium">{{ run.peerDeviceName }}</div>
-                <q-badge :color="runStatusColor(run.status)" :label="runStatusLabel(run.status)" />
-                <q-badge
-                  v-if="run.incremental"
-                  color="grey-7"
-                  outline
-                  :label="$text('sync.run_incremental')"
-                />
-              </div>
-              <div class="text-caption text-grey-8">
-                {{ runStartedLabel(run) }}
-                <span v-if="run.finishedAt"> · {{ runFinishedLabel(run) }}</span>
-              </div>
-              <div v-if="run.message" class="text-caption text-grey-7 q-mt-xs">
-                {{ run.message }}
-                <span v-if="run.groupsReceived != null">
-                  · {{ $text('sync.run_stats') }}
-                  ↑{{ run.groupsSent ?? 0 }}/{{ run.tasksSent ?? 0 }}
-                  ↓{{ run.groupsReceived }}/{{ run.tasksReceived ?? 0 }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="actions.length" class="pending-actions-list column q-gutter-md">
+        <!-- Pending actions (retryable) — always on top -->
+        <div v-if="actions.length" class="pending-actions-list column q-gutter-md q-mb-md">
           <div
-            v-for="action in actions"
+            v-for="action in sortedActions"
             :key="action.id"
             class="pending-action-card"
+            :class="{ 'pending-action-card--failed': failCount(action) > 0 && !action.deliveredAt }"
           >
             <div class="pending-action-card__main row items-start q-col-gutter-md">
               <div class="col">
@@ -104,6 +74,101 @@
             </div>
           </div>
         </div>
+
+        <!-- Sync runs — collapsed into expandable groups by status -->
+        <q-list v-if="syncRuns.length" bordered separator class="rounded-borders pending-runs-list">
+          <q-expansion-item
+            v-if="failedRuns.length"
+            dense
+            header-class="bg-red-1 text-negative"
+            :default-opened="true"
+          >
+            <template #header>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ failedRuns.length }} failed sync{{ failedRuns.length === 1 ? '' : 's' }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="negative">{{ failedRuns.length }}</q-badge>
+              </q-item-section>
+            </template>
+            <div class="pending-runs-group">
+              <div v-for="run in failedRuns" :key="run.id" class="pending-run-row">
+                <div class="row items-center q-gutter-xs">
+                  <span class="text-weight-medium">{{ run.peerDeviceName }}</span>
+                  <q-badge color="negative" dense label="failed" />
+                </div>
+                <div class="text-caption text-grey-7">
+                  {{ runStartedLabel(run) }}
+                  <span v-if="run.message"> · {{ run.message }}</span>
+                </div>
+              </div>
+            </div>
+          </q-expansion-item>
+
+          <q-expansion-item
+            v-if="okRuns.length"
+            dense
+            header-class="bg-green-1"
+          >
+            <template #header>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ okRuns.length }} successful sync{{ okRuns.length === 1 ? '' : 's' }}
+                </q-item-label>
+                <q-item-label v-if="okRuns[0]" caption>
+                  last: {{ formatTimeShort(okRuns[0].finishedAt ?? okRuns[0].createdAt) }}
+                  <span v-if="okRuns[0].groupsReceived != null">
+                    · ↑{{ okRuns[0].groupsSent ?? 0 }}/{{ okRuns[0].tasksSent ?? 0 }}
+                    ↓{{ okRuns[0].groupsReceived }}/{{ okRuns[0].tasksReceived ?? 0 }}
+                  </span>
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="positive">{{ okRuns.length }}</q-badge>
+              </q-item-section>
+            </template>
+            <div class="pending-runs-group">
+              <div v-for="run in okRuns" :key="run.id" class="pending-run-row">
+                <div class="row items-center q-gutter-xs">
+                  <span class="text-weight-medium">{{ run.peerDeviceName }}</span>
+                  <span v-if="run.groupsReceived != null" class="text-caption text-grey-7">
+                    ↑{{ run.groupsSent ?? 0 }}/{{ run.tasksSent ?? 0 }}
+                    ↓{{ run.groupsReceived }}/{{ run.tasksReceived ?? 0 }}
+                  </span>
+                </div>
+                <div class="text-caption text-grey-7">{{ formatTimeShort(run.finishedAt ?? run.createdAt) }}</div>
+              </div>
+            </div>
+          </q-expansion-item>
+
+          <q-expansion-item
+            v-if="otherRuns.length"
+            dense
+            header-class="bg-blue-1"
+          >
+            <template #header>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ otherRuns.length }} pending/running
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="primary">{{ otherRuns.length }}</q-badge>
+              </q-item-section>
+            </template>
+            <div class="pending-runs-group">
+              <div v-for="run in otherRuns" :key="run.id" class="pending-run-row">
+                <div class="row items-center q-gutter-xs">
+                  <span class="text-weight-medium">{{ run.peerDeviceName }}</span>
+                  <q-badge :color="runStatusColor(run.status)" dense :label="runStatusLabel(run.status)" />
+                </div>
+                <div class="text-caption text-grey-7">{{ runStartedLabel(run) }}</div>
+              </div>
+            </div>
+          </q-expansion-item>
+        </q-list>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -168,11 +233,35 @@ function lastAttemptLabel(action: SyncPendingAction): string {
   return raw.replace('{time}', new Date(action.lastAttemptAt).toLocaleString());
 }
 
+const sortedActions = computed(() =>
+  [...props.actions].sort((a, b) => {
+    const aRetry = !a.deliveredAt && (a.deliveryFailCount ?? 0) > 0 ? 0 : a.deliveredAt ? 2 : 1;
+    const bRetry = !b.deliveredAt && (b.deliveryFailCount ?? 0) > 0 ? 0 : b.deliveredAt ? 2 : 1;
+    return aRetry - bRetry || b.createdAt - a.createdAt;
+  }),
+);
+
 const syncRuns = computed(() => props.syncRuns ?? []);
 
 const syncRunsNewestFirst = computed(() =>
   [...syncRuns.value].sort((a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt)),
 );
+
+const failedRuns = computed(() =>
+  syncRunsNewestFirst.value.filter((r) => r.status === 'failed'),
+);
+
+const okRuns = computed(() =>
+  syncRunsNewestFirst.value.filter((r) => r.status === 'ok'),
+);
+
+const otherRuns = computed(() =>
+  syncRunsNewestFirst.value.filter((r) => r.status !== 'ok' && r.status !== 'failed'),
+);
+
+function formatTimeShort(ts: number): string {
+  return new Date(ts).toLocaleTimeString();
+}
 
 function runStatusColor(status: SyncRunStatus): string {
   if (status === 'ok') return 'positive';
@@ -198,7 +287,6 @@ function runFinishedLabel(run: SyncRunRecord): string {
 </script>
 
 <style scoped>
-/* Body area: light panel distinct from blue dialog chrome (overrides global dialog card-section). */
 .pending-actions-body {
   color: rgba(0, 0, 0, 0.87) !important;
   background: #e8ecf0 !important;
@@ -216,8 +304,34 @@ function runFinishedLabel(run: SyncRunRecord): string {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.pending-action-card--failed {
+  border-left: 3px solid #e53935;
+}
+
 .pending-action-card__actions {
   min-width: 140px;
+}
+
+.pending-runs-list {
+  background: #fff;
+}
+
+.pending-runs-list :deep(.q-item) {
+  background: #fff;
+  color: #212121;
+}
+
+.pending-runs-group {
+  padding: 4px 12px 8px;
+}
+
+.pending-run-row {
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pending-run-row:last-child {
+  border-bottom: none;
 }
 
 @media (max-width: 599px) {
