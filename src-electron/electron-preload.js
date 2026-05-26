@@ -358,6 +358,7 @@ contextBridge.exposeInMainWorld('electronLan', {
     ipcRenderer.invoke('lan:set-trusted-contract-devices', ids),
   resolvePair: (token, accept) => ipcRenderer.invoke('lan:resolve-pair', { token, accept }),
   browseCo21: (opts) => ipcRenderer.invoke('lan:browse-co21', opts),
+  httpRequest: (opts) => ipcRenderer.invoke('lan:http-request', opts),
   onPairingPending: (callback) => {
     if (typeof callback !== 'function') return () => {};
     pairingPendingCallbacks.add(callback);

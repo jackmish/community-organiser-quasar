@@ -14,6 +14,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -544,13 +546,16 @@ public class Co21LanServerPlugin extends Plugin {
   private NanoHTTPD.Response handleSyncExchange(NanoHTTPD.IHTTPSession session, String remoteAddr) {
     try {
       String raw = readBody(session);
+      Log.d(TAG, "exchange body len=" + (raw != null ? raw.length() : 0) + " from=" + remoteAddr);
       JSONObject parsed = new JSONObject(raw != null && !raw.isEmpty() ? raw : "{}");
       String deviceId = parsed.optString("deviceId", "").trim();
       if (deviceId.isEmpty()) {
+        Log.w(TAG, "exchange: empty deviceId");
         return jsonResponse(400, errorBody("invalid_sync_request"));
       }
       registerLanPeerConnection(deviceId, remoteAddr);
       if (!isTrusted(deviceId, remoteAddr)) {
+        Log.w(TAG, "exchange: untrusted device=" + deviceId);
         return jsonResponse(403, errorBody("device_not_registered"));
       }
 
@@ -561,24 +566,30 @@ public class Co21LanServerPlugin extends Plugin {
       JSObject event = new JSObject();
       event.put("requestId", requestId);
       event.put("body", parsed.toString());
+      Log.d(TAG, "exchange: notifying bridge requestId=" + requestId);
       notifyListeners("syncExchangeRequest", event);
 
       boolean done = pending.latch.await(SYNC_BRIDGE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
       syncBridgePending.remove(requestId);
       String responseJson = pending.responseJson;
       if (!done || responseJson == null || responseJson.isEmpty()) {
+        Log.w(TAG, "exchange: bridge timeout/empty done=" + done + " hasResponse=" + (responseJson != null));
         return jsonResponse(503, errorBody("bridge_timeout"));
       }
 
+      Log.d(TAG, "exchange: bridge responded len=" + responseJson.length());
       JSONObject response = new JSONObject(responseJson);
       int code = response.optBoolean("ok", false) ? 200 : 400;
       return jsonResponse(code, response);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+      Log.e(TAG, "exchange: interrupted", e);
       return jsonResponse(503, errorBody("bridge_interrupted"));
     } catch (JSONException e) {
+      Log.e(TAG, "exchange: json error", e);
       return jsonResponse(400, errorBody("invalid_json"));
     } catch (Exception e) {
+      Log.e(TAG, "exchange: error", e);
       return jsonResponse(500, errorBody("bridge_error"));
     }
   }
@@ -688,6 +699,24 @@ public class Co21LanServerPlugin extends Plugin {
 
   private static String readBody(NanoHTTPD.IHTTPSession session)
     throws IOException, NanoHTTPD.ResponseException {
+    String lenHeader = session.getHeaders().get("content-length");
+    if (lenHeader != null && !lenHeader.isEmpty()) {
+      try {
+        int len = Integer.parseInt(lenHeader.trim());
+        if (len <= 0) return "";
+        InputStream is = session.getInputStream();
+        byte[] buf = new byte[len];
+        int totalRead = 0;
+        while (totalRead < len) {
+          int n = is.read(buf, totalRead, len - totalRead);
+          if (n < 0) break;
+          totalRead += n;
+        }
+        return new String(buf, 0, totalRead, StandardCharsets.UTF_8);
+      } catch (NumberFormatException ignored) {
+        // fall through to parseBody
+      }
+    }
     Map<String, String> files = new HashMap<>();
     session.parseBody(files);
     String body = files.get("postData");

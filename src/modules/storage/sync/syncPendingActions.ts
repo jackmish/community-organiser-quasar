@@ -243,29 +243,8 @@ export async function tryDeliverAction(
   list[idx] = updated;
   await savePendingActions(list);
   dispatchPendingActionsChanged();
-  if (ok && action.kind === 'send_contract') {
-    const { runSyncWithPeer } = await import('./lanOrganiserSync');
-    const delayMs = 400;
-    const syncTargets = deviceRows.map((d) => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      lanHost: (d.lanHost || '').trim(),
-    }));
-    setTimeout(() => {
-      void (async () => {
-        for (const t of syncTargets) {
-          if (!t.lanHost) continue;
-          const syncOpts = {
-            peerDeviceId: t.deviceId,
-            peerDeviceName: t.deviceName,
-            lanHost: t.lanHost,
-          };
-          const st = action.pending.syncSessionToken;
-          await runSyncWithPeer(st ? { ...syncOpts, sessionToken: st } : syncOpts);
-        }
-      })();
-    }, delayMs);
-  }
+  // Exchange is NOT attempted here — the peer hasn't accepted the contract yet.
+  // The first exchange runs after the peer sends an explicit accept.
   return ok;
 }
 

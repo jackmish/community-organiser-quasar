@@ -10,7 +10,11 @@ import {
   type LanSyncExchangeResponse,
 } from 'src/modules/lan/lanSyncAuth';
 import { lanPostSyncExchange } from 'src/modules/lan/lanSyncTransport';
-import { loadActiveContractForSync, type SyncContractSnapshot } from './syncContractSettings';
+import {
+  loadActiveContractForSync,
+  loadLastContractSnapshot,
+  type SyncContractSnapshot,
+} from './syncContractSettings';
 import type { GroupRecord } from './deviceRoleAssignment';
 import { contractGroupIds } from './syncContractScope';
 import {
@@ -360,11 +364,20 @@ export async function runSyncWithPeer(opts: {
   exchangeTimeoutMs?: number;
   /** When true, caller already confirmed peer via GET /info. */
   skipInfoProbe?: boolean;
+  /** Bypass the accepted-contract guard (used by runFirstSyncAfterContractAccept). */
+  allowPendingContract?: boolean;
 }): Promise<boolean> {
   const contract = await loadActiveContractForSync();
   if (!contract) {
     logger.warn('[lanOrganiserSync] no active contract');
     return false;
+  }
+  if (!opts.allowPendingContract) {
+    const saved = await loadLastContractSnapshot();
+    if (!saved) {
+      logger.info('[lanOrganiserSync] skipped exchange — contract not yet accepted by peer');
+      return false;
+    }
   }
   const scope = await resolveSyncScope(contract);
   const local = await loadOwnDeviceMeta();
@@ -516,6 +529,7 @@ export async function runFirstSyncAfterContractAccept(
       lanHost: (probe.device.lanHost || d.lanHost || '').trim(),
       ...(token ? { sessionToken: token } : {}),
       skipInfoProbe: true,
+      allowPendingContract: true,
     });
   }
 }
