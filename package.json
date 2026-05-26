@@ -18,6 +18,8 @@
     "electron": "quasar dev -m electron",
     "android-build": "quasar build -m capacitor -T android",
     "android": "quasar build -m capacitor -T android --debug",
+    "android:deploy": "powershell -ExecutionPolicy Bypass -File ./deploy-android.ps1",
+    "android:install": "powershell -ExecutionPolicy Bypass -File ./deploy-android.ps1 -SkipBuild",
     "build": "quasar build",
     "build:electron": "quasar build -m electron",
     "postinstall": "quasar prepare"
