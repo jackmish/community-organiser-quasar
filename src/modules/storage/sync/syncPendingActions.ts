@@ -166,8 +166,6 @@ export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
   try {
     const outgoing = await loadPendingOutgoingContract();
     if (!outgoing?.snapshot) return false;
-    const action = await findSendContractAction();
-    if (!action) return false;
     await saveLastContractSnapshot({
       ...outgoing.snapshot,
       ...(outgoing.duplicateResolution
@@ -176,8 +174,13 @@ export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
     });
     await savePendingOutgoingContract(null);
     const list = await loadPendingActions();
-    await savePendingActions(list.filter((a) => a.kind !== 'send_contract'));
+    const filtered = list.filter((a) => a.kind !== 'send_contract');
+    if (filtered.length !== list.length) {
+      await savePendingActions(filtered);
+    }
     dispatchPendingActionsChanged();
+    const { setSyncContractRuntime } = await import('./syncContractRuntime');
+    setSyncContractRuntime(outgoing.snapshot);
     window.dispatchEvent(new Event('co21:sync-contract-signed'));
     logger.info('[syncPendingActions] outgoing contract promoted — peer accepted');
     return true;

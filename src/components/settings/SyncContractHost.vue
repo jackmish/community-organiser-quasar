@@ -230,10 +230,12 @@ async function onIncomingPreviewAccept(): Promise<void> {
   const token = pendingIncomingContract.syncSessionToken;
   const pending = pendingIncomingContract;
   await saveSyncDuplicateResolution(incomingDuplicateResolution.value);
-  await saveLastContractSnapshot({
+  const savedSnapshot = {
     ...pending.snapshot,
     duplicateResolution: incomingDuplicateResolution.value,
-  });
+  };
+  await saveLastContractSnapshot(savedSnapshot);
+  setSyncContractRuntime(savedSnapshot);
   await ensurePeerSyncSession(
     pending.proposerDeviceId,
     pending.proposerDeviceName,
@@ -256,6 +258,8 @@ async function onIncomingPreviewAccept(): Promise<void> {
   if (!accepted) {
     pendingAcceptRetry = pending;
     logger.warn('[SyncContractHost] accept delivery failed — will retry on next peer discovery');
+  } else {
+    pendingAcceptRetry = null;
   }
   void runFirstSyncAfterContractAccept(token);
 }
@@ -333,6 +337,7 @@ async function handlePeerAcceptedContract(detail: unknown): Promise<void> {
       message: $text('sync.contract_signed_ok'),
       timeout: 2500,
     });
+    void runFirstSyncAfterContractAccept();
   }
 }
 

@@ -233,9 +233,13 @@ export async function applyInboundSyncDelta(
   await adoptMergedGroupBackgrounds(mergedGroups, remoteGroups);
   let localFlat = collectFlatTasks();
   localFlat = applyTaskDeletionsToFlatList(localFlat, deletions);
+  const inboundScope = new Set(scope);
+  for (const g of remoteGroups ?? []) {
+    if (g.id) inboundScope.add(String(g.id));
+  }
   const remoteInScope = filterTasksInScope(
     (remoteTasks ?? []) as FlatTask[],
-    scope,
+    inboundScope,
   ) as LanSyncExchangeRequest['tasks'];
   const mergedTasks = mergeTasksByNewest(localFlat, remoteInScope ?? []);
 
