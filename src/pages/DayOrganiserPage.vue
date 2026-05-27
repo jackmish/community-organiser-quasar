@@ -232,10 +232,21 @@
       @click="panelHidden = false"
     />
 
-    <div
-      v-if="todoScheduleActive && todoScheduleHasPickedDate"
-      class="todo-schedule-footer"
-    >
+    <div v-if="todoScheduleActive" class="todo-schedule-footer">
+      <div
+        class="todo-schedule-footer__date"
+        :class="
+          todoScheduleHasPickedDate
+            ? 'text-primary text-weight-medium'
+            : 'todo-schedule-footer__date--placeholder'
+        "
+      >
+        {{
+          todoScheduleHasPickedDate
+            ? formatDisplayDate(todoSchedulePickedDate)
+            : $text('task.todo.choose_day')
+        }}
+      </div>
       <div class="todo-schedule-footer__time">
         <q-input
           v-model.number="todoScheduleHour"
@@ -339,6 +350,7 @@ const {
   pickDay: pickTodoScheduleDay,
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
+
 const isMobileOrganiser = computed(() => $q.screen.lt.md);
 const { scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
@@ -1081,8 +1093,8 @@ function cancelTodoSchedule() {
 async function confirmTodoSchedule(goToEdit: boolean) {
   const task = todoScheduleSourceTask.value;
   const date = todoSchedulePickedDate.value.trim();
-  if (!task?.id || !date) return;
   const eventTime = buildTodoScheduleEventTime();
+  if (!task?.id || !date || !eventTime) return;
   const updated = {
     ...task,
     type_id: "TimeEvent",

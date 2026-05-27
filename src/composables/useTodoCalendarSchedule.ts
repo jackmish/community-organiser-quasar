@@ -14,8 +14,8 @@ export type TodoScheduleTask = {
 const active = ref(false);
 const sourceTask = shallowRef<TodoScheduleTask | null>(null);
 const pickedDate = ref('');
-const scheduleHour = ref(9);
-const scheduleMinute = ref(0);
+const scheduleHour = ref<number | null>(null);
+const scheduleMinute = ref<number | null>(null);
 
 /** Shared state: schedule a Todo via the main calendar (preview or edit). */
 export function useTodoCalendarSchedule() {
@@ -25,15 +25,8 @@ export function useTodoCalendarSchedule() {
     if (!task?.id) return;
     sourceTask.value = task;
     pickedDate.value = '';
-    const t = String(task.eventTime || '').trim();
-    if (t && /^\d{1,2}:\d{2}/.test(t)) {
-      const [h, m] = t.split(':');
-      scheduleHour.value = Math.min(23, Math.max(0, Number(h) || 9));
-      scheduleMinute.value = Math.min(59, Math.max(0, Number(m) || 0));
-    } else {
-      scheduleHour.value = 9;
-      scheduleMinute.value = 0;
-    }
+    scheduleHour.value = null;
+    scheduleMinute.value = null;
     active.value = true;
   }
 
@@ -41,6 +34,8 @@ export function useTodoCalendarSchedule() {
     active.value = false;
     sourceTask.value = null;
     pickedDate.value = '';
+    scheduleHour.value = null;
+    scheduleMinute.value = null;
   }
 
   function pickDay(date: string) {
@@ -49,9 +44,11 @@ export function useTodoCalendarSchedule() {
     pickedDate.value = d;
   }
 
-  function buildEventTime(): string {
-    const h = Math.min(23, Math.max(0, Number(scheduleHour.value) || 0));
-    const m = Math.min(59, Math.max(0, Number(scheduleMinute.value) || 0));
+  function buildEventTime(): string | null {
+    if (scheduleHour.value == null || scheduleMinute.value == null) return null;
+    const h = Math.min(23, Math.max(0, Number(scheduleHour.value)));
+    const m = Math.min(59, Math.max(0, Number(scheduleMinute.value)));
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
