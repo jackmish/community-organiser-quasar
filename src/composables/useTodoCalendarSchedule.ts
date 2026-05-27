@@ -44,11 +44,12 @@ export function useTodoCalendarSchedule() {
     pickedDate.value = d;
   }
 
-  function buildEventTime(): string | null {
-    if (scheduleHour.value == null || scheduleMinute.value == null) return null;
+  /** HH:mm when both fields are set; otherwise empty (all-day on that date). */
+  function buildEventTime(): string {
+    if (scheduleHour.value == null || scheduleMinute.value == null) return '';
     const h = Math.min(23, Math.max(0, Number(scheduleHour.value)));
     const m = Math.min(59, Math.max(0, Number(scheduleMinute.value)));
-    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 

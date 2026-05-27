@@ -1093,15 +1093,14 @@ function cancelTodoSchedule() {
 async function confirmTodoSchedule(goToEdit: boolean) {
   const task = todoScheduleSourceTask.value;
   const date = todoSchedulePickedDate.value.trim();
-  const eventTime = buildTodoScheduleEventTime();
-  if (!task?.id || !date || !eventTime) return;
+  if (!task?.id || !date) return;
   const updated = {
     ...task,
     type_id: "TimeEvent",
     type: "event",
     date,
     eventDate: date,
-    eventTime,
+    eventTime: buildTodoScheduleEventTime(),
     timeMode: "event",
   };
   try {
