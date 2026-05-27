@@ -3,6 +3,7 @@ import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
+  getRepeatDays as utilGetRepeatDays,
 } from '../utils/occursOnDay';
 import {
   parseYmdLocal as parseYmdLocalDefault,
@@ -33,6 +34,17 @@ export function createTaskComputed(args: {
 
   const getCycleType = task?.helpers?.getCycleType ?? utilGetCycleType;
   const occursOnDay = task?.helpers?.occursOnDay ?? utilOccursOnDay;
+  const getRepeatDays = task?.helpers?.getRepeatDays ?? utilGetRepeatDays;
+
+  function cyclicSeriesKey(task: { groupId?: string; name?: string; repeat?: unknown }): string | null {
+    const cycle = getCycleType(task);
+    if (!cycle) return null;
+    const days = getRepeatDays(task);
+    const daysKey = Array.isArray(days) ? [...days].sort().join(',') : '';
+    const gid = String(task.groupId || '');
+    const name = String(task.name || '').trim().toLowerCase();
+    return `${gid}|${name}|${cycle}|${daysKey}`;
+  }
 
   const groups: Ref<any[]> = (group?.list?.all as Ref<any[]>) ?? ref([] as any[]);
   const activeGroup: Ref<any> = (group?.active?.activeGroup as Ref<any>) ?? ref(null as any);
@@ -127,7 +139,12 @@ export function createTaskComputed(args: {
         if (Number(t.status_id) === 0) continue;
         if (t.type_id === 'Replenish') continue;
         if (occursOnDay(t, day)) {
-          if (!tasksToSort.some((existing) => existing.id === t.id)) {
+          const seriesKey = cyclicSeriesKey(t);
+          const alreadyListed =
+            tasksToSort.some((existing) => existing.id === t.id) ||
+            (seriesKey != null &&
+              tasksToSort.some((existing) => cyclicSeriesKey(existing) === seriesKey));
+          if (!alreadyListed) {
             // Ensure display and helpers use the occurrence date (not the seed date)
             const clone: any = { ...t, eventDate: day, date: day };
             clone.__isCyclicInstance = true;

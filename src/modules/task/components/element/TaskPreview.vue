@@ -17,6 +17,17 @@
             style="margin-right: 6px"
           />
           <q-btn
+            v-if="isTodo"
+            dense
+            round
+            unelevated
+            color="primary"
+            icon="event"
+            class="todo-schedule-calendar-btn"
+            :title="$text('task.todo.schedule_on_calendar')"
+            @click.stop="onScheduleTodoClick"
+          />
+          <q-btn
             dense
             unelevated
             color="orange"
@@ -361,6 +372,10 @@ import {
 } from "src/modules/task/utils/occursOnDay";
 import CC from "src/CCAccess";
 import type { Task } from "src/modules/task/models/TaskModel";
+import {
+  todoCalendarSchedule,
+  type TodoScheduleTask,
+} from "src/composables/useTodoCalendarSchedule";
 
 const props = defineProps<{
   task: Task;
@@ -594,6 +609,21 @@ function menuItemClass(p?: string) {
 const groupName = computed(() => props.groupName || "");
 
 const isTimeEvent = computed(() => (activeTask.value?.type_id || "") === "TimeEvent");
+const isTodo = computed(() => (activeTask.value?.type_id || "") === "Todo");
+
+function onScheduleTodoClick() {
+  const t = activeTask.value;
+  if (!t) return;
+  todoCalendarSchedule.start({
+    id: String(t.id),
+    name: t.name,
+    eventTime: t.eventTime,
+    eventDate: t.eventDate ?? t.date,
+    date: t.date ?? t.eventDate,
+    type_id: t.type_id,
+  } as TodoScheduleTask);
+  window.dispatchEvent(new Event("co21:todo-schedule-open"));
+}
 
 const displayDate = computed(() => {
   const task = activeTask.value || ({} as any);

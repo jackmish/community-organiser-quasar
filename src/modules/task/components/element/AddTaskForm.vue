@@ -22,7 +22,9 @@ import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
 import { hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
+import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
+import type { TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -368,7 +370,23 @@ const watermarkIcon = computed(() => {
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? "md" : "sm"));
 const isReplenish = computed(() => (localNewTask.value.type_id || "") === "Replenish");
+/** Type when edit session started — keeps calendar btn if user switches Todo → TimeEvent. */
+const scheduleOriginTypeId = ref("");
+const showTodoCalendarBtn = computed(() => {
+  if (props.mode !== "edit") return false;
+  const cur = localNewTask.value.type_id || "";
+  return cur === "TimeEvent" || scheduleOriginTypeId.value === "Todo";
+});
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
+
+function openTodoCalendarSchedule() {
+  if (!localNewTask.value.id) return;
+  todoCalendarSchedule.start({
+    ...localNewTask.value,
+    id: String(localNewTask.value.id),
+  } as TodoScheduleTask);
+  window.dispatchEvent(new Event("co21:todo-schedule-open"));
+}
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
 // Submit button appearance based on mode
@@ -596,6 +614,7 @@ watch(
   () => props.initialTask,
   (val) => {
     if (val) {
+      scheduleOriginTypeId.value = String(val.type_id || "");
       // copy relevant fields
       localNewTask.value = {
         name: val.name || "",
@@ -1166,6 +1185,19 @@ function onSubmit(event: Event) {
         </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
+        <div
+          v-if="showTodoCalendarBtn && localNewTask.type_id !== 'TimeEvent'"
+          class="row items-center q-mb-sm"
+        >
+          <q-btn
+            dense
+            unelevated
+            color="primary"
+            icon="event"
+            :label="$text('task.todo.schedule_on_calendar')"
+            @click="openTodoCalendarSchedule"
+          />
+        </div>
         <!-- Type selector moved into Priority card below; header removed -->
 
         <!-- Date/time panels relocated into the description column below -->
@@ -1189,6 +1221,17 @@ function onSubmit(event: Event) {
                         <div class="text-caption text-grey-7">
                           {{ $text("label.date") }}
                         </div>
+                        <q-btn
+                          v-if="showTodoCalendarBtn"
+                          dense
+                          round
+                          unelevated
+                          color="primary"
+                          icon="event"
+                          class="todo-schedule-calendar-btn"
+                          :title="$text('task.todo.schedule_on_calendar')"
+                          @click="openTodoCalendarSchedule"
+                        />
 
                         <div class="col-auto">
                           <q-btn-toggle

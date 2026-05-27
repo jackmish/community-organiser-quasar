@@ -118,12 +118,29 @@
         <div
           ref="calendarSectionRef"
           class="col-12 col-md-8 day-organiser-calendar-section day-organiser-scroll-anchor"
+          :class="{ 'day-organiser-calendar-section--pick': todoScheduleActive }"
         >
+          <div
+            v-if="todoScheduleActive"
+            class="todo-schedule-pick-banner"
+            role="status"
+          >
+            <span>{{ $text('task.todo.choose_day') }}</span>
+            <q-btn
+              flat
+              dense
+              round
+              color="white"
+              icon="close"
+              :aria-label="$text('action.cancel')"
+              @click="cancelTodoSchedule"
+            />
+          </div>
           <CalendarView
             :key="reloadKey"
             :selected-date="CC.task.time.currentDate.value"
             :tasks="allTasks"
-            @update:selectedDate="(d) => CC.task.time.setCurrentDate(d)"
+            @update:selectedDate="onCalendarSelectedDate"
             @day-click="onCalendarDayClick"
           />
         </div>
@@ -214,6 +231,48 @@
       :label="$text('ui.show')"
       @click="panelHidden = false"
     />
+
+    <div
+      v-if="todoScheduleActive && todoScheduleHasPickedDate"
+      class="todo-schedule-footer"
+    >
+      <div class="todo-schedule-footer__time">
+        <q-input
+          v-model.number="todoScheduleHour"
+          type="number"
+          :label="$text('label.hour')"
+          outlined
+          dense
+          min="0"
+          max="23"
+          style="max-width: 88px"
+        />
+        <q-input
+          v-model.number="todoScheduleMinute"
+          type="number"
+          :label="$text('label.minute')"
+          outlined
+          dense
+          min="0"
+          max="59"
+          style="max-width: 88px"
+        />
+      </div>
+      <div class="todo-schedule-footer__actions">
+        <q-btn
+          unelevated
+          color="primary"
+          :label="$text('task.todo.save_scheduled')"
+          @click="confirmTodoSchedule(false)"
+        />
+        <q-btn
+          unelevated
+          color="orange"
+          :label="$text('task.todo.save_and_edit')"
+          @click="confirmTodoSchedule(true)"
+        />
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -243,6 +302,7 @@ import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers"
 import { useCalendarHandlers } from "src/composables/useCalendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
 import { useTaskCrud } from "src/composables/useTaskCrud";
+import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 
 // Use shared view composable for clock and time-diff helpers
@@ -268,6 +328,17 @@ const $q = useQuasar();
 
 const dayViewSectionRef = ref<HTMLElement | null>(null);
 const calendarSectionRef = ref<HTMLElement | null>(null);
+const {
+  active: todoScheduleActive,
+  sourceTask: todoScheduleSourceTask,
+  pickedDate: todoSchedulePickedDate,
+  scheduleHour: todoScheduleHour,
+  scheduleMinute: todoScheduleMinute,
+  hasPickedDate: todoScheduleHasPickedDate,
+  cancel: cancelTodoScheduleState,
+  pickDay: pickTodoScheduleDay,
+  buildEventTime: buildTodoScheduleEventTime,
+} = todoCalendarSchedule;
 const isMobileOrganiser = computed(() => $q.screen.lt.md);
 const { scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
@@ -552,6 +623,7 @@ let organiserCommunityOpenHandler: any = null;
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
+  window.removeEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   try {
     if (organiserReloadHandler)
       window.removeEventListener(
@@ -983,8 +1055,81 @@ async function onListAdd(evt?: Event, go?: any) {
   }
 }
 
+function onCalendarSelectedDate(d: string) {
+  try {
+    CC.task.time.setCurrentDate(d);
+  } catch {
+    void 0;
+  }
+  if (todoScheduleActive.value) {
+    pickTodoScheduleDay(d);
+  }
+}
+
+function scrollToCalendarSection() {
+  try {
+    calendarSectionRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch {
+    void 0;
+  }
+}
+
+function cancelTodoSchedule() {
+  cancelTodoScheduleState();
+}
+
+async function confirmTodoSchedule(goToEdit: boolean) {
+  const task = todoScheduleSourceTask.value;
+  const date = todoSchedulePickedDate.value.trim();
+  if (!task?.id || !date) return;
+  const eventTime = buildTodoScheduleEventTime();
+  const updated = {
+    ...task,
+    type_id: "TimeEvent",
+    type: "event",
+    date,
+    eventDate: date,
+    eventTime,
+    timeMode: "event",
+  };
+  try {
+    await handleUpdateTask(updated);
+    cancelTodoScheduleState();
+    try {
+      CC.task.time.setCurrentDate(date);
+    } catch {
+      void 0;
+    }
+    panelHidden.value = false;
+    if (goToEdit) {
+      try {
+        CC.task.active.mode.value = "edit";
+      } catch {
+        void 0;
+      }
+    }
+  } catch {
+    void 0;
+  }
+}
+
+function onTodoScheduleOpen() {
+  scrollToCalendarSection();
+  panelHidden.value = true;
+}
+
 async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
   try {
+    if (todoScheduleActive.value) {
+      const date = payload?.date || CC.task.time.currentDate.value;
+      pickTodoScheduleDay(date);
+      try {
+        CC.task.time.setCurrentDate(date);
+      } catch {
+        void 0;
+      }
+      return;
+    }
     lastAddFromCalendar.value = true;
     // Clear any active task so AddTaskForm enters add mode
     try {
@@ -1173,6 +1318,7 @@ useDayRollover({
 });
 
 onMounted(async () => {
+  window.addEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   try {
     await CC.storage.loadData();
     try {
