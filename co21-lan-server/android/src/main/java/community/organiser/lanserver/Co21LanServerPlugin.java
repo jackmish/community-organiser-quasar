@@ -505,6 +505,7 @@ public class Co21LanServerPlugin extends Plugin {
       if (acceptorDeviceId.isEmpty()) {
         return jsonResponse(400, errorBody("invalid_accept"));
       }
+      registerLanPeerConnection(acceptorDeviceId, remoteAddr);
       if (!isTrusted(acceptorDeviceId, remoteAddr)) {
         return jsonResponse(403, errorBody("acceptor_not_registered"));
       }

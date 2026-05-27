@@ -70,6 +70,8 @@ import {
 } from 'src/modules/storage/sync/lanOrganiserSync';
 import { setSyncContractRuntime } from 'src/modules/storage/sync/syncContractRuntime';
 import { loadActiveContractForSync } from 'src/modules/storage/sync/syncContractSettings';
+import { applyContractSnapshotGroupsToOrganiser } from 'src/modules/storage/sync/syncContractGroups';
+import { applyContractSnapshotToLocalRegistry } from 'src/modules/storage/sync/syncContractApply';
 import SyncContractPreviewDialog from './SyncContractPreviewDialog.vue';
 
 const showIncomingPreview = ref(false);
@@ -234,6 +236,8 @@ async function onIncomingPreviewAccept(): Promise<void> {
     ...pending.snapshot,
     duplicateResolution: incomingDuplicateResolution.value,
   };
+  await applyContractSnapshotGroupsToOrganiser(savedSnapshot);
+  await applyContractSnapshotToLocalRegistry(savedSnapshot);
   await saveLastContractSnapshot(savedSnapshot);
   setSyncContractRuntime(savedSnapshot);
   await ensurePeerSyncSession(
@@ -327,18 +331,18 @@ async function handlePeerAcceptedContract(detail: unknown): Promise<void> {
   const acceptorName =
     typeof d.acceptorDeviceName === 'string' ? d.acceptorDeviceName.trim() : '';
   logger.info('[SyncContractHost] peer accepted contract', acceptorName);
-  const { promoteOutgoingContractIfNeeded } = await import(
+  const { finalizeAcceptedOutgoingContract } = await import(
     'src/modules/storage/sync/syncPendingActions'
   );
-  const promoted = await promoteOutgoingContractIfNeeded();
+  const { promoted, sessionToken } = await finalizeAcceptedOutgoingContract();
   if (promoted) {
     Notify.create({
       type: 'positive',
       message: $text('sync.contract_signed_ok'),
       timeout: 2500,
     });
-    void runFirstSyncAfterContractAccept();
   }
+  void runFirstSyncAfterContractAccept(sessionToken);
 }
 
 let acceptRetryTimer: ReturnType<typeof setInterval> | null = null;

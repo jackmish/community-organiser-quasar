@@ -154,6 +154,22 @@ function filterTasksInScope(tasks: FlatTask[], scope: Set<string>): FlatTask[] {
   });
 }
 
+function expandInboundScope(
+  scope: Set<string>,
+  remoteGroups: LanSyncExchangeRequest['groups'],
+  remoteTasks: LanSyncExchangeRequest['tasks'],
+): Set<string> {
+  const inboundScope = new Set(scope);
+  for (const g of remoteGroups ?? []) {
+    if (g.id) inboundScope.add(String(g.id));
+  }
+  for (const t of remoteTasks ?? []) {
+    const gid = asOptionalString((t as { groupId?: unknown }).groupId);
+    if (gid) inboundScope.add(gid);
+  }
+  return inboundScope;
+}
+
 function markSyncedFlags(
   peer: SyncPeerRecord,
   groups: { id: string; updatedAt?: string }[],
@@ -233,10 +249,7 @@ export async function applyInboundSyncDelta(
   await adoptMergedGroupBackgrounds(mergedGroups, remoteGroups);
   let localFlat = collectFlatTasks();
   localFlat = applyTaskDeletionsToFlatList(localFlat, deletions);
-  const inboundScope = new Set(scope);
-  for (const g of remoteGroups ?? []) {
-    if (g.id) inboundScope.add(String(g.id));
-  }
+  const inboundScope = expandInboundScope(scope, remoteGroups, remoteTasks);
   const remoteInScope = filterTasksInScope(
     (remoteTasks ?? []) as FlatTask[],
     inboundScope,
@@ -496,6 +509,8 @@ export async function runSyncWithPeer(opts: {
       ...(res.deletedTasks ?? []).map((d) => d.id),
     ];
     if (prunedIds.length) await pruneTaskDeletionTombstones(prunedIds);
+    const { finalizeAcceptedOutgoingContract } = await import('./syncPendingActions');
+    await finalizeAcceptedOutgoingContract();
     return true;
   } catch (e) {
     logger.error('[lanOrganiserSync] runSyncWithPeer failed', e);

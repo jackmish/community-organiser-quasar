@@ -13,10 +13,13 @@ import {
   loadPendingOutgoingContract,
   savePendingOutgoingContract,
   saveLastContractSnapshot,
+  snapshotFromPending,
   type SyncContractPending,
   type SyncContractSnapshot,
   type SyncDuplicateResolution,
 } from './syncContractSettings';
+import { applyContractSnapshotGroupsToOrganiser } from './syncContractGroups';
+import { applyContractSnapshotToLocalRegistry } from './syncContractApply';
 
 export const PENDING_ACTIONS_CHANGED_EVENT = 'co21:pending-actions-changed';
 export const OPEN_PENDING_ACTIONS_EVENT = 'co21:open-pending-actions';
@@ -155,23 +158,31 @@ export async function findSendContractAction(): Promise<SyncPendingAction | null
 
 let promotionInProgress = false;
 
+async function resolveOutgoingPendingContract(): Promise<SyncContractPending | null> {
+  const outgoing = await loadPendingOutgoingContract();
+  if (outgoing?.snapshot) return outgoing;
+  const action = await findSendContractAction();
+  return action?.pending?.snapshot ? action.pending : null;
+}
+
 /**
- * After a successful sync exchange, promote the outgoing pending contract
- * to a saved (accepted) contract and remove the send_contract action.
- * This is the implicit "peer accepted" signal.
+ * Peer accepted (explicit POST or first successful exchange): promote outgoing
+ * contract, clear pending send action, apply snapshot group metadata locally.
  */
-export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
-  if (promotionInProgress) return false;
+export async function finalizeAcceptedOutgoingContract(): Promise<{
+  promoted: boolean;
+  sessionToken?: string;
+}> {
+  if (promotionInProgress) return { promoted: false };
   promotionInProgress = true;
   try {
-    const outgoing = await loadPendingOutgoingContract();
-    if (!outgoing?.snapshot) return false;
-    await saveLastContractSnapshot({
-      ...outgoing.snapshot,
-      ...(outgoing.duplicateResolution
-        ? { duplicateResolution: outgoing.duplicateResolution }
-        : {}),
-    });
+    const outgoing = await resolveOutgoingPendingContract();
+    if (!outgoing?.snapshot) return { promoted: false };
+
+    const saved = snapshotFromPending(outgoing);
+    await applyContractSnapshotGroupsToOrganiser(saved);
+    await applyContractSnapshotToLocalRegistry(saved);
+    await saveLastContractSnapshot(saved);
     await savePendingOutgoingContract(null);
     const list = await loadPendingActions();
     const filtered = list.filter((a) => a.kind !== 'send_contract');
@@ -180,16 +191,25 @@ export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
     }
     dispatchPendingActionsChanged();
     const { setSyncContractRuntime } = await import('./syncContractRuntime');
-    setSyncContractRuntime(outgoing.snapshot);
+    setSyncContractRuntime(saved);
     window.dispatchEvent(new Event('co21:sync-contract-signed'));
-    logger.info('[syncPendingActions] outgoing contract promoted — peer accepted');
-    return true;
+    logger.info('[syncPendingActions] outgoing contract finalized — peer accepted');
+    return {
+      promoted: true,
+      ...(outgoing.syncSessionToken ? { sessionToken: outgoing.syncSessionToken } : {}),
+    };
   } catch (e) {
-    logger.warn('[syncPendingActions] promoteOutgoingContract failed', e);
-    return false;
+    logger.warn('[syncPendingActions] finalizeAcceptedOutgoingContract failed', e);
+    return { promoted: false };
   } finally {
     promotionInProgress = false;
   }
+}
+
+/** @deprecated Use finalizeAcceptedOutgoingContract */
+export async function promoteOutgoingContractIfNeeded(): Promise<boolean> {
+  const { promoted } = await finalizeAcceptedOutgoingContract();
+  return promoted;
 }
 
 export async function tryDeliverAction(

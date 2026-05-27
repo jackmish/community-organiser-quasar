@@ -186,13 +186,11 @@ export function buildSyncContractSnapshot(
   return {
     savedAt: Date.now(),
     duplicateResolution: normalizeSyncDuplicateResolution(duplicateResolution),
-    devices: devices
-      .filter((d) => !d.isLocal)
-      .map((d) => ({
-        id: d.id,
-        name: d.name,
-        rolesByGroup: { ...(d.rolesByGroup ?? {}) },
-      })),
+    devices: devices.map((d) => ({
+      id: d.id,
+      name: d.name,
+      rolesByGroup: { ...(d.rolesByGroup ?? {}) },
+    })),
     roleProfiles: profiles.map((p) => ({
       id: p.id,
       name: p.name,

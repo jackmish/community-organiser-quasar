@@ -368,6 +368,7 @@ function handleSyncContractAccept(
       return;
     }
     const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(acceptorDeviceId, remoteAddr);
     if (!isContractProposerTrusted(acceptorDeviceId, remoteAddr)) {
       sendJson(res, 403, { error: 'acceptor_not_registered' });
       return;
@@ -414,6 +415,7 @@ function handleSyncContractReject(
       return;
     }
     const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(rejectorDeviceId, remoteAddr);
     if (!isContractProposerTrusted(rejectorDeviceId, remoteAddr)) {
       sendJson(res, 403, { error: 'rejector_not_registered' });
       return;
