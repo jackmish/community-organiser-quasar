@@ -1,12 +1,15 @@
 /** Row shown in task header / options menu device strip. */
+export type DeviceConnectionStatus = 'connected' | 'disconnected' | 'checking';
+
 export type DeviceStatusRow = {
   id: string;
   name: string;
   shortLine1: string;
   shortLine2: string;
+  status: DeviceConnectionStatus;
+  connected: boolean;
   /** Connection transport icon (LAN/Wi‑Fi for now). */
   linkIcon: string;
-  connected: boolean;
 };
 
 function takePartChars(part: string, max = 3): string {
@@ -37,13 +40,15 @@ export function deviceShortcutLines(
 }
 
 /** LAN pairing uses Wi‑Fi/router path for now. */
-export function deviceLinkIcon(connected: boolean): string {
-  return connected ? 'wifi' : 'wifi_off';
+export function deviceLinkIcon(status: DeviceConnectionStatus): string {
+  if (status === 'checking') return 'sync';
+  if (status === 'connected') return 'wifi';
+  return 'wifi_off';
 }
 
 export function buildDeviceStatusRow(
   device: { id: string; name?: string },
-  connected: boolean,
+  status: DeviceConnectionStatus,
 ): DeviceStatusRow {
   const name = String(device.name || device.id || '');
   const { shortLine1, shortLine2 } = deviceShortcutLines(name, device.id);
@@ -52,7 +57,20 @@ export function buildDeviceStatusRow(
     name,
     shortLine1,
     shortLine2,
-    linkIcon: deviceLinkIcon(connected),
-    connected,
+    status,
+    connected: status === 'connected',
+    linkIcon: deviceLinkIcon(status),
   };
+}
+
+export function deviceStatusPillClass(status: DeviceConnectionStatus): string {
+  if (status === 'checking') return 'task-header-device-pill--checking';
+  if (status === 'connected') return 'task-header-device-pill--on';
+  return 'task-header-device-pill--off';
+}
+
+export function deviceStatusMenuPillClass(status: DeviceConnectionStatus): string {
+  if (status === 'checking') return 'task-menu-device-pill--checking';
+  if (status === 'connected') return 'task-menu-device-pill--on';
+  return 'task-menu-device-pill--off';
 }

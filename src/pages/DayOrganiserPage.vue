@@ -28,7 +28,7 @@
                       v-for="d in headerDeviceStatus"
                       :key="d.id"
                       class="task-header-device-pill"
-                      :class="d.connected ? 'task-header-device-pill--on' : 'task-header-device-pill--off'"
+                      :class="deviceStatusPillClass(d.status)"
                     >
                       <q-icon
                         :name="d.linkIcon"
@@ -445,8 +445,13 @@ import { saveData } from "src/utils/storageUtils";
 import { scheduleBackgroundLanSyncAfterDisplay } from "src/modules/storage/sync/lanOrganiserSyncTrigger";
 import {
   buildDeviceStatusRow,
+  deviceStatusPillClass,
+  type DeviceConnectionStatus,
   type DeviceStatusRow,
 } from "src/utils/deviceStatusDisplay";
+import { probeLanPeerInfo } from "src/modules/lan/lanPeerConnectivity";
+import type { ConnectedDevice } from "src/modules/storage/sync/deviceRoleAssignment";
+import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
@@ -764,20 +769,68 @@ let organiserSyncFullHandler: any = null;
 let organiserGroupMergeOpenHandler: any = null;
 let headerDevicesInterval: ReturnType<typeof setInterval> | null = null;
 
+const DEVICE_PROBE_SLOW_MS = 1000;
+const deviceProbeChecking = ref<Record<string, boolean>>({});
+const headerDeviceProbeDone = ref(false);
+
+function resolveConnectionStatus(
+  deviceId: string,
+  peer: SyncPeerRecord | undefined,
+): DeviceConnectionStatus {
+  if (deviceProbeChecking.value[deviceId]) return 'checking';
+  if (!headerDeviceProbeDone.value) return 'checking';
+  return peer?.peerInRange === true ? 'connected' : 'disconnected';
+}
+
 async function refreshHeaderDeviceStatus(): Promise<void> {
   try {
     const [devices, peers] = await Promise.all([loadConnectionsDevices(), loadSyncPeerStates()]);
     const peerMap = new Map(peers.map((p) => [String(p.peerDeviceId), p]));
     const remotes = (devices || []).filter((d: any) => !d?.isLocal);
     headerDeviceStatus.value = remotes.map((d: any) => {
-      const state = peerMap.get(String(d.id));
+      const id = String(d.id);
+      const status = resolveConnectionStatus(id, peerMap.get(id));
       return buildDeviceStatusRow(
-        { id: String(d.id), name: String(d.name || d.id || "") },
-        state?.peerInRange === true,
+        { id, name: String(d.name || d.id || "") },
+        status,
       );
     });
   } catch {
     void 0;
+  }
+}
+
+async function probeOneDeviceForStrip(device: ConnectedDevice): Promise<void> {
+  const id = String(device.id);
+  const slowTimer = setTimeout(() => {
+    deviceProbeChecking.value = { ...deviceProbeChecking.value, [id]: true };
+    void refreshHeaderDeviceStatus();
+  }, DEVICE_PROBE_SLOW_MS);
+  try {
+    if (String(device.lanHost || "").trim()) {
+      await probeLanPeerInfo(device);
+    }
+  } finally {
+    clearTimeout(slowTimer);
+    const next = { ...deviceProbeChecking.value };
+    delete next[id];
+    deviceProbeChecking.value = next;
+    await refreshHeaderDeviceStatus();
+  }
+}
+
+async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void> {
+  if (opts?.launch) headerDeviceProbeDone.value = false;
+  try {
+    const devices = await loadConnectionsDevices();
+    const remotes = devices.filter((d) => !d.isLocal);
+    await refreshHeaderDeviceStatus();
+    await Promise.all(remotes.map((d) => probeOneDeviceForStrip(d)));
+  } catch {
+    void 0;
+  } finally {
+    headerDeviceProbeDone.value = true;
+    await refreshHeaderDeviceStatus();
   }
 }
 
@@ -1104,6 +1157,8 @@ async function runHeaderSync(forceFullSync: boolean): Promise<void> {
       return;
     }
 
+    await probeHeaderDeviceStrip();
+
     let ok = 0;
     for (const peer of allowedPeers) {
       const success = await runSyncWithPeer({
@@ -1114,6 +1169,7 @@ async function runHeaderSync(forceFullSync: boolean): Promise<void> {
       });
       if (success) ok += 1;
     }
+    await refreshHeaderDeviceStatus();
     const fail = allowedPeers.length - ok;
     $q.notify({
       type: fail ? "warning" : "positive",
@@ -1765,9 +1821,9 @@ onMounted(async () => {
   };
   window.addEventListener("group:merge-open", organiserGroupMergeOpenHandler as EventListener);
 
-  await refreshHeaderDeviceStatus();
+  void probeHeaderDeviceStrip({ launch: true });
   headerDevicesInterval = setInterval(() => {
-    void refreshHeaderDeviceStatus();
+    void probeHeaderDeviceStrip();
   }, 15000);
 
   // Show first run dialog if no groups exist
@@ -1891,6 +1947,29 @@ onMounted(async () => {
 
 .task-header-device-pill--off :deep(.q-icon) {
   color: #7f1d1d !important;
+}
+
+.task-header-device-pill--checking {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.task-header-device-pill--checking :deep(.q-icon) {
+  color: #1d4ed8 !important;
+}
+
+.task-header-device-pill--checking .task-header-device-pill__link {
+  animation: task-header-device-spin 1.1s linear infinite;
+}
+
+@keyframes task-header-device-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .task-header-date-nav .task-header-date-btn {

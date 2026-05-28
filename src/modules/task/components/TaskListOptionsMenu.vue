@@ -17,7 +17,7 @@
                   v-for="d in props.deviceStatuses"
                   :key="d.id"
                   class="task-menu-device-pill"
-                  :class="d.connected ? 'task-menu-device-pill--on' : 'task-menu-device-pill--off'"
+                  :class="deviceStatusMenuPillClass(d.status)"
                 >
                   <q-icon :name="d.linkIcon" size="16px" class="task-menu-device-pill__link" />
                   <div class="task-menu-device-pill__labels">
@@ -87,7 +87,10 @@ import { $text } from 'src/modules/lang';
 import CC from 'src/CCAccess';
 import { computed } from 'vue';
 import { useQuasar } from 'quasar';
-import type { DeviceStatusRow } from 'src/utils/deviceStatusDisplay';
+import {
+  deviceStatusMenuPillClass,
+  type DeviceStatusRow,
+} from 'src/utils/deviceStatusDisplay';
 
 const props = defineProps<{
   textColor?: string;
@@ -215,5 +218,28 @@ function onMergeGroup() {
 
 .task-menu-device-pill--off :deep(.q-icon) {
   color: #7f1d1d !important;
+}
+
+.task-menu-device-pill--checking {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.task-menu-device-pill--checking :deep(.q-icon) {
+  color: #1d4ed8 !important;
+}
+
+.task-menu-device-pill--checking .task-menu-device-pill__link {
+  animation: task-menu-device-spin 1.1s linear infinite;
+}
+
+@keyframes task-menu-device-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
