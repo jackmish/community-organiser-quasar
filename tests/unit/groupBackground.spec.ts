@@ -3,8 +3,11 @@ import {
   colorizeFilterForHex,
   getMonthBackgroundUrl,
   groupBackgroundLayerStyle,
+  hueRotateDegreesForTint,
+  MONTH_FALLBACK_SOURCE_HUE,
   pageBackgroundAccentColor,
   resolveGroupBackground,
+  sepiaStrengthForHex,
 } from '../../src/modules/group/utils/groupBackground';
 
 describe('groupBackground', () => {
@@ -63,5 +66,47 @@ describe('groupBackground', () => {
 
   it('colorizeFilterForHex returns css filter', () => {
     expect(colorizeFilterForHex('#4caf50')).toMatch(/hue-rotate/);
+  });
+
+  it('does not overshoot blue group tint on month fallback (pink water)', () => {
+    const hex = '#1976d2';
+    const rotate = hueRotateDegreesForTint(hex, {
+      sourceHue: MONTH_FALLBACK_SOURCE_HUE,
+      sepiaStrength: sepiaStrengthForHex(hex),
+    });
+    expect(rotate).toBeGreaterThan(50);
+    expect(rotate).toBeLessThan(110);
+    expect(rotate).not.toBe(170);
+  });
+
+  it('uses low sepia and grayscale for white group color', () => {
+    const filter = colorizeFilterForHex('#ffffff');
+    expect(filter).toMatch(/sepia\(0\.0[0-9]/);
+    expect(filter).toContain('grayscale(');
+    expect(filter).not.toContain('hue-rotate');
+  });
+
+  it('uses low sepia and grayscale for black group color', () => {
+    const filter = colorizeFilterForHex('#000000');
+    expect(filter).toMatch(/sepia\(0\.0[0-9]/);
+    expect(filter).toContain('grayscale(');
+    expect(filter).not.toContain('hue-rotate');
+  });
+
+  it('uses stronger sepia and hue-rotate for saturated colors', () => {
+    const filter = colorizeFilterForHex('#1976d2');
+    expect(filter).toMatch(/sepia\(0\.[2-5]/);
+    expect(filter).toContain('hue-rotate');
+    expect(filter).toMatch(/saturate\(1\.[4-7]/);
+  });
+
+  it('desaturates muted blue-grey #607d8b toward the swatch', () => {
+    const filter = colorizeFilterForHex('#607d8b');
+    expect(filter).toContain('grayscale(');
+    expect(filter).toContain('hue-rotate');
+    const sat = filter.match(/saturate\(([\d.]+)\)/);
+    expect(sat).not.toBeNull();
+    expect(Number(sat![1])).toBeLessThan(1.05);
+    expect(Number(sat![1])).toBeGreaterThan(0.7);
   });
 });
