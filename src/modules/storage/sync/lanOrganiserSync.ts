@@ -49,6 +49,8 @@ import logger from 'src/utils/logger';
 import type { Group } from 'src/modules/group/models/GroupModel';
 import type { ConnectedDevice } from 'src/modules/storage/sync/deviceRoleAssignment';
 
+const DAILY_FULL_RESYNC_MS = 24 * 60 * 60 * 1000;
+
 function tsMs(v: string | undefined): number {
   if (!v) return 0;
   const n = Date.parse(v);
@@ -339,12 +341,11 @@ export async function handleLanSyncExchangeRequest(
     });
   }
 
-  const sinceMs =
-    typeof req.since === 'number' && req.since > 0
-      ? req.since
-      : peer.lastSyncAt > 0
-        ? peer.lastSyncAt
-        : 0;
+  const explicitSince =
+    Object.prototype.hasOwnProperty.call(req as object, 'since') &&
+    typeof req.since === 'number' &&
+    req.since >= 0;
+  const sinceMs = explicitSince ? req.since! : peer.lastSyncAt > 0 ? peer.lastSyncAt : 0;
   const isInitialExchangeWithPeer = peer.lastSyncAt <= 0;
 
   if (req.groups?.length || req.tasks?.length || req.deletedTasks?.length) {
@@ -364,6 +365,7 @@ export async function handleLanSyncExchangeRequest(
     peerDeviceId: peer.peerDeviceId,
     lastSyncAt: now,
     lastSyncStatus: 'ok',
+    ...(sinceMs <= 0 ? { lastFullSyncAt: now } : {}),
     groupSyncedAt: peer.groupSyncedAt,
     taskSyncedAt: peer.taskSyncedAt,
   };
@@ -394,6 +396,8 @@ export async function runSyncWithPeer(opts: {
   skipInfoProbe?: boolean;
   /** Bypass the accepted-contract guard (used by runFirstSyncAfterContractAccept). */
   allowPendingContract?: boolean;
+  /** Force full exchange (`since=0`) even when incremental is available. */
+  forceFullSync?: boolean;
 }): Promise<boolean> {
   const contract = await loadActiveContractForSync();
   if (!contract) {
@@ -413,7 +417,10 @@ export async function runSyncWithPeer(opts: {
   if (!peer) {
     peer = await ensurePeerSyncSession(opts.peerDeviceId, opts.peerDeviceName, opts.sessionToken);
   }
-  const incremental = peer.lastSyncAt > 0;
+  const now = Date.now();
+  const dueForDailyFull =
+    typeof peer.lastFullSyncAt !== 'number' || now - peer.lastFullSyncAt >= DAILY_FULL_RESYNC_MS;
+  const incremental = peer.lastSyncAt > 0 && !dueForDailyFull && !opts.forceFullSync;
   const run = await enqueueSyncRun({
     peerDeviceId: opts.peerDeviceId,
     peerDeviceName: opts.peerDeviceName,
@@ -471,7 +478,7 @@ export async function runSyncWithPeer(opts: {
       tasks: outbound.tasks,
       deletedTasks: outbound.deletedTasks,
     };
-    if (sinceMs > 0) reqBody.since = sinceMs;
+    reqBody.since = sinceMs;
     const res = await lanPostSyncExchange(base, reqBody, opts.exchangeTimeoutMs ?? 20_000);
     if (!res?.ok) {
       await upsertSyncPeerState({
@@ -503,6 +510,7 @@ export async function runSyncWithPeer(opts: {
       sessionToken: adoptLanSyncNextToken(peer.sessionToken, res.nextToken),
       lastSyncAt: now,
       lastSyncStatus: 'ok',
+      ...(sinceMs <= 0 ? { lastFullSyncAt: now } : {}),
       peerInRange: true,
       peerCheckedAt: now,
       groupSyncedAt: synced.groupSyncedAt,

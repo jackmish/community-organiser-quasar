@@ -204,6 +204,21 @@ export function createParentComputed(groupsRef: Ref<any[]>, activeRef: Ref<unkno
 // inline implementation but lives in the service layer so it can be reused.
 export function createTreeComputed(groupsRef: Ref<any[]>) {
   return computed(() => {
+    const byDisplay = new Map<string, number>();
+    for (const g of groupsRef.value || []) {
+      const label = resolveLocalGroupName(g).trim().toLowerCase();
+      if (!label) continue;
+      byDisplay.set(label, (byDisplay.get(label) ?? 0) + 1);
+    }
+    const formatLabel = (group: any): string => {
+      const base = resolveLocalGroupName(group);
+      const key = base.trim().toLowerCase();
+      const dup = key && (byDisplay.get(key) ?? 0) > 1;
+      if (!dup) return base;
+      const sid = String(group?.id ?? "").slice(-6);
+      return `${base} [${sid}]`;
+    };
+
     const buildTree = (parentId?: string): any[] => {
       const pidNorm = parentId == null ? undefined : String(parentId);
       const groupsForParent = getGroupsByParentUtil(groupsRef.value || [], pidNorm).sort(
@@ -214,7 +229,7 @@ export function createTreeComputed(groupsRef: Ref<any[]>) {
       );
       return (groupsForParent || []).map((group: any) => ({
         id: String(group.id),
-        label: resolveLocalGroupName(group),
+        label: formatLabel(group),
         color: group.color,
         icon: group.icon || 'folder',
         group: group,

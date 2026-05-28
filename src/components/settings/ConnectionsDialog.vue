@@ -142,6 +142,18 @@
                           :aria-label="$text('accounts.sync_now')"
                           @click="void onManualSyncDevice(d)"
                         />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          color="primary"
+                          icon="sync_alt"
+                          :loading="!!fullSyncById[d.id]"
+                          :disable="!d.lanHost || !!manualSyncById[d.id] || !!fullSyncById[d.id]"
+                          :title="$text('sync.pending_action_run_now')"
+                          :aria-label="$text('sync.pending_action_run_now')"
+                          @click="void onFullSyncDevice(d)"
+                        />
                         <span class="text-caption text-grey-7">
                           {{ $text('sync.interval_unit') }}
                         </span>
@@ -390,6 +402,7 @@ const devicesRegistryLoaded = ref(false);
 type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
 const deviceCheckById = reactive<Record<string, DeviceCheckState>>({});
 const manualSyncById = reactive<Record<string, boolean>>({});
+const fullSyncById = reactive<Record<string, boolean>>({});
 
 function deviceCheckState(deviceId: string): DeviceCheckState {
   return deviceCheckById[deviceId] ?? 'idle';
@@ -562,6 +575,26 @@ async function onManualSyncDevice(d: ConnectedDevice): Promise<void> {
     toast('negative', $text('sync.pending_action_run_fail'));
   } finally {
     manualSyncById[d.id] = false;
+  }
+}
+
+async function onFullSyncDevice(d: ConnectedDevice): Promise<void> {
+  if (d.isLocal || !d.lanHost || fullSyncById[d.id] || manualSyncById[d.id]) return;
+  fullSyncById[d.id] = true;
+  try {
+    const ok = await runSyncWithPeer({
+      peerDeviceId: d.id,
+      peerDeviceName: d.name || d.id,
+      lanHost: d.lanHost,
+      forceFullSync: true,
+    });
+    if (ok) toast('positive', `${$text('accounts.sync_now')} (full)`);
+    else toast('warning', $text('sync.pending_action_run_fail'));
+  } catch (e) {
+    logger.error('full sync failed', e);
+    toast('negative', $text('sync.pending_action_run_fail'));
+  } finally {
+    fullSyncById[d.id] = false;
   }
 }
 const showAddConnectionDialog = ref(false);

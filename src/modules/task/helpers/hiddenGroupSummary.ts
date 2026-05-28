@@ -47,8 +47,8 @@ export function createHiddenGroupSummary(
       const all = getTasksInRangeService('1970-01-01', '9999-12-31') || [];
       for (const t of all) {
         try {
-          if (!t || !t.groupId) continue;
-          const gid = String(t.groupId);
+          const gid = String((t as any)?.groupId ?? (t as any)?.group_id ?? '');
+          if (!gid) continue;
           if (!hiddenGroupIds.has(gid)) continue;
           if (Number(t.status_id) === 0) continue; // skip done
           const p = t.priority || 'medium';
