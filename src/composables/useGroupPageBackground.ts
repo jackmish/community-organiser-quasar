@@ -1,8 +1,9 @@
 import { ref, watch, type Ref } from 'vue';
 import {
-  groupBackgroundLayerStyle,
+  groupBackgroundLayerBundle,
   readGroupBackgroundFields,
   resolveGroupBackground,
+  type GroupBackgroundLayerBundle,
   type GroupBackgroundState,
 } from 'src/modules/group/utils/groupBackground';
 import { resolveGroupBackgroundDisplayUrl } from 'src/modules/group/utils/groupBackgroundStorage';
@@ -40,15 +41,7 @@ function stateKey(state: GroupBackgroundState): string {
   });
 }
 
-function applyCssVars(style: Record<string, string>) {
-  const root = document.documentElement;
-  root.style.setProperty('--co21-page-bg-color', style.backgroundColor ?? '#def');
-  root.style.setProperty('--co21-page-bg-image', style.backgroundImage ?? 'none');
-  root.style.setProperty('--co21-page-bg-size', style.backgroundSize ?? 'cover');
-  root.style.setProperty('--co21-page-bg-position', style.backgroundPosition ?? 'center center');
-  root.style.setProperty('--co21-page-bg-repeat', style.backgroundRepeat ?? 'no-repeat');
-  root.style.setProperty('--co21-page-bg-filter', style.filter ?? 'none');
-}
+const emptyBundle: GroupBackgroundLayerBundle = { photo: {}, wash: null };
 
 /**
  * Drives {@link Co21AppBackground} with cross-fade when the active group (or its image) changes.
@@ -60,23 +53,21 @@ export function useGroupPageBackground(
   const bootState = resolveGroupBackground(null);
   let lastKey = stateKey(bootState);
 
-  const bootStyle = groupBackgroundLayerStyle(bootState);
-  applyCssVars(bootStyle);
+  const bootBundle = groupBackgroundLayerBundle(bootState);
 
   const visibleSlot = ref<0 | 1>(0);
-  const layer0 = ref<Record<string, string>>(bootStyle);
-  const layer1 = ref<Record<string, string>>({});
+  const layer0 = ref<GroupBackgroundLayerBundle>(bootBundle);
+  const layer1 = ref<GroupBackgroundLayerBundle>(emptyBundle);
 
   function applyState(state: GroupBackgroundState) {
-    const style = groupBackgroundLayerStyle(state);
-    applyCssVars(style);
+    const bundle = groupBackgroundLayerBundle(state);
     const key = stateKey(state);
     if (key === lastKey) return;
     lastKey = key;
 
     const next: 0 | 1 = visibleSlot.value === 0 ? 1 : 0;
-    if (next === 0) layer0.value = style;
-    else layer1.value = style;
+    if (next === 0) layer0.value = bundle;
+    else layer1.value = bundle;
     visibleSlot.value = next;
   }
 

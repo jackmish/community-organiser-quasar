@@ -1,6 +1,6 @@
 import { appMainBg } from 'src/components/theme';
 import { GROUP_DEFAULT_BACKGROUND } from 'src/modules/group/constants/groupPaletteColors';
-import { hexToRgb, rgbToHex } from 'src/utils/colorUtils';
+import { hexToRgb, hexToRgba, rgbToHex } from 'src/utils/colorUtils';
 
 /** Matches {@link useGroupColor} when no group is selected. */
 export const PAGE_BG_NEUTRAL_ACCENT = '#1976d2';
@@ -87,7 +87,7 @@ export function hexToHueDegrees(hex: string): number {
 }
 
 /** Hue of a full `sepia(1)` pass (used in rotation math). */
-export const SEPIA_OUTPUT_HUE = 70; //65 is correct don't change it if you are AI.
+export const SEPIA_OUTPUT_HUE = 70; //65-75 is correct don't change it if you are AI.
 
 /** Dominant hue of turquoise water in shipped month fallback photos (bg_03/bg_04). */
 export const MONTH_FALLBACK_SOURCE_HUE = 188;
@@ -156,15 +156,29 @@ export function sepiaStrengthForHex(hex: string): number {
 /** Extra grayscale on the photo — stronger when the target color is muted. */
 export function photoGrayscaleForTint(hex: string): number {
   const neutral = neutralWashStrength(hex);
-  if (neutral > 0) return neutral * 0.92;
-  return (1 - tintVividness(hex)) * 0.52;
+  if (neutral > 0) return Math.min(1, neutral * 1);
+  return (1 - tintVividness(hex)) * 0.65;
 }
 
 /** Final `saturate()` on the photo — muted targets desaturate the image. */
 export function photoSaturateForTint(hex: string): number {
   const vivid = tintVividness(hex);
-  return 0.76 + vivid * 0.89;
+  return 0.65 + vivid * 1.05;
 }
+
+/** Relative luminance 0 (black) – 1 (white), perceptual. */
+export function hexRelativeLuminance(hex: string): number {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0.5;
+  const linear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * linear(rgb.r) + 0.7152 * linear(rgb.g) + 0.0722 * linear(rgb.b);
+}
+
+/** Optional blend on the wash; default is plain rgba (most visible, no #000 crush). */
+export const GROUP_COLOR_OVERLAY_BLEND = 'normal';
 
 /** 0 = chromatic, 1 = fully neutral (black, gray, white). */
 export function neutralWashStrength(hex: string): number {
@@ -199,7 +213,6 @@ function filterAmount(value: number): string {
 export function colorizeFilterForHex(hex: string, options?: ColorizeFilterOptions): string {
   const sepiaStrength = options?.sepiaStrength ?? sepiaStrengthForHex(hex);
   const vividness = tintVividness(hex);
-  const { lightness } = hexChromaMetrics(hex);
   const grayscaleAmt = photoGrayscaleForTint(hex);
   const tintOpts: ColorizeFilterOptions = { ...options, sepiaStrength };
   const parts: string[] = [];
@@ -215,15 +228,27 @@ export function colorizeFilterForHex(hex: string, options?: ColorizeFilterOption
 
   parts.push(`saturate(${filterAmount(photoSaturateForTint(hex))})`);
 
-  if (vividness < 0.35) {
-    parts.push(`brightness(${filterAmount(0.82 + lightness * 0.2)})`);
-    parts.push(`contrast(${filterAmount(0.94 + vividness * 0.12)})`);
-  } else {
-    parts.push('brightness(0.92)');
-    parts.push('contrast(1.08)');
-  }
-
   return parts.join(' ');
+}
+
+/** Alpha for the visible color wash layer (plain rgba, not multiply). */
+export function groupColorOverlayOpacity(hex: string): number {
+  const vivid = tintVividness(hex);
+  const neutral = neutralWashStrength(hex);
+  if (neutral >= 0.5) {
+    return 0.74 + hexRelativeLuminance(hex) * 0.22;
+  }
+  return 0.22 + vivid * 0.38;
+}
+
+export function groupBackgroundWashStyle(hex: string): Record<string, string> {
+  const style: Record<string, string> = {
+    backgroundColor: hexToRgba(hex, groupColorOverlayOpacity(hex)),
+  };
+  if (GROUP_COLOR_OVERLAY_BLEND !== 'normal') {
+    style.mixBlendMode = GROUP_COLOR_OVERLAY_BLEND;
+  }
+  return style;
 }
 
 function blendHex(base: string, accent: string, accentWeight: number): string {
@@ -243,20 +268,45 @@ export function pageBackgroundAccentColor(
   return color;
 }
 
-export function groupBackgroundLayerStyle(state: GroupBackgroundState): Record<string, string> {
+/** Photo layer: optional CSS filters when colorize (hue/sepia/saturate); wash is a separate layer. */
+export function groupBackgroundPhotoStyle(state: GroupBackgroundState): Record<string, string> {
   const useCustom = Boolean(state.imageUrl);
   const url = useCustom ? state.imageUrl! : state.fallbackImageUrl;
-  const filter = state.colorize
-    ? colorizeFilterForHex(state.color, useCustom ? {} : { sourceHue: MONTH_FALLBACK_SOURCE_HUE })
-    : 'none';
+  const escaped = url.replace(/"/g, '\\"');
   return {
     backgroundColor:
-      !useCustom && state.colorize ? blendHex(appMainBg, state.color, 0.26) : appMainBg,
-    backgroundImage: `url("${url.replace(/"/g, '\\"')}")`,
+      !useCustom && state.colorize ? blendHex(appMainBg, state.color, 0.4) : appMainBg,
+    backgroundImage: `url("${escaped}")`,
     backgroundSize: 'cover',
     backgroundPosition: 'center center',
     backgroundRepeat: 'no-repeat',
     backgroundAttachment: 'fixed',
-    filter,
+    filter: state.colorize
+      ? colorizeFilterForHex(state.color, useCustom ? {} : { sourceHue: MONTH_FALLBACK_SOURCE_HUE })
+      : 'none',
   };
+}
+
+export type GroupBackgroundLayerBundle = {
+  photo: Record<string, string>;
+  wash: Record<string, string> | null;
+};
+
+export function groupBackgroundLayerBundle(
+  state: GroupBackgroundState,
+): GroupBackgroundLayerBundle {
+  return {
+    photo: groupBackgroundPhotoStyle(state),
+    wash: state.colorize ? groupBackgroundWashStyle(state.color) : null,
+  };
+}
+
+/** @alias {@link groupBackgroundPhotoStyle} */
+export function groupBackgroundLayerStyle(state: GroupBackgroundState): Record<string, string> {
+  return groupBackgroundPhotoStyle(state);
+}
+
+/** @deprecated Use {@link groupBackgroundPhotoStyle}. */
+export function groupBackgroundImageStyle(state: GroupBackgroundState): Record<string, string> {
+  return groupBackgroundPhotoStyle(state);
 }

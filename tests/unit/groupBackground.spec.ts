@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   colorizeFilterForHex,
   getMonthBackgroundUrl,
+  groupBackgroundLayerBundle,
   groupBackgroundLayerStyle,
+  groupBackgroundWashStyle,
+  groupColorOverlayOpacity,
   hueRotateDegreesForTint,
   MONTH_FALLBACK_SOURCE_HUE,
   pageBackgroundAccentColor,
@@ -27,9 +30,11 @@ describe('groupBackground', () => {
       color: '#e91e63',
       backgroundColorize: true,
     });
-    const style = groupBackgroundLayerStyle(state);
-    expect(style.filter).toContain('hue-rotate');
-    expect(style.backgroundColor).not.toBe('#def');
+    const bundle = groupBackgroundLayerBundle(state);
+    expect(bundle.wash).not.toBeNull();
+    expect(bundle.wash?.backgroundColor).toContain('rgba');
+    expect(bundle.photo.filter).toContain('hue-rotate');
+    expect(bundle.photo.backgroundImage).toContain('bg_04');
   });
 
   it('does not tint custom image when colorize is off', () => {
@@ -39,23 +44,26 @@ describe('groupBackground', () => {
       backgroundColorize: false,
       color: '#e91e63',
     });
-    const style = groupBackgroundLayerStyle(state);
-    expect(style.filter).toBe('none');
+    const bundle = groupBackgroundLayerBundle(state);
+    expect(bundle.wash).toBeNull();
+    expect(bundle.photo.filter).toBe('none');
   });
 
   it('uses neutral accent when no group is active', () => {
     expect(pageBackgroundAccentColor(null)).toBe('#1976d2');
   });
 
-  it('applies colorize filter when enabled with custom image', () => {
+  it('applies wash and photo filters when enabled with custom image', () => {
     const state = resolveGroupBackground({
+      id: 'g-test',
       backgroundImage: 'data:image/png;base64,abc',
       backgroundColorize: true,
       color: '#e91e63',
     });
-    const style = groupBackgroundLayerStyle(state);
-    expect(style.backgroundImage).toContain('data:image');
-    expect(style.filter).toContain('hue-rotate');
+    const bundle = groupBackgroundLayerBundle(state);
+    expect(bundle.photo.backgroundImage).toContain('data:image');
+    expect(bundle.photo.filter).toContain('hue-rotate');
+    expect(bundle.wash?.backgroundColor).toMatch(/rgba/i);
   });
 
   it('getMonthBackgroundUrl falls back when month asset is not shipped', () => {
@@ -79,34 +87,21 @@ describe('groupBackground', () => {
     expect(rotate).not.toBe(170);
   });
 
-  it('uses low sepia and grayscale for white group color', () => {
-    const filter = colorizeFilterForHex('#ffffff');
-    expect(filter).toMatch(/sepia\(0\.0[0-9]/);
-    expect(filter).toContain('grayscale(');
-    expect(filter).not.toContain('hue-rotate');
+  it('wash layer uses rgba (not multiply gradient)', () => {
+    const wash = groupBackgroundWashStyle('#4caf50');
+    expect(wash.backgroundColor).toMatch(/^rgba\(/);
+    expect(wash.mixBlendMode).toBeUndefined();
+    expect(groupColorOverlayOpacity('#4caf50')).toBeGreaterThan(0.4);
   });
 
-  it('uses low sepia and grayscale for black group color', () => {
-    const filter = colorizeFilterForHex('#000000');
-    expect(filter).toMatch(/sepia\(0\.0[0-9]/);
-    expect(filter).toContain('grayscale(');
-    expect(filter).not.toContain('hue-rotate');
+  it('white group wash is a visible light rgba layer', () => {
+    const wash = groupBackgroundWashStyle('#ffffff');
+    expect(wash.backgroundColor).toMatch(/rgba\(255,\s*255,\s*255/);
   });
 
-  it('uses stronger sepia and hue-rotate for saturated colors', () => {
-    const filter = colorizeFilterForHex('#1976d2');
-    expect(filter).toMatch(/sepia\(0\.[2-5]/);
-    expect(filter).toContain('hue-rotate');
-    expect(filter).toMatch(/saturate\(1\.[4-7]/);
-  });
-
-  it('desaturates muted blue-grey #607d8b toward the swatch', () => {
+  it('desaturates muted blue-grey #607d8b in filter helper', () => {
     const filter = colorizeFilterForHex('#607d8b');
     expect(filter).toContain('grayscale(');
     expect(filter).toContain('hue-rotate');
-    const sat = filter.match(/saturate\(([\d.]+)\)/);
-    expect(sat).not.toBeNull();
-    expect(Number(sat![1])).toBeLessThan(1.05);
-    expect(Number(sat![1])).toBeGreaterThan(0.7);
   });
 });
