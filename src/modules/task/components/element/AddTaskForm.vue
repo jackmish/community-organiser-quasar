@@ -19,7 +19,7 @@ import {
   typeTextColors as themeTypeTextColors,
 } from "src/components/theme";
 import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
-import { hexToRgba } from "src/utils/colorUtils";
+import { getContrastColor, hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
@@ -59,6 +59,11 @@ const props = defineProps({
   mode: {
     type: String,
     default: "add",
+  },
+  /** Task type preset when opening add mode (`Todo` for + buttons, `TimeEvent` for calendar). */
+  defaultAddTypeId: {
+    type: String as () => "Todo" | "TimeEvent",
+    default: "Todo",
   },
 });
 const emit = defineEmits([
@@ -122,7 +127,8 @@ function getGroupChipStyle(gid: string | undefined): Record<string, string> {
     const found = list.find((x: any) => String(x.id) === String(gid));
     if (!found || !found.color) return {};
     const bg = found.color;
-    const text = found.textColor || found.text_color || "#ffffff";
+    const text =
+      found.textColor || found.text_color || getContrastColor(bg);
     return { backgroundColor: bg + " !important", color: text + " !important" };
   } catch (e) {
     return {};
@@ -135,7 +141,7 @@ function getGroupTextColor(gid: string | undefined): string {
     if (!gid) return "inherit";
     const found = list.find((x: any) => String(x.id) === String(gid));
     if (!found || !found.color) return "inherit";
-    return found.textColor || found.text_color || "#ffffff";
+    return found.textColor || found.text_color || getContrastColor(found.color);
   } catch (e) {
     return "inherit";
   }
@@ -226,7 +232,7 @@ type TaskType = {
 const localNewTask = ref<TaskType>({
   name: "",
   description: "",
-  type_id: "TimeEvent",
+  type_id: "Todo",
   // default to '1' = just created
   // default to 1 = just created (use numeric codes, not boolean)
   status_id: 1,
@@ -245,7 +251,7 @@ const localNewTask = ref<TaskType>({
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
 // Persist to localStorage so the selection survives form resets/remounts.
 const STORAGE_KEY = "coq:lastTaskType";
-let initialStored = "TimeEvent";
+let initialStored = "Todo";
 try {
   const s = localStorage.getItem(STORAGE_KEY);
   if (s) initialStored = s;
@@ -253,7 +259,23 @@ try {
   // ignore (e.g. SSR or blocked storage)
 }
 const lastSelectedType = ref<string>(
-  initialStored || localNewTask.value.type_id || "TimeEvent"
+  initialStored || localNewTask.value.type_id || "Todo"
+);
+
+function resolveAddModeTypeId(): string {
+  return props.defaultAddTypeId === "TimeEvent" ? "TimeEvent" : "Todo";
+}
+
+watch(
+  () => [props.mode, props.defaultAddTypeId, props.initialTask] as const,
+  ([mode]) => {
+    if (mode !== "add" || props.initialTask) return;
+    const typeId = resolveAddModeTypeId();
+    if (localNewTask.value.type_id !== typeId) {
+      localNewTask.value.type_id = typeId;
+      lastSelectedType.value = typeId;
+    }
+  },
 );
 watch(
   () => localNewTask.value.type_id,
@@ -691,9 +713,8 @@ watch(
     } else {
       // switch back to add mode and reset fields
       emit("update:mode", "add");
-      // preserve currently selected type so the chooser doesn't jump back to default
-      const prevType =
-        lastSelectedType.value || localNewTask.value?.type_id || "TimeEvent";
+      const prevType = resolveAddModeTypeId();
+      lastSelectedType.value = prevType;
       // keep date if provided via selectedDate prop
       localNewTask.value = {
         name: "",
@@ -831,20 +852,14 @@ watch(
     if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
-      // When parent changes the selected date (e.g. calendar day click),
-      // default new tasks to `TimeEvent` so the TimeEvent chooser is shown.
-      try {
-        if (props.mode === "add") {
-          localNewTask.value.type_id = "TimeEvent";
-          lastSelectedType.value = "TimeEvent";
-          try {
-            localStorage.setItem(STORAGE_KEY, "TimeEvent");
-          } catch (e) {
-            void e;
-          }
+      if (props.mode === "add" && props.defaultAddTypeId === "TimeEvent") {
+        localNewTask.value.type_id = "TimeEvent";
+        lastSelectedType.value = "TimeEvent";
+        try {
+          localStorage.setItem(STORAGE_KEY, "TimeEvent");
+        } catch (e) {
+          void e;
         }
-      } catch (e) {
-        void e;
       }
     }
   }

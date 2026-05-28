@@ -23,7 +23,15 @@ export type SyncContractSnapshot = {
     functionAccess: Array<{ functionId: string; enabled: boolean; privilege: string }>;
   }>;
   /** Group metadata for display on the receiving device (optional, backward-compat). */
-  groups?: Array<{ id: string; name: string; icon?: string; color?: string; parentId?: string | null; taskCount?: number }>;
+  groups?: Array<{
+    id: string;
+    name: string;
+    icon?: string;
+    color?: string;
+    textColor?: string;
+    parentId?: string | null;
+    taskCount?: number;
+  }>;
 };
 
 export type SyncContractPending = {
@@ -159,4 +167,13 @@ export async function savePendingIncomingContract(
 export async function isSyncContractActive(): Promise<boolean> {
   const data = await loadCo21Settings();
   return typeof data.syncContractAcceptedAt === 'number' && data.syncContractAcceptedAt > 0;
+}
+
+/** Remove signed contract from disk and runtime (pending queues handled separately). */
+export async function clearSignedSyncContract(): Promise<boolean> {
+  setSyncContractRuntime(null);
+  return patchCo21Settings({
+    syncLastContractSnapshot: null,
+    syncContractAcceptedAt: null,
+  });
 }

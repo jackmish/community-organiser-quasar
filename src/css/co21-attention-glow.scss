@@ -15,9 +15,15 @@
   box-shadow: 0 0 6px 1px rgba(var(--co21-glow-rgb), 0.5);
 }
 
+.co21-glow-negative {
+  --co21-glow-rgb: 193, 0, 21;
+  box-shadow: 0 0 6px 1px rgba(var(--co21-glow-rgb), 0.5);
+}
+
 .co21-glow-positive--pulse,
 .co21-glow-warning--pulse,
-.co21-glow-info--pulse {
+.co21-glow-info--pulse,
+.co21-glow-negative--pulse {
   animation: co21-glow-pulse 2.2s ease-in-out infinite;
 }
 

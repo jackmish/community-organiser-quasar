@@ -171,14 +171,29 @@ export function buildSyncContractSnapshot(
       const id = typeof g.id === 'string' || typeof g.id === 'number' ? String(g.id) : '';
       if (!id || !assignedGroupIds.has(id)) continue;
       const name = typeof g.name === 'string' && g.name ? g.name : id;
-      const entry: { id: string; name: string; icon?: string; color?: string; parentId?: string | null; taskCount?: number } = { id, name };
+      const entry: {
+        id: string;
+        name: string;
+        icon?: string;
+        color?: string;
+        textColor?: string;
+        parentId?: string | null;
+        taskCount?: number;
+      } = { id, name };
       if (typeof g.icon === 'string' && g.icon) entry.icon = g.icon;
-      if (typeof g.color === 'string' && g.color) entry.color = g.color;
+      if (typeof g.color === 'string' && g.color.trim()) entry.color = g.color.trim();
+      const tc =
+        typeof g.textColor === 'string'
+          ? g.textColor
+          : typeof g.text_color === 'string'
+            ? g.text_color
+            : '';
+      if (tc.trim()) entry.textColor = tc.trim();
       const pid = g.parentId ?? g.parent_id;
       if (typeof pid === 'string' && pid) entry.parentId = pid;
       else entry.parentId = null;
-      const tc = taskCountByGroup?.[id];
-      if (typeof tc === 'number' && tc > 0) entry.taskCount = tc;
+      const taskCount = taskCountByGroup?.[id];
+      if (typeof taskCount === 'number' && taskCount > 0) entry.taskCount = taskCount;
       groups.push(entry);
     }
   }

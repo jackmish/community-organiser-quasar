@@ -1,5 +1,32 @@
 <template>
   <div class="co21-group-picker">
+    <div class="co21-group-picker__toolbar row items-center no-wrap q-px-sm q-py-xs">
+      <q-btn
+        flat
+        dense
+        no-caps
+        class="col"
+        icon="folder_special"
+        :label="$text('ui.manage_groups')"
+        align="left"
+        @click="openManage"
+      />
+      <q-btn
+        flat
+        dense
+        round
+        color="positive"
+        icon="add"
+        size="sm"
+        class="co21-group-picker__add-btn"
+        :title="$text('ui.add_group')"
+        :aria-label="$text('ui.add_group')"
+        @click="$emit('create-group')"
+      />
+    </div>
+
+    <q-separator />
+
     <q-list v-if="showAllGroups" padding>
       <q-item clickable v-ripple @click="onSelectAll">
         <q-item-section avatar>
@@ -12,7 +39,7 @@
     <q-separator v-if="showAllGroups" />
 
     <GroupTreeSelector
-      class="q-mt-sm"
+      class="q-mt-xs"
       :nodes="treeNodes"
       :selected="selectedKeyArray"
       :max-height="maxHeight"
@@ -23,29 +50,12 @@
           <q-icon
             :name="prop.node.icon || 'folder'"
             class="q-mr-sm"
-            :style="{ color: prop.node.color }"
+            :style="{ color: prop.node.color || undefined }"
           />
           <span>{{ prop.node.label }}</span>
         </div>
       </template>
     </GroupTreeSelector>
-
-    <q-separator />
-
-    <q-list padding>
-      <q-item clickable v-ripple @click="openManage">
-        <q-item-section avatar>
-          <q-icon name="folder_special" />
-        </q-item-section>
-        <q-item-section>{{ $text('ui.manage_groups') }}</q-item-section>
-      </q-item>
-      <q-item clickable v-ripple @click="$emit('create-group')" class="text-positive">
-        <q-item-section avatar>
-          <q-icon name="add_circle" color="positive" />
-        </q-item-section>
-        <q-item-section class="text-weight-medium">{{ $text('ui.add_group') }} +</q-item-section>
-      </q-item>
-    </q-list>
   </div>
 </template>
 
@@ -104,3 +114,13 @@ function openManage() {
   window.dispatchEvent(new Event('group:manage-request'));
 }
 </script>
+
+<style scoped>
+.co21-group-picker__toolbar {
+  border-bottom: none;
+}
+
+.co21-group-picker__add-btn {
+  flex-shrink: 0;
+}
+</style>

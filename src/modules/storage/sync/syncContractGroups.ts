@@ -1,5 +1,6 @@
 import CC from 'src/CCAccess';
 import { GroupModel } from 'src/modules/group/models/GroupModel';
+import { normalizeGroupStyleFields } from 'src/modules/group/utils/groupStyleUtils';
 import type { SyncContractSnapshot } from './syncContractSettings';
 
 /** Ensure groups referenced in a signed contract exist in the organiser. */
@@ -19,7 +20,12 @@ export async function applyContractSnapshotGroupsToOrganiser(
       name: sg.name || id,
     };
     if (sg.icon) init.icon = sg.icon;
-    if (sg.color) init.color = sg.color;
+    const style = normalizeGroupStyleFields({
+      color: sg.color,
+      textColor: sg.textColor,
+    });
+    if (style.color) init.color = style.color;
+    if (style.textColor) init.textColor = style.textColor;
     if (sg.parentId != null) init.parentId = sg.parentId ?? undefined;
     byId.set(id, new GroupModel(init));
     changed = true;

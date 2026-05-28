@@ -11,6 +11,11 @@
           <div id="co21-header-notifications" class="notification-wrapper">
             <SyncContractIncomingNotification :show="showIncomingContract" :proposer-name="incomingProposerName"
               @review="openIncomingContractReview" />
+            <SyncContractRevokedNotification
+              :show="showRevokedContract"
+              :banner-text="revokedContractBannerText"
+              @open="openConnectionsAfterRevoked"
+            />
             <NextEventNotification style="min-width: 0; flex: 1" />
           </div>
           <div style="margin-left: auto; display: inline-block">
@@ -65,7 +70,7 @@
                   </q-item>
                   <q-item clickable v-ripple @click="openAccounts">
                     <q-item-section avatar>
-                      <q-icon name="manage_accounts" />
+                      <q-icon name="login" />
                     </q-item-section>
                     <q-item-section>{{ $text("menu.accounts") }}</q-item-section>
                   </q-item>
@@ -155,7 +160,9 @@ import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 import { dispatchOpenRolesSetup } from "src/modules/storage/sync/rolesSetupUi";
 import SyncContractHost from "src/components/settings/SyncContractHost.vue";
 import SyncContractIncomingNotification from "src/components/settings/SyncContractIncomingNotification.vue";
+import SyncContractRevokedNotification from "src/components/settings/SyncContractRevokedNotification.vue";
 import { useSyncContractIncomingNotice } from "src/composables/useSyncContractIncomingNotice";
+import { useSyncContractRevokedNotice } from "src/composables/useSyncContractRevokedNotice";
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
@@ -217,7 +224,18 @@ const {
   openReview: openIncomingContractReview,
 } = useSyncContractIncomingNotice();
 
+const {
+  show: showRevokedContract,
+  bannerText: revokedContractBannerText,
+  dismiss: dismissRevokedContractNotice,
+} = useSyncContractRevokedNotice();
+
 const { runs: syncRunsList } = useSyncRuns();
+
+function openConnectionsAfterRevoked(): void {
+  dismissRevokedContractNotice();
+  showConnectionsDialog.value = true;
+}
 
 const pendingActionsMenuLabel = computed(() =>
   $text("sync.pending_actions_menu").replace("{count}", String(pendingActionsCount.value)),

@@ -997,6 +997,7 @@ watch(
 );
 
 const lastAddFromCalendar = ref(false);
+const addFormDefaultTypeId = ref<'Todo' | 'TimeEvent'>('Todo');
 const lastAddAnchored = ref(false);
 
 const isAddButtonAnchored = computed(() => {
@@ -1142,6 +1143,7 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
       return;
     }
     lastAddFromCalendar.value = true;
+    addFormDefaultTypeId.value = 'TimeEvent';
     // Clear any active task so AddTaskForm enters add mode
     try {
       CC.task.active.setTask(null);
@@ -1216,6 +1218,7 @@ async function onInlineAdd() {
     // ensure anchored flags are not set so mode watcher won't preserve floating
     lastAddAnchored.value = false;
     lastAddFromCalendar.value = false;
+    addFormDefaultTypeId.value = 'Todo';
 
     try {
       CC.task.active.mode.value = "add";
@@ -1250,6 +1253,7 @@ async function onFloatingAddClick() {
     // Ensure we don't preserve an anchored floating placement
     lastAddAnchored.value = false;
     lastAddFromCalendar.value = false;
+    addFormDefaultTypeId.value = 'Todo';
 
     try {
       CC.task.active.mode.value = "add";
@@ -1306,6 +1310,7 @@ provide(dayOrganiserPanelKey, {
   handleToggleStatus: (task) => void handleToggleStatus(task),
   handleCalendarDateSelect,
   filterParentTasks,
+  addFormDefaultTypeId,
   CC,
 } as DayOrganiserPanelContext);
 

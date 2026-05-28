@@ -140,8 +140,9 @@
   font-size: 24px;
 }
 
-.co21-sync-banner--mobile .co21-sync-banner__text {
-  font-size: 13px;
+.co21-sync-banner--mobile .co21-sync-banner__btn {
+  margin-left: 0;
+  flex: 1 1 auto;
 }
 
 /* LAN pairing dialog */

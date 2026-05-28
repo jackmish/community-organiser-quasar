@@ -22,21 +22,21 @@
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              color: getBtnBgColor(selectedOption) || 'inherit',
-              backgroundColor: getBtnTextColor(selectedOption) || 'transparent',
-              border: '2px solid ' + (getBtnTextColor(selectedOption) || 'transparent'),
+              color: getBtnTextColor(headerGroup) || 'inherit',
+              backgroundColor: getBtnBgColor(headerGroup) || 'transparent',
+              border: '2px solid ' + (getBtnBorderColor(headerGroup) || 'transparent'),
               boxShadow: 'none !important',
             }">
             <div style="display: flex; align-items: center; gap: 8px; flex: 1">
               <q-icon :name="selectedOption?.icon || 'folder_open'" :style="'color: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important; fill: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important; stroke: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important;'
                 " />
-              <span :style="{ color: getBtnBgColor(selectedOption) || 'inherit' }" style="
+              <span :style="{ color: getBtnTextColor(headerGroup) || 'inherit' }" style="
                   max-width: 140px;
                   overflow: hidden;
                   text-overflow: ellipsis;
@@ -46,7 +46,7 @@
               </span>
             </div>
             <q-icon name="arrow_drop_down" :style="'color: ' +
-              (getBtnBgColor(selectedOption) || 'inherit') +
+              (getBtnTextColor(headerGroup) || 'inherit') +
               ' !important;'
               " />
           </q-btn>
@@ -79,7 +79,7 @@
 
       <!-- Right slot: options menu for the current group -->
       <div style="display: flex; align-items: center">
-        <TaskListOptionsMenu :text-color="getBtnTextColor(selectedOption) || undefined" />
+        <TaskListOptionsMenu :text-color="getBtnTextColor(headerGroup) || undefined" />
       </div>
     </template>
     <template v-else>
@@ -327,6 +327,9 @@ const selectedGroupObj = computed(() => {
     return null;
   }
 });
+
+/** Full group record for header colors (options list omits textColor). */
+const headerGroup = computed(() => selectedGroupObj.value ?? selectedOption.value);
 
 function activateTreeShortcut(node: any) {
   try {

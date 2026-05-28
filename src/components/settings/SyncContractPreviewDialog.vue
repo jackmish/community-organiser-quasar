@@ -86,7 +86,7 @@
 
         <q-separator class="q-my-md" />
 
-        <div class="row items-center q-gutter-md sync-contract-preview-options">
+        <div v-if="!previewOnly" class="row items-center q-gutter-md sync-contract-preview-options">
           <template v-if="incoming">
             <div class="col-12 text-body2">
               <span class="text-caption text-grey-7">{{ $text('sync.interval_label') }}: </span>
@@ -143,24 +143,29 @@
       </q-card-section>
 
       <q-card-actions align="right" class="q-pt-none">
-        <q-btn v-if="!incoming" flat :label="$text('action.cancel')" @click="onCancel" />
-        <q-btn
-          v-if="incoming"
-          unelevated
-          color="negative"
-          icon="cancel"
-          :label="$text('sync.contract_preview_reject')"
-          @click="onReject"
-        />
-        <q-btn
-          unelevated
-          color="positive"
-          icon="check_circle"
-          :label="
-            incoming ? $text('sync.contract_preview_accept') : $text('sync.contract_preview_send')
-          "
-          @click="onSend"
-        />
+        <template v-if="previewOnly">
+          <q-btn flat color="primary" :label="$text('action.close')" @click="onCancel" />
+        </template>
+        <template v-else>
+          <q-btn v-if="!incoming" flat :label="$text('action.cancel')" @click="onCancel" />
+          <q-btn
+            v-if="incoming"
+            unelevated
+            color="negative"
+            icon="cancel"
+            :label="$text('sync.contract_preview_reject')"
+            @click="onReject"
+          />
+          <q-btn
+            unelevated
+            color="positive"
+            icon="check_circle"
+            :label="
+              incoming ? $text('sync.contract_preview_accept') : $text('sync.contract_preview_send')
+            "
+            @click="onSend"
+          />
+        </template>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -191,6 +196,8 @@ const props = defineProps<{
   preview: SyncContractPreview | null;
   /** Reviewing a contract proposed by a paired LAN peer. */
   incoming?: boolean;
+  /** Read-only merged rules (no send / interval editors). */
+  previewOnly?: boolean;
   intervalSeconds?: number;
   duplicateResolution?: SyncDuplicateResolution;
   minSyncInterval?: number;
@@ -207,6 +214,7 @@ const emit = defineEmits<{
 }>();
 
 const incoming = computed(() => !!props.incoming);
+const previewOnly = computed(() => !!props.previewOnly);
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
   useSettingsDialogLayout(560, 720);

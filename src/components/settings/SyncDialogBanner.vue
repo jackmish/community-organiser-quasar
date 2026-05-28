@@ -5,7 +5,7 @@
     role="status"
   >
     <q-icon :name="icon" class="co21-sync-banner__icon" color="white" />
-    <p class="co21-sync-banner__text">{{ message }}</p>
+    <p v-if="!mobile" class="co21-sync-banner__text">{{ message }}</p>
     <q-btn
       class="co21-sync-banner__btn"
       unelevated

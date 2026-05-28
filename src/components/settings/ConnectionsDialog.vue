@@ -2,7 +2,7 @@
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
       <q-card-section :class="headerClass">
-        <div class="text-h6">Connections and data</div>
+        <div class="text-h6">{{ $text('connections.title') }}</div>
       </q-card-section>
 
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
@@ -134,6 +134,15 @@
                           {{ $text('sync.interval_unit') }}
                         </span>
                       </div>
+                      <DevicePairContractRow
+                        v-if="!d.isLocal"
+                        :device="d"
+                        :refresh-key="contractsRefreshKey"
+                        @preview="openPairContractPreview"
+                        @confirm="openPairContractPreview"
+                        @resend="onContractResend"
+                        @remove="onPairContractRemove"
+                      />
                     </div>
                   </div>
                   <div class="row items-center q-gutter-xs"
@@ -277,6 +286,12 @@
       @confirm="onSyncPreviewConfirm" @cancel="onPreviewCancelled" />
     <PrivilegeChangeSyncDialog v-model="showPrivilegeDialog" :changes="privilegeChanges"
       @confirm="onPrivilegeDialogConfirm" @cancel="onPrivilegeDialogCancel" />
+    <DeviceSyncContractPreviewHost
+      v-model="showPairContractPreview"
+      :device="pairPreviewDevice"
+      @accepted="onPairContractAccepted"
+      @rejected="onPairContractRejected"
+    />
   </q-dialog>
 </template>
 
@@ -329,6 +344,11 @@ import {
 import AddConnectionDialog, { type AddConnectionTab } from './AddConnectionDialog.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
+import DevicePairContractRow from './DevicePairContractRow.vue';
+import DeviceSyncContractPreviewHost from './DeviceSyncContractPreviewHost.vue';
+import { revokeLanSyncContractForPeer } from 'src/modules/storage/sync/syncContractRevoke';
+import { findSendContractAction, runPendingActionNow, cancelPendingAction } from 'src/modules/storage/sync/syncPendingActions';
+import { loadMergedDevicePairContract } from 'src/modules/storage/sync/syncDeviceContracts';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
@@ -533,6 +553,80 @@ function close() {
 const $q = useQuasar();
 const lanPairingPendingOffer = ref<LanPendingDetail | null>(null);
 const showJoinMemberDialog = ref(false);
+const showPairContractPreview = ref(false);
+const pairPreviewDevice = ref<ConnectedDevice | null>(null);
+const contractsRefreshKey = ref(0);
+
+function bumpContractsRefresh(): void {
+  contractsRefreshKey.value += 1;
+}
+
+function openPairContractPreview(device: ConnectedDevice): void {
+  pairPreviewDevice.value = device;
+  showPairContractPreview.value = true;
+}
+
+function onPairContractAccepted(): void {
+  bumpContractsRefresh();
+  void refreshIncomingContractNotice();
+}
+
+function onPairContractRejected(): void {
+  bumpContractsRefresh();
+  void refreshIncomingContractNotice();
+}
+
+async function onContractResend(device: ConnectedDevice): Promise<void> {
+  const action = await findSendContractAction();
+  if (action && !action.deliveredAt) {
+    await runPendingActionNow(action.id, devices.value);
+    await refreshPendingSend();
+    appNotify('info', $text('sync.pending_send_banner'));
+    return;
+  }
+  await startRenewContract();
+}
+
+function onPairContractRemove(device: ConnectedDevice): void {
+  const title = $text('sync.contract_remove');
+  const message = $text('sync.contract_remove_confirm').replace(
+    '{device}',
+    device.name || '?',
+  );
+  const runRemove = () => {
+    void (async () => {
+      const merged = await loadMergedDevicePairContract(device.id);
+      if (merged.phase === 'awaiting_confirm') {
+        const { savePendingIncomingContract } = await import(
+          'src/modules/storage/sync/syncContractSettings'
+        );
+        const { dispatchSyncContractIncoming } = await import(
+          'src/modules/storage/sync/syncContractIncoming'
+        );
+        await savePendingIncomingContract(null);
+        dispatchSyncContractIncoming();
+        await refreshIncomingContractNotice();
+      } else if (merged.phase === 'sending' || merged.phase === 'awaiting_peer') {
+        const action = await findSendContractAction();
+        if (action) await cancelPendingAction(action.id);
+        const { savePendingOutgoingContract } = await import(
+          'src/modules/storage/sync/syncContractSettings'
+        );
+        await savePendingOutgoingContract(null);
+        await refreshPendingSend();
+      } else if (merged.phase === 'active') {
+        await revokeLanSyncContractForPeer(device);
+      }
+      bumpContractsRefresh();
+      appNotify('info', $text('sync.contract_revoked_local'));
+    })();
+  };
+  if (typeof $q.dialog === 'function') {
+    $q.dialog({ title, message, cancel: true, persistent: true }).onOk(runRemove);
+    return;
+  }
+  if (window.confirm(`${title}\n\n${message}`)) runRemove();
+}
 
 async function refreshRoleProfiles(): Promise<void> {
   roleProfiles.value = await loadRoleProfiles();

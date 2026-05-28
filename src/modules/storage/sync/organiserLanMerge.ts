@@ -1,4 +1,5 @@
 import { GroupModel, type Group } from 'src/modules/group/models/GroupModel';
+import { mergeGroupStyleFields, normalizeGroupStyleFields } from 'src/modules/group/utils/groupStyleUtils';
 import type {
   LanSyncGroupPayload,
   LanSyncTaskDeletionPayload,
@@ -23,9 +24,13 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
         id,
         name: r.name ?? '',
       };
-      if (r.color !== undefined) init.color = r.color;
+      const style = normalizeGroupStyleFields({
+        color: r.color,
+        textColor: r.textColor,
+      });
+      if (style.color) init.color = style.color;
+      if (style.textColor) init.textColor = style.textColor;
       if (r.icon !== undefined) init.icon = r.icon;
-      if (r.textColor !== undefined) init.textColor = r.textColor;
       if (r.backgroundImage !== undefined) init.backgroundImage = r.backgroundImage;
       if (r.backgroundColorize !== undefined) init.backgroundColorize = r.backgroundColorize;
       if (r.parentId != null) init.parentId = r.parentId ?? undefined;
@@ -40,11 +45,21 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
     const remoteMs = tsMs(r.updatedAt);
     const localMs = tsMs(existing.updatedAt);
     if (remoteMs >= localMs) {
+      const mergedStyle = mergeGroupStyleFields(
+        {
+          ...(existing.color ? { color: existing.color } : {}),
+          ...(existing.textColor ? { textColor: existing.textColor } : {}),
+        },
+        {
+          ...(r.color ? { color: r.color } : {}),
+          ...(r.textColor ? { textColor: r.textColor } : {}),
+        },
+      );
       Object.assign(existing, {
         name: r.name ?? existing.name,
-        color: r.color !== undefined ? r.color : existing.color,
+        ...(mergedStyle.color ? { color: mergedStyle.color } : {}),
         icon: r.icon !== undefined ? r.icon : existing.icon,
-        textColor: r.textColor !== undefined ? r.textColor : existing.textColor,
+        ...(mergedStyle.textColor ? { textColor: mergedStyle.textColor } : {}),
         backgroundImage:
           r.backgroundImage !== undefined ? r.backgroundImage : existing.backgroundImage,
         backgroundColorize:
@@ -79,7 +94,6 @@ export function applyTaskDeletionsToFlatList(
     if (!id) continue;
     const existing = byId.get(id);
     if (!existing) {
-      drop.add(id);
       continue;
     }
     const delMs = tsMs(d.deletedAt);
@@ -197,9 +211,10 @@ export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {
     createdAt: g.createdAt,
     updatedAt: g.updatedAt,
   };
-  if (g.color !== undefined) p.color = g.color;
+  const style = normalizeGroupStyleFields({ color: g.color, textColor: g.textColor });
+  if (style.color) p.color = style.color;
   if (g.icon !== undefined) p.icon = g.icon;
-  if (g.textColor !== undefined) p.textColor = g.textColor;
+  if (style.textColor) p.textColor = style.textColor;
   if (g.backgroundImage !== undefined) p.backgroundImage = g.backgroundImage;
   if (g.backgroundColorize !== undefined) p.backgroundColorize = g.backgroundColorize;
   if (g.hideTasksFromParent !== undefined) p.hideTasksFromParent = g.hideTasksFromParent;
