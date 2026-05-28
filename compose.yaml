@@ -1,0 +1,50 @@
+# CO21 local Linux peers for connection testing.
+#
+# Quick start (from app-quasar/):
+#   docker compose up -d debian-peer
+#   curl http://localhost:9080/health
+#   docker compose exec debian-peer bash
+#
+# Ubuntu variant (optional profile):
+#   docker compose --profile ubuntu up -d ubuntu-peer
+
+name: co21-dev
+
+services:
+  debian-peer:
+    build:
+      context: ./docker/debian-peer
+      args:
+        BASE_IMAGE: debian:bookworm-slim
+        CO21_DISTRO: debian
+    container_name: co21-debian-peer
+    hostname: debian-peer
+    ports:
+      - "${CO21_PEER_PORT:-9080}:9080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - co21-net
+    restart: unless-stopped
+
+  ubuntu-peer:
+    profiles:
+      - ubuntu
+    build:
+      context: ./docker/debian-peer
+      args:
+        BASE_IMAGE: ubuntu:24.04
+        CO21_DISTRO: ubuntu
+    container_name: co21-ubuntu-peer
+    hostname: ubuntu-peer
+    ports:
+      - "${CO21_UBUNTU_PEER_PORT:-9081}:9080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - co21-net
+    restart: unless-stopped
+
+networks:
+  co21-net:
+    driver: bridge

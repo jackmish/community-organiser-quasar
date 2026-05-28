@@ -22,6 +22,10 @@
     "android:install": "powershell -ExecutionPolicy Bypass -File ./deploy-android.ps1 -SkipBuild",
     "build": "quasar build",
     "build:electron": "quasar build -m electron",
+    "docker:up": "docker compose up -d debian-peer",
+    "docker:down": "docker compose down",
+    "docker:shell": "docker compose exec debian-peer bash",
+    "docker:ubuntu": "docker compose --profile ubuntu up -d ubuntu-peer",
     "postinstall": "quasar prepare"
   },
   "dependencies": {
