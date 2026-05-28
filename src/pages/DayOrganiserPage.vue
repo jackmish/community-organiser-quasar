@@ -69,6 +69,17 @@
                     "
                   >
                     <GroupSelectHeader />
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="sync"
+                      :loading="headerSyncRunning"
+                      :disable="headerSyncRunning"
+                      :title="$text('accounts.sync_now')"
+                      :aria-label="$text('accounts.sync_now')"
+                      @click="void onHeaderManualSync()"
+                    />
                   </div>
                 </div>
               </div>
@@ -317,6 +328,16 @@ import { useTaskCrud } from "src/composables/useTaskCrud";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
+import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
+import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
+import {
+  loadActiveContractForSync,
+} from "src/modules/storage/sync/syncContractSettings";
+import {
+  normalizeDeviceId,
+  resolveEffectiveRole,
+} from "src/modules/storage/sync/deviceRoleAssignment";
+import { loadRoleProfiles } from "src/modules/storage/sync/roleProfileSettings";
 
 // Use shared view composable for clock and time-diff helpers
 const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView();
@@ -338,6 +359,7 @@ import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 
 const $q = useQuasar();
+const headerSyncRunning = ref(false);
 
 const dayViewSectionRef = ref<HTMLElement | null>(null);
 const calendarSectionRef = ref<HTMLElement | null>(null);
@@ -885,6 +907,75 @@ const activeGroupWatermarkLabel = computed(() => {
   const group = CC.group.list.all.value.find((g: Group) => String(g.id) === id);
   return group ? resolveLocalGroupName(group) : active?.label || id;
 });
+
+async function onHeaderManualSync(): Promise<void> {
+  if (headerSyncRunning.value) return;
+  headerSyncRunning.value = true;
+  try {
+    const contract = await loadActiveContractForSync();
+    if (!contract) {
+      $q.notify({ type: "warning", message: $text("sync.contract_pending_short") });
+      return;
+    }
+
+    const devices = await loadConnectionsDevices();
+    const remotes = devices.filter((d) => !d.isLocal && !!String(d.lanHost || "").trim());
+    if (!remotes.length) {
+      $q.notify({ type: "warning", message: $text("sync.lan_delivery_failed") });
+      return;
+    }
+
+    const activeGroupId = String(CC.group.active.activeGroup.value?.value || "").trim();
+    const groups = (CC.group.list.all.value || []).map((g: any) => ({
+      id: String(g.id),
+      name: String(g.name || g.id || ""),
+      parentId: g.parentId ?? g.parent_id ?? null,
+    }));
+    const profiles = await loadRoleProfiles();
+    const snapshotById = new Map(
+      contract.devices.map((d) => [normalizeDeviceId(d.id), d.rolesByGroup || {}]),
+    );
+
+    const allowedPeers = remotes.filter((d) => {
+      const mergedRoles = snapshotById.get(normalizeDeviceId(d.id)) ?? d.rolesByGroup ?? {};
+      if (!activeGroupId) return Object.keys(mergedRoles).length > 0;
+      const resolved = resolveEffectiveRole(
+        { ...d, rolesByGroup: { ...mergedRoles } },
+        groups,
+        profiles,
+        activeGroupId,
+      );
+      return !!resolved;
+    });
+
+    if (!allowedPeers.length) {
+      $q.notify({ type: "info", message: $text("sync.contract_no_access") });
+      return;
+    }
+
+    let ok = 0;
+    for (const peer of allowedPeers) {
+      const success = await runSyncWithPeer({
+        peerDeviceId: peer.id,
+        peerDeviceName: peer.name || peer.id,
+        lanHost: String(peer.lanHost || ""),
+      });
+      if (success) ok += 1;
+    }
+    const fail = allowedPeers.length - ok;
+    $q.notify({
+      type: fail ? "warning" : "positive",
+      message: fail
+        ? `${$text("accounts.sync_now")}: ${ok}/${allowedPeers.length}`
+        : `${$text("accounts.sync_now")}: ${ok}/${allowedPeers.length}`,
+    });
+  } catch (e) {
+    logger.error("header manual sync failed", e);
+    $q.notify({ type: "negative", message: $text("sync.pending_action_run_fail") });
+  } finally {
+    headerSyncRunning.value = false;
+  }
+}
 
 // Color/style computeds derived from the active group
 const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(
