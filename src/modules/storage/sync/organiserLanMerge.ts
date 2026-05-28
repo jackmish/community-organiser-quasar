@@ -1,6 +1,7 @@
 import { GroupModel, type Group } from 'src/modules/group/models/GroupModel';
 import { mergeGroupStyleFields, normalizeGroupStyleFields } from 'src/modules/group/utils/groupStyleUtils';
 import type {
+  LanSyncGroupDeletionPayload,
   LanSyncGroupPayload,
   LanSyncTaskDeletionPayload,
   LanSyncTaskPayload,
@@ -79,6 +80,27 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
     }
   }
   return [...byId.values()];
+}
+
+/** Remove groups deleted on a peer when the tombstone is newer than the local row. */
+export function applyGroupDeletionsToList(
+  local: Group[],
+  deletions: LanSyncGroupDeletionPayload[] | undefined,
+): Group[] {
+  if (!deletions?.length) return local;
+  const byId = new Map(local.map((g) => [String(g.id), g]));
+  const drop = new Set<string>();
+  for (const d of deletions) {
+    const id = String(d.id || '').trim();
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (!existing) continue;
+    const delMs = tsMs(d.deletedAt);
+    const localMs = tsMs(existing.updatedAt);
+    if (delMs >= localMs) drop.add(id);
+  }
+  if (!drop.size) return local;
+  return local.filter((g) => !drop.has(String(g.id)));
 }
 
 /** Apply remote task deletions before merging task payloads. */

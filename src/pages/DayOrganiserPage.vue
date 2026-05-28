@@ -1244,8 +1244,13 @@ async function confirmGroupMerge(): Promise<void> {
         if (gid !== sourceId) continue;
         task.groupId = targetId;
         if ("group_id" in task) task.group_id = targetId;
-        task.updatedAt = Date.now();
+        task.updatedAt = new Date().toISOString();
       }
+    }
+    try {
+      CC.task.refreshFlatListFromDays();
+    } catch {
+      void 0;
     }
     await saveData();
     await CC.group.delete(sourceId);
@@ -1723,6 +1728,24 @@ onMounted(async () => {
   window.addEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   try {
     await CC.storage.loadData();
+    if ((CC.group.list.all.value || []).length === 0) {
+      try {
+        const { reloadOrganiserFromDisk } = await import(
+          "src/modules/storage/organiserDiskReload"
+        );
+        const recovered = await reloadOrganiserFromDisk();
+        if (recovered.groups > 0) {
+          logger.info(
+            "[DayOrganiser] recovered groups from disk",
+            recovered.groups,
+            "days",
+            recovered.days,
+          );
+        }
+      } catch (e) {
+        logger.error("[DayOrganiser] disk recovery failed", e);
+      }
+    }
     try {
       CC.task.refreshFlatListFromDays();
     } catch (e) {

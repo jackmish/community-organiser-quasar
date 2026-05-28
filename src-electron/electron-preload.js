@@ -77,14 +77,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Simple test API
   isPreloadWorking: () => true,
 
+  readFile: async (filePath) => {
+    try {
+      return await fs.promises.readFile(filePath, 'utf-8');
+    } catch (error) {
+      return null;
+    }
+  },
+
   // Read JSON file
   readJsonFile: async (filePath) => {
     try {
-      const data = await fs.promises.readFile(filePath, 'utf-8');
+      let data = await fs.promises.readFile(filePath, 'utf-8');
       if (!data || !data.trim()) return null;
+      if (data.charCodeAt(0) === 0xfeff) data = data.slice(1);
       try {
         return JSON.parse(data);
       } catch (parseError) {
+        console.error('[electronAPI.readJsonFile] parse failed:', filePath, parseError);
         return null;
       }
     } catch (error) {

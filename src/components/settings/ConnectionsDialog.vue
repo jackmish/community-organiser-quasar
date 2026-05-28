@@ -824,23 +824,10 @@ async function loadGroupsFromAppData(): Promise<any[]> {
   try {
     const api = (window as any).electronAPI;
     if (api && typeof api.getAppDataPath === 'function') {
-      const appPath = await api.getAppDataPath();
-      const groupDir = api.joinPath(appPath, 'storage', 'group');
-      await api.ensureDir(groupDir);
-      const groups: any[] = [];
-      const files: string[] = await api.readDir(groupDir);
-      for (const f of files || []) {
-        if (typeof f === 'string' && f.startsWith('group-') && f.endsWith('.json')) {
-          try {
-            const p = api.joinPath(groupDir, f);
-            const data = await api.readJsonFile(p);
-            groups.push(data);
-          } catch (e) {
-            logger.error('Error reading group file', f, e);
-          }
-        }
-      }
-      return groups;
+      const { loadGroupsFromGroupDirectory } = await import(
+        'src/modules/storage/backend/electron/groupFileLoader'
+      );
+      return await loadGroupsFromGroupDirectory(api);
     }
     const stored = localStorage.getItem('day-organiser-groups');
     if (stored) {

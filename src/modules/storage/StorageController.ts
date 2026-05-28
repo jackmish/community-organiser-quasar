@@ -59,7 +59,13 @@ export class StorageController {
       }
       if (!data) data = await backendStorage.loadData();
 
-      const rawGroups: any[] = Array.isArray(data?.groups) ? (data.groups as any[]) : [];
+      const rawGroups: any[] = Array.isArray(data?.groups)
+        ? (data.groups as any[]).filter((g) => {
+            if (!g || typeof g !== 'object') return false;
+            const id = (g as { id?: unknown }).id;
+            return typeof id === 'string' && id.trim().length > 0;
+          })
+        : [];
       const daysFromGroups: Record<string, any> = {};
       const groupsHaveTasks = rawGroups.some(
         (g: any) => Array.isArray(g.tasks) && g.tasks.length > 0,

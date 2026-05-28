@@ -1,4 +1,5 @@
 export interface ElectronAppdataAPI {
+  readFile?: (filePath: string) => Promise<string | null>;
   readJsonFile: (filePath: string) => Promise<any>;
   writeJsonFile: (filePath: string, data: any) => Promise<boolean>;
   writeFile: (filePath: string, data: string) => Promise<boolean>;

@@ -53,6 +53,8 @@ class GroupController implements Controllable {
   };
 
   delete = async (groupId: string) => {
+    const { recordGroupDeletion } = await import('src/modules/storage/sync/groupDeletionLog');
+    await recordGroupDeletion(groupId);
     const res = groupRepository.deleteGroup(this.groups.value, groupId);
     const { purgeGroupBackgroundFilesForGroup } = await import(
       'src/modules/group/utils/groupBackgroundStorage'
