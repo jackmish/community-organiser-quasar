@@ -86,12 +86,15 @@ export function useGroupPageBackground(
     const fields = readGroupBackgroundFields(group);
     const displayUrl = await resolveGroupBackgroundDisplayUrl(fields.backgroundImage);
     applyState(
-      resolveGroupBackground({
-        ...(group ?? {}),
-        backgroundImage: displayUrl,
-        backgroundColorize: fields.backgroundColorize,
-        color: fields.color,
-      }),
+      resolveGroupBackground(
+        group
+          ? {
+              ...group,
+              backgroundImage: displayUrl,
+              backgroundColorize: fields.backgroundColorize,
+            }
+          : null,
+      ),
     );
   }
 

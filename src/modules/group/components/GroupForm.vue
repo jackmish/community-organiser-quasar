@@ -301,7 +301,6 @@
         />
         <q-checkbox
           v-model="localBackgroundColorize"
-          :disable="!localBackgroundImage"
           :label="$text('label.colorize_group_background')"
           dense
         />
@@ -489,6 +488,7 @@ const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
 const bgPreviewStyle = computed(() =>
   groupBackgroundLayerStyle(
     resolveGroupBackground({
+      id: props.editingGroupId || '__preview',
       backgroundImage: localBackgroundImage.value,
       backgroundColorize: localBackgroundColorize.value,
       color: localColor.value,

@@ -1,6 +1,9 @@
 import { appMainBg } from 'src/components/theme';
 import { GROUP_DEFAULT_BACKGROUND } from 'src/modules/group/constants/groupPaletteColors';
-import { hexToRgb } from 'src/utils/colorUtils';
+import { hexToRgb, rgbToHex } from 'src/utils/colorUtils';
+
+/** Matches {@link useGroupColor} when no group is selected. */
+export const PAGE_BG_NEUTRAL_ACCENT = '#1976d2';
 
 export const DEFAULT_MONTH_BACKGROUND = '/images/months/bg_04.jpg';
 
@@ -51,10 +54,10 @@ export function resolveGroupBackground(
   group: Record<string, unknown> | null | undefined,
   month?: number,
 ): GroupBackgroundState {
-  const { backgroundImage, backgroundColorize, color } = readGroupBackgroundFields(group);
+  const { backgroundImage, backgroundColorize } = readGroupBackgroundFields(group);
   return {
     imageUrl: backgroundImage,
-    color,
+    color: pageBackgroundAccentColor(group),
     colorize: backgroundColorize,
     fallbackImageUrl: getMonthBackgroundUrl(month),
   };
@@ -96,13 +99,36 @@ export function colorizeFilterForHex(hex: string): string {
   return `sepia(0.4) saturate(1.65) hue-rotate(${rotate}deg) brightness(0.92) contrast(1.08)`;
 }
 
+function blendHex(base: string, accent: string, accentWeight: number): string {
+  const a = hexToRgb(base);
+  const b = hexToRgb(accent);
+  if (!a || !b) return base;
+  const w = Math.max(0, Math.min(1, accentWeight));
+  return rgbToHex(
+    a.r * (1 - w) + b.r * w,
+    a.g * (1 - w) + b.g * w,
+    a.b * (1 - w) + b.b * w,
+  );
+}
+
+/** Accent used to tint the default month photo (and page bleed color). */
+export function pageBackgroundAccentColor(
+  group: Record<string, unknown> | null | undefined,
+): string {
+  if (!group?.id) return PAGE_BG_NEUTRAL_ACCENT;
+  const { color } = readGroupBackgroundFields(group);
+  return color;
+}
+
 export function groupBackgroundLayerStyle(state: GroupBackgroundState): Record<string, string> {
   const useCustom = Boolean(state.imageUrl);
   const url = useCustom ? state.imageUrl! : state.fallbackImageUrl;
-  const filter =
-    useCustom && state.colorize ? colorizeFilterForHex(state.color) : 'none';
+  const filter = state.colorize ? colorizeFilterForHex(state.color) : 'none';
   return {
-    backgroundColor: appMainBg,
+    backgroundColor:
+      !useCustom && state.colorize
+        ? blendHex(appMainBg, state.color, 0.26)
+        : appMainBg,
     backgroundImage: `url("${url.replace(/"/g, '\\"')}")`,
     backgroundSize: 'cover',
     backgroundPosition: 'center center',
