@@ -77,14 +77,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Simple test API
   isPreloadWorking: () => true,
 
+  readFile: async (filePath) => {
+    try {
+      return await fs.promises.readFile(filePath, 'utf-8');
+    } catch (error) {
+      return null;
+    }
+  },
+
   // Read JSON file
   readJsonFile: async (filePath) => {
     try {
-      const data = await fs.promises.readFile(filePath, 'utf-8');
+      let data = await fs.promises.readFile(filePath, 'utf-8');
       if (!data || !data.trim()) return null;
+      if (data.charCodeAt(0) === 0xfeff) data = data.slice(1);
       try {
         return JSON.parse(data);
       } catch (parseError) {
+        console.error('[electronAPI.readJsonFile] parse failed:', filePath, parseError);
         return null;
       }
     } catch (error) {
@@ -168,6 +178,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Create a zip containing provided JSON (main process will write file)
   exportZip: (folder, zipName, jsonString) =>
     ipcRenderer.invoke('export:zip', folder, zipName, jsonString),
+});
+
+// ── Google Auth bridge ──────────────────────────────────────────────────────
+contextBridge.exposeInMainWorld('electronGoogleAuth', {
+  /** Start the full OAuth loopback flow. Opens system browser. */
+  startAuth: () => ipcRenderer.invoke('google:auth-start'),
+  /** Refresh an access token using a stored refresh token. */
+  refreshToken: (refreshToken) => ipcRenderer.invoke('google:auth-refresh', refreshToken),
 });
 
 // BLE bridge: IPC for main-process BLE adapter and Web Bluetooth helpers for renderer
@@ -350,6 +368,7 @@ contextBridge.exposeInMainWorld('electronLan', {
     ipcRenderer.invoke('lan:set-trusted-contract-devices', ids),
   resolvePair: (token, accept) => ipcRenderer.invoke('lan:resolve-pair', { token, accept }),
   browseCo21: (opts) => ipcRenderer.invoke('lan:browse-co21', opts),
+  httpRequest: (opts) => ipcRenderer.invoke('lan:http-request', opts),
   onPairingPending: (callback) => {
     if (typeof callback !== 'function') return () => {};
     pairingPendingCallbacks.add(callback);
@@ -385,5 +404,18 @@ contextBridge.exposeInMainWorld('electronLan', {
     };
     ipcRenderer.on('lan:sync-contract-rejected', fn);
     return () => ipcRenderer.removeListener('lan:sync-contract-rejected', fn);
+  },
+  onSyncContractAccepted: (callback) => {
+    const fn = (_e, detail) => {
+      void (async () => {
+        try {
+          await callback(detail);
+        } catch (err) {
+          console.error('electronLan onSyncContractAccepted callback', err);
+        }
+      })();
+    };
+    ipcRenderer.on('lan:sync-contract-accepted', fn);
+    return () => ipcRenderer.removeListener('lan:sync-contract-accepted', fn);
   },
 });

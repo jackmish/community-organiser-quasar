@@ -2,7 +2,7 @@
   <q-dialog v-model="dialogVisible" v-bind="dialogBind">
     <q-card :class="cardClass" :style="cardStyle">
       <q-card-section :class="headerClass">
-        <div class="text-h6">Connections and data</div>
+        <div class="text-h6">{{ $text('connections.title') }}</div>
       </q-card-section>
 
       <q-card-section :class="[bodyClass, 'connections-dialog-body']" :style="bodyStyle">
@@ -130,10 +130,43 @@
                           class="connections-device-sync-input" style="max-width: 140px"
                           :label="$text('sync.per_device_interval_label')" :min="minSyncInterval" :max="maxSyncInterval"
                           @update:model-value="(v) => setDeviceSyncInterval(d.id, v)" @blur="void saveDevicesToStorage()" />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          color="primary"
+                          icon="sync"
+                          :loading="!!manualSyncById[d.id]"
+                          :disable="!d.lanHost || !!manualSyncById[d.id]"
+                          :title="$text('accounts.sync_now')"
+                          :aria-label="$text('accounts.sync_now')"
+                          @click="void onManualSyncDevice(d)"
+                        />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          color="primary"
+                          icon="sync_alt"
+                          :loading="!!fullSyncById[d.id]"
+                          :disable="!d.lanHost || !!manualSyncById[d.id] || !!fullSyncById[d.id]"
+                          :title="$text('sync.pending_action_run_now')"
+                          :aria-label="$text('sync.pending_action_run_now')"
+                          @click="void onFullSyncDevice(d)"
+                        />
                         <span class="text-caption text-grey-7">
                           {{ $text('sync.interval_unit') }}
                         </span>
                       </div>
+                      <DevicePairContractRow
+                        v-if="!d.isLocal"
+                        :device="d"
+                        :refresh-key="contractsRefreshKey"
+                        @preview="openPairContractPreview"
+                        @confirm="openPairContractPreview"
+                        @resend="onContractResend"
+                        @remove="onPairContractRemove"
+                      />
                     </div>
                   </div>
                   <div class="row items-center q-gutter-xs"
@@ -176,10 +209,10 @@
                     justifyContent: 'center',
                   }
                   ">
-                  <div style="display: flex; align-items: center">
-                    <q-btn dense unelevated color="primary" label="Export" class="q-mr-sm" @click="exportWithPicker" />
-                    <q-btn dense outline color="secondary" label="Merge" class="q-mr-sm" @click="triggerImport" />
-                    <q-btn dense unelevated color="negative" label="Override" class="q-ml-sm" @click="overrideBackup" />
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px">
+                    <q-btn dense unelevated color="primary" label="Export" @click="hasElectronAPI ? exportWithPicker() : exportAsJsonDownload()" />
+                    <q-btn dense outline color="secondary" label="Merge" @click="triggerImport" />
+                    <q-btn v-if="hasElectronAPI" dense unelevated color="negative" label="Override" @click="overrideBackup" />
                   </div>
                   <div v-if="exportState !== 'idle'" style="margin-top: 6px; width: 100%; text-align: left">
                     <div class="text-caption" style="display: flex; align-items: center; gap: 8px">
@@ -191,7 +224,7 @@
                   </div>
                 </div>
               </div>
-              <div class="q-mt-md">
+              <div v-if="hasElectronAPI" class="q-mt-md">
                 <div class="row items-center q-gutter-sm">
                   <div class="col">
                     Automatic local backup
@@ -277,6 +310,12 @@
       @confirm="onSyncPreviewConfirm" @cancel="onPreviewCancelled" />
     <PrivilegeChangeSyncDialog v-model="showPrivilegeDialog" :changes="privilegeChanges"
       @confirm="onPrivilegeDialogConfirm" @cancel="onPrivilegeDialogCancel" />
+    <DeviceSyncContractPreviewHost
+      v-model="showPairContractPreview"
+      :device="pairPreviewDevice"
+      @accepted="onPairContractAccepted"
+      @rejected="onPairContractRejected"
+    />
   </q-dialog>
 </template>
 
@@ -286,6 +325,8 @@ import { useQuasar } from 'quasar';
 import { appNotify } from 'src/utils/appNotify';
 import { $text } from 'src/modules/lang';
 import logger from 'src/utils/logger';
+
+const hasElectronAPI = typeof window !== 'undefined' && !!(window as any).electronAPI;
 import { jsonStringField, type LanPeerInfo } from 'src/modules/lan/lanPairingClient';
 import { probeLanPeerInfo } from 'src/modules/lan/lanPeerConnectivity';
 import { isLanDebugCaptureActive, lanDebugNote } from 'src/modules/lan/lanDebugLog';
@@ -327,6 +368,12 @@ import {
 import AddConnectionDialog, { type AddConnectionTab } from './AddConnectionDialog.vue';
 import JoinMemberDialog from './JoinMemberDialog.vue';
 import SyncDialogBanner from './SyncDialogBanner.vue';
+import DevicePairContractRow from './DevicePairContractRow.vue';
+import DeviceSyncContractPreviewHost from './DeviceSyncContractPreviewHost.vue';
+import { revokeLanSyncContractForPeer } from 'src/modules/storage/sync/syncContractRevoke';
+import { findSendContractAction, runPendingActionNow, cancelPendingAction } from 'src/modules/storage/sync/syncPendingActions';
+import { loadMergedDevicePairContract } from 'src/modules/storage/sync/syncDeviceContracts';
+import { runSyncWithPeer } from 'src/modules/storage/sync/lanOrganiserSync';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
@@ -354,6 +401,8 @@ const devicesRegistryLoaded = ref(false);
 
 type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
 const deviceCheckById = reactive<Record<string, DeviceCheckState>>({});
+const manualSyncById = reactive<Record<string, boolean>>({});
+const fullSyncById = reactive<Record<string, boolean>>({});
 
 function deviceCheckState(deviceId: string): DeviceCheckState {
   return deviceCheckById[deviceId] ?? 'idle';
@@ -509,6 +558,45 @@ function setDeviceSyncInterval(deviceId: string, v: string | number | null): voi
     d.id === deviceId ? { ...d, syncIntervalSeconds: n } : d,
   );
 }
+
+async function onManualSyncDevice(d: ConnectedDevice): Promise<void> {
+  if (d.isLocal || !d.lanHost || manualSyncById[d.id]) return;
+  manualSyncById[d.id] = true;
+  try {
+    const ok = await runSyncWithPeer({
+      peerDeviceId: d.id,
+      peerDeviceName: d.name || d.id,
+      lanHost: d.lanHost,
+    });
+    if (ok) toast('positive', $text('sync.run_status_ok'));
+    else toast('warning', $text('sync.pending_action_run_fail'));
+  } catch (e) {
+    logger.error('manual sync failed', e);
+    toast('negative', $text('sync.pending_action_run_fail'));
+  } finally {
+    manualSyncById[d.id] = false;
+  }
+}
+
+async function onFullSyncDevice(d: ConnectedDevice): Promise<void> {
+  if (d.isLocal || !d.lanHost || fullSyncById[d.id] || manualSyncById[d.id]) return;
+  fullSyncById[d.id] = true;
+  try {
+    const ok = await runSyncWithPeer({
+      peerDeviceId: d.id,
+      peerDeviceName: d.name || d.id,
+      lanHost: d.lanHost,
+      forceFullSync: true,
+    });
+    if (ok) toast('positive', `${$text('accounts.sync_now')} (full)`);
+    else toast('warning', $text('sync.pending_action_run_fail'));
+  } catch (e) {
+    logger.error('full sync failed', e);
+    toast('negative', $text('sync.pending_action_run_fail'));
+  } finally {
+    fullSyncById[d.id] = false;
+  }
+}
 const showAddConnectionDialog = ref(false);
 const addConnectionTab = ref<AddConnectionTab>('lan');
 
@@ -531,6 +619,80 @@ function close() {
 const $q = useQuasar();
 const lanPairingPendingOffer = ref<LanPendingDetail | null>(null);
 const showJoinMemberDialog = ref(false);
+const showPairContractPreview = ref(false);
+const pairPreviewDevice = ref<ConnectedDevice | null>(null);
+const contractsRefreshKey = ref(0);
+
+function bumpContractsRefresh(): void {
+  contractsRefreshKey.value += 1;
+}
+
+function openPairContractPreview(device: ConnectedDevice): void {
+  pairPreviewDevice.value = device;
+  showPairContractPreview.value = true;
+}
+
+function onPairContractAccepted(): void {
+  bumpContractsRefresh();
+  void refreshIncomingContractNotice();
+}
+
+function onPairContractRejected(): void {
+  bumpContractsRefresh();
+  void refreshIncomingContractNotice();
+}
+
+async function onContractResend(device: ConnectedDevice): Promise<void> {
+  const action = await findSendContractAction();
+  if (action && !action.deliveredAt) {
+    await runPendingActionNow(action.id, devices.value);
+    await refreshPendingSend();
+    appNotify('info', $text('sync.pending_send_banner'));
+    return;
+  }
+  await startRenewContract();
+}
+
+function onPairContractRemove(device: ConnectedDevice): void {
+  const title = $text('sync.contract_remove');
+  const message = $text('sync.contract_remove_confirm').replace(
+    '{device}',
+    device.name || '?',
+  );
+  const runRemove = () => {
+    void (async () => {
+      const merged = await loadMergedDevicePairContract(device.id);
+      if (merged.phase === 'awaiting_confirm') {
+        const { savePendingIncomingContract } = await import(
+          'src/modules/storage/sync/syncContractSettings'
+        );
+        const { dispatchSyncContractIncoming } = await import(
+          'src/modules/storage/sync/syncContractIncoming'
+        );
+        await savePendingIncomingContract(null);
+        dispatchSyncContractIncoming();
+        await refreshIncomingContractNotice();
+      } else if (merged.phase === 'sending' || merged.phase === 'awaiting_peer') {
+        const action = await findSendContractAction();
+        if (action) await cancelPendingAction(action.id);
+        const { savePendingOutgoingContract } = await import(
+          'src/modules/storage/sync/syncContractSettings'
+        );
+        await savePendingOutgoingContract(null);
+        await refreshPendingSend();
+      } else if (merged.phase === 'active') {
+        await revokeLanSyncContractForPeer(device);
+      }
+      bumpContractsRefresh();
+      appNotify('info', $text('sync.contract_revoked_local'));
+    })();
+  };
+  if (typeof $q.dialog === 'function') {
+    $q.dialog({ title, message, cancel: true, persistent: true }).onOk(runRemove);
+    return;
+  }
+  if (window.confirm(`${title}\n\n${message}`)) runRemove();
+}
 
 async function refreshRoleProfiles(): Promise<void> {
   roleProfiles.value = await loadRoleProfiles();
@@ -661,24 +823,17 @@ async function loadSettings(): Promise<void> {
 async function loadGroupsFromAppData(): Promise<any[]> {
   try {
     const api = (window as any).electronAPI;
-    if (!api || typeof api.getAppDataPath !== 'function') return [];
-    const appPath = await api.getAppDataPath();
-    const groupDir = api.joinPath(appPath, 'storage', 'group');
-    await api.ensureDir(groupDir);
-    const groups: any[] = [];
-    const files: string[] = await api.readDir(groupDir);
-    for (const f of files || []) {
-      if (typeof f === 'string' && f.startsWith('group-') && f.endsWith('.json')) {
-        try {
-          const p = api.joinPath(groupDir, f);
-          const data = await api.readJsonFile(p);
-          groups.push(data);
-        } catch (e) {
-          logger.error('Error reading group file', f, e);
-        }
-      }
+    if (api && typeof api.getAppDataPath === 'function') {
+      const { loadGroupsFromGroupDirectory } = await import(
+        'src/modules/storage/backend/electron/groupFileLoader'
+      );
+      return await loadGroupsFromGroupDirectory(api);
     }
-    return groups;
+    const stored = localStorage.getItem('day-organiser-groups');
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return []; }
+    }
+    return [];
   } catch (e) {
     logger.error('loadGroupsFromAppData failed', e);
     return [];
@@ -868,6 +1023,61 @@ const exportWithPicker = async () => {
     }, 5000);
   }
 };
+
+async function exportAsJsonDownload(): Promise<void> {
+  try {
+    exportState.value = 'exporting';
+    exportMessage.value = 'Exporting...';
+    const groups = await loadGroupsFromAppData();
+    const payload = JSON.stringify({ groups: Array.isArray(groups) ? groups : [] }, null, 2);
+    const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
+    const name = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const blob = new Blob([payload], { type: 'application/json' });
+    const file = new File([blob], name, { type: 'application/json' });
+
+    let shared = false;
+    if (typeof navigator.share === 'function') {
+      try {
+        const canShareFiles = navigator.canShare?.({ files: [file] });
+        if (canShareFiles) {
+          await navigator.share({ files: [file], title: 'CO21 Backup' });
+          shared = true;
+        } else {
+          await navigator.share({ title: 'CO21 Backup', text: payload });
+          shared = true;
+        }
+      } catch (shareErr: any) {
+        if (shareErr?.name === 'AbortError') {
+          exportState.value = 'idle';
+          exportMessage.value = '';
+          return;
+        }
+      }
+    }
+
+    if (!shared) {
+      try {
+        await navigator.clipboard.writeText(payload);
+        exportState.value = 'done';
+        exportMessage.value = 'Backup copied to clipboard — paste it into a file to save';
+      } catch {
+        exportState.value = 'error';
+        exportMessage.value = 'Could not share or copy backup';
+      }
+      setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 6000);
+      return;
+    }
+
+    exportState.value = 'done';
+    exportMessage.value = 'Shared successfully';
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 4000);
+  } catch (e: any) {
+    exportState.value = 'error';
+    exportMessage.value = `Export failed: ${e?.message || e}`;
+    setTimeout(() => { exportState.value = 'idle'; exportMessage.value = ''; }, 5000);
+  }
+}
+
 const triggerImport = () => {
   const el = fileInput.value;
   if (el) {
@@ -888,6 +1098,7 @@ function getAutoPeriodMinutes() {
 }
 
 async function performAutoBackup() {
+  if (!hasElectronAPI) return;
   try {
     autoBackupStatus.value = 'exporting';
     const api = (window as any).electronAPI;

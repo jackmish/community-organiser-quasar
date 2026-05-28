@@ -1,0 +1,329 @@
+/**
+ * Google Calendar sync service.
+ *
+ * Uses the Google Calendar REST API directly with the stored access token
+ * (no server-side SDK needed — all calls are simple HTTPS fetches).
+ *
+ * Sync flow:
+ * 1. Check if sync is due (interval elapsed since lastSyncAt)
+ * 2. Fetch events for the visible date range from Google Calendar
+ * 3. Convert them to CO21 tasks and upsert into the target group
+ * 4. Update lastSyncAt / lastSyncRange in user profile
+ */
+import { getAccessToken } from './googleAuthService';
+import { UserStoreController } from './UserController';
+import CC from 'src/CCAccess';
+import { saveData } from 'src/utils/storageUtils';
+import logger from 'src/utils/logger';
+
+const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
+
+interface GCalEvent {
+  id: string;
+  summary?: string;
+  description?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  updated?: string;
+  status?: string;
+  /** Injected by sync: true when event comes from a holiday calendar */
+  _isHoliday?: boolean;
+}
+
+interface GCalListResponse {
+  items?: GCalEvent[];
+  nextPageToken?: string;
+}
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Check whether a periodic sync is due and run it if so.
+ * Called on app startup and after calendar page navigation.
+ */
+export async function checkAndSync(
+  visibleFrom: string,
+  visibleTo: string,
+): Promise<{ synced: boolean; count: number }> {
+  const user = UserStoreController();
+
+  if (!user.isLoaded) {
+    await user.load();
+  }
+
+  if (!user.isCalendarSyncReady) {
+    return { synced: false, count: 0 };
+  }
+
+  const sync = user.calendarSync;
+  const intervalMs = sync.intervalHours * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const requestedRange = `${visibleFrom}/${visibleTo}`;
+  const rangeChanged = sync.lastSyncRange !== requestedRange;
+
+  if (sync.lastSyncAt && !rangeChanged) {
+    const elapsed = now - new Date(sync.lastSyncAt).getTime();
+    if (elapsed < intervalMs) {
+      return { synced: false, count: 0 };
+    }
+  }
+
+  return runSync(visibleFrom, visibleTo);
+}
+
+/**
+ * Force an immediate sync for the given date range.
+ */
+export async function runSync(
+  visibleFrom: string,
+  visibleTo: string,
+): Promise<{ synced: boolean; count: number }> {
+  const user = UserStoreController();
+  const groupId = user.calendarGroupId;
+  if (!groupId) return { synced: false, count: 0 };
+
+  const token = await getAccessToken();
+  if (!token) {
+    logger.warn('[CalendarSync] No valid access token — skipping sync');
+    return { synced: false, count: 0 };
+  }
+
+  try {
+    const events = await fetchCalendarEvents(token, visibleFrom, visibleTo);
+    const count = await upsertEventsAsTasks(events, groupId, visibleFrom);
+
+    const range = `${visibleFrom}/${visibleTo}`;
+    await user.updateCalendarSyncMeta(new Date().toISOString(), range);
+
+    logger.debug(`[CalendarSync] Synced ${count} events for range ${range}`);
+    return { synced: true, count };
+  } catch (e) {
+    logger.error('[CalendarSync] Sync failed', e);
+    return { synced: false, count: 0 };
+  }
+}
+
+/**
+ * Start the periodic sync timer.
+ */
+export function startSyncScheduler(): void {
+  stopSyncScheduler();
+
+  const tick = async () => {
+    try {
+      const user = UserStoreController();
+      if (!user.isCalendarSyncReady) return;
+
+      const sync = user.calendarSync;
+      const lastRange = sync.lastSyncRange;
+      if (!lastRange) return;
+
+      const [from, to] = lastRange.split('/');
+      if (from && to) {
+        await checkAndSync(from, to);
+      }
+    } catch {
+      void 0;
+    }
+  };
+
+  syncTimer = setInterval(() => { void tick(); }, 5 * 60 * 1000);
+}
+
+export function stopSyncScheduler(): void {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+}
+
+// ── Google Calendar API ──────────────────────────────────────────────────
+
+interface GCalCalendarEntry {
+  id: string;
+  summary?: string;
+  accessRole?: string;
+  selected?: boolean;
+}
+
+async function fetchAllCalendarIds(accessToken: string): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ minAccessRole: 'reader' });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const res = await fetch(
+      `${CALENDAR_API}/users/me/calendarList?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+
+    if (!res.ok) break;
+
+    const data = (await res.json()) as { items?: GCalCalendarEntry[]; nextPageToken?: string };
+    if (data.items) {
+      for (const cal of data.items) {
+        if (cal.id) ids.push(cal.id);
+      }
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  if (ids.length === 0) ids.push('primary');
+  return ids;
+}
+
+async function fetchCalendarEvents(
+  accessToken: string,
+  timeMin: string,
+  timeMax: string,
+): Promise<GCalEvent[]> {
+  const calendarIds = await fetchAllCalendarIds(accessToken);
+  const allEvents: GCalEvent[] = [];
+
+  const minDate = new Date(timeMin + 'T00:00:00Z').toISOString();
+  const maxDate = new Date(timeMax + 'T23:59:59Z').toISOString();
+
+  for (const calId of calendarIds) {
+    const isHolidayCal = calId.includes('holiday@group') || calId.includes('#holiday');
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        timeMin: minDate,
+        timeMax: maxDate,
+        singleEvents: 'true',
+        orderBy: 'startTime',
+        maxResults: '250',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
+
+      const encodedCalId = encodeURIComponent(calId);
+      const res = await fetch(
+        `${CALENDAR_API}/calendars/${encodedCalId}/events?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      if (!res.ok) {
+        logger.warn(`[CalendarSync] Failed to fetch from calendar "${calId}" (${res.status})`);
+        break;
+      }
+
+      const data = (await res.json()) as GCalListResponse;
+      if (data.items) {
+        const events = data.items.filter((e) => e.status !== 'cancelled');
+        if (isHolidayCal) {
+          for (const ev of events) ev._isHoliday = true;
+        }
+        allEvents.push(...events);
+      }
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+  }
+
+  // Deduplicate by event ID (same event can appear in multiple calendars)
+  const seen = new Set<string>();
+  return allEvents.filter((ev) => {
+    if (!ev.id || seen.has(ev.id)) return false;
+    seen.add(ev.id);
+    return true;
+  });
+}
+
+// ── Event → Task conversion ─────────────────────────────────────────────
+
+async function upsertEventsAsTasks(
+  events: GCalEvent[],
+  groupId: string,
+  _visibleFrom: string,
+): Promise<number> {
+  let count = 0;
+
+  for (const ev of events) {
+    const dateKey = extractDateKey(ev);
+    if (!dateKey) continue;
+
+    const existing = findExistingTaskBySourceId(ev.id);
+
+    const summary = ev.summary || '(No title)';
+    const isHoliday = !!ev._isHoliday;
+    const timeMode = isHoliday ? 'holiday' : 'event';
+    const desc = ev.description
+      ? `${summary}\n${ev.description}`
+      : summary;
+
+    if (existing) {
+      const needsUpdate =
+        existing.description !== desc ||
+        existing.timeMode !== timeMode;
+
+      if (needsUpdate) {
+        await CC.task.update(dateKey, existing.id, {
+          name: summary,
+          description: desc,
+          date: dateKey,
+          eventDate: dateKey,
+          eventTime: extractTime(ev),
+          type: 'TimeEvent',
+          type_id: 'TimeEvent',
+          timeMode,
+        });
+        count++;
+      }
+    } else {
+      await CC.task.add(dateKey, {
+        name: summary,
+        description: desc,
+        date: dateKey,
+        type: 'TimeEvent',
+        type_id: 'TimeEvent',
+        timeMode,
+        category: 'other',
+        priority: isHoliday ? 'low' : 'medium',
+        groupId,
+        eventDate: dateKey,
+        eventTime: isHoliday ? null : extractTime(ev),
+        source: 'google-calendar',
+        sourceId: ev.id,
+      } as any);
+      count++;
+    }
+  }
+
+  if (count > 0) {
+    await saveData();
+  }
+
+  return count;
+}
+
+function extractDateKey(ev: GCalEvent): string | null {
+  const raw = ev.start?.date || ev.start?.dateTime;
+  if (!raw) return null;
+  return raw.slice(0, 10);
+}
+
+function extractTime(ev: GCalEvent): string | null {
+  const dt = ev.start?.dateTime;
+  if (!dt) return null;
+  const match = dt.match(/T(\d{2}:\d{2})/);
+  return match?.[1] ?? null;
+}
+
+function findExistingTaskBySourceId(googleEventId: string): any {
+  try {
+    const days = CC.task.time?.days?.value ?? {};
+    for (const key of Object.keys(days)) {
+      const day = days[key];
+      if (!day?.tasks) continue;
+      const found = day.tasks.find(
+        (t: any) => t.sourceId === googleEventId || t.source_id === googleEventId,
+      );
+      if (found) return found;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

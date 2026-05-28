@@ -9,6 +9,13 @@
           dense
           class="col"
         />
+        <q-input
+          v-model="localLocalName"
+          :label="$text('label.group_local_name')"
+          outlined
+          dense
+          class="col"
+        />
 
         <!-- Icon preview and selector (moved out of the input) -->
         <div
@@ -96,92 +103,108 @@
           style="width: 160px; overflow: visible"
         >
           <template #append>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <div
-                ref="colorSwatchRef"
-                @click.stop.prevent="toggleColorMenu"
-                style="
-                  width: 30px;
-                  height: 30px;
-                  border-radius: 6px;
-                  border: 1px solid white;
-                  cursor: pointer;
-                  box-sizing: border-box;
-                "
-                :style="{ background: localColor }"
-              ></div>
-              <q-menu
-                v-model="menuVisible"
-                :target="colorSwatchRef ?? undefined"
-                anchor="bottom right"
-                self="top right"
-                :offset="[0, 6]"
-                max-height="520px"
-                :content-style="colorPopupStyle"
-                content-class="gm-popup-menu gm-color-palette-menu"
-                no-parent-event
-              >
-                <div class="gm-color-palette">
-                  <div class="gm-color-palette__grid">
-                    <button
-                      v-for="c in paletteColors"
-                      :key="c"
-                      type="button"
-                      class="gm-color-palette__swatch"
-                      :title="c"
-                      :style="{ background: c }"
-                      :class="{ 'gm-color-palette__swatch--selected': localColor === c }"
-                      @click="selectPaletteColor(c)"
-                    />
-                  </div>
-                  <div class="gm-color-palette__actions">
-                    <q-btn
-                      dense
-                      unelevated
-                      color="primary"
-                      @click="openCustom"
-                      class="gm-color-palette__action-btn"
-                    >
-                      <span>{{ $text('action.custom') }}</span>
-                      <div
-                        class="gm-color-palette__action-preview"
-                        :style="{ background: localColor }"
-                      />
-                    </q-btn>
-                    <q-btn
-                      dense
-                      unelevated
-                      color="negative"
-                      :label="$text('action.reset')"
-                      class="gm-color-palette__action-btn"
-                      @click="resetColor"
-                    />
-                  </div>
+            <div
+              ref="colorSwatchRef"
+              class="gm-color-swatch-trigger"
+              :style="{ background: localColor }"
+              @click.stop.prevent="toggleColorMenu"
+            />
+            <q-menu
+              v-model="menuVisible"
+              :target="colorSwatchRef ?? undefined"
+              anchor="bottom right"
+              self="top right"
+              :offset="[0, 6]"
+              :max-height="colorCustomMode ? 'min(90vh, 640px)' : '520px'"
+              persistent
+              :content-style="colorPopupStyle"
+              content-class="gm-popup-menu gm-color-palette-menu"
+              no-parent-event
+              @hide="colorCustomMode = false"
+            >
+              <div v-if="!colorCustomMode" class="gm-color-palette" @click.stop>
+                <div class="gm-color-palette__grid">
+                  <button
+                    v-for="c in paletteColors"
+                    :key="c"
+                    type="button"
+                    class="gm-color-palette__swatch"
+                    :title="c"
+                    :style="{ background: c }"
+                    :class="{ 'gm-color-palette__swatch--selected': localColor === c }"
+                    @click="selectPaletteColor(c)"
+                  />
                 </div>
-              </q-menu>
-            </div>
+                <div class="gm-color-palette__actions">
+                  <q-btn
+                    dense
+                    unelevated
+                    color="primary"
+                    class="gm-color-palette__action-btn"
+                    @click="openColorCustomPanel"
+                  >
+                    <span>{{ $text('action.custom') }}</span>
+                    <div
+                      class="gm-color-palette__action-preview"
+                      :style="{ background: localColor }"
+                    />
+                  </q-btn>
+                  <q-btn
+                    dense
+                    unelevated
+                    color="negative"
+                    :label="$text('action.reset')"
+                    class="gm-color-palette__action-btn"
+                    @click="resetColor"
+                  />
+                </div>
+              </div>
+              <div v-else class="gm-color-custom-panel" @click.stop>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('action.custom') }}</div>
+                <q-color
+                  v-model="draftColor"
+                  format-model="hex"
+                  default-view="spectrum"
+                  no-header
+                  no-footer
+                  bordered
+                  class="gm-q-color-picker"
+                />
+                <div class="gm-color-custom-panel__below">
+                  <div
+                    class="gm-color-custom-preview"
+                    :style="{ background: draftColor }"
+                    aria-hidden="true"
+                  />
+                  <q-input
+                    v-model="draftColor"
+                    dense
+                    outlined
+                    class="gm-color-custom-hex"
+                    :label="$text('label.color_hex')"
+                  />
+                </div>
+                <div class="gm-color-palette__footer">
+                  <q-btn
+                    type="button"
+                    dense
+                    flat
+                    :label="$text('action.cancel')"
+                    @click="cancelColorCustom"
+                  />
+                  <q-btn
+                    type="button"
+                    dense
+                    unelevated
+                    color="primary"
+                    :label="$text('action.confirm')"
+                    @click="confirmColorCustom"
+                  />
+                </div>
+              </div>
+            </q-menu>
           </template>
         </q-input>
-
-        <!-- hidden color input used for native color picker fallback -->
-        <input
-          ref="colorInput"
-          :value="localColor"
-          @input="onColorInput"
-          type="color"
-          style="
-            width: 30px;
-            height: 30px;
-            border: none;
-            cursor: pointer;
-            position: relative;
-            z-index: 100000;
-            pointer-events: auto;
-            opacity: 0;
-            position: absolute;
-            left: -9999px;
-          "
-        />
 
         <!-- Text color selector (swatch + palette) -->
         <q-input
@@ -193,85 +216,108 @@
           style="width: 160px; margin-left: 8px; overflow: visible"
         >
           <template #append>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <div
-                ref="textColorSwatchRef"
-                :style="{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  background: localTextColor,
-                  boxSizing: 'border-box',
-                  cursor: 'pointer',
-                }"
-                @click.stop.prevent="toggleTextColorMenu"
-              ></div>
-              <q-menu
-                v-model="textMenuVisible"
-                :target="textColorSwatchRef ?? undefined"
-                anchor="bottom right"
-                self="top right"
-                :offset="[0, 6]"
-                max-height="320px"
-                :content-style="textColorPopupStyle"
-                content-class="gm-popup-menu gm-color-palette-menu"
-                no-parent-event
-              >
-                <div class="gm-color-palette gm-color-palette--text">
-                  <div class="gm-color-palette__grid gm-color-palette__grid--text">
-                    <button
-                      v-for="c in textPalette"
-                      :key="c"
-                      type="button"
-                      class="gm-color-palette__swatch"
-                      :title="c"
-                      :style="{ background: c }"
-                      :class="{ 'gm-color-palette__swatch--selected': localTextColor === c }"
-                      @click="selectTextPaletteColor(c)"
-                    />
-                  </div>
-                  <div class="gm-color-palette__actions">
-                    <q-btn
-                      dense
-                      unelevated
-                      color="primary"
-                      :label="$text('action.custom')"
-                      class="gm-color-palette__action-btn"
-                      @click="openTextCustom"
-                    />
-                    <q-btn
-                      dense
-                      unelevated
-                      color="negative"
-                      :label="$text('action.reset')"
-                      class="gm-color-palette__action-btn"
-                      @click="resetTextColor"
-                    />
-                  </div>
+            <div
+              ref="textColorSwatchRef"
+              class="gm-color-swatch-trigger gm-color-swatch-trigger--text"
+              :style="{ background: localTextColor }"
+              @click.stop.prevent="toggleTextColorMenu"
+            />
+            <q-menu
+              v-model="textMenuVisible"
+              :target="textColorSwatchRef ?? undefined"
+              anchor="bottom right"
+              self="top right"
+              :offset="[0, 6]"
+              :max-height="textColorCustomMode ? 'min(90vh, 640px)' : '360px'"
+              persistent
+              :content-style="textColorPopupStyle"
+              content-class="gm-popup-menu gm-color-palette-menu"
+              no-parent-event
+              @hide="textColorCustomMode = false"
+            >
+              <div v-if="!textColorCustomMode" class="gm-color-palette gm-color-palette--text" @click.stop>
+                <div class="gm-color-palette__grid gm-color-palette__grid--text">
+                  <button
+                    v-for="c in textPalette"
+                    :key="c"
+                    type="button"
+                    class="gm-color-palette__swatch"
+                    :title="c"
+                    :style="{ background: c }"
+                    :class="{ 'gm-color-palette__swatch--selected': localTextColor === c }"
+                    @click="selectTextPaletteColor(c)"
+                  />
                 </div>
-              </q-menu>
-            </div>
+                <div class="gm-color-palette__actions">
+                  <q-btn
+                    dense
+                    unelevated
+                    color="primary"
+                    class="gm-color-palette__action-btn"
+                    @click="openTextColorCustomPanel"
+                  >
+                    <span>{{ $text('action.custom') }}</span>
+                    <div
+                      class="gm-color-palette__action-preview"
+                      :style="{ background: localTextColor }"
+                    />
+                  </q-btn>
+                  <q-btn
+                    dense
+                    unelevated
+                    color="negative"
+                    :label="$text('action.reset')"
+                    class="gm-color-palette__action-btn"
+                    @click="resetTextColor"
+                  />
+                </div>
+              </div>
+              <div v-else class="gm-color-custom-panel" @click.stop>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('action.custom') }}</div>
+                <q-color
+                  v-model="draftTextColor"
+                  format-model="hex"
+                  default-view="spectrum"
+                  no-header
+                  no-footer
+                  bordered
+                  class="gm-q-color-picker"
+                />
+                <div class="gm-color-custom-panel__below">
+                  <div
+                    class="gm-color-custom-preview"
+                    :style="{ background: draftTextColor }"
+                    aria-hidden="true"
+                  />
+                  <q-input
+                    v-model="draftTextColor"
+                    dense
+                    outlined
+                    class="gm-color-custom-hex"
+                    :label="$text('label.text_color_hex')"
+                  />
+                </div>
+                <div class="gm-color-palette__footer">
+                  <q-btn
+                    type="button"
+                    dense
+                    flat
+                    :label="$text('action.cancel')"
+                    @click="cancelTextColorCustom"
+                  />
+                  <q-btn
+                    type="button"
+                    dense
+                    unelevated
+                    color="primary"
+                    :label="$text('action.confirm')"
+                    @click="confirmTextColorCustom"
+                  />
+                </div>
+              </div>
+            </q-menu>
           </template>
         </q-input>
-        <input
-          ref="textColorInput"
-          :value="localTextColor"
-          @input="onTextColorInput"
-          type="color"
-          style="
-            width: 30px;
-            height: 30px;
-            border: none;
-            cursor: pointer;
-            position: relative;
-            z-index: 100000;
-            pointer-events: auto;
-            opacity: 0;
-            position: absolute;
-            left: -9999px;
-          "
-        />
       </div>
 
       <div class="row items-center q-gutter-sm gm-bg-row q-mt-xs" style="width: 100%">
@@ -294,15 +340,17 @@
         />
         <q-checkbox
           v-model="localBackgroundColorize"
-          :disable="!localBackgroundImage"
           :label="$text('label.colorize_group_background')"
           dense
         />
-        <div
-          class="gm-bg-preview"
-          :style="bgPreviewStyle"
-          :title="$text('label.group_background_preview')"
-        />
+        <div class="gm-bg-preview" :title="$text('label.group_background_preview')">
+          <div class="gm-bg-preview__photo" :style="bgPreviewPhotoStyle" />
+          <div
+            v-if="bgPreviewWashStyle"
+            class="gm-bg-preview__wash"
+            :style="bgPreviewWashStyle"
+          />
+        </div>
         <input
           ref="bgImageInput"
           type="file"
@@ -420,6 +468,7 @@
         </div>
       </div>
     </div>
+
   </q-form>
 </template>
 
@@ -435,7 +484,7 @@ import {
   GROUP_TEXT_PALETTE,
 } from "src/modules/group/constants/groupPaletteColors";
 import {
-  groupBackgroundLayerStyle,
+  groupBackgroundLayerBundle,
   readGroupBackgroundFields,
   resolveGroupBackground,
 } from "src/modules/group/utils/groupBackground";
@@ -444,11 +493,13 @@ import { appNotify } from "src/utils/appNotify";
 import type { QTreeNode } from "quasar";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 import GroupTreeSelector from "./GroupTreeSelector.vue";
+import { getLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const props = defineProps<{
   groupTree?: QTreeNode<any>[];
   groupOptions?: any[];
   editingGroupId?: string | null;
+  initialParentId?: string | null;
 }>();
 const emit = defineEmits<{
   (e: "submit", payload: any): void;
@@ -460,6 +511,7 @@ const lockedParentTree = computed(() =>
 );
 
 const localName = ref("");
+const localLocalName = ref("");
 const localParent = ref<string | null>(null);
 const parentMenuOpen = ref(false);
 const localParentIcon = ref<string | null>(null);
@@ -476,22 +528,27 @@ const bgImageInput = ref<HTMLInputElement | null>(null);
 
 const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
 
-const bgPreviewStyle = computed(() =>
-  groupBackgroundLayerStyle(
+const bgPreviewBundle = computed(() =>
+  groupBackgroundLayerBundle(
     resolveGroupBackground({
+      id: props.editingGroupId || '__preview',
       backgroundImage: localBackgroundImage.value,
       backgroundColorize: localBackgroundColorize.value,
       color: localColor.value,
     }),
   ),
 );
+const bgPreviewPhotoStyle = computed(() => bgPreviewBundle.value.photo);
+const bgPreviewWashStyle = computed(() => bgPreviewBundle.value.wash);
 
-const colorInput = ref<HTMLInputElement | null>(null);
-const textColorInput = ref<HTMLInputElement | null>(null);
 const colorSwatchRef = ref<HTMLElement | null>(null);
 const textColorSwatchRef = ref<HTMLElement | null>(null);
 const menuVisible = ref(false);
 const textMenuVisible = ref(false);
+const colorCustomMode = ref(false);
+const textColorCustomMode = ref(false);
+const draftColor = ref(GROUP_DEFAULT_BACKGROUND);
+const draftTextColor = ref(GROUP_DEFAULT_TEXT_COLOR);
 
 const colorPopupStyle = computed(() => ({
   zIndex: popupZIndexAboveDialogs(colorSwatchRef.value),
@@ -620,12 +677,14 @@ const parentMenuStyle = ref<Record<string, string>>({
 function toggleColorMenu() {
   textMenuVisible.value = false;
   iconMenuVisible.value = false;
+  colorCustomMode.value = false;
   menuVisible.value = !menuVisible.value;
 }
 
 function toggleTextColorMenu() {
   menuVisible.value = false;
   iconMenuVisible.value = false;
+  textColorCustomMode.value = false;
   textMenuVisible.value = !textMenuVisible.value;
 }
 
@@ -635,23 +694,6 @@ function toggleIconMenu() {
   iconMenuVisible.value = !iconMenuVisible.value;
 }
 
-function applyNativeColorInputStyle(el: HTMLInputElement, anchor?: HTMLElement | null) {
-  const z = popupZIndexAboveDialogs(anchor);
-  el.style.position = "fixed";
-  el.style.width = "1px";
-  el.style.height = "1px";
-  el.style.opacity = "0";
-  el.style.pointerEvents = "auto";
-  el.style.zIndex = z;
-  try {
-    const rect = (anchor ?? el).getBoundingClientRect();
-    el.style.left = `${Math.max(0, rect.left + 4)}px`;
-    el.style.top = `${Math.max(0, rect.bottom + 4)}px`;
-  } catch {
-    el.style.left = "0px";
-    el.style.top = "0px";
-  }
-}
 function selectIcon(ic: string) {
   localIcon.value = ic;
   iconMenuVisible.value = false;
@@ -711,7 +753,8 @@ watch(
   ([id]) => {
     if (!id) {
       localName.value = "";
-      localParent.value = null;
+      localLocalName.value = "";
+      localParent.value = props.initialParentId ? String(props.initialParentId) : null;
       localColor.value = GROUP_DEFAULT_BACKGROUND;
       localIcon.value = "folder";
       localShareSubgroups.value = false;
@@ -754,6 +797,7 @@ watch(
       const src = full || found || null;
       if (src) {
         localName.value = src.name || src.label || "";
+        localLocalName.value = getLocalGroupName(String(id));
         localParent.value = src.parentId || src.parent_id || null;
         localColor.value = src.color || GROUP_DEFAULT_BACKGROUND;
         localTextColor.value = src.textColor || src.text_color || localTextColor.value;
@@ -806,164 +850,60 @@ function onBackgroundImageSelected(ev: Event) {
   reader.readAsDataURL(file);
 }
 
-function onColorInput(e: Event) {
-  const t = e.target as HTMLInputElement | null;
-  if (t && typeof t.value === "string") localColor.value = t.value;
-}
-function onTextColorInput(e: Event) {
-  const t = e.target as HTMLInputElement | null;
-  if (t && typeof t.value === "string") localTextColor.value = t.value;
-}
-function selectTextPaletteColor(c: string) {
-  localTextColor.value = c;
-  textMenuVisible.value = false;
-}
-function resetTextColor() {
-  localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
-  textMenuVisible.value = false;
-}
-function openTextCustom() {
-  textMenuVisible.value = false;
-  setTimeout(() => openTextColorPicker(), 120);
+function openColorCustomPanel() {
+  draftColor.value = localColor.value || GROUP_DEFAULT_BACKGROUND;
+  colorCustomMode.value = true;
 }
 
-function openTextColorPicker() {
-  try {
-    if (textColorInput.value) {
-      const orig = textColorInput.value;
-      const clone = orig.cloneNode(true) as HTMLInputElement;
-      clone.value = orig.value || localTextColor.value || GROUP_DEFAULT_TEXT_COLOR;
-      applyNativeColorInputStyle(clone, textColorSwatchRef.value ?? orig);
-      document.body.appendChild(clone);
-      const onInputClone = (ev: Event) => {
-        const tt = ev.target as HTMLInputElement | null;
-        if (tt && typeof tt.value === "string") localTextColor.value = tt.value;
-      };
-      clone.addEventListener("input", onInputClone);
-      clone.addEventListener("change", onInputClone);
-      setTimeout(() => {
-        try {
-          clone.click();
-        } catch (e) {
-          void e;
-        }
-      }, 50);
-      setTimeout(() => {
-        clone.removeEventListener("input", onInputClone);
-        clone.removeEventListener("change", onInputClone);
-        if (clone.parentElement) clone.parentElement.removeChild(clone);
-      }, 5000);
-      return;
-    }
-
-    const temp = document.createElement("input");
-    temp.type = "color";
-    temp.value = localTextColor.value || GROUP_DEFAULT_TEXT_COLOR;
-    applyNativeColorInputStyle(temp, textColorSwatchRef.value);
-    document.body.appendChild(temp);
-
-    const onInput = (ev: Event) => {
-      const tt = ev.target as HTMLInputElement | null;
-      if (tt && typeof tt.value === "string") localTextColor.value = tt.value;
-    };
-
-    temp.addEventListener("input", onInput);
-    temp.addEventListener("change", onInput);
-
-    setTimeout(() => {
-      try {
-        temp.click();
-      } catch (e) {
-        void e;
-      }
-    }, 50);
-
-    setTimeout(() => {
-      temp.removeEventListener("input", onInput);
-      temp.removeEventListener("change", onInput);
-      if (temp.parentElement) temp.parentElement.removeChild(temp);
-    }, 5000);
-  } catch (e) {
-    void e;
-  }
-}
-function selectPaletteColor(c: string) {
-  localColor.value = c;
+function confirmColorCustom() {
+  localColor.value = draftColor.value;
+  colorCustomMode.value = false;
   menuVisible.value = false;
 }
+
+function cancelColorCustom() {
+  colorCustomMode.value = false;
+}
+
 function resetColor() {
   localColor.value = GROUP_DEFAULT_BACKGROUND;
   menuVisible.value = false;
 }
-function openCustom() {
-  menuVisible.value = false;
-  setTimeout(() => openColorPicker(), 120);
+
+function openTextColorCustomPanel() {
+  draftTextColor.value = localTextColor.value || GROUP_DEFAULT_TEXT_COLOR;
+  textColorCustomMode.value = true;
 }
 
-function openColorPicker() {
-  try {
-    if (colorInput.value) {
-      const orig = colorInput.value;
-      const clone = orig.cloneNode(true) as HTMLInputElement;
-      clone.value = orig.value || localColor.value || GROUP_DEFAULT_BACKGROUND;
-      applyNativeColorInputStyle(clone, colorSwatchRef.value ?? orig);
-      document.body.appendChild(clone);
-      const onInputClone = (ev: Event) => {
-        const tt = ev.target as HTMLInputElement | null;
-        if (tt && typeof tt.value === "string") localColor.value = tt.value;
-      };
-      clone.addEventListener("input", onInputClone);
-      clone.addEventListener("change", onInputClone);
-      setTimeout(() => {
-        try {
-          clone.click();
-        } catch (e) {
-          void e;
-        }
-      }, 50);
-      setTimeout(() => {
-        clone.removeEventListener("input", onInputClone);
-        clone.removeEventListener("change", onInputClone);
-        if (clone.parentElement) clone.parentElement.removeChild(clone);
-      }, 5000);
-      return;
-    }
+function confirmTextColorCustom() {
+  localTextColor.value = draftTextColor.value;
+  textColorCustomMode.value = false;
+  textMenuVisible.value = false;
+}
 
-    const temp = document.createElement("input");
-    temp.type = "color";
-    temp.value = localColor.value || GROUP_DEFAULT_BACKGROUND;
-    applyNativeColorInputStyle(temp, colorSwatchRef.value);
-    document.body.appendChild(temp);
+function cancelTextColorCustom() {
+  textColorCustomMode.value = false;
+}
 
-    const onInput = (ev: Event) => {
-      const tt = ev.target as HTMLInputElement | null;
-      if (tt && typeof tt.value === "string") localColor.value = tt.value;
-    };
+function resetTextColor() {
+  localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
+  textMenuVisible.value = false;
+}
 
-    temp.addEventListener("input", onInput);
-    temp.addEventListener("change", onInput);
+function selectTextPaletteColor(c: string) {
+  localTextColor.value = c;
+  textMenuVisible.value = false;
+}
 
-    setTimeout(() => {
-      try {
-        temp.click();
-      } catch (e) {
-        void e;
-      }
-    }, 50);
-
-    setTimeout(() => {
-      temp.removeEventListener("input", onInput);
-      temp.removeEventListener("change", onInput);
-      if (temp.parentElement) temp.parentElement.removeChild(temp);
-    }, 5000);
-  } catch (e) {
-    void e;
-  }
+function selectPaletteColor(c: string) {
+  localColor.value = c;
+  menuVisible.value = false;
 }
 
 function onSubmit() {
   const payload = {
     name: localName.value.trim(),
+    localName: localLocalName.value.trim(),
     parent: localParent.value || undefined,
     color: localColor.value,
     textColor: localTextColor.value,
@@ -1038,7 +978,22 @@ function onCancel() {
   overflow: visible !important;
 }
 
+.gm-color-swatch-trigger {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.gm-color-swatch-trigger--text {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
 .gm-bg-preview {
+  position: relative;
   width: 88px;
   height: 52px;
   margin-left: auto;
@@ -1046,6 +1001,19 @@ function onCancel() {
   border: 1px solid rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.gm-bg-preview__photo,
+.gm-bg-preview__wash {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.gm-bg-preview__wash {
+  pointer-events: none;
 }
 
 .gm-bg-row {
@@ -1062,6 +1030,45 @@ function onCancel() {
 
 .gm-color-palette-menu {
   overflow: visible !important;
+  z-index: 2147483540 !important;
+}
+
+.gm-color-custom-panel {
+  box-sizing: border-box;
+  min-width: 280px;
+  max-width: min(340px, 92vw);
+  padding: 10px 12px 12px;
+}
+
+.gm-q-color-picker {
+  width: 100%;
+  max-width: 316px;
+}
+
+.gm-color-custom-panel__below {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.gm-color-custom-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 50%;
+  max-width: 50%;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.gm-color-custom-hex {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 50%;
+  max-width: 50%;
 }
 
 .gm-color-palette {
@@ -1123,6 +1130,15 @@ function onCancel() {
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+}
+
+.gm-color-palette__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .gm-icon-picker-panel {

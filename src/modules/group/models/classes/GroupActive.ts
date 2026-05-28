@@ -3,6 +3,7 @@ import type { ComputedRef, Ref } from 'vue';
 import * as groupRepository from '../../managers/groupRepository';
 import type { Group } from '../GroupModel';
 import type { ActiveInterface } from 'src/types/ActiveInterface';
+import { resolveLocalGroupName } from '../../utils/groupLocalNames';
 
 /**
  * Manage the currently active group. Uses a generic group type `G`
@@ -48,7 +49,7 @@ export class GroupActive<
       return;
     }
     const id = String((g as any).id ?? (g as any).value ?? '');
-    const label = (g as any).name ?? (g as any).label ?? id;
+    const label = resolveLocalGroupName(g as any) || (g as any).label || id;
     this.activeGroup.value = { label, value: id };
   }
 

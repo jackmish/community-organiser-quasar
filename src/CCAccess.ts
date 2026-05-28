@@ -16,12 +16,14 @@
 import { CCRegistry } from 'src/CCRegistry';
 import { GroupStoreController } from 'src/modules/group/GroupController';
 import { TaskStoreController } from 'src/modules/task/TaskController';
+import { UserStoreController } from 'src/modules/user/UserController';
 
 // ── Domain registration ────────────────────────────────────────────────────
 // Declared in boot order. Each line = one domain.
 export const CCReg = new CCRegistry()
   .register('group', GroupStoreController)
-  .register('task', TaskStoreController);
+  .register('task', TaskStoreController)
+  .register('user', UserStoreController);
 
 // ── Access object ──────────────────────────────────────────────────────────
 // CC is the public surface. CC.group / CC.task / CC.storage are fully typed

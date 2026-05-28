@@ -22,12 +22,19 @@ export type LanSyncExchangeRequest = {
   tasks?: LanSyncTaskPayload[];
   /** Task ids deleted since last sync (tombstones). */
   deletedTasks?: LanSyncTaskDeletionPayload[];
+  /** Group ids removed since last sync (tombstones). */
+  deletedGroups?: LanSyncGroupDeletionPayload[];
 };
 
 export type LanSyncTaskDeletionPayload = {
   id: string;
   deletedAt: string;
   groupId?: string;
+};
+
+export type LanSyncGroupDeletionPayload = {
+  id: string;
+  deletedAt: string;
 };
 
 export type LanSyncExchangeResponse = {
@@ -38,6 +45,7 @@ export type LanSyncExchangeResponse = {
   groups: LanSyncGroupPayload[];
   tasks: LanSyncTaskPayload[];
   deletedTasks?: LanSyncTaskDeletionPayload[];
+  deletedGroups?: LanSyncGroupDeletionPayload[];
   error?: string;
 };
 

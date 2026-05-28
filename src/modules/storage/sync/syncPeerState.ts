@@ -18,6 +18,8 @@ export type SyncPeerRecord = {
   /** Per-group / per-task sync watermark (ms) for incremental sync. */
   groupSyncedAt: Record<string, number>;
   taskSyncedAt: Record<string, number>;
+  /** Last time a full (since=0) exchange completed with this peer. */
+  lastFullSyncAt?: number;
 };
 
 function asNumberRecord(v: unknown): Record<string, number> {
@@ -52,6 +54,7 @@ function normalizePeer(raw: unknown): SyncPeerRecord | null {
     ...(typeof o.peerInRange === 'boolean' ? { peerInRange: o.peerInRange } : {}),
     groupSyncedAt: asNumberRecord(o.groupSyncedAt),
     taskSyncedAt: asNumberRecord(o.taskSyncedAt),
+    ...(typeof o.lastFullSyncAt === 'number' ? { lastFullSyncAt: o.lastFullSyncAt } : {}),
   };
   if (typeof o.peerDeviceName === 'string' && o.peerDeviceName.trim()) {
     row.peerDeviceName = o.peerDeviceName.trim();

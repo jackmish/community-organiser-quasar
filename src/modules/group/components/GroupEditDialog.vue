@@ -10,6 +10,7 @@
           :group-tree="groupTree"
           :group-options="groupOptions"
           :editing-group-id="editingGroupId ?? null"
+          :initial-parent-id="initialParentId ?? null"
           @submit="handleSubmit"
           @cancel="dialogVisible = false"
         />
@@ -25,6 +26,10 @@ import CC from 'src/CCAccess';
 import logger from 'src/utils/logger';
 import { saveData } from 'src/utils/storageUtils';
 import * as groupRepository from 'src/modules/group/managers/groupRepository';
+import {
+  resolveLocalGroupName,
+  setLocalGroupName,
+} from 'src/modules/group/utils/groupLocalNames';
 import GroupForm from './GroupForm.vue';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 
@@ -34,6 +39,7 @@ const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
 const props = defineProps<{
   modelValue: boolean;
   editingGroupId?: string | null;
+  initialParentId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -56,7 +62,7 @@ const groupTree = computed(() => {
 const groupOptions = computed(() => {
   try {
     return (CC.group.list.all.value ?? []).map((g: any) => ({
-      label: g.name,
+      label: resolveLocalGroupName(g),
       value: String(g.id),
     }));
   } catch {
@@ -101,8 +107,9 @@ async function handleSubmit(payload: any) {
           logger.error('updateGroup fallback failed', e);
         }
       }
+      setLocalGroupName(id, payload.localName ?? '');
     } else {
-      await CC.group.add({
+      const created: any = await CC.group.add({
         name,
         parentId: parent,
         color,
@@ -116,6 +123,8 @@ async function handleSubmit(payload: any) {
           ? { backgroundColorize: payload.backgroundColorize }
           : {}),
       });
+      const createdId = String(created?.id || '').trim();
+      if (createdId) setLocalGroupName(createdId, payload.localName ?? '');
     }
   } catch (e) {
     logger.error('GroupEditDialog: save failed', e);

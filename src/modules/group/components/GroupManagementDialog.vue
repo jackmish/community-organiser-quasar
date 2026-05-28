@@ -43,17 +43,6 @@
             </div>
           </div>
         </div>
-
-        <div v-if="privilegeMode === 'edit'" class="row justify-end q-mt-sm">
-          <q-btn
-            dense
-            unelevated
-            color="positive"
-            icon="add"
-            :label="$text('ui.add_group')"
-            @click="openCreateGroup"
-          />
-        </div>
       </q-card-section>
 
       <q-card-section
@@ -116,7 +105,17 @@
         </GroupTreeSelector>
       </q-card-section>
 
-      <q-card-actions align="right" class="settings-dialog-footer">
+      <q-card-actions class="settings-dialog-footer group-management-dialog__footer">
+        <q-btn
+          dense
+          unelevated
+          color="positive"
+          icon="add"
+          :label="isMobile ? undefined : $text('ui.add_group')"
+          :aria-label="$text('ui.add_group')"
+          @click="openCreateGroup"
+        />
+        <q-space />
         <q-btn flat :label="$text('action.close')" color="primary" @click="close" />
       </q-card-actions>
     </q-card>
@@ -269,6 +268,10 @@ function close() {
 
 .group-management-dialog__body {
   color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.group-management-dialog__footer {
+  flex-shrink: 0;
 }
 
 .mode-btn {

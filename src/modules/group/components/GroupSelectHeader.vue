@@ -22,21 +22,21 @@
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              color: getBtnBgColor(selectedOption) || 'inherit',
-              backgroundColor: getBtnTextColor(selectedOption) || 'transparent',
-              border: '2px solid ' + (getBtnTextColor(selectedOption) || 'transparent'),
+              color: getBtnTextColor(headerGroup) || 'inherit',
+              backgroundColor: getBtnBgColor(headerGroup) || 'transparent',
+              border: '2px solid ' + (getBtnBorderColor(headerGroup) || 'transparent'),
               boxShadow: 'none !important',
             }">
             <div style="display: flex; align-items: center; gap: 8px; flex: 1">
               <q-icon :name="selectedOption?.icon || 'folder_open'" :style="'color: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important; fill: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important; stroke: ' +
-                (getBtnBgColor(selectedOption) || 'inherit') +
+                (getBtnTextColor(headerGroup) || 'inherit') +
                 ' !important;'
                 " />
-              <span :style="{ color: getBtnBgColor(selectedOption) || 'inherit' }" style="
+              <span :style="{ color: getBtnTextColor(headerGroup) || 'inherit' }" style="
                   max-width: 140px;
                   overflow: hidden;
                   text-overflow: ellipsis;
@@ -46,56 +46,20 @@
               </span>
             </div>
             <q-icon name="arrow_drop_down" :style="'color: ' +
-              (getBtnBgColor(selectedOption) || 'inherit') +
+              (getBtnTextColor(headerGroup) || 'inherit') +
               ' !important;'
               " />
           </q-btn>
 
           <q-menu v-model="menuOpen" self="bottom left" anchor="top left">
-            <q-list padding>
-              <q-item clickable v-ripple @click="onSelectAll">
-                <q-item-section>
-                  <q-icon name="folder_open" />
-                </q-item-section>
-                <q-item-section>{{ $text("ui.all_groups") }}</q-item-section>
-              </q-item>
-            </q-list>
-
-            <q-separator />
-
-            <GroupTreeSelector
-              class="q-mt-sm"
-              :nodes="treeNodes"
-              :selected="selectedKeyArray"
-              max-height="48vh"
+            <GroupPicker
+              :selected="localValue"
+              :show-all-groups="true"
               @update:selected="onTreeSelect"
-            >
-              <template #header="prop">
-                <div class="row items-center full-width">
-                  <q-icon :name="prop.node.icon || 'folder'" class="q-mr-sm" :style="{ color: prop.node.color }" />
-                  <span>{{ prop.node.label }}</span>
-                  <q-space />
-                  <span v-if="isNodeShortcut(prop.node)" flat dense style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      text-transform: none;
-                    " class="q-ml-sm" @click.stop.prevent="activateTreeShortcut(prop.node)">
-                    <q-icon :name="prop.node.icon || 'folder'" :style="{ color: prop.node.color }" />
-
-                    <q-tooltip>{{ $text("ui.shortcut") }}</q-tooltip>
-                  </span>
-                </div>
-              </template>
-            </GroupTreeSelector>
-
-            <q-separator />
-
-            <q-list padding>
-              <q-item clickable v-ripple @click="openManage">
-                <q-item-section>{{ $text("ui.manage_groups") }}</q-item-section>
-              </q-item>
-            </q-list>
+              @select-all="onSelectAll"
+              @create-group="onCreateGroup"
+              @manage="menuOpen = false"
+            />
           </q-menu>
         </div>
 
@@ -115,7 +79,10 @@
 
       <!-- Right slot: options menu for the current group -->
       <div style="display: flex; align-items: center">
-        <TaskListOptionsMenu :text-color="getBtnTextColor(selectedOption) || undefined" />
+        <TaskListOptionsMenu
+          :text-color="getBtnTextColor(headerGroup) || undefined"
+          :device-statuses="safeDeviceStatuses"
+        />
       </div>
     </template>
     <template v-else>
@@ -134,9 +101,17 @@ import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
 import { groupsToTreeNodes } from "src/modules/group/utils/treeUi";
-import GroupTreeSelector from "./GroupTreeSelector.vue";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
+import GroupPicker from "./GroupPicker.vue";
+import type { DeviceStatusRow } from "src/utils/deviceStatusDisplay";
 
 const $q = useQuasar();
+
+const props = defineProps<{
+  deviceStatuses?: DeviceStatusRow[];
+}>();
+
+const safeDeviceStatuses = computed(() => props.deviceStatuses ?? []);
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";
@@ -194,9 +169,13 @@ const options = computed(() => {
 
   const groupOptions = (groups.value || [])
     .slice()
-    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
+    .sort((a: any, b: any) =>
+      resolveLocalGroupName(a).localeCompare(resolveLocalGroupName(b), undefined, {
+        sensitivity: "base",
+      }),
+    )
     .map((g: any) => ({
-      label: g.name,
+      label: resolveLocalGroupName(g),
       value: String(g.id),
       icon: g.icon || "folder",
       color: g.color || null,
@@ -214,7 +193,7 @@ const options = computed(() => {
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label =
-        (typeof cur === "object" && cur.label) || (found && found.name) || curVal;
+        (typeof cur === "object" && cur.label) || resolveLocalGroupName(found) || curVal;
       combined.push({
         label,
         value: curVal,
@@ -346,6 +325,11 @@ function openManage() {
   menuOpen.value = false;
 }
 
+function onCreateGroup() {
+  menuOpen.value = false;
+  window.dispatchEvent(new CustomEvent("group:manage-edit", { detail: { groupId: null } }));
+}
+
 const parentButtonVisible = computed(() => Boolean(parentGroup.value));
 const parentName = computed(() => (parentGroup.value ? parentGroup.value.name : null));
 
@@ -358,6 +342,9 @@ const selectedGroupObj = computed(() => {
     return null;
   }
 });
+
+/** Full group record for header colors (options list omits textColor). */
+const headerGroup = computed(() => selectedGroupObj.value ?? selectedOption.value);
 
 function activateTreeShortcut(node: any) {
   try {

@@ -308,18 +308,32 @@ export class TaskRepository {
   listFromDays(daysArg?: Record<string, any>): Task[] {
     const daysObj = daysArg || {};
     const out: Task[] = [];
+    const seenIds = new Set<string>();
     try {
       for (const key of Object.keys(daysObj || {})) {
         const d = daysObj[key];
-        if (d && Array.isArray(d.tasks)) out.push(...(d.tasks as Task[]));
+        if (d && Array.isArray(d.tasks)) {
+          for (const t of d.tasks as Task[]) {
+            const id = t?.id != null ? String(t.id) : '';
+            if (id && seenIds.has(id)) continue;
+            if (id) seenIds.add(id);
+            if (!t.date) t.date = t.eventDate || key;
+            if (!t.priority) t.priority = 'medium';
+            out.push(t);
+          }
+        }
       }
     } catch (e) {
       // ignore
     }
     return out.sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date);
+      const ad = a.date || a.eventDate || '';
+      const bd = b.date || b.eventDate || '';
+      const dateCompare = ad.localeCompare(bd);
       if (dateCompare !== 0) return dateCompare;
-      return a.priority.localeCompare(b.priority);
+      const ap = a.priority || 'medium';
+      const bp = b.priority || 'medium';
+      return ap.localeCompare(bp);
     });
   }
 

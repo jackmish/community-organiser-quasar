@@ -100,10 +100,14 @@ export function useSyncContractFlow() {
     profiles: RoleProfileData[],
     intervalSeconds?: number,
   ): boolean {
+    const ccGroups = CC.group?.list?.all?.value ?? [];
+    const taskCounts = countTasksByGroup();
     const current = buildSyncContractSnapshot(
       devices,
       profiles,
       confirmDuplicateResolution.value,
+      ccGroups,
+      taskCounts,
     );
     const previous = baselineSnapshot;
     if (!hasMeaningfulContractChanges(previous, current, devices)) {
@@ -115,8 +119,8 @@ export function useSyncContractFlow() {
       current,
       devices,
       profiles,
-      CC.group?.list?.all?.value ?? [],
-      countTasksByGroup(),
+      ccGroups,
+      taskCounts,
     );
 
     pendingSnapshot.value = current;
@@ -172,10 +176,14 @@ export function useSyncContractFlow() {
         );
       }
     }
+    const ccGroups = CC.group?.list?.all?.value ?? [];
+    const taskCounts = countTasksByGroup();
     const current = buildSyncContractSnapshot(
       devices,
       profiles,
       confirmDuplicateResolution.value,
+      ccGroups,
+      taskCounts,
     );
     const previous = baselineSnapshot;
     const built = buildSyncContractPreview(
@@ -183,8 +191,8 @@ export function useSyncContractFlow() {
       current,
       devices,
       profiles,
-      CC.group?.list?.all?.value ?? [],
-      countTasksByGroup(),
+      ccGroups,
+      taskCounts,
     );
     pendingSnapshot.value = current;
     preview.value = built;

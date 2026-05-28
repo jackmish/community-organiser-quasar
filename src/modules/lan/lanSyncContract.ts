@@ -17,6 +17,13 @@ export type SyncContractRejectPayload = {
   createdAt?: number;
 };
 
+export type SyncContractAcceptPayload = {
+  acceptorDeviceId: string;
+  acceptorDeviceName: string;
+  proposerDeviceId: string;
+  createdAt?: number;
+};
+
 /** POST contract rejection to the proposer's LAN HTTP server. */
 export async function lanPostSyncContractReject(
   baseUrl: string,
@@ -37,6 +44,30 @@ export async function lanPostSyncContractReject(
   }
 }
 
+/** POST contract acceptance to the proposer's LAN HTTP server. */
+export async function lanPostSyncContractAccept(
+  baseUrl: string,
+  payload: SyncContractAcceptPayload,
+): Promise<boolean> {
+  const url = `${baseUrl.replace(/\/+$/, '')}${CO21_LAN_API_PREFIX}/sync/contract/accept`;
+  try {
+    const res = await lanHttpRequest({
+      url,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      timeoutMs: 10000,
+    });
+    if (!res.ok) {
+      logger.warn('[lanSyncContract] accept failed', res.status, res.body, baseUrl);
+    }
+    return res.ok;
+  } catch (e) {
+    logger.warn('[lanSyncContract] accept error', baseUrl, e);
+    return false;
+  }
+}
+
 /** POST proposed sync contract to a peer's LAN HTTP server. */
 export async function lanPostSyncContractPropose(
   baseUrl: string,
@@ -49,10 +80,10 @@ export async function lanPostSyncContractPropose(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(pending),
-      timeoutMs: 8000,
+      timeoutMs: 15000,
     });
     if (!res.ok) {
-      logger.warn('[lanSyncContract] propose failed', res.status, baseUrl);
+      logger.warn('[lanSyncContract] propose failed', res.status, res.body, baseUrl);
     }
     return res.ok;
   } catch (e) {

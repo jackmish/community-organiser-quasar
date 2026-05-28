@@ -59,12 +59,13 @@ import { computed } from 'vue';
 
 // access group list to resolve group names for tiny labels
 import CC from 'src/CCAccess';
+import { resolveLocalGroupName } from 'src/modules/group/utils/groupLocalNames';
 const groups = CC.group.list.all;
 
 function getGroupName(groupId: any) {
   if (!groupId) return '';
   const g = groups.value.find((x: any) => String(x.id) === String(groupId));
-  return g ? g.name : '';
+  return g ? resolveLocalGroupName(g) : '';
 }
 
 function isNewGroup(idx: number, task: any) {

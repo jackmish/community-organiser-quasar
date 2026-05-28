@@ -3,6 +3,7 @@ import logger from 'src/utils/logger';
 import {
   occursOnDay as utilOccursOnDay,
   getCycleType as utilGetCycleType,
+  getRepeatDays as utilGetRepeatDays,
 } from '../utils/occursOnDay';
 import {
   parseYmdLocal as parseYmdLocalDefault,
@@ -33,6 +34,26 @@ export function createTaskComputed(args: {
 
   const getCycleType = task?.helpers?.getCycleType ?? utilGetCycleType;
   const occursOnDay = task?.helpers?.occursOnDay ?? utilOccursOnDay;
+  const getRepeatDays = task?.helpers?.getRepeatDays ?? utilGetRepeatDays;
+
+  function taskGroupId(task: { groupId?: string; group_id?: string } | null | undefined): string {
+    return String(task?.groupId ?? (task as any)?.group_id ?? '');
+  }
+
+  function cyclicSeriesKey(task: {
+    groupId?: string;
+    group_id?: string;
+    name?: string;
+    repeat?: unknown;
+  }): string | null {
+    const cycle = getCycleType(task);
+    if (!cycle) return null;
+    const days = getRepeatDays(task);
+    const daysKey = Array.isArray(days) ? [...days].sort().join(',') : '';
+    const gid = taskGroupId(task);
+    const name = String(task.name || '').trim().toLowerCase();
+    return `${gid}|${name}|${cycle}|${daysKey}`;
+  }
 
   const groups: Ref<any[]> = (group?.list?.all as Ref<any[]>) ?? ref([] as any[]);
   const activeGroup: Ref<any> = (group?.active?.activeGroup as Ref<any>) ?? ref(null as any);
@@ -127,15 +148,20 @@ export function createTaskComputed(args: {
         if (Number(t.status_id) === 0) continue;
         if (t.type_id === 'Replenish') continue;
         if (occursOnDay(t, day)) {
-          if (!tasksToSort.some((existing) => existing.id === t.id)) {
+          const seriesKey = cyclicSeriesKey(t);
+          const alreadyListed =
+            tasksToSort.some((existing) => existing.id === t.id) ||
+            (seriesKey != null &&
+              tasksToSort.some((existing) => cyclicSeriesKey(existing) === seriesKey));
+          if (!alreadyListed) {
             // Ensure display and helpers use the occurrence date (not the seed date)
             const clone: any = { ...t, eventDate: day, date: day };
             clone.__isCyclicInstance = true;
-            if (isVisibleForActive(clone.groupId)) tasksToSort.push(clone);
+            if (isVisibleForActive(taskGroupId(clone))) tasksToSort.push(clone);
           }
         }
       }
-      tasksToSort = tasksToSort.filter((task) => isVisibleForActive(task.groupId));
+      tasksToSort = tasksToSort.filter((task) => isVisibleForActive(taskGroupId(task)));
     } catch (e) {
       // ignore errors here
     }
@@ -166,7 +192,7 @@ export function createTaskComputed(args: {
         (t) => (t.type_id || t.type) === 'Replenish' && Number(t.status_id) !== 0,
       );
       if (activeGroup.value && activeGroup.value.value !== null) {
-        val = val.filter((t) => isVisibleForActive(t.groupId));
+        val = val.filter((t) => isVisibleForActive(taskGroupId(t as any)));
       }
       val = val.sort((a: any, b: any) => {
         const na = (a.name || '').toLowerCase();
@@ -204,7 +230,7 @@ export function createTaskComputed(args: {
         (t: any) => (t.type_id || t.type) === 'Replenish' && Number(t.status_id) === 0,
       );
       if (activeGroup.value && activeGroup.value.value !== null) {
-        replenishDone = replenishDone.filter((t: any) => isVisibleForActive(t.groupId));
+        replenishDone = replenishDone.filter((t: any) => isVisibleForActive(taskGroupId(t)));
       }
       const existingIds = new Set(done.map((d: any) => d.id));
       for (const r of replenishDone) {
@@ -329,7 +355,7 @@ export function createTaskComputed(args: {
         value: null,
       },
       ...groups.value.map((g) => {
-        const taskCount = all.filter((t) => t.groupId === g.id).length;
+        const taskCount = all.filter((t: any) => taskGroupId(t) === String(g.id)).length;
         return { label: `${g.name} (${taskCount})`, value: String(g.id) };
       }),
     ];

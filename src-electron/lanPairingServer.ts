@@ -340,6 +340,53 @@ function handleSyncContractPropose(
   })();
 }
 
+function handleSyncContractAccept(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  void (async () => {
+    let raw: string;
+    try {
+      raw = await readBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'bad_body' });
+      return;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw || '{}') as Record<string, unknown>;
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return;
+    }
+    const acceptorDeviceId =
+      typeof parsed.acceptorDeviceId === 'string' ? parsed.acceptorDeviceId : '';
+    const acceptorDeviceName =
+      typeof parsed.acceptorDeviceName === 'string' ? parsed.acceptorDeviceName : '';
+    if (!acceptorDeviceId) {
+      sendJson(res, 400, { error: 'invalid_accept' });
+      return;
+    }
+    const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(acceptorDeviceId, remoteAddr);
+    if (!isContractProposerTrusted(acceptorDeviceId, remoteAddr)) {
+      sendJson(res, 403, { error: 'acceptor_not_registered' });
+      return;
+    }
+    notifyRenderer('lan:sync-contract-accepted', {
+      acceptorDeviceId,
+      acceptorDeviceName: acceptorDeviceName || 'Unknown device',
+      proposerDeviceId:
+        typeof parsed.proposerDeviceId === 'string' ? parsed.proposerDeviceId : '',
+      createdAt:
+        typeof parsed.createdAt === 'number' && parsed.createdAt > 0
+          ? parsed.createdAt
+          : undefined,
+    });
+    sendJson(res, 200, { ok: true });
+  })();
+}
+
 function handleSyncContractReject(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -368,6 +415,7 @@ function handleSyncContractReject(
       return;
     }
     const remoteAddr = normalizeClientIp(req.socket.remoteAddress);
+    registerLanPeerConnection(rejectorDeviceId, remoteAddr);
     if (!isContractProposerTrusted(rejectorDeviceId, remoteAddr)) {
       sendJson(res, 403, { error: 'rejector_not_registered' });
       return;
@@ -695,6 +743,11 @@ export function startLanPairingServer(
 
         if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/propose`) {
           void handleSyncContractPropose(req, res);
+          return;
+        }
+
+        if (req.method === 'POST' && pathOnly === `${CO21_LAN_API_PREFIX}/sync/contract/accept`) {
+          void handleSyncContractAccept(req, res);
           return;
         }
 

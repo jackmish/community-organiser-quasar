@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { loadDotEnv } from './loadDotEnv';
+loadDotEnv();
 import {
   startLanPairingServer,
   setLanTrustedContractDeviceIds,
@@ -13,9 +15,11 @@ import {
 } from './lanPairingServer';
 import { CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
 import { browseCo21Organisers, destroyBonjour } from './lanMdns';
+import { startGoogleAuthFlow, refreshAccessToken } from './googleAuth';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import http from 'http';
 import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
 import logger from 'src/utils/logger';
@@ -342,6 +346,89 @@ ipcMain.handle(
       logger.error('export:zip failed', err);
       throw err;
     }
+  },
+);
+
+// ── Google OAuth IPC ──────────────────────────────────────────────────────
+ipcMain.handle('google:auth-start', async () => {
+  try {
+    const result = await startGoogleAuthFlow();
+    return { ok: true as const, ...result };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('google:auth-refresh', async (_evt, refreshToken: string) => {
+  try {
+    const tokens = await refreshAccessToken(refreshToken);
+    return { ok: true as const, tokens };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+/**
+ * Proxy LAN HTTP requests through Node.js — bypasses Chromium CORS/preflight
+ * and avoids browser-level networking quirks with NanoHTTPD on Android.
+ */
+ipcMain.handle(
+  'lan:http-request',
+  async (
+    _evt,
+    opts: {
+      url: string;
+      method: string;
+      headers?: Record<string, string>;
+      body?: string;
+      timeoutMs?: number;
+    },
+  ) => {
+    const timeout = opts.timeoutMs ?? 20_000;
+    return new Promise<{ status: number; body: string; ok: boolean }>((resolve) => {
+      try {
+        const parsed = new URL(opts.url);
+        const hdrs: Record<string, string> = { ...opts.headers };
+        if (opts.body !== undefined && !hdrs['Content-Length'] && !hdrs['content-length']) {
+          hdrs['Content-Length'] = String(Buffer.byteLength(opts.body, 'utf8'));
+        }
+        const reqOpts: http.RequestOptions = {
+          hostname: parsed.hostname,
+          port: parsed.port || 80,
+          path: parsed.pathname + parsed.search,
+          method: opts.method || 'GET',
+          headers: hdrs,
+          timeout,
+        };
+        const req = http.request(reqOpts, (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => {
+            const body = Buffer.concat(chunks).toString('utf8');
+            const status = res.statusCode ?? 0;
+            resolve({ status, body, ok: status >= 200 && status < 300 });
+          });
+        });
+        req.on('error', (err) => {
+          resolve({ status: 0, body: '', ok: false });
+          logger.warn('[lan:http-request] error', opts.method, opts.url, err.message);
+        });
+        req.on('timeout', () => {
+          req.destroy();
+          resolve({ status: 0, body: '', ok: false });
+        });
+        if (opts.body !== undefined) {
+          req.write(opts.body);
+        }
+        req.end();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.warn('[lan:http-request] setup error', msg);
+        resolve({ status: 0, body: '', ok: false });
+      }
+    });
   },
 );
 

@@ -17,7 +17,7 @@ export type Co21LanServerPlugin = {
   resolvePair(options: { token: string; accept: boolean }): Promise<{ ok: boolean }>;
   resolveSyncExchange(options: { requestId: string; responseJson: string }): Promise<{ ok: boolean }>;
   addListener(
-    eventName: 'pairingPending' | 'pairingComplete' | 'syncContractIncoming' | 'syncContractRejected' | 'syncExchangeRequest',
+    eventName: 'pairingPending' | 'pairingComplete' | 'syncContractIncoming' | 'syncContractRejected' | 'syncContractAccepted' | 'syncExchangeRequest',
     listenerFunc: (event: { requestId?: string; body?: string; [key: string]: unknown }) => void,
   ): Promise<{ remove: () => void }>;
 };

@@ -24,8 +24,13 @@ export class LanHttpError extends Error {
   }
 }
 
-function pickLanTransport(): 'capacitor-native' | 'fetch' {
-  return Capacitor.isNativePlatform() ? 'capacitor-native' : 'fetch';
+type LanTransport = 'capacitor-native' | 'electron-ipc' | 'fetch';
+
+function pickLanTransport(): LanTransport {
+  if (Capacitor.isNativePlatform()) return 'capacitor-native';
+  const eLan = (window as { electronLan?: { httpRequest?: unknown } }).electronLan;
+  if (typeof eLan?.httpRequest === 'function') return 'electron-ipc';
+  return 'fetch';
 }
 
 function httpResponseDataToBody(data: unknown): string {
@@ -125,7 +130,43 @@ async function capacitorLanRequest(opts: {
 }
 
 /**
- * HTTP for LAN APIs. Native Capacitor HTTP on Android/iOS; fetch on Electron/web.
+ * Node.js HTTP via Electron IPC — bypasses Chromium CORS/preflight entirely.
+ */
+async function electronIpcLanRequest(opts: {
+  url: string;
+  method: 'GET' | 'POST' | 'OPTIONS';
+  headers?: Record<string, string>;
+  body?: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}): Promise<LanHttpResponse> {
+  if (opts.signal?.aborted) {
+    throw new LanHttpError('Pairing cancelled', 0, '');
+  }
+  const eLan = (window as { electronLan?: { httpRequest: (o: unknown) => Promise<LanHttpResponse> } }).electronLan;
+  if (!eLan) {
+    throw new LanHttpError('electronLan not available', 0, '');
+  }
+  const res = await raceAbort(
+    opts.signal,
+    eLan.httpRequest({
+      url: opts.url,
+      method: opts.method,
+      headers: opts.headers,
+      body: opts.body,
+      timeoutMs: opts.timeoutMs,
+    }),
+    opts.timeoutMs,
+  );
+  if (!res.ok && res.status === 0) {
+    throw new LanHttpError('Network error (Node.js)', 0, '');
+  }
+  return res;
+}
+
+/**
+ * HTTP for LAN APIs. Native Capacitor HTTP on Android/iOS;
+ * Node.js via IPC on Electron; fetch on web.
  */
 export async function lanHttpRequest(opts: {
   url: string;
@@ -154,10 +195,14 @@ export async function lanHttpRequest(opts: {
     });
   };
   try {
-    const res =
-      transport === 'capacitor-native'
-        ? await capacitorLanRequest(opts)
-        : await fetchLanRequest(opts);
+    let res: LanHttpResponse;
+    if (transport === 'capacitor-native') {
+      res = await capacitorLanRequest(opts);
+    } else if (transport === 'electron-ipc') {
+      res = await electronIpcLanRequest(opts);
+    } else {
+      res = await fetchLanRequest(opts);
+    }
     finish({ status: res.status, body: res.body });
     return res;
   } catch (e: unknown) {

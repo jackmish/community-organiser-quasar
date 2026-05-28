@@ -24,7 +24,7 @@ import { runSyncWithPeer } from './lanOrganiserSync';
 const DEBOUNCE_MS = 600;
 
 /** Background / on-change sync exchange timeout (only after /info succeeded). */
-const SYNC_EXCHANGE_MS = 8_000;
+const SYNC_EXCHANGE_MS = 20_000;
 
 /** How often to retry /info for peers currently marked offline. */
 const RECONNECT_INTERVAL_MS = 45_000;

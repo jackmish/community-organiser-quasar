@@ -29,6 +29,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import GroupTreeSelector from "./GroupTreeSelector.vue";
 
 const props = defineProps<{
@@ -67,7 +68,7 @@ const hasMenu = computed(() => Array.isArray(props.groups) && props.groups.lengt
 const displayLabel = computed(() => {
   if (props.label) return props.label;
   if (!props.group) return "";
-  return props.group.name ?? props.group.label ?? "";
+  return resolveLocalGroupName(props.group) || props.group.label || "";
 });
 
 const textColor = computed(() => {

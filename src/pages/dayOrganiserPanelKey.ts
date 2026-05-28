@@ -24,6 +24,8 @@ export type DayOrganiserPanelContext = {
   handleToggleStatus: (payload: unknown) => void | Promise<void>;
   handleCalendarDateSelect: (date: string) => void;
   filterParentTasks: (val: string, update: (fn: () => void) => void) => void;
+  /** Default task type when opening the add form (`Todo` vs `TimeEvent`). */
+  addFormDefaultTypeId: Ref<'Todo' | 'TimeEvent'>;
   CC: typeof CCAccess;
 };
 

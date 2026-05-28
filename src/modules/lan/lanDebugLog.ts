@@ -11,7 +11,7 @@ export type LanDebugEntry = {
   title: string;
   method?: string;
   url?: string;
-  transport?: 'capacitor-native' | 'xhr' | 'fetch';
+  transport?: 'capacitor-native' | 'electron-ipc' | 'xhr' | 'fetch';
   requestHeaders?: Record<string, string>;
   requestBody?: string;
   status?: number;
@@ -132,7 +132,7 @@ function deriveLanHttpErrorCode(status: number, error?: string): string {
 export function pushLanHttpDebugStart(opts: {
   method: string;
   url: string;
-  transport: 'capacitor-native' | 'xhr' | 'fetch';
+  transport: 'capacitor-native' | 'electron-ipc' | 'xhr' | 'fetch';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;

@@ -1,9 +1,24 @@
 .settings-dialog-card--mobile {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
   width: 100%;
   max-width: 100% !important;
   min-width: 0 !important;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   border-radius: 0;
+  overflow: hidden;
+}
+
+.settings-dialog-card--mobile .settings-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Debug tools: full-screen white panel on phones (scroll in body, not nested list) */
@@ -125,8 +140,9 @@
   font-size: 24px;
 }
 
-.co21-sync-banner--mobile .co21-sync-banner__text {
-  font-size: 13px;
+.co21-sync-banner--mobile .co21-sync-banner__btn {
+  margin-left: 0;
+  flex: 1 1 auto;
 }
 
 /* LAN pairing dialog */
@@ -175,14 +191,22 @@
 
 .add-connection-dialog-card {
   overflow: hidden;
+}
+
+.add-connection-dialog-card:not(.add-connection-dialog-card--compact) {
   display: flex;
   flex-direction: column;
 }
 
-/* Phone / native: full height, scrollable body (same pattern as debug-tools) */
+/* Phone / native: full height, flex column so scroll body fills remaining space */
 .add-connection-dialog-card--compact,
 .add-connection-dialog-card.settings-dialog-card--mobile {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  height: 100vh;
   height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   width: 100%;
   max-width: 100% !important;
@@ -211,6 +235,8 @@
 .add-connection-dialog-card--compact .add-connection-scroll-body,
 .add-connection-dialog-card.settings-dialog-card--mobile .add-connection-scroll-body {
   padding: 8px 12px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .add-connection-dialog-card .add-connection-tabs {
@@ -226,52 +252,65 @@
   overflow-x: hidden;
 }
 
-/* Light panel on compact layouts — readable fields (not white-on-blue) */
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan {
+/* Light panel for all Add Connection tabs — readable content on the blue card chrome */
+.add-connection-dialog-card .add-connection-tab-panel {
   margin: 0;
   padding: 12px;
   border-radius: 8px;
   background: #e8ecf0;
 }
 
-.add-connection-dialog-card--compact .add-connection-tab-panel__text,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel__text {
+.add-connection-dialog-card .add-connection-tab-panel__text {
   color: rgba(0, 0, 0, 0.75) !important;
 }
 
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-panel,
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-dialog-body,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-panel,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-dialog-body {
+.add-connection-dialog-card .add-connection-tab-panel--lan .lan-pairing-panel,
+.add-connection-dialog-card .add-connection-tab-panel--lan .lan-pairing-dialog-body {
   color: rgba(0, 0, 0, 0.87) !important;
 }
 
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input input,
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__native,
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__input,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input input,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__native,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__input {
+.add-connection-dialog-card .add-connection-tab-panel--lan .lan-pairing-muted,
+.add-connection-dialog-card .add-connection-tab-panel--lan .lan-pairing-pair-label {
+  color: rgba(0, 0, 0, 0.58) !important;
+}
+
+.add-connection-dialog-card .add-connection-tab-panel--lan .settings-dialog-surface-btn {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Beat the high-specificity global app.scss rules that force blue field backgrounds + white text */
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field {
   color: rgba(0, 0, 0, 0.87) !important;
   -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
 }
 
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .connections-device-sync-input .q-field__label,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .connections-device-sync-input .q-field__label {
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field--outlined .q-field__control {
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field--outlined .q-field__control::before {
+  border-color: rgba(0, 0, 0, 0.24) !important;
+}
+
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel input,
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel textarea,
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field__native,
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field__input,
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-select__input {
+  color: rgba(0, 0, 0, 0.87) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+  caret-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel input::placeholder,
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel textarea::placeholder {
+  color: rgba(0, 0, 0, 0.45) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+html body .q-dialog .q-card.add-connection-dialog-card .add-connection-tab-panel .q-field__label {
   color: rgba(0, 0, 0, 0.6) !important;
-}
-
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-muted,
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .lan-pairing-pair-label,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-muted,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .lan-pairing-pair-label {
-  color: rgba(0, 0, 0, 0.58) !important;
-}
-
-.add-connection-dialog-card--compact .add-connection-tab-panel--lan .settings-dialog-surface-btn,
-.add-connection-dialog-card.settings-dialog-card--mobile .add-connection-tab-panel--lan .settings-dialog-surface-btn {
-  color: rgba(0, 0, 0, 0.75) !important;
 }
 
 .lan-pairing-panel--embedded {
@@ -343,6 +382,18 @@
   padding-bottom: 0;
   margin-top: 7px;
   margin-bottom: 0;
+}
+
+.lan-pairing-pair-row.column .lan-pairing-pair-input,
+.lan-pairing-pair-row.column .lan-pairing-pair-btn {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 0 0 auto;
+}
+
+.lan-pairing-pair-row.column .lan-pairing-pair-btn {
+  margin-top: 4px;
 }
 
 .lan-pairing-tool-row {

@@ -1,5 +1,6 @@
 import logger from '../../../../utils/logger';
 import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
+import { loadGroupsFromGroupDirectory } from './groupFileLoader';
 import type { StorageBackend } from '../StorageBackend';
 // Re-export so existing callers that import OrganiserData from this module keep working.
 export type { OrganiserData } from '../StorageBackend';
@@ -187,29 +188,12 @@ class DayOrganiserStorage implements StorageBackend {
       typeof window.electronAPI.readJsonFile === 'function' &&
       typeof window.electronAPI.joinPath === 'function'
     ) {
-      const appDataDir = await window.electronAPI.getAppDataPath();
-      const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
-      await window.electronAPI.ensureDir(groupDir);
-      const groups: any[] = [];
       try {
-        const files = await window.electronAPI.readDir(groupDir);
-
-        for (const file of files) {
-          if (file.startsWith('group-') && file.endsWith('.json')) {
-            const filePath = window.electronAPI.joinPath(groupDir, file);
-            try {
-              const groupData = await window.electronAPI.readJsonFile(filePath);
-              groups.push(groupData);
-            } catch (err) {
-              logger.error('Error reading group file:', filePath, err);
-            }
-          }
-        }
+        return await loadGroupsFromGroupDirectory(window.electronAPI);
       } catch (err) {
-        logger.error('Error reading group directory:', groupDir, err);
+        logger.error('Error reading group directory:', err);
+        return [];
       }
-      // loaded groups from files
-      return groups;
     } else if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem('day-organiser-groups');
       if (stored) {

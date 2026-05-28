@@ -19,10 +19,13 @@ import {
   typeTextColors as themeTypeTextColors,
 } from "src/components/theme";
 import { useRepeatSchedule } from "src/composables/useRepeatSchedule";
-import { hexToRgba } from "src/utils/colorUtils";
+import { getContrastColor, hexToRgba } from "src/utils/colorUtils";
 import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
+import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
+import type { TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -57,6 +60,11 @@ const props = defineProps({
   mode: {
     type: String,
     default: "add",
+  },
+  /** Task type preset when opening add mode (`Todo` for + buttons, `TimeEvent` for calendar). */
+  defaultAddTypeId: {
+    type: String as () => "Todo" | "TimeEvent",
+    default: "Todo",
   },
 });
 const emit = defineEmits([
@@ -107,7 +115,7 @@ function getGroupName(gid: string | undefined) {
     const list: any[] = (groups && groups.value) || groups || [];
     if (!gid) return null;
     const found = list.find((x: any) => String(x.id) === String(gid));
-    return (found && found.name) || null;
+    return found ? resolveLocalGroupName(found) : null;
   } catch (e) {
     return null;
   }
@@ -120,7 +128,8 @@ function getGroupChipStyle(gid: string | undefined): Record<string, string> {
     const found = list.find((x: any) => String(x.id) === String(gid));
     if (!found || !found.color) return {};
     const bg = found.color;
-    const text = found.textColor || found.text_color || "#ffffff";
+    const text =
+      found.textColor || found.text_color || getContrastColor(bg);
     return { backgroundColor: bg + " !important", color: text + " !important" };
   } catch (e) {
     return {};
@@ -133,7 +142,7 @@ function getGroupTextColor(gid: string | undefined): string {
     if (!gid) return "inherit";
     const found = list.find((x: any) => String(x.id) === String(gid));
     if (!found || !found.color) return "inherit";
-    return found.textColor || found.text_color || "#ffffff";
+    return found.textColor || found.text_color || getContrastColor(found.color);
   } catch (e) {
     return "inherit";
   }
@@ -216,7 +225,7 @@ type TaskType = {
   eventTime: string;
   // timeMode controls how the time is interpreted in the UI
   // 'event' = normal event (default), 'prepare' = preparation time, 'expiration' = expiration time
-  timeMode?: "event" | "prepare" | "expiration";
+  timeMode?: "event" | "prepare" | "expiration" | "holiday";
   // number of days before the event (used for prepare/expiration modes)
   timeOffsetDays?: number | null;
 };
@@ -224,7 +233,7 @@ type TaskType = {
 const localNewTask = ref<TaskType>({
   name: "",
   description: "",
-  type_id: "TimeEvent",
+  type_id: "Todo",
   // default to '1' = just created
   // default to 1 = just created (use numeric codes, not boolean)
   status_id: 1,
@@ -243,7 +252,7 @@ const localNewTask = ref<TaskType>({
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
 // Persist to localStorage so the selection survives form resets/remounts.
 const STORAGE_KEY = "coq:lastTaskType";
-let initialStored = "TimeEvent";
+let initialStored = "Todo";
 try {
   const s = localStorage.getItem(STORAGE_KEY);
   if (s) initialStored = s;
@@ -251,7 +260,23 @@ try {
   // ignore (e.g. SSR or blocked storage)
 }
 const lastSelectedType = ref<string>(
-  initialStored || localNewTask.value.type_id || "TimeEvent"
+  initialStored || localNewTask.value.type_id || "Todo"
+);
+
+function resolveAddModeTypeId(): string {
+  return props.defaultAddTypeId === "TimeEvent" ? "TimeEvent" : "Todo";
+}
+
+watch(
+  () => [props.mode, props.defaultAddTypeId, props.initialTask] as const,
+  ([mode]) => {
+    if (mode !== "add" || props.initialTask) return;
+    const typeId = resolveAddModeTypeId();
+    if (localNewTask.value.type_id !== typeId) {
+      localNewTask.value.type_id = typeId;
+      lastSelectedType.value = typeId;
+    }
+  },
 );
 watch(
   () => localNewTask.value.type_id,
@@ -368,7 +393,23 @@ const watermarkIcon = computed(() => {
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? "md" : "sm"));
 const isReplenish = computed(() => (localNewTask.value.type_id || "") === "Replenish");
+/** Type when edit session started — keeps calendar btn if user switches Todo → TimeEvent. */
+const scheduleOriginTypeId = ref("");
+const showTodoCalendarBtn = computed(() => {
+  if (props.mode !== "edit") return false;
+  const cur = localNewTask.value.type_id || "";
+  return cur === "TimeEvent" || scheduleOriginTypeId.value === "Todo";
+});
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
+
+function openTodoCalendarSchedule() {
+  if (!localNewTask.value.id) return;
+  todoCalendarSchedule.start({
+    ...localNewTask.value,
+    id: String(localNewTask.value.id),
+  } as TodoScheduleTask);
+  window.dispatchEvent(new Event("co21:todo-schedule-open"));
+}
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
 // Submit button appearance based on mode
@@ -596,6 +637,7 @@ watch(
   () => props.initialTask,
   (val) => {
     if (val) {
+      scheduleOriginTypeId.value = String(val.type_id || "");
       // copy relevant fields
       localNewTask.value = {
         name: val.name || "",
@@ -672,9 +714,8 @@ watch(
     } else {
       // switch back to add mode and reset fields
       emit("update:mode", "add");
-      // preserve currently selected type so the chooser doesn't jump back to default
-      const prevType =
-        lastSelectedType.value || localNewTask.value?.type_id || "TimeEvent";
+      const prevType = resolveAddModeTypeId();
+      lastSelectedType.value = prevType;
       // keep date if provided via selectedDate prop
       localNewTask.value = {
         name: "",
@@ -739,6 +780,7 @@ const autoGeneratedName = computed(() => {
       const timeMode = (localNewTask.value as any).timeMode || "event";
       if (timeMode === "prepare") typeLabel = "Preparation";
       else if (timeMode === "expiration") typeLabel = "Deadline";
+      else if (timeMode === "holiday") typeLabel = "Holiday";
       else typeLabel = "Event";
     }
 
@@ -811,20 +853,14 @@ watch(
     if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
-      // When parent changes the selected date (e.g. calendar day click),
-      // default new tasks to `TimeEvent` so the TimeEvent chooser is shown.
-      try {
-        if (props.mode === "add") {
-          localNewTask.value.type_id = "TimeEvent";
-          lastSelectedType.value = "TimeEvent";
-          try {
-            localStorage.setItem(STORAGE_KEY, "TimeEvent");
-          } catch (e) {
-            void e;
-          }
+      if (props.mode === "add" && props.defaultAddTypeId === "TimeEvent") {
+        localNewTask.value.type_id = "TimeEvent";
+        lastSelectedType.value = "TimeEvent";
+        try {
+          localStorage.setItem(STORAGE_KEY, "TimeEvent");
+        } catch (e) {
+          void e;
         }
-      } catch (e) {
-        void e;
       }
     }
   }
@@ -1165,6 +1201,19 @@ function onSubmit(event: Event) {
         </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
+        <div
+          v-if="showTodoCalendarBtn && localNewTask.type_id !== 'TimeEvent'"
+          class="row items-center q-mb-sm"
+        >
+          <q-btn
+            dense
+            unelevated
+            color="primary"
+            icon="event"
+            :label="$text('task.todo.schedule_on_calendar')"
+            @click="openTodoCalendarSchedule"
+          />
+        </div>
         <!-- Type selector moved into Priority card below; header removed -->
 
         <!-- Date/time panels relocated into the description column below -->
@@ -1188,6 +1237,17 @@ function onSubmit(event: Event) {
                         <div class="text-caption text-grey-7">
                           {{ $text("label.date") }}
                         </div>
+                        <q-btn
+                          v-if="showTodoCalendarBtn"
+                          dense
+                          round
+                          unelevated
+                          color="primary"
+                          icon="event"
+                          class="todo-schedule-calendar-btn"
+                          :title="$text('task.todo.schedule_on_calendar')"
+                          @click="openTodoCalendarSchedule"
+                        />
 
                         <div class="col-auto">
                           <q-btn-toggle
@@ -1513,7 +1573,7 @@ function onSubmit(event: Event) {
                         </div>
                       </div>
                       <div
-                        v-if="eventTimeMode !== 'event'"
+                        v-if="eventTimeMode === 'prepare' || eventTimeMode === 'expiration'"
                         class="row q-mt-xs items-center"
                         style="gap: 8px; align-items: center"
                       >

@@ -1,8 +1,8 @@
 <template>
 
-  <q-dialog :model-value="modelValue" v-bind="dialogBind" @update:model-value="emit('update:modelValue', $event)">
+  <q-dialog :model-value="modelValue" v-bind="effectiveDialogBind" @update:model-value="emit('update:modelValue', $event)">
 
-    <q-card :class="cardClasses" :style="cardStyle">
+    <q-card :class="cardClasses" :style="effectiveCardStyle">
 
       <q-card-section :class="[headerClass, 'q-pb-sm']">
 
@@ -192,25 +192,51 @@ const $q = useQuasar();
 
 const { dialogBind, cardClass, cardStyle, headerClass, isMobile } = useSettingsDialogLayout(720, 900);
 
-
+const isNative = Capacitor.isNativePlatform();
 
 /** Native app or narrow screen — horizontal tabs + stacked content. */
 
 const isCompact = computed(
 
-  () => isMobile.value || Capacitor.isNativePlatform() || $q.screen.width < 768,
+  () => isMobile.value || isNative || $q.screen.width < 768,
 
 );
 
+/** Compact/native → always maximise and drop desktop min/maxWidth so the card never overflows. */
 
+const effectiveDialogBind = computed(() => {
+
+  if (isCompact.value) {
+
+    return { maximized: true, transitionShow: 'slide-up', transitionHide: 'slide-down' };
+
+  }
+
+  return dialogBind.value;
+
+});
+
+const effectiveCardStyle = computed(() => (isCompact.value ? undefined : cardStyle.value));
+
+const effectiveCardClass = computed(() => {
+
+  if (isCompact.value) {
+
+    return 'co21-dialog-card settings-dialog-card settings-dialog-card--mobile';
+
+  }
+
+  return cardClass.value;
+
+});
 
 const cardClasses = computed(() => [
 
-  cardClass.value,
+  effectiveCardClass.value,
 
   'add-connection-dialog-card',
 
-  'column',
+  { 'column': !isCompact.value },
 
   { 'add-connection-dialog-card--compact': isCompact.value },
 

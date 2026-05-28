@@ -12,42 +12,17 @@ $inactive-blue: #1976d2; // matches :root --q-primary
 $menu-bg: #4af;
 $menu-bg-opacity: rgba(11, 111, 222, 0.7);
 
-/* Page background: CSS vars (useGroupPageBackground) + Co21AppBackground cross-fade layers. */
-html {
-  --co21-page-bg-color: #def;
-  --co21-page-bg-image: url('/images/months/bg_04.jpg');
-  --co21-page-bg-size: cover;
-  --co21-page-bg-position: center center;
-  --co21-page-bg-repeat: no-repeat;
-  --co21-page-bg-filter: none;
-}
-
+/* Page photo + tint: {@link Co21AppBackground} only (no #q-app pseudo backgrounds). */
 html,
 body {
   min-height: 100%;
-  background-color: var(--co21-page-bg-color) !important;
+  background-color: #def !important;
 }
 
 #q-app {
   position: relative;
-  isolation: isolate;
   min-height: 100%;
   background: transparent !important;
-}
-
-#q-app::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-color: var(--co21-page-bg-color);
-  background-image: var(--co21-page-bg-image);
-  background-size: var(--co21-page-bg-size);
-  background-position: var(--co21-page-bg-position);
-  background-repeat: var(--co21-page-bg-repeat);
-  background-attachment: fixed;
-  filter: var(--co21-page-bg-filter);
 }
 
 main {

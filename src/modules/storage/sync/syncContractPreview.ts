@@ -54,6 +54,7 @@ export type SyncContractPreview = {
 
 export type AssignmentChangeLine = {
   deviceName: string;
+  groupId: string;
   groupName: string;
   fromLabel: string;
   toLabel: string;
@@ -153,17 +154,59 @@ export function buildSyncContractSnapshot(
   devices: ConnectedDevice[],
   profiles: RoleProfileData[],
   duplicateResolution: SyncDuplicateResolution = DEFAULT_SYNC_DUPLICATE_RESOLUTION,
+  groupsRaw?: unknown[],
+  taskCountByGroup?: Record<string, number>,
 ): SyncContractSnapshot {
+  const assignedGroupIds = new Set<string>();
+  for (const d of devices) {
+    if (d.rolesByGroup) {
+      for (const gid of Object.keys(d.rolesByGroup)) assignedGroupIds.add(gid);
+    }
+  }
+
+  const groups: SyncContractSnapshot['groups'] = [];
+  if (Array.isArray(groupsRaw)) {
+    for (const item of groupsRaw) {
+      if (!item || typeof item !== 'object') continue;
+      const g = item as Record<string, unknown>;
+      const id = typeof g.id === 'string' || typeof g.id === 'number' ? String(g.id) : '';
+      if (!id || !assignedGroupIds.has(id)) continue;
+      const name = typeof g.name === 'string' && g.name ? g.name : id;
+      const entry: {
+        id: string;
+        name: string;
+        icon?: string;
+        color?: string;
+        textColor?: string;
+        parentId?: string | null;
+        taskCount?: number;
+      } = { id, name };
+      if (typeof g.icon === 'string' && g.icon) entry.icon = g.icon;
+      if (typeof g.color === 'string' && g.color.trim()) entry.color = g.color.trim();
+      const tc =
+        typeof g.textColor === 'string'
+          ? g.textColor
+          : typeof g.text_color === 'string'
+            ? g.text_color
+            : '';
+      if (tc.trim()) entry.textColor = tc.trim();
+      const pid = g.parentId ?? g.parent_id;
+      if (typeof pid === 'string' && pid) entry.parentId = pid;
+      else entry.parentId = null;
+      const taskCount = taskCountByGroup?.[id];
+      if (typeof taskCount === 'number' && taskCount > 0) entry.taskCount = taskCount;
+      groups.push(entry);
+    }
+  }
+
   return {
     savedAt: Date.now(),
     duplicateResolution: normalizeSyncDuplicateResolution(duplicateResolution),
-    devices: devices
-      .filter((d) => !d.isLocal)
-      .map((d) => ({
-        id: d.id,
-        name: d.name,
-        rolesByGroup: { ...(d.rolesByGroup ?? {}) },
-      })),
+    devices: devices.map((d) => ({
+      id: d.id,
+      name: d.name,
+      rolesByGroup: { ...(d.rolesByGroup ?? {}) },
+    })),
     roleProfiles: profiles.map((p) => ({
       id: p.id,
       name: p.name,
@@ -175,6 +218,7 @@ export function buildSyncContractSnapshot(
         privilege: f.privilege,
       })),
     })),
+    groups,
   };
 }
 
@@ -265,6 +309,7 @@ export function computeAssignmentChanges(
       if (prevId === nextId) continue;
       lines.push({
         deviceName: deviceName(cur.id),
+        groupId: gid,
         groupName: groupName(gid),
         fromLabel: labelExplicitAccess(dev, prevRoles, groups, profiles, gid),
         toLabel: labelExplicitAccess(dev, cur.rolesByGroup, groups, profiles, gid),
@@ -366,7 +411,7 @@ function headlineForRole(
   assignmentChanges: AssignmentChangeLine[],
 ): string {
   for (const gid of directGroupIds) {
-    const change = assignmentChanges.find((c) => c.groupName === groupNameById(groups, gid));
+    const change = assignmentChanges.find((c) => c.groupId === gid);
     if (change) {
       return fmt('sync.preview_role_changed', {
         group: change.groupName,
@@ -472,14 +517,8 @@ function buildPreviewSections(
   return sections.sort((a, b) => a.roleName.localeCompare(b.roleName));
 }
 
-/** Short chip label e.g. "CO21 - 11 tasks" */
+/** Short chip label — group name only. */
 export function syncGroupChipLabel(chip: SyncGroupChip): string {
-  if (chip.tasksEnabled) {
-    return fmt('sync.preview_tasks_short', {
-      name: chip.group.name,
-      count: String(chip.taskCount),
-    });
-  }
   return chip.group.name;
 }
 
@@ -505,6 +544,34 @@ export function syncInheritedScopeText(sourceGroup: SyncGroupVisual): string {
   return fmt('sync.preview_inherited_scope', { group: sourceGroup.name });
 }
 
+/**
+ * Fill in group records, visual entries, and task counts from a snapshot's
+ * embedded `groups` metadata for any data not already present locally.
+ */
+function mergeSnapshotGroupsInto(
+  snapshot: SyncContractSnapshot,
+  groups: GroupRecord[],
+  visualMap: Map<string, SyncGroupVisual>,
+  taskCountByGroup?: Record<string, number>,
+): void {
+  if (!snapshot.groups?.length) return;
+  const knownIds = new Set(groups.map((g) => g.id));
+  for (const sg of snapshot.groups) {
+    if (!knownIds.has(sg.id)) {
+      groups.push({ id: sg.id, name: sg.name, parentId: sg.parentId ?? null });
+      knownIds.add(sg.id);
+    }
+    if (!visualMap.has(sg.id)) {
+      const vis: SyncGroupVisual = { id: sg.id, name: sg.name, icon: sg.icon || 'folder' };
+      if (sg.color) vis.color = sg.color;
+      visualMap.set(sg.id, vis);
+    }
+    if (taskCountByGroup && typeof sg.taskCount === 'number' && sg.taskCount > 0) {
+      if (!taskCountByGroup[sg.id]) taskCountByGroup[sg.id] = sg.taskCount;
+    }
+  }
+}
+
 export type BuildSyncContractPreviewOptions = {
   /** Incoming peer contract: show roles for all devices in the proposal (including this device). */
   includeAllDevicesInSections?: boolean;
@@ -521,6 +588,10 @@ export function buildSyncContractPreview(
 ): SyncContractPreview {
   const groups = normalizeGroupsFromCc(Array.isArray(groupsRaw) ? groupsRaw : []);
   const visualMap = buildGroupVisualMap(groupsRaw);
+
+  mergeSnapshotGroupsInto(current, groups, visualMap, taskCountByGroup);
+  if (previous) mergeSnapshotGroupsInto(previous, groups, visualMap, taskCountByGroup);
+
   const sectionDevices = options?.includeAllDevicesInSections
     ? devices
     : devices.filter((d) => !d.isLocal);

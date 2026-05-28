@@ -40,7 +40,7 @@ export type Co21LanServerPlugin = {
     }): Promise<{
         ok: boolean;
     }>;
-    addListener(eventName: 'pairingPending' | 'pairingComplete' | 'syncContractIncoming' | 'syncContractRejected' | 'syncExchangeRequest', listenerFunc: (event: {
+    addListener(eventName: 'pairingPending' | 'pairingComplete' | 'syncContractIncoming' | 'syncContractRejected' | 'syncContractAccepted' | 'syncExchangeRequest', listenerFunc: (event: {
         requestId?: string;
         body?: string;
         [key: string]: unknown;

@@ -57,12 +57,15 @@ export async function listTaskDeletionsForSync(
   sinceMs: number,
   scope: Set<string>,
 ): Promise<TaskDeletionTombstone[]> {
+  // Baseline / first exchange after contract: tasks only (additive). Tombstones can
+  // delete the peer's copy of ids that only existed locally on this device.
+  if (sinceMs <= 0 || !scope.size) return [];
   const map = await loadTombstoneMap();
   const out: TaskDeletionTombstone[] = [];
   for (const t of Object.values(map)) {
     const ts = Date.parse(t.deletedAt);
-    if (sinceMs > 0 && Number.isFinite(ts) && ts <= sinceMs) continue;
-    if (scope.size && t.groupId && !scope.has(t.groupId)) continue;
+    if (Number.isFinite(ts) && ts <= sinceMs) continue;
+    if (t.groupId && !scope.has(t.groupId)) continue;
     out.push(t);
   }
   return out;
