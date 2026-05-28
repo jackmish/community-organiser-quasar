@@ -58,7 +58,7 @@
   "action.remove_group_image": "Usuń obraz",
   "label.colorize_group_background": "Tonuj obraz kolorem grupy",
   "label.group_background_preview": "Podgląd tła",
-  "ui.join_device": "Przypisz urządzenia do grup",
+  "ui.join_device": "Dołącz do grupy urządzenie",
   "ui.select_group": "Wybierz grupę",
   "role.setup_title": "Role i uprawnienia",
   "role.setup_intro": "Zdefiniuj role z uprawnieniami do funkcji aplikacji. Przypisz role urządzeniom wg grup w Połączeniach.",
@@ -435,5 +435,12 @@
   "accounts.select_group_first": "Najpierw wybierz grupę, aby włączyć synchronizację",
   "accounts.sync_now": "Synchronizuj teraz",
   "accounts.sync_done": "Zsynchronizowano {count} wydarzeń",
-  "accounts.sync_skipped": "Już aktualne"
+  "accounts.sync_skipped": "Już aktualne",
+  "sync.full_sync_now": "Pełna synchronizacja",
+  "group.add_subgroup": "Dodaj podgrupę",
+  "group.add_root_group": "Dodaj grupę główną",
+  "group.merge_group": "Scal grupę",
+  "group.merge_group_hint": "Przenieś wszystkie zadania z bieżącej grupy do innej grupy. Ustawienia grupy docelowej pozostają bez zmian.",
+  "group.merge_target": "Grupa docelowa",
+  "group.merge_done": "Grupa została scalona"
 }

@@ -10,6 +10,7 @@
           :group-tree="groupTree"
           :group-options="groupOptions"
           :editing-group-id="editingGroupId ?? null"
+          :initial-parent-id="initialParentId ?? null"
           @submit="handleSubmit"
           @cancel="dialogVisible = false"
         />
@@ -38,6 +39,7 @@ const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
 const props = defineProps<{
   modelValue: boolean;
   editingGroupId?: string | null;
+  initialParentId?: string | null;
 }>();
 
 const emit = defineEmits<{

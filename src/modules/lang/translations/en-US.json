@@ -58,7 +58,7 @@
   "action.remove_group_image": "Remove image",
   "label.colorize_group_background": "Tint image with group color",
   "label.group_background_preview": "Background preview",
-  "ui.join_device": "Assign devices to groups",
+  "ui.join_device": "Connect/disconnect device",
   "ui.select_group": "Select group",
   "role.setup_title": "Roles & privileges",
   "role.setup_intro": "Define roles with privileges per app function. Assign roles to devices per group in Connections.",
@@ -387,5 +387,12 @@
   "accounts.select_group_first": "Select a group first to enable sync",
   "accounts.sync_now": "Sync now",
   "accounts.sync_done": "Synced {count} events",
-  "accounts.sync_skipped": "Already up to date"
+  "accounts.sync_skipped": "Already up to date",
+  "sync.full_sync_now": "Full sync now",
+  "group.add_subgroup": "Add subgroup",
+  "group.add_root_group": "Add root group",
+  "group.merge_group": "Merge group",
+  "group.merge_group_hint": "Move all tasks from the current group to another group. Target group settings stay unchanged.",
+  "group.merge_target": "Destination group",
+  "group.merge_done": "Group merged successfully"
 }

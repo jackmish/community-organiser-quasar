@@ -457,6 +457,7 @@ const props = defineProps<{
   groupTree?: QTreeNode<any>[];
   groupOptions?: any[];
   editingGroupId?: string | null;
+  initialParentId?: string | null;
 }>();
 const emit = defineEmits<{
   (e: "submit", payload: any): void;
@@ -721,7 +722,7 @@ watch(
     if (!id) {
       localName.value = "";
       localLocalName.value = "";
-      localParent.value = null;
+      localParent.value = props.initialParentId ? String(props.initialParentId) : null;
       localColor.value = GROUP_DEFAULT_BACKGROUND;
       localIcon.value = "folder";
       localShareSubgroups.value = false;

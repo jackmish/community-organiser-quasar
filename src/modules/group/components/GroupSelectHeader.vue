@@ -79,7 +79,10 @@
 
       <!-- Right slot: options menu for the current group -->
       <div style="display: flex; align-items: center">
-        <TaskListOptionsMenu :text-color="getBtnTextColor(headerGroup) || undefined" />
+        <TaskListOptionsMenu
+          :text-color="getBtnTextColor(headerGroup) || undefined"
+          :device-statuses="safeDeviceStatuses"
+        />
       </div>
     </template>
     <template v-else>
@@ -100,8 +103,15 @@ import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu
 import { groupsToTreeNodes } from "src/modules/group/utils/treeUi";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import GroupPicker from "./GroupPicker.vue";
+import type { DeviceStatusRow } from "src/utils/deviceStatusDisplay";
 
 const $q = useQuasar();
+
+const props = defineProps<{
+  deviceStatuses?: DeviceStatusRow[];
+}>();
+
+const safeDeviceStatuses = computed(() => props.deviceStatuses ?? []);
 
 function getBtnTextColor(g: any) {
   if (!g) return "inherit";

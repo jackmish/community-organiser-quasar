@@ -23,6 +23,64 @@
             <q-card-section>
               <div class="text-h6 task-list-header" :style="headerStyle">
                 <div class="row items-center task-header-row" >
+                  <div v-if="!$q.screen.lt.md" class="task-header-device-strip">
+                    <div
+                      v-for="d in headerDeviceStatus"
+                      :key="d.id"
+                      class="task-header-device-pill"
+                      :class="d.connected ? 'task-header-device-pill--on' : 'task-header-device-pill--off'"
+                    >
+                      <q-icon
+                        :name="d.linkIcon"
+                        size="16px"
+                        class="task-header-device-pill__link"
+                      />
+                      <div class="task-header-device-pill__labels">
+                        <span class="task-header-device-pill__line">{{ d.shortLine1 }}</span>
+                        <span v-if="d.shortLine2" class="task-header-device-pill__line">{{
+                          d.shortLine2
+                        }}</span>
+                      </div>
+                      <q-tooltip anchor="bottom middle" self="top middle">{{ d.name }}</q-tooltip>
+                    </div>
+                  </div>
+                  <div v-if="!$q.screen.lt.md" class="row items-center no-wrap task-header-sync-tools">
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      class="task-header-date-btn"
+                      :style="{ color: headerStyle.color }"
+                      :loading="headerSyncRunning"
+                      :disable="headerSyncRunning"
+                      :title="$text('accounts.sync_now')"
+                      :aria-label="$text('accounts.sync_now')"
+                      @click="void onHeaderManualSync()"
+                    >
+                      <q-icon
+                        name="sync"
+                        :style="'color: ' + headerStyle.color + ' !important;'"
+                      />
+                    </q-btn>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      class="task-header-date-btn"
+                      :style="{ color: headerStyle.color }"
+                      :loading="headerSyncRunning"
+                      :disable="headerSyncRunning"
+                      :title="$text('sync.full_sync_now')"
+                      :aria-label="$text('sync.full_sync_now')"
+                      @click="void onHeaderFullSync()"
+                    >
+                      <q-icon
+                        name="sync_alt"
+                        :style="'color: ' + headerStyle.color + ' !important;'"
+                      />
+                    </q-btn>
+                    <div class="task-header-v-separator" aria-hidden="true" />
+                  </div>
                   <div class="row items-center no-wrap task-header-date-nav">
                     <q-btn
                       flat
@@ -36,7 +94,6 @@
                         :style="'color: ' + headerStyle.color + ' !important;'"
                       />
                     </q-btn>
-
                     <span
                       :class="[
                         'text-weight-bold',
@@ -68,18 +125,7 @@
                       position: relative;
                     "
                   >
-                    <GroupSelectHeader />
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      icon="sync"
-                      :loading="headerSyncRunning"
-                      :disable="headerSyncRunning"
-                      :title="$text('accounts.sync_now')"
-                      :aria-label="$text('accounts.sync_now')"
-                      @click="void onHeaderManualSync()"
-                    />
+                    <GroupSelectHeader :device-statuses="headerDeviceStatus" />
                   </div>
                 </div>
               </div>
@@ -177,7 +223,48 @@
     <GroupEditDialog
       v-model="showGroupEditDialog"
       :editing-group-id="editDialogGroupId"
+      :initial-parent-id="createGroupParentId"
     />
+    <q-dialog v-model="showGroupMergeDialog">
+      <q-card style="min-width: min(560px, 96vw)">
+        <q-card-section class="row items-center q-pb-sm">
+          <div class="text-h6">{{ $text('group.merge_group') }}</div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <div class="text-caption text-grey-7 q-mb-sm">{{ $text('group.merge_group_hint') }}</div>
+          <div class="column q-gutter-sm items-center">
+            <q-chip dense square color="primary" text-color="white">
+              {{ mergeSourceLabel }}
+            </q-chip>
+            <q-icon name="arrow_downward" />
+            <div class="full-width" style="max-width: min(460px, 94vw)">
+              <div class="text-caption q-mb-xs">{{ $text('group.merge_target') }}</div>
+              <GroupTreeSelector
+                :nodes="mergeTargetTree"
+                :selected="mergeTargetGroupId ? [String(mergeTargetGroupId)] : []"
+                max-height="36vh"
+                @update:selected="onMergeTargetTreeSelect"
+              />
+            </div>
+            <q-chip v-if="mergeTargetLabel" dense square color="secondary" text-color="white">
+              {{ mergeTargetLabel }}
+            </q-chip>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :label="$text('action.cancel')" @click="showGroupMergeDialog = false" />
+          <q-btn
+            unelevated
+            color="negative"
+            icon="merge_type"
+            :disable="!canMergeCurrentGroup || !mergeTargetGroupId || mergeRunning"
+            :loading="mergeRunning"
+            :label="$text('group.merge_group')"
+            @click="void confirmGroupMerge()"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <!-- Join Member Dialog (opened from options menu 'Join new member or device') -->
     <JoinMemberDialog
       v-model="showCommunityDialog"
@@ -317,6 +404,7 @@ import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
 import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
+import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
 import { useGroupColor } from "src/composables/useGroupColor";
 import { useLineEventHandlers } from "src/composables/useLineEventHandlers";
@@ -330,6 +418,7 @@ import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
 import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
+import { loadSyncPeerStates } from "src/modules/storage/sync/syncPeerState";
 import {
   loadActiveContractForSync,
 } from "src/modules/storage/sync/syncContractSettings";
@@ -352,7 +441,12 @@ import { useFloatingPreview } from "src/composables/useFloatingPreview";
 import { useQuasar } from "quasar";
 import logger from "src/utils/logger";
 import CC from "src/CCAccess";
+import { saveData } from "src/utils/storageUtils";
 import { scheduleBackgroundLanSyncAfterDisplay } from "src/modules/storage/sync/lanOrganiserSyncTrigger";
+import {
+  buildDeviceStatusRow,
+  type DeviceStatusRow,
+} from "src/utils/deviceStatusDisplay";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
@@ -601,15 +695,24 @@ const allTasks = computed(() => CC.task.list.items());
 const showGroupDialog = ref(false);
 const showGroupEditDialog = ref(false);
 const editDialogGroupId = ref<string | null>(null);
+const createGroupParentId = ref<string | null>(null);
+const showGroupMergeDialog = ref(false);
+const mergeTargetGroupId = ref<string | null>(null);
+const mergeRunning = ref(false);
+const headerDeviceStatus = ref<DeviceStatusRow[]>([]);
 
-function openGroupEditDialog(groupId: string | null) {
+function openGroupEditDialog(groupId: string | null, parentId: string | null = null) {
   editDialogGroupId.value = groupId;
+  createGroupParentId.value = groupId ? null : parentId;
   showGroupEditDialog.value = true;
 }
 
 // reset edit group id whenever that dialog is closed
 watch(showGroupEditDialog, (v) => {
-  if (!v) editDialogGroupId.value = null;
+  if (!v) {
+    editDialogGroupId.value = null;
+    createGroupParentId.value = null;
+  }
 });
 const showCommunityDialog = ref(false);
 
@@ -656,6 +759,27 @@ const { handleImportFile } = createImportHandler({
 let organiserGroupManageHandler: any = null;
 let organiserGroupManageEditHandler: any = null;
 let organiserCommunityOpenHandler: any = null;
+let organiserSyncNowHandler: any = null;
+let organiserSyncFullHandler: any = null;
+let organiserGroupMergeOpenHandler: any = null;
+let headerDevicesInterval: ReturnType<typeof setInterval> | null = null;
+
+async function refreshHeaderDeviceStatus(): Promise<void> {
+  try {
+    const [devices, peers] = await Promise.all([loadConnectionsDevices(), loadSyncPeerStates()]);
+    const peerMap = new Map(peers.map((p) => [String(p.peerDeviceId), p]));
+    const remotes = (devices || []).filter((d: any) => !d?.isLocal);
+    headerDeviceStatus.value = remotes.map((d: any) => {
+      const state = peerMap.get(String(d.id));
+      return buildDeviceStatusRow(
+        { id: String(d.id), name: String(d.name || d.id || "") },
+        state?.peerInRange === true,
+      );
+    });
+  } catch {
+    void 0;
+  }
+}
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
@@ -681,10 +805,29 @@ onBeforeUnmount(() => {
         "community:open",
         organiserCommunityOpenHandler as EventListener
       );
+    if (organiserSyncNowHandler)
+      window.removeEventListener(
+        "organiser:sync-now",
+        organiserSyncNowHandler as EventListener
+      );
+    if (organiserSyncFullHandler)
+      window.removeEventListener(
+        "organiser:sync-full",
+        organiserSyncFullHandler as EventListener
+      );
+    if (organiserGroupMergeOpenHandler)
+      window.removeEventListener(
+        "group:merge-open",
+        organiserGroupMergeOpenHandler as EventListener
+      );
   } catch (e) {
     // ignore
   }
   stopSyncScheduler();
+  if (headerDevicesInterval) {
+    clearInterval(headerDevicesInterval);
+    headerDevicesInterval = null;
+  }
 });
 
 function triggerCalendarSync() {
@@ -909,6 +1052,14 @@ const activeGroupWatermarkLabel = computed(() => {
 });
 
 async function onHeaderManualSync(): Promise<void> {
+  await runHeaderSync(false);
+}
+
+async function onHeaderFullSync(): Promise<void> {
+  await runHeaderSync(true);
+}
+
+async function runHeaderSync(forceFullSync: boolean): Promise<void> {
   if (headerSyncRunning.value) return;
   headerSyncRunning.value = true;
   try {
@@ -959,6 +1110,7 @@ async function onHeaderManualSync(): Promise<void> {
         peerDeviceId: peer.id,
         peerDeviceName: peer.name || peer.id,
         lanHost: String(peer.lanHost || ""),
+        forceFullSync,
       });
       if (success) ok += 1;
     }
@@ -966,14 +1118,91 @@ async function onHeaderManualSync(): Promise<void> {
     $q.notify({
       type: fail ? "warning" : "positive",
       message: fail
-        ? `${$text("accounts.sync_now")}: ${ok}/${allowedPeers.length}`
-        : `${$text("accounts.sync_now")}: ${ok}/${allowedPeers.length}`,
+        ? `${$text(forceFullSync ? "sync.full_sync_now" : "accounts.sync_now")}: ${ok}/${allowedPeers.length}`
+        : `${$text(forceFullSync ? "sync.full_sync_now" : "accounts.sync_now")}: ${ok}/${allowedPeers.length}`,
     });
   } catch (e) {
     logger.error("header manual sync failed", e);
     $q.notify({ type: "negative", message: $text("sync.pending_action_run_fail") });
   } finally {
     headerSyncRunning.value = false;
+  }
+}
+
+const mergeSourceGroup = computed(() => {
+  const activeId = String(CC.group.active.activeGroup.value?.value || "").trim();
+  if (!activeId) return null;
+  return (CC.group.list.all.value || []).find((g: any) => String(g.id) === activeId) || null;
+});
+const canMergeCurrentGroup = computed(() => !!mergeSourceGroup.value);
+const mergeSourceLabel = computed(() =>
+  mergeSourceGroup.value ? resolveLocalGroupName(mergeSourceGroup.value) : ""
+);
+const mergeTargetOptions = computed(() => {
+  const sourceId = String(mergeSourceGroup.value?.id || "");
+  return (CC.group.list.all.value || [])
+    .filter((g: any) => String(g.id) !== sourceId)
+    .map((g: any) => ({ label: resolveLocalGroupName(g), value: String(g.id) }))
+    .sort((a: any, b: any) => String(a.label).localeCompare(String(b.label), undefined, { sensitivity: "base" }));
+});
+const mergeTargetTree = computed(() => {
+  const sourceId = String(mergeSourceGroup.value?.id || "");
+  const prune = (nodes: any[]): any[] =>
+    (nodes || [])
+      .filter((n: any) => String(n.id) !== sourceId)
+      .map((n: any) => ({
+        ...n,
+        children: prune(n.children || []),
+      }));
+  return prune((CC.group.list.tree.value || []) as any[]);
+});
+const mergeTargetLabel = computed(() => {
+  const id = String(mergeTargetGroupId.value || "");
+  const opt = mergeTargetOptions.value.find((o: any) => String(o.value) === id);
+  return opt?.label || "";
+});
+
+function onMergeTargetTreeSelect(v: string[] | string | null): void {
+  const key = Array.isArray(v) ? v[0] : v;
+  mergeTargetGroupId.value = key ? String(key) : null;
+}
+
+function openGroupMergeDialog(): void {
+  if (!mergeSourceGroup.value) return;
+  mergeTargetGroupId.value = String(mergeTargetOptions.value[0]?.value || "") || null;
+  showGroupMergeDialog.value = true;
+}
+
+async function confirmGroupMerge(): Promise<void> {
+  const source = mergeSourceGroup.value;
+  const sourceId = String(source?.id || "").trim();
+  const targetId = String(mergeTargetGroupId.value || "").trim();
+  if (!sourceId || !targetId || sourceId === targetId || mergeRunning.value) return;
+  mergeRunning.value = true;
+  try {
+    const days = CC.task.time.days.value || {};
+    for (const [, day] of Object.entries(days)) {
+      if (!day || !Array.isArray(day.tasks)) continue;
+      for (const task of day.tasks) {
+        const gid = String(task?.groupId ?? task?.group_id ?? "");
+        if (gid !== sourceId) continue;
+        task.groupId = targetId;
+        if ("group_id" in task) task.group_id = targetId;
+        task.updatedAt = Date.now();
+      }
+    }
+    await saveData();
+    await CC.group.delete(sourceId);
+    const targetGroup = (CC.group.list.all.value || []).find((g: any) => String(g.id) === targetId);
+    if (targetGroup) CC.group.active.set(targetGroup);
+    else CC.group.active.setById(targetId);
+    showGroupMergeDialog.value = false;
+    $q.notify({ type: "positive", message: $text("group.merge_done") });
+  } catch (e) {
+    logger.error("group merge failed", e);
+    $q.notify({ type: "negative", message: $text("sync.pending_action_run_fail") });
+  } finally {
+    mergeRunning.value = false;
   }
 }
 
@@ -1502,8 +1731,10 @@ onMounted(async () => {
 
   // allow TaskListOptionsMenu 'edit group' action to open the dedicated edit dialog
   organiserGroupManageEditHandler = (e: Event) => {
-    const groupId = (e as CustomEvent<{ groupId?: string }>).detail?.groupId ?? null;
-    openGroupEditDialog(groupId);
+    const detail = (e as CustomEvent<{ groupId?: string; parentId?: string | null }>).detail;
+    const groupId = detail?.groupId ?? null;
+    const parentId = detail?.parentId ?? null;
+    openGroupEditDialog(groupId, parentId);
   };
   window.addEventListener(
     "group:manage-edit",
@@ -1518,6 +1749,26 @@ onMounted(async () => {
     "community:open",
     organiserCommunityOpenHandler as EventListener
   );
+
+  organiserSyncNowHandler = () => {
+    void onHeaderManualSync();
+  };
+  window.addEventListener("organiser:sync-now", organiserSyncNowHandler as EventListener);
+
+  organiserSyncFullHandler = () => {
+    void onHeaderFullSync();
+  };
+  window.addEventListener("organiser:sync-full", organiserSyncFullHandler as EventListener);
+
+  organiserGroupMergeOpenHandler = () => {
+    openGroupMergeDialog();
+  };
+  window.addEventListener("group:merge-open", organiserGroupMergeOpenHandler as EventListener);
+
+  await refreshHeaderDeviceStatus();
+  headerDevicesInterval = setInterval(() => {
+    void refreshHeaderDeviceStatus();
+  }, 15000);
 
   // Show first run dialog if no groups exist
   if (CC.group.list.all.value.length === 0) {
@@ -1555,11 +1806,91 @@ onMounted(async () => {
 .task-header-row {
   width: 100%;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 /* Tighter space between chevrons and date label (margin/padding only — no font changes). */
 .task-header-date-nav {
   gap: 4px;
+  flex-shrink: 0;
+}
+
+.task-header-sync-tools {
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.task-header-v-separator {
+  width: 1px;
+  height: 22px;
+  margin-left: 4px;
+  background: color-mix(in srgb, currentColor 45%, transparent);
+  opacity: 0.75;
+}
+
+.task-header-device-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 36%;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.task-header-device-pill {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  border-radius: 0;
+  padding: 3px 6px;
+  min-width: 52px;
+  font-size: 9px;
+  line-height: 1.05;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.task-header-device-pill__labels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.task-header-device-pill__line {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.task-header-device-pill__link {
+  flex-shrink: 0;
+}
+
+.task-header-device-pill--on {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #14532d;
+}
+
+.task-header-device-pill--on :deep(.q-icon) {
+  color: #14532d !important;
+}
+
+.task-header-device-pill--off {
+  background: #fff;
+  border-color: #991b1b;
+  color: #7f1d1d;
+}
+
+.task-header-device-pill--off :deep(.q-icon) {
+  color: #7f1d1d !important;
 }
 
 .task-header-date-nav .task-header-date-btn {
@@ -1591,6 +1922,10 @@ onMounted(async () => {
     flex-wrap: nowrap;
     gap: 6px;
     align-items: center;
+  }
+
+  .task-header-sync-tools {
+    display: none !important;
   }
 
   .task-header-date-nav {
