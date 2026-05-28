@@ -386,6 +386,7 @@ import {
   formatEventHoursDiff,
   parseYmdLocal,
 } from "src/modules/task/utils/occursOnDay";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const openItemMenuId = ref<string | null>(null);
 const pendingDeleteId = ref<string | null>(null);
@@ -474,7 +475,7 @@ const typeColors: Record<string, string> = {
 const getGroupName = (groupId?: string) => {
   if (!groupId) return "Unknown";
   const g = groups.value.find((gg: any) => gg.id === groupId);
-  return g ? g.name : "Unknown";
+  return g ? resolveLocalGroupName(g) : "Unknown";
 };
 
 const getGroupColor = (groupId?: string) => {

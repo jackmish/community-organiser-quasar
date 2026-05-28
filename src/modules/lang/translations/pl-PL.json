@@ -37,6 +37,7 @@
   "action.yes": "Tak",
   "action.no": "Nie",
   "label.group_name": "Nazwa grupy",
+  "label.group_local_name": "Nazwa lokalna (to urządzenie)",
   "label.share_subgroups": "Udostępnij podgrupy",
   "label.parent_summary": "W rodzicu pokaż tylko podsumowanie zadań",
   "label.make_shortcut": "Utwórz skrót",

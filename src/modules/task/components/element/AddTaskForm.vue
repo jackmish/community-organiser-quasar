@@ -25,6 +25,7 @@ import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
 import type { TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -114,7 +115,7 @@ function getGroupName(gid: string | undefined) {
     const list: any[] = (groups && groups.value) || groups || [];
     if (!gid) return null;
     const found = list.find((x: any) => String(x.id) === String(gid));
-    return (found && found.name) || null;
+    return found ? resolveLocalGroupName(found) : null;
   } catch (e) {
     return null;
   }

@@ -130,6 +130,18 @@
                           class="connections-device-sync-input" style="max-width: 140px"
                           :label="$text('sync.per_device_interval_label')" :min="minSyncInterval" :max="maxSyncInterval"
                           @update:model-value="(v) => setDeviceSyncInterval(d.id, v)" @blur="void saveDevicesToStorage()" />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          color="primary"
+                          icon="sync"
+                          :loading="!!manualSyncById[d.id]"
+                          :disable="!d.lanHost || !!manualSyncById[d.id]"
+                          :title="$text('accounts.sync_now')"
+                          :aria-label="$text('accounts.sync_now')"
+                          @click="void onManualSyncDevice(d)"
+                        />
                         <span class="text-caption text-grey-7">
                           {{ $text('sync.interval_unit') }}
                         </span>
@@ -349,6 +361,7 @@ import DeviceSyncContractPreviewHost from './DeviceSyncContractPreviewHost.vue';
 import { revokeLanSyncContractForPeer } from 'src/modules/storage/sync/syncContractRevoke';
 import { findSendContractAction, runPendingActionNow, cancelPendingAction } from 'src/modules/storage/sync/syncPendingActions';
 import { loadMergedDevicePairContract } from 'src/modules/storage/sync/syncDeviceContracts';
+import { runSyncWithPeer } from 'src/modules/storage/sync/lanOrganiserSync';
 import { loadCo21Settings } from 'src/modules/storage/sync/roleProfileSettings';
 import { refreshLanServerForConnections } from 'src/modules/lan/lanServerManager';
 import { dispatchOpenRolesSetup } from 'src/modules/storage/sync/rolesSetupUi';
@@ -376,6 +389,7 @@ const devicesRegistryLoaded = ref(false);
 
 type DeviceCheckState = 'idle' | 'checking' | 'success' | 'fail';
 const deviceCheckById = reactive<Record<string, DeviceCheckState>>({});
+const manualSyncById = reactive<Record<string, boolean>>({});
 
 function deviceCheckState(deviceId: string): DeviceCheckState {
   return deviceCheckById[deviceId] ?? 'idle';
@@ -530,6 +544,25 @@ function setDeviceSyncInterval(deviceId: string, v: string | number | null): voi
   devices.value = devices.value.map((d) =>
     d.id === deviceId ? { ...d, syncIntervalSeconds: n } : d,
   );
+}
+
+async function onManualSyncDevice(d: ConnectedDevice): Promise<void> {
+  if (d.isLocal || !d.lanHost || manualSyncById[d.id]) return;
+  manualSyncById[d.id] = true;
+  try {
+    const ok = await runSyncWithPeer({
+      peerDeviceId: d.id,
+      peerDeviceName: d.name || d.id,
+      lanHost: d.lanHost,
+    });
+    if (ok) toast('positive', $text('sync.run_status_ok'));
+    else toast('warning', $text('sync.pending_action_run_fail'));
+  } catch (e) {
+    logger.error('manual sync failed', e);
+    toast('negative', $text('sync.pending_action_run_fail'));
+  } finally {
+    manualSyncById[d.id] = false;
+  }
 }
 const showAddConnectionDialog = ref(false);
 const addConnectionTab = ref<AddConnectionTab>('lan');

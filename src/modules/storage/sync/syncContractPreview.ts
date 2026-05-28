@@ -54,6 +54,7 @@ export type SyncContractPreview = {
 
 export type AssignmentChangeLine = {
   deviceName: string;
+  groupId: string;
   groupName: string;
   fromLabel: string;
   toLabel: string;
@@ -308,6 +309,7 @@ export function computeAssignmentChanges(
       if (prevId === nextId) continue;
       lines.push({
         deviceName: deviceName(cur.id),
+        groupId: gid,
         groupName: groupName(gid),
         fromLabel: labelExplicitAccess(dev, prevRoles, groups, profiles, gid),
         toLabel: labelExplicitAccess(dev, cur.rolesByGroup, groups, profiles, gid),
@@ -409,7 +411,7 @@ function headlineForRole(
   assignmentChanges: AssignmentChangeLine[],
 ): string {
   for (const gid of directGroupIds) {
-    const change = assignmentChanges.find((c) => c.groupName === groupNameById(groups, gid));
+    const change = assignmentChanges.find((c) => c.groupId === gid);
     if (change) {
       return fmt('sync.preview_role_changed', {
         group: change.groupName,

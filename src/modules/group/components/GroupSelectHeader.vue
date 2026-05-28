@@ -98,6 +98,7 @@ import CC from "src/CCAccess";
 import { getContrastColor, darkenHex } from "src/utils/colorUtils";
 import TaskListOptionsMenu from "src/modules/task/components/TaskListOptionsMenu.vue";
 import { groupsToTreeNodes } from "src/modules/group/utils/treeUi";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import GroupPicker from "./GroupPicker.vue";
 
 const $q = useQuasar();
@@ -158,9 +159,13 @@ const options = computed(() => {
 
   const groupOptions = (groups.value || [])
     .slice()
-    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
+    .sort((a: any, b: any) =>
+      resolveLocalGroupName(a).localeCompare(resolveLocalGroupName(b), undefined, {
+        sensitivity: "base",
+      }),
+    )
     .map((g: any) => ({
-      label: g.name,
+      label: resolveLocalGroupName(g),
       value: String(g.id),
       icon: g.icon || "folder",
       color: g.color || null,
@@ -178,7 +183,7 @@ const options = computed(() => {
     if (curVal && !combined.some((o: any) => o.value === curVal)) {
       const found = (groups.value || []).find((g: any) => String(g.id) === curVal);
       const label =
-        (typeof cur === "object" && cur.label) || (found && found.name) || curVal;
+        (typeof cur === "object" && cur.label) || resolveLocalGroupName(found) || curVal;
       combined.push({
         label,
         value: curVal,

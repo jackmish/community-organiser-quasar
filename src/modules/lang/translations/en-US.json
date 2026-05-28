@@ -37,6 +37,7 @@
   "action.yes": "Yes",
   "action.no": "No",
   "label.group_name": "Group Name",
+  "label.group_local_name": "Local name (this device)",
   "label.share_subgroups": "Share subgroups",
   "label.parent_summary": "In parent show only summary of tasks",
   "label.make_shortcut": "Make shortcut",

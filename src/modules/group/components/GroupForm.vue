@@ -9,6 +9,13 @@
           dense
           class="col"
         />
+        <q-input
+          v-model="localLocalName"
+          :label="$text('label.group_local_name')"
+          outlined
+          dense
+          class="col"
+        />
 
         <!-- Icon preview and selector (moved out of the input) -->
         <div
@@ -444,6 +451,7 @@ import { appNotify } from "src/utils/appNotify";
 import type { QTreeNode } from "quasar";
 import { treeNodesExpandedOnly } from "src/modules/group/utils/treeUi";
 import GroupTreeSelector from "./GroupTreeSelector.vue";
+import { getLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const props = defineProps<{
   groupTree?: QTreeNode<any>[];
@@ -460,6 +468,7 @@ const lockedParentTree = computed(() =>
 );
 
 const localName = ref("");
+const localLocalName = ref("");
 const localParent = ref<string | null>(null);
 const parentMenuOpen = ref(false);
 const localParentIcon = ref<string | null>(null);
@@ -711,6 +720,7 @@ watch(
   ([id]) => {
     if (!id) {
       localName.value = "";
+      localLocalName.value = "";
       localParent.value = null;
       localColor.value = GROUP_DEFAULT_BACKGROUND;
       localIcon.value = "folder";
@@ -754,6 +764,7 @@ watch(
       const src = full || found || null;
       if (src) {
         localName.value = src.name || src.label || "";
+        localLocalName.value = getLocalGroupName(String(id));
         localParent.value = src.parentId || src.parent_id || null;
         localColor.value = src.color || GROUP_DEFAULT_BACKGROUND;
         localTextColor.value = src.textColor || src.text_color || localTextColor.value;
@@ -964,6 +975,7 @@ function openColorPicker() {
 function onSubmit() {
   const payload = {
     name: localName.value.trim(),
+    localName: localLocalName.value.trim(),
     parent: localParent.value || undefined,
     color: localColor.value,
     textColor: localTextColor.value,

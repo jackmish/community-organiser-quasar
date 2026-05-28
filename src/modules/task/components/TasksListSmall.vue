@@ -129,6 +129,7 @@ import TaskCardSmall from "./TaskCardSmall.vue";
 import GroupButton from "src/modules/group/components/GroupButton.vue";
 import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 
 const props = defineProps<{
   tasksWithTime: Task[];
@@ -153,7 +154,7 @@ const activeGroup = CC.group.active.activeGroup;
 function getGroupName(groupId: any) {
   if (!groupId) return "";
   const g = groups.value.find((x: any) => String(x.id) === String(groupId));
-  return g ? g.name : "";
+  return g ? resolveLocalGroupName(g) : "";
 }
 
 // Normalize group id access to support legacy `group_id` fields on raw objects

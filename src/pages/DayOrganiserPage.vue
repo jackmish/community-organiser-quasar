@@ -74,6 +74,7 @@
               </div>
               <Watermark
                 :active-group="CC.group.active.activeGroup"
+                :label="activeGroupWatermarkLabel"
                 :color="watermarkTextColor"
                 size="large"
                 justifyContent="flex-start"
@@ -313,6 +314,7 @@ import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers"
 import { useCalendarHandlers } from "src/composables/useCalendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
 import { useTaskCrud } from "src/composables/useTaskCrud";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 
@@ -873,8 +875,16 @@ const formatHeaderDate = (date: string): string =>
 const getGroupName = (groupId?: string): string => {
   if (!groupId) return "Unknown";
   const group = CC.group.list.all.value.find((g: Group) => g.id === groupId);
-  return group ? group.name : "Unknown";
+  return group ? resolveLocalGroupName(group) : "Unknown";
 };
+
+const activeGroupWatermarkLabel = computed(() => {
+  const active = CC.group.active.activeGroup.value;
+  const id = String(active?.value ?? "").trim();
+  if (!id) return "";
+  const group = CC.group.list.all.value.find((g: Group) => String(g.id) === id);
+  return group ? resolveLocalGroupName(group) : active?.label || id;
+});
 
 // Color/style computeds derived from the active group
 const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(

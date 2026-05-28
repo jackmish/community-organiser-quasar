@@ -334,6 +334,7 @@ const { startLongPress, cancelLongPress, longPressTriggered, setLongPressHandler
 
 // Bring in group and theme helpers locally so parent doesn't need to pass them
 import CC from 'src/CCAccess';
+import { resolveLocalGroupName } from 'src/modules/group/utils/groupLocalNames';
 const groups = CC.group.list.all;
 const activeGroup = CC.group.active.activeGroup;
 import {
@@ -435,7 +436,7 @@ const typeColors: Record<string, string> = {
 const getGroupName = (groupId?: string) => {
   if (!groupId) return 'Unknown';
   const g = groups.value.find((gg: any) => gg.id === groupId);
-  return g ? g.name : 'Unknown';
+  return g ? resolveLocalGroupName(g) : 'Unknown';
 };
 
 const getGroupColor = (groupId?: string) => {

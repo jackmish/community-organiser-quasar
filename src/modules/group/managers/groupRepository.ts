@@ -7,6 +7,7 @@ import logger from 'src/utils/logger';
 import { getGroupsByParent as getGroupsByParentUtil } from '../utils/groupUtils';
 import { generateGroupId } from '../utils/groupId';
 import { normalizeId as normalizeGroupId } from '../utils/groupUtils';
+import { resolveLocalGroupName } from '../utils/groupLocalNames';
 
 export type CreateGroupInput = {
   name: string;
@@ -205,10 +206,15 @@ export function createTreeComputed(groupsRef: Ref<any[]>) {
   return computed(() => {
     const buildTree = (parentId?: string): any[] => {
       const pidNorm = parentId == null ? undefined : String(parentId);
-      const groupsForParent = getGroupsByParentUtil(groupsRef.value || [], pidNorm);
+      const groupsForParent = getGroupsByParentUtil(groupsRef.value || [], pidNorm).sort(
+        (a: any, b: any) =>
+          resolveLocalGroupName(a).localeCompare(resolveLocalGroupName(b), undefined, {
+            sensitivity: 'base',
+          }),
+      );
       return (groupsForParent || []).map((group: any) => ({
         id: String(group.id),
-        label: group.name,
+        label: resolveLocalGroupName(group),
         color: group.color,
         icon: group.icon || 'folder',
         group: group,
