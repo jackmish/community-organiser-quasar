@@ -1,6 +1,6 @@
 import logger from 'src/utils/logger';
 import { getCountryCode, getLanguage } from 'src/modules/lang';
-import { loadMeteoSyncEnabled } from './meteoSyncSettings';
+import { loadMeteoSyncEnabled, loadMeteoLocation } from './meteoSyncSettings';
 
 export const OPEN_METEO_FORECAST_API = 'https://api.open-meteo.com/v1/forecast';
 export const OPEN_METEO_GEOCODING_API = 'https://geocoding-api.open-meteo.com/v1';
@@ -42,8 +42,11 @@ export interface MeteoSnapshot {
 }
 
 interface MeteoCachePayload {
+  version?: number;
   snapshot: MeteoSnapshot;
 }
+
+const METEO_CACHE_VERSION = 3;
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const FORECAST_DAY_COUNT = 3;
@@ -105,18 +108,21 @@ async function getCacheFilePath(): Promise<string | null> {
 
 async function loadMeteoCache(): Promise<MeteoSnapshot | null> {
   try {
+    let payload: MeteoCachePayload | null = null;
     if (isElectron) {
       const filePath = await getCacheFilePath();
       if (!filePath) return null;
       const exists = await (window as any).electronAPI.fileExists(filePath);
       if (!exists) return null;
-      const data = (await (window as any).electronAPI.readJsonFile(filePath)) as MeteoCachePayload;
-      return data?.snapshot ?? null;
+      payload = (await (window as any).electronAPI.readJsonFile(filePath)) as MeteoCachePayload;
+    } else {
+      const raw = localStorage.getItem('meteo_cache');
+      if (!raw) return null;
+      payload = JSON.parse(raw) as MeteoCachePayload;
     }
-    const raw = localStorage.getItem('meteo_cache');
-    if (!raw) return null;
-    const data = JSON.parse(raw) as MeteoCachePayload;
-    return data?.snapshot ?? null;
+    if (!payload?.snapshot) return null;
+    if (payload.version !== METEO_CACHE_VERSION) return null;
+    return payload.snapshot;
   } catch (error) {
     logger.error('Failed to load meteo cache:', error);
     return null;
@@ -125,7 +131,7 @@ async function loadMeteoCache(): Promise<MeteoSnapshot | null> {
 
 async function saveMeteoCache(snapshot: MeteoSnapshot): Promise<void> {
   try {
-    const payload: MeteoCachePayload = { snapshot };
+    const payload: MeteoCachePayload = { version: METEO_CACHE_VERSION, snapshot };
     if (isElectron) {
       const filePath = await getCacheFilePath();
       if (!filePath) return;
@@ -144,8 +150,15 @@ async function saveMeteoCache(snapshot: MeteoSnapshot): Promise<void> {
   }
 }
 
-function isCacheFresh(snapshot: MeteoSnapshot | null): boolean {
+function isCacheFresh(snapshot: MeteoSnapshot | null, location: MeteoLocation | null): boolean {
   if (!snapshot?.fetchedAt || !snapshot.days?.length) return false;
+  if (snapshot.days.length < FORECAST_DAY_COUNT) return false;
+  if (!snapshot.days.every(dayHasHour24)) return false;
+  if (location && snapshot.location) {
+    const latOk = Math.abs(snapshot.location.latitude - location.latitude) < 0.05;
+    const lonOk = Math.abs(snapshot.location.longitude - location.longitude) < 0.05;
+    if (!latOk || !lonOk) return false;
+  }
   return Date.now() - snapshot.fetchedAt < CACHE_TTL_MS;
 }
 
@@ -157,8 +170,64 @@ function localDateKey(date: Date): string {
 }
 
 function parseHourFromIso(iso: string): number {
-  const match = /T(\d{2}):/.exec(iso);
+  const match = /T(\d{2})/.exec(iso);
   return match ? Number(match[1]) : 0;
+}
+
+function parseDateFromIso(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+function findHourlyIndex(times: string[], dateKey: string, hour: number): number {
+  return times.findIndex(
+    (t) => parseDateFromIso(t) === dateKey && parseHourFromIso(t) === hour,
+  );
+}
+
+function nextDateKey(date: string): string {
+  const parts = date.split('-').map(Number);
+  const [year, month, day] = parts;
+  if (parts.length !== 3 || !year || !month || !day) return date;
+  return localDateKey(new Date(year, month - 1, day + 1));
+}
+
+function buildHourSlot(
+  time: string,
+  hour: number,
+  index: number,
+  temperatures: Array<number | null | undefined>,
+  rainChances: Array<number | null | undefined>,
+  weatherCodes: Array<number | null | undefined>,
+): MeteoHourSlot {
+  return {
+    time,
+    hour,
+    temperature: temperatures[index] ?? 0,
+    rainChance: rainChances[index] ?? 0,
+    weatherCode: weatherCodes[index] ?? 0,
+  };
+}
+
+function hour24SlotForDay(
+  date: string,
+  times: string[],
+  temperatures: Array<number | null | undefined>,
+  rainChances: Array<number | null | undefined>,
+  weatherCodes: Array<number | null | undefined>,
+): MeteoHourSlot | null {
+  const nextDay = nextDateKey(date);
+  let idx = findHourlyIndex(times, nextDay, 0);
+  if (idx < 0) {
+    idx = findHourlyIndex(times, date, 23);
+  }
+  if (idx < 0) return null;
+  const time = times[idx];
+  if (!time) return null;
+  return buildHourSlot(time, 24, idx, temperatures, rainChances, weatherCodes);
+}
+
+function dayHasHour24(day: MeteoDayForecast): boolean {
+  return day.hours.some((h) => h.hour === 24);
 }
 
 function rainChanceForNow(
@@ -194,13 +263,7 @@ function buildDayForecasts(
     const hour = parseHourFromIso(time);
     if (hour < FORECAST_HOUR_FROM || hour > FORECAST_HOUR_TO) continue;
     const date = time.slice(0, 10);
-    const slot: MeteoHourSlot = {
-      time,
-      hour,
-      temperature: temperatures[i] ?? 0,
-      rainChance: rainChances[i] ?? 0,
-      weatherCode: weatherCodes[i] ?? 0,
-    };
+    const slot = buildHourSlot(time, hour, i, temperatures, rainChances, weatherCodes);
     const list = slotsByDate.get(date) ?? [];
     list.push(slot);
     slotsByDate.set(date, list);
@@ -208,11 +271,14 @@ function buildDayForecasts(
 
   const todayKey = localDateKey(new Date());
   const sortedDates = [...slotsByDate.keys()].sort().filter((d) => d >= todayKey);
-  return sortedDates.slice(0, FORECAST_DAY_COUNT).map((date, dayIndex) => ({
-    date,
-    dayIndex,
-    hours: (slotsByDate.get(date) ?? []).sort((a, b) => a.hour - b.hour),
-  }));
+  return sortedDates.slice(0, FORECAST_DAY_COUNT).map((date, dayIndex) => {
+    const hours = (slotsByDate.get(date) ?? []).sort((a, b) => a.hour - b.hour);
+    const hour24 = hour24SlotForDay(date, times, temperatures, rainChances, weatherCodes);
+    if (hour24 && !hours.some((h) => h.hour === 24)) {
+      hours.push(hour24);
+    }
+    return { date, dayIndex, hours };
+  });
 }
 
 async function resolveLocationName(latitude: number, longitude: number): Promise<string> {
@@ -248,9 +314,53 @@ async function resolveDeviceLocation(): Promise<MeteoLocation | null> {
 }
 
 async function resolveLocation(): Promise<MeteoLocation> {
+  const saved = await loadMeteoLocation();
+  if (saved) return saved;
   const device = await resolveDeviceLocation();
   if (device) return device;
   return countryFallbackLocation();
+}
+
+export async function resolveDeviceMeteoLocation(): Promise<MeteoLocation | null> {
+  return resolveDeviceLocation();
+}
+
+function formatGeocodingLabel(hit: {
+  name: string;
+  admin1?: string;
+  country?: string;
+}): string {
+  if (hit.admin1) return `${hit.name}, ${hit.admin1}`;
+  if (hit.country) return `${hit.name}, ${hit.country}`;
+  return hit.name;
+}
+
+export async function searchMeteoCities(query: string): Promise<MeteoLocation[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  try {
+    const lang = getLanguage();
+    const url =
+      `${OPEN_METEO_GEOCODING_API}/search?name=${encodeURIComponent(q)}` +
+      `&count=8&language=${encodeURIComponent(lang)}`;
+    const data = await xhrGetJson<{
+      results?: Array<{
+        name: string;
+        latitude: number;
+        longitude: number;
+        admin1?: string;
+        country?: string;
+      }>;
+    }>(url);
+    return (data.results ?? []).map((hit) => ({
+      latitude: hit.latitude,
+      longitude: hit.longitude,
+      name: formatGeocodingLabel(hit),
+    }));
+  } catch (error) {
+    logger.warn('Meteo city search failed:', error);
+    return [];
+  }
 }
 
 async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
@@ -259,7 +369,7 @@ async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
     `&longitude=${location.longitude}` +
     '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m' +
     '&hourly=temperature_2m,precipitation_probability,weather_code' +
-    `&forecast_days=${FORECAST_DAY_COUNT}` +
+    `&forecast_days=${FORECAST_DAY_COUNT + 1}` +
     '&wind_speed_unit=ms&timezone=auto';
   const data = await xhrGetJson<{
     current?: {
@@ -324,19 +434,21 @@ export async function refreshMeteoData(force = false): Promise<MeteoSnapshot | n
   const enabled = await loadMeteoSyncEnabled();
   if (!enabled) return null;
 
+  const location = await resolveLocation();
+
   if (!force) {
     const cached = await loadMeteoCache();
-    if (isCacheFresh(cached)) return cached;
+    if (isCacheFresh(cached, location)) return cached;
   }
 
   try {
-    const location = await resolveLocation();
     const snapshot = await fetchForecast(location);
     await saveMeteoCache(snapshot);
     return snapshot;
   } catch (error) {
     logger.warn('Failed to fetch meteo forecast:', error);
     const cached = await loadMeteoCache();
+    if (cached && isCacheFresh(cached, location)) return cached;
     return cached;
   }
 }
