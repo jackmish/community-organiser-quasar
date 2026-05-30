@@ -268,10 +268,6 @@
                   <div class="text-caption text-white q-mt-xs">
                     <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.35; color: inherit">
                       <li>
-                        https://date.nager.at/api/v3/PublicHolidays/{year}/PL — public holidays
-                        (country code PL). Once data is downloaded, it is stored locally on device.
-                      </li>
-                      <li>
                         https://www.google.com/favicon.ico — detect Internet connection status -
                         method will be changed, as for now it just works.
                       </li>

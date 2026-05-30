@@ -304,12 +304,19 @@ import { format, addDays, startOfWeek, differenceInCalendarDays } from "date-fns
 import logger from "src/utils/logger";
 import {
   $text,
-  detectAndSetLocale,
   getLanguage,
   getCountryCode,
   getLocale,
-  loadSavedLocale,
 } from "src/modules/lang";
+import {
+  type Holiday,
+  refreshHolidayData,
+  resolveHolidayLocale,
+} from "src/modules/time/holidaySyncService";
+import {
+  HOLIDAY_SYNC_CHANGED_EVENT,
+  loadHolidaySyncEnabled,
+} from "src/modules/time/holidaySyncSettings";
 import {
   formatAppMonthLong,
   formatAppMonthShort,
@@ -1002,228 +1009,19 @@ watch([calendarBaseDate, calendarViewDays], () => displayManager.reset());
 // Online/offline detection
 const isOnline = ref(navigator.onLine);
 
-// Holidays state
-interface Holiday {
-  date: string;
-  localName: string;
-  name: string;
-}
-
-interface HolidayCache {
-  year: number;
-  holidays: Holiday[];
-  fetchedAt: number;
-}
-
 const holidays = ref<Map<string, Holiday>>(new Map());
-
-// Check if running in Electron
-const isElectron = !!(window as any).electronAPI;
-
-// Detected holiday country code and display language
+const holidaySyncEnabled = ref(true);
 const holidayCountryCode = ref<string>("PL");
 const holidayDisplayLang = ref<string>("en");
 
-// Locale detection moved to `src/modules/lang` (detectAndSetLocale)
-
-// Get holidays file path
-async function getHolidaysFilePath(year: number): Promise<string | null> {
-  if (!isElectron) return null;
-
-  const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(
-    appDataPath,
-    "holidays",
-    `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}.json`
+async function reloadHolidays(): Promise<void> {
+  holidays.value = new Map();
+  if (!holidaySyncEnabled.value) return;
+  await refreshHolidayData(
+    holidays.value,
+    holidayCountryCode.value,
+    holidayDisplayLang.value,
   );
-}
-
-// Load holidays from APPDATA (Electron) or localStorage (browser)
-async function loadHolidaysFromCache(year: number): Promise<boolean> {
-  try {
-    if (isElectron) {
-      // Load from APPDATA file
-      // Try language-specific file first, then fall back to legacy filename
-      const filePath = await getHolidaysFilePath(year);
-      if (!filePath) return false;
-
-      let exists = await (window as any).electronAPI.fileExists(filePath);
-      let data: HolidayCache | null = null;
-
-      if (exists) {
-        data = await (window as any).electronAPI.readJsonFile(filePath);
-      } else {
-        // Legacy file name without language component
-        const appDataPath = await (window as any).electronAPI.getAppDataPath();
-        const legacyPath = (window as any).electronAPI.joinPath(
-          appDataPath,
-          "holidays",
-          `holidays_${holidayCountryCode.value}_${year}.json`
-        );
-        const legacyExists = await (window as any).electronAPI.fileExists(legacyPath);
-        if (legacyExists) {
-          try {
-            data = await (window as any).electronAPI.readJsonFile(legacyPath);
-            // Migrate: save under the new language-specific path
-            const safe = JSON.parse(JSON.stringify(data));
-            await (window as any).electronAPI.ensureDir(
-              (window as any).electronAPI.joinPath(appDataPath, "holidays")
-            );
-            await (window as any).electronAPI.writeJsonFile(filePath, safe);
-            exists = true;
-          } catch (e) {
-            // ignore and treat as not found
-          }
-        }
-      }
-
-      if (!data) return false;
-
-      // Load holidays into Map (no expiry check for APPDATA files)
-      data.holidays.forEach((holiday) => {
-        holidays.value.set(holiday.date, holiday);
-      });
-
-      return true;
-    } else {
-      // Load from localStorage. Prefer language-specific key, but fall back to
-      // legacy key without language to support older installs.
-      const langKey = `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}`;
-      const legacyKey = `holidays_${holidayCountryCode.value}_${year}`;
-      let cached = localStorage.getItem(langKey);
-      let usedLegacy = false;
-      if (!cached) {
-        cached = localStorage.getItem(legacyKey);
-        usedLegacy = !!cached;
-      }
-
-      if (!cached) return false;
-
-      const data: HolidayCache = JSON.parse(cached);
-
-      // Check if cache is still valid (less than 30 days old)
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      const isExpired = Date.now() - data.fetchedAt > thirtyDaysMs;
-
-      if (isExpired) {
-        try {
-          if (usedLegacy) localStorage.removeItem(legacyKey);
-          else localStorage.removeItem(langKey);
-        } catch (e) {
-          // ignore
-        }
-        return false;
-      }
-
-      // Load holidays into Map
-      data.holidays.forEach((holiday) => {
-        holidays.value.set(holiday.date, holiday);
-      });
-
-      // If we used legacy data (no language in key), save it under the
-      // language-specific key so future loads are per-language.
-      if (usedLegacy) {
-        try {
-          localStorage.setItem(langKey, JSON.stringify(data));
-          localStorage.removeItem(legacyKey);
-        } catch (e) {
-          // ignore storage errors
-        }
-      }
-
-      return true;
-    }
-  } catch (error) {
-    logger.error("Failed to load holidays from cache:", error);
-    return false;
-  }
-}
-
-// Save holidays to APPDATA (Electron) or localStorage (browser)
-async function saveHolidaysToCache(year: number, holidayList: Holiday[]) {
-  try {
-    const cache: HolidayCache = {
-      year,
-      holidays: holidayList,
-      fetchedAt: Date.now(),
-    };
-
-    if (isElectron) {
-      // Save to APPDATA file
-      const filePath = await getHolidaysFilePath(year);
-      if (!filePath) return;
-
-      // Ensure directory exists
-      const dirPath = (window as any).electronAPI.joinPath(
-        await (window as any).electronAPI.getAppDataPath(),
-        "holidays"
-      );
-      await (window as any).electronAPI.ensureDir(dirPath);
-
-      // Write file (serialize to plain JSON first to avoid structured-clone errors
-      // when crossing the contextBridge boundary)
-      const safe = JSON.parse(JSON.stringify(cache));
-      await (window as any).electronAPI.writeJsonFile(filePath, safe);
-    } else {
-      // Save to localStorage
-      // Save under a language-specific key so cached data is tied to
-      // the display language as well as country/year.
-      const cacheKey = `holidays_${holidayCountryCode.value}_${holidayDisplayLang.value}_${year}`;
-      localStorage.setItem(cacheKey, JSON.stringify(cache));
-    }
-  } catch (error) {
-    logger.error("Failed to save holidays to cache:", error);
-  }
-}
-
-// Fetch holidays for Poland from API
-async function fetchHolidays(year: number) {
-  // Try to load from cache first
-  const loaded = await loadHolidaysFromCache(year);
-  if (loaded) {
-    return;
-  }
-
-  // In browser, fetch from API if not in cache
-  try {
-    // Use XMLHttpRequest instead of fetch to avoid QUIC protocol issues in Electron
-    const data: Holiday[] = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.timeout = 5000;
-      xhr.open(
-        "GET",
-        `https://date.nager.at/api/v3/PublicHolidays/${year}/${holidayCountryCode.value}`
-      );
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(JSON.parse(xhr.responseText));
-          } catch (e) {
-            reject(new Error("Failed to parse JSON"));
-          }
-        } else {
-          reject(new Error(`HTTP error! status: ${xhr.status}`));
-        }
-      };
-      xhr.onerror = () => reject(new Error("Network error"));
-      xhr.ontimeout = () => reject(new Error("Request timeout"));
-      xhr.send();
-    });
-
-    // Store holidays in Map for quick lookup
-    data.forEach((holiday) => {
-      holidays.value.set(holiday.date, holiday);
-    });
-
-    // Save to cache
-    await saveHolidaysToCache(year, data);
-  } catch (error) {
-    logger.warn(
-      `Failed to fetch holidays for ${year}. Its not important, but if you need holidays probably there is firewall or network issue:`,
-      error
-    );
-    // Load fallback holidays
-  }
 }
 
 function hasHolidayTask(dateString: string): boolean {
@@ -1234,82 +1032,50 @@ function hasHolidayTask(dateString: string): boolean {
 }
 
 function getHoliday(dateString: string): Holiday | undefined {
-  if (hasHolidayTask(dateString)) return undefined;
+  if (!holidaySyncEnabled.value || hasHolidayTask(dateString)) return undefined;
   return holidays.value.get(dateString);
 }
 
-// Load holidays on mount
 onMounted(async () => {
-  // detect/load user's locale via lang module so we know which country code to request
-  try {
-    // Prefer saved locale from app settings (appdata) so startup uses stored language
+  const locale = await resolveHolidayLocale();
+  holidayCountryCode.value = locale.country;
+  holidayDisplayLang.value = locale.lang;
+  holidaySyncEnabled.value = await loadHolidaySyncEnabled();
+  await reloadHolidays();
+
+  const onLocaleChanged = (ev: Event) => {
     try {
-      await loadSavedLocale();
-      holidayCountryCode.value = getCountryCode();
-      holidayDisplayLang.value = getLanguage();
-    } catch (e) {
-      // Fallback: detect from navigator if no saved locale
-      try {
-        const info = await detectAndSetLocale();
-        holidayCountryCode.value = info.country;
-        holidayDisplayLang.value = info.lang;
-      } catch (err) {
-        // ignore - defaults already set
+      const ce = ev as CustomEvent;
+      const info = ce?.detail || {};
+      const newCountry = info.country || getCountryCode();
+      const newLang = info.lang || getLanguage();
+      if (
+        newCountry === holidayCountryCode.value &&
+        newLang === holidayDisplayLang.value
+      ) {
+        return;
       }
-    }
-  } catch (e) {
-    // ignore - defaults already set
-  }
-  const currentYear = new Date().getFullYear();
-  await fetchHolidays(currentYear);
-  await fetchHolidays(currentYear + 1); // Also fetch next year's holidays
-  // Listen for locale changes at runtime and refresh holiday data
-  try {
-    const handler = (ev: Event) => {
-      try {
-        const ce = ev as CustomEvent;
-        const info = ce?.detail || {};
-        const newCountry = info.country || getCountryCode();
-        const newLang = info.lang || getLanguage();
-        // If nothing changed, ignore
-        if (
-          newCountry === holidayCountryCode.value &&
-          newLang === holidayDisplayLang.value
-        )
-          return;
-        holidayCountryCode.value = newCountry;
-        holidayDisplayLang.value = newLang;
-        // Clear existing holidays and refetch for current and next year
-        holidays.value = new Map();
-        void (async () => {
-          const y = new Date().getFullYear();
-          try {
-            await fetchHolidays(y);
-            await fetchHolidays(y + 1);
-          } catch (e) {
-            // ignore
-          }
-        })();
-      } catch (e) {
-        // ignore
-      }
-    };
-    window.addEventListener("app:locale-changed", handler as EventListener);
-    // remove listener on unmount
-    try {
-      onBeforeUnmount(() => {
-        try {
-          window.removeEventListener("app:locale-changed", handler as EventListener);
-        } catch (e) {
-          // ignore
-        }
-      });
-    } catch (e) {
+      holidayCountryCode.value = newCountry;
+      holidayDisplayLang.value = newLang;
+      void reloadHolidays();
+    } catch {
       // ignore
     }
-  } catch (e) {
-    // ignore
-  }
+  };
+
+  const onHolidaySyncChanged = (ev: Event) => {
+    const ce = ev as CustomEvent<{ enabled?: boolean }>;
+    holidaySyncEnabled.value = !!ce.detail?.enabled;
+    void reloadHolidays();
+  };
+
+  window.addEventListener("app:locale-changed", onLocaleChanged as EventListener);
+  window.addEventListener(HOLIDAY_SYNC_CHANGED_EVENT, onHolidaySyncChanged as EventListener);
+
+  onBeforeUnmount(() => {
+    window.removeEventListener("app:locale-changed", onLocaleChanged as EventListener);
+    window.removeEventListener(HOLIDAY_SYNC_CHANGED_EVENT, onHolidaySyncChanged as EventListener);
+  });
 });
 
 const calendarCurrentWeek = computed(() => {

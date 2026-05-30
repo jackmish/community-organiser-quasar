@@ -107,6 +107,31 @@
               <q-icon name="chevron_right" />
             </q-item-section>
           </q-item>
+
+          <q-separator spaced />
+
+          <!-- Public services (no registration) -->
+          <q-item-label header class="text-weight-bold text-subtitle1">
+            {{ $text('accounts.public_services_section') }}
+          </q-item-label>
+
+          <q-item tag="label">
+            <q-item-section avatar>
+              <q-avatar color="deep-purple-6" text-color="white" icon="celebration" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ $text('accounts.nager_holidays_title') }}</q-item-label>
+              <q-item-label caption>{{ nagerHolidaysCaption }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-toggle
+                v-model="holidaySyncEnabled"
+                color="deep-purple-6"
+                :disable="holidaySyncSaving"
+                @update:model-value="onHolidaySyncToggle"
+              />
+            </q-item-section>
+          </q-item>
         </q-list>
       </q-card-section>
 
@@ -121,11 +146,16 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { $text } from 'src/modules/lang';
+import { $text, getCountryCode } from 'src/modules/lang';
 import { UserStoreController } from '../UserController';
 import GoogleAccountConfig from './GoogleAccountConfig.vue';
 import type { GoogleFeature, GoogleAccountLink } from '../models/UserAccount';
 import { clearGoogleTokens } from '../googleAuthService';
+import {
+  loadHolidaySyncEnabled,
+  saveHolidaySyncEnabled,
+} from 'src/modules/time/holidaySyncSettings';
+import { NAGER_HOLIDAYS_API } from 'src/modules/time/holidaySyncService';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -144,6 +174,14 @@ const showPasswordInput = ref(false);
 const showGoogleConfig = ref(false);
 const emailDraft = ref('');
 const passwordDraft = ref('');
+const holidaySyncEnabled = ref(true);
+const holidaySyncSaving = ref(false);
+
+const nagerHolidaysCaption = computed(() =>
+  $text('accounts.nager_holidays_desc')
+    .replace('{api}', NAGER_HOLIDAYS_API)
+    .replace('{country}', getCountryCode()),
+);
 
 const identifier = computed(() => user.identifier);
 const identifierType = computed(() => user.identifierType);
@@ -157,6 +195,9 @@ const googleAccount = computed(() => user.googleAccount);
 watch(dialogVisible, async (open) => {
   if (open && !user.isLoaded) {
     await user.load();
+  }
+  if (open) {
+    holidaySyncEnabled.value = await loadHolidaySyncEnabled();
   }
   if (!open) {
     showEmailInput.value = false;
@@ -224,6 +265,16 @@ async function onConfirmSync() {
 
 async function onRevokeSync() {
   await user.revokeCalendarSync();
+}
+
+async function onHolidaySyncToggle(enabled: boolean) {
+  holidaySyncSaving.value = true;
+  try {
+    const ok = await saveHolidaySyncEnabled(enabled);
+    if (!ok) holidaySyncEnabled.value = !enabled;
+  } finally {
+    holidaySyncSaving.value = false;
+  }
 }
 </script>
 
