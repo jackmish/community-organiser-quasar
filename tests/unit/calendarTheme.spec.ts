@@ -1,71 +1,63 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CALENDAR_TONED_MONTH_COUNT,
-  calendarTonedMonthColor,
+  buildCalendarColorizeTones,
+  calendarBandColorForOffset,
   getOverlayColorForMonth,
   monthOffsetFromToday,
   resolveCalendarTheme,
 } from 'src/components/theme';
+import { isHexBright } from 'src/utils/colorUtils';
 
 describe('calendar theme', () => {
-  it('resolveCalendarTheme includes text color', () => {
+  it('resolveCalendarTheme builds two tones when colorize is on', () => {
     const t = resolveCalendarTheme({
       calendarColorize: true,
-      color: '#112233',
-      textColor: '#ff00aa',
+      color: '#1976d2',
+      textColor: '#ffffff',
     });
-    expect(t.colorize).toBe(true);
-    expect(t.groupColor).toBe('#112233');
-    expect(t.groupTextColor).toBe('#ff00aa');
+    expect(t.colorizeTones).not.toBeNull();
+    expect(t.colorizeTones!.bright).toBe('#1976d2');
+    expect(t.colorizeTones!.alternate).not.toBe(t.colorizeTones!.bright);
   });
 
-  it('dark group color tones lighter for first 3 months', () => {
-    const dark = '#112233';
-    const c0 = calendarTonedMonthColor(dark, 0);
-    const c1 = calendarTonedMonthColor(dark, 1);
-    const c2 = calendarTonedMonthColor(dark, 2);
-    expect(c0).toBe(dark);
-    expect(c1).not.toBe(c0);
-    expect(c2).not.toBe(c1);
-    // lighter = higher channel sum roughly
+  it('even offsets share bright, odd offsets share alternate', () => {
+    const tones = buildCalendarColorizeTones('#4caf50');
+    expect(calendarBandColorForOffset(0, tones)).toBe(tones.bright);
+    expect(calendarBandColorForOffset(2, tones)).toBe(tones.bright);
+    expect(calendarBandColorForOffset(4, tones)).toBe(tones.bright);
+    expect(calendarBandColorForOffset(1, tones)).toBe(tones.alternate);
+    expect(calendarBandColorForOffset(3, tones)).toBe(tones.alternate);
+  });
+
+  it('dark group: alternate is lighter than bright', () => {
+    const group = '#1b5e20';
+    expect(isHexBright(group)).toBe(false);
+    const tones = buildCalendarColorizeTones(group);
     const sum = (h: string) => {
       const n = parseInt(h.replace('#', ''), 16);
       return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255);
     };
-    expect(sum(c2)).toBeGreaterThan(sum(c0));
+    expect(sum(tones.alternate)).toBeGreaterThan(sum(tones.bright));
   });
 
-  it('bright group color tones darker for first 3 months', () => {
-    const bright = '#ffff88';
-    const c0 = calendarTonedMonthColor(bright, 0);
-    const c2 = calendarTonedMonthColor(bright, 2);
+  it('bright group: alternate is darker than bright', () => {
+    const group = '#ffeb3b';
+    expect(isHexBright(group)).toBe(true);
+    const tones = buildCalendarColorizeTones(group);
     const sum = (h: string) => {
       const n = parseInt(h.replace('#', ''), 16);
       return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255);
     };
-    expect(sum(c2)).toBeLessThan(sum(c0));
-  });
-
-  it('months after toned range morph toward group text color', () => {
-    const theme = {
-      colorize: true,
-      groupColor: '#112233',
-      groupTextColor: '#ff00aa',
-    };
-    const anchorMonth = new Date();
-    anchorMonth.setMonth(anchorMonth.getMonth() + CALENDAR_TONED_MONTH_COUNT);
-    const farMonth = new Date();
-    farMonth.setMonth(farMonth.getMonth() + 11);
-
-    const [bgNear] = getOverlayColorForMonth(anchorMonth, theme);
-    const [bgFar] = getOverlayColorForMonth(farMonth, theme);
-
-    expect(bgNear).not.toBe(theme.groupTextColor);
-    expect(bgFar.toLowerCase()).toBe(theme.groupTextColor.toLowerCase());
+    expect(sum(tones.alternate)).toBeLessThan(sum(tones.bright));
   });
 
   it('legacy palette when colorize is off', () => {
-    const [bg] = getOverlayColorForMonth(new Date(), { colorize: false, groupColor: '#f00', groupTextColor: '#000' });
+    const [bg] = getOverlayColorForMonth(new Date(), {
+      colorize: false,
+      groupColor: '#f00',
+      groupTextColor: '#000',
+      colorizeTones: null,
+    });
     expect(bg).toBe('#ffffff');
   });
 

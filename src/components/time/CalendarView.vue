@@ -582,7 +582,10 @@ const calendarControlBtnStyle = computed(() => {
 const calendarPaginationStyle = computed(() => {
   if (!calendarTheme.value.colorize) return {};
   const { backgroundColor, color } = getCalendarControlColors(calendarTheme.value);
-  return { backgroundColor, color };
+  return {
+    backgroundColor,
+    color,
+  };
 });
 
 function overlayColorForMonth(monthLike: string | number | Date): [string, string] {
@@ -1380,6 +1383,7 @@ watch(
       calendarTheme.value.colorize,
       calendarTheme.value.groupColor,
       calendarTheme.value.groupTextColor,
+      calendarTheme.value.colorizeTones,
     ] as const,
   () => {
     nextTick().then(() => {
@@ -1653,11 +1657,22 @@ function getEventsForDay(day: string) {
 <style scoped src="../../css/calendar-view.scss"></style>
 
 <style lang="scss">
-/* Chrome row bg: unscoped so it applies with imported scoped calendar-view.scss */
+/* Chrome + controls: unscoped; vars from getCalendarCssVariables on .calendar-root */
 .calendar-root.calendar-root--colorize {
   .top-row,
   .bottom-row {
     background-color: var(--cal-chrome-bg) !important;
+  }
+
+  .calendar-nav-arrow.q-btn,
+  .today-jump-btn.q-btn {
+    background-color: var(--cal-nav-btn-bg) !important;
+    color: var(--cal-nav-btn-fg) !important;
+  }
+
+  .visible-days-control {
+    background-color: var(--cal-pagination-bg) !important;
+    color: var(--cal-pagination-fg) !important;
   }
 }
 </style>

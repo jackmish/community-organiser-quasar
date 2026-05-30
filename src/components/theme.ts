@@ -161,11 +161,23 @@ export function resolveTaskListSizeVariant(
 
 // ── Calendar theming (month bands, chrome, neutrals, nav) ─────────────────────
 
+/** Two band tones when calendar colorize is on (even / odd month offset). */
+export type CalendarColorizeTones = {
+  /** Offsets 0, 2, 4, … */
+  bright: string;
+  /** Offsets 1, 3, 5, … */
+  alternate: string;
+};
+
 export type CalendarThemeOptions = {
   colorize: boolean;
   groupColor: string;
   groupTextColor: string;
+  colorizeTones: CalendarColorizeTones | null;
 };
+
+/** Lighten/darken amount for the alternate month band. */
+export const CALENDAR_COLORIZE_ALTERNATE_STEP = 0.24;
 
 /** Top/bottom bars above and below the grid when calendar colorize is off. */
 export const CALENDAR_CHROME_BG_DEFAULT = 'rgba(50, 200, 255, 0.5)';
@@ -182,12 +194,22 @@ const LEGACY_MONTH_OVERLAY_STOPS: ReadonlyArray<readonly [string, string]> = [
   ['#3f51b5', '#fff'],
 ];
 
-/** First N months use toned group bg; later months morph toward group text color. */
-export const CALENDAR_TONED_MONTH_COUNT = 3;
+/** Bright + alternate band colors from the group background color. */
+export function buildCalendarColorizeTones(groupHex: string): CalendarColorizeTones {
+  const g = (groupHex || '').trim() || GROUP_DEFAULT_BACKGROUND;
+  const bright = g;
+  const alternate = isHexBright(g)
+    ? darkenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP)
+    : lightenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP * 1.4);
+  return { bright, alternate };
+}
 
-const CALENDAR_MONTH_TONE_STEP = 0.14;
-const CALENDAR_MONTH_TONE_MAX = 0.72;
-const CALENDAR_MONTHS_IN_YEAR = 12;
+export function calendarBandColorForOffset(
+  offset: number,
+  tones: CalendarColorizeTones,
+): string {
+  return offset % 2 === 0 ? tones.bright : tones.alternate;
+}
 
 export function resolveCalendarTheme(
   group: Record<string, unknown> | null | undefined,
@@ -197,6 +219,7 @@ export function resolveCalendarTheme(
     colorize: calendarColorize,
     groupColor: color,
     groupTextColor: textColor,
+    colorizeTones: calendarColorize ? buildCalendarColorizeTones(color) : null,
   };
 }
 
@@ -220,25 +243,6 @@ export function monthOffsetFromToday(monthLike: string | number | Date): number 
   return (monthNum - todayMonth + 12) % 12;
 }
 
-/** Tone steps 0..2 from group bg (bright → darker, dark → lighter). */
-export function calendarTonedMonthColor(groupHex: string, toneIndex: number): string {
-  const idx = Math.max(0, Math.min(CALENDAR_TONED_MONTH_COUNT - 1, toneIndex));
-  if (idx === 0) return groupHex;
-  const amount = Math.min(CALENDAR_MONTH_TONE_MAX, idx * CALENDAR_MONTH_TONE_STEP);
-  return isHexBright(groupHex) ? darkenHex(groupHex, amount) : lightenHex(groupHex, amount);
-}
-
-function groupMonthBandColor(groupHex: string, textHex: string, offset: number): string {
-  if (offset < CALENDAR_TONED_MONTH_COUNT) {
-    return calendarTonedMonthColor(groupHex, offset);
-  }
-  const anchor = calendarTonedMonthColor(groupHex, CALENDAR_TONED_MONTH_COUNT - 1);
-  const morphSpan = CALENDAR_MONTHS_IN_YEAR - CALENDAR_TONED_MONTH_COUNT;
-  const morphIndex = offset - CALENDAR_TONED_MONTH_COUNT;
-  const t = morphSpan <= 1 ? 1 : morphIndex / (morphSpan - 1);
-  return blendHex(anchor, textHex, Math.min(1, Math.max(0, t)));
-}
-
 /** Month band / jump-button / label colors: [background, foreground]. */
 export function getOverlayColorForMonth(
   monthLike: string | number | Date,
@@ -257,9 +261,9 @@ export function getOverlayColorForMonth(
     return [bg, getContrastColor(bg)];
   }
 
-  const groupHex = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
-  const textHex = theme.groupTextColor || GROUP_DEFAULT_TEXT_COLOR;
-  const bg = groupMonthBandColor(groupHex, textHex, offset);
+  const tones =
+    theme.colorizeTones ?? buildCalendarColorizeTones(theme.groupColor || GROUP_DEFAULT_BACKGROUND);
+  const bg = calendarBandColorForOffset(offset, tones);
   return [bg, getContrastColor(bg)];
 }
 
@@ -273,36 +277,26 @@ export function getCalendarChromeBarStyle(theme?: CalendarThemeOptions): Record<
   return { backgroundColor: calendarChromeBackground(theme) };
 }
 
-/** Direct group color for prev/next nav and visible-days pagination control. */
+/** Group color for today / prev / next / pagination controls when colorize is on. */
 export function getCalendarControlColors(
   theme?: CalendarThemeOptions,
 ): { backgroundColor: string; color: string } {
   if (!theme?.colorize) {
     return { backgroundColor: CALENDAR_PRIMARY, color: '#ffffff' };
   }
-  const bg = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
-  return { backgroundColor: bg, color: getContrastColor(bg) };
+  const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  return { backgroundColor: g, color: getContrastColor(g) };
 }
 
 /**
- * CSS variables for calendar neutrals (day cells, weekday headers, accents).
- * Empty when colorize is off — SCSS fallbacks apply.
+ * CSS variables for chrome rows and controls only (not day cells — avoids muddy overlays).
  */
 export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<string, string> {
   if (!theme?.colorize) return {};
-  const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
   const control = getCalendarControlColors(theme);
   const chromeBg = calendarChromeBackground(theme);
   return {
     '--cal-chrome-bg': chromeBg,
-    '--cal-day-bg': hexToRgba(blendHex('#ffffff', g, 0.14), 0.92),
-    '--cal-weekday-bg': hexToRgba(blendHex('#eeeeee', g, 0.2), 0.93),
-    '--cal-weekday-alt-bg': hexToRgba(blendHex('#ffffff', g, 0.12), 0.93),
-    '--cal-weekend-th-bg': blendHex('#55bbff', g, 0.28),
-    '--cal-past-day-bg': hexToRgba(blendHex('#ffffff', g, 0.1), 0.82),
-    '--cal-weekend-highlight': hexToRgba(g, 0.38),
-    '--cal-today-column-bg': hexToRgba(g, 0.42),
-    '--cal-accent': g,
     '--cal-nav-btn-bg': control.backgroundColor,
     '--cal-nav-btn-fg': control.color,
     '--cal-pagination-bg': control.backgroundColor,

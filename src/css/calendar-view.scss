@@ -482,15 +482,4 @@ $calendar-nav-col-width: 122px;
   color: var(--cal-pagination-fg, white);
 }
 
-.calendar-root--colorize {
-  .top-row,
-  .bottom-row {
-    background-color: var(--cal-chrome-bg) !important;
-  }
-
-  .calendar-nav-arrow.q-btn,
-  .today-jump-btn.q-btn {
-    background-color: var(--cal-nav-btn-bg) !important;
-    color: var(--cal-nav-btn-fg) !important;
-  }
-}
+/* Chrome/control colorize rules live in CalendarView.vue (unscoped) — vars on .calendar-root */
