@@ -125,15 +125,21 @@
         </div>
         <div class="meteo-panel__hours meteo-panel__nice-scroll meteo-panel__nice-scroll--horizontal">
           <div
-            v-for="slot in day.hours"
+            v-for="slot in visibleHoursForDay(day)"
             :key="slot.time"
             class="meteo-panel__hour"
-            :class="{ 'meteo-panel__hour--eod': slot.hour === 24 }"
+            :class="{ 'meteo-panel__hour--eod': isHourMarker(slot.hour) }"
           >
-            <div class="meteo-panel__hour-time">{{ formatHourLabel(slot.hour) }}</div>
-            <q-icon :name="hourIcon(slot.weatherCode)" size="16px" class="meteo-panel__hour-icon" />
-            <div class="meteo-panel__hour-temp">{{ formatTemp(slot.temperature) }}</div>
-            <div class="meteo-panel__hour-rain">{{ slot.rainChance }}%</div>
+            <div
+              class="meteo-panel__hour-rain-fill"
+              :style="{ height: `${hourRainFill(slot.rainChance)}%` }"
+            />
+            <div class="meteo-panel__hour-content">
+              <div class="meteo-panel__hour-time">{{ formatHourLabel(slot.hour) }}</div>
+              <q-icon :name="hourIcon(slot.weatherCode)" size="20px" class="meteo-panel__hour-icon" />
+              <div class="meteo-panel__hour-temp">{{ formatTemp(slot.temperature) }}</div>
+              <div class="meteo-panel__hour-rain">{{ slot.rainChance }}%</div>
+            </div>
           </div>
         </div>
       </div>
@@ -172,10 +178,15 @@ import {
 import {
   describeWeatherCode,
   refreshMeteoData,
+  meteoSnapshotNeedsEveningRefetch,
   resolveDeviceMeteoLocation,
   searchMeteoCities,
   locationCityName,
+  FORECAST_HOUR_FROM,
+  FORECAST_DISPLAY_HOUR_TO,
+  FORECAST_HOUR_TO,
   type MeteoDayForecast,
+  type MeteoHourSlot,
   type MeteoLocation,
   type MeteoSnapshot,
 } from 'src/modules/time/meteoService';
@@ -336,6 +347,34 @@ function hourIcon(code: number): string {
   return describeWeatherCode(code).icon;
 }
 
+const HOUR_WINDOW_SPAN = FORECAST_DISPLAY_HOUR_TO - FORECAST_HOUR_FROM;
+
+function hourRangeForDay(day: MeteoDayForecast): { from: number; to: number } {
+  if (day.dayIndex !== 0) {
+    return { from: FORECAST_HOUR_FROM, to: FORECAST_DISPLAY_HOUR_TO };
+  }
+  const currentHour = new Date().getHours();
+  const from = Math.max(FORECAST_HOUR_FROM, currentHour);
+  const to = Math.min(from + HOUR_WINDOW_SPAN, FORECAST_HOUR_TO);
+  return { from, to };
+}
+
+/** Today: sliding window (e.g. 7–19, 9–21, 20–23 + midnight). Other days: 7–19 + midnight. */
+function visibleHoursForDay(day: MeteoDayForecast): MeteoHourSlot[] {
+  const { from, to } = hourRangeForDay(day);
+  return day.hours.filter(
+    (slot) => slot.hour === 24 || (slot.hour >= from && slot.hour <= to),
+  );
+}
+
+function isHourMarker(hour: number): boolean {
+  return hour === 12 || hour === 24;
+}
+
+function hourRainFill(rainChance: number): number {
+  return Math.min(100, Math.max(0, rainChance));
+}
+
 function locationKey(loc: MeteoLocation): string {
   return `${loc.latitude.toFixed(3)}:${loc.longitude.toFixed(3)}`;
 }
@@ -370,7 +409,10 @@ async function loadForecast(force = false): Promise<void> {
   loading.value = true;
   error.value = false;
   try {
-    const data = await refreshMeteoData(force);
+    let data = await refreshMeteoData(force);
+    if (data && !force && meteoSnapshotNeedsEveningRefetch(data)) {
+      data = await refreshMeteoData(true);
+    }
     snapshot.value = data;
     if (!data) {
       error.value = true;
@@ -769,11 +811,12 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__hour {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 2px;
+  align-items: stretch;
+  padding: 0;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
   flex: 0 0 44px;
@@ -784,6 +827,34 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.12);
 }
 
+.meteo-panel__hour-rain-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 71, 161, 0.42);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 0 0 6px 6px;
+  transition: height 0.2s ease;
+}
+
+.meteo-panel--colorize .meteo-panel__hour-rain-fill {
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.meteo-panel__hour-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  width: 100%;
+  height: 100%;
+}
+
 .meteo-panel__hour--eod {
   background: rgba(255, 255, 255, 0.22);
   flex: 0 0 48px;
@@ -792,6 +863,14 @@ onBeforeUnmount(() => {
 
 .meteo-panel--colorize .meteo-panel__hour--eod {
   background: rgba(0, 0, 0, 0.22);
+}
+
+.meteo-panel__hour--eod .meteo-panel__hour-rain-fill {
+  background: rgba(13, 71, 161, 0.5);
+}
+
+.meteo-panel--colorize .meteo-panel__hour--eod .meteo-panel__hour-rain-fill {
+  background: rgba(0, 0, 0, 0.42);
 }
 
 .meteo-panel__hour-time {
@@ -807,11 +886,12 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__hour-rain {
-  font-size: 0.62rem;
-  opacity: 0.8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .meteo-panel__hour-icon {
-  opacity: 0.92;
+  opacity: 0.95;
 }
 </style>

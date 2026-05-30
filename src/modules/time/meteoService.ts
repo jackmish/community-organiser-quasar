@@ -46,12 +46,15 @@ interface MeteoCachePayload {
   snapshot: MeteoSnapshot;
 }
 
-const METEO_CACHE_VERSION = 3;
+const METEO_CACHE_VERSION = 5;
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const FORECAST_DAY_COUNT = 3;
-const FORECAST_HOUR_FROM = 7;
-const FORECAST_HOUR_TO = 19;
+export const FORECAST_HOUR_FROM = 7;
+/** Default visible end hour for future days (today uses a sliding window). */
+export const FORECAST_DISPLAY_HOUR_TO = 19;
+/** Last regular hour slot stored from the API (supports evening sliding window). */
+export const FORECAST_HOUR_TO = 23;
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
 
 const COUNTRY_DEFAULTS: Record<string, MeteoLocation> = {
@@ -154,6 +157,7 @@ function isCacheFresh(snapshot: MeteoSnapshot | null, location: MeteoLocation | 
   if (!snapshot?.fetchedAt || !snapshot.days?.length) return false;
   if (snapshot.days.length < FORECAST_DAY_COUNT) return false;
   if (!snapshot.days.every(dayHasHour24)) return false;
+  if (snapshotNeedsEveningHours(snapshot)) return false;
   if (location && snapshot.location) {
     const latOk = Math.abs(snapshot.location.latitude - location.latitude) < 0.05;
     const lonOk = Math.abs(snapshot.location.longitude - location.longitude) < 0.05;
@@ -228,6 +232,18 @@ function hour24SlotForDay(
 
 function dayHasHour24(day: MeteoDayForecast): boolean {
   return day.hours.some((h) => h.hour === 24);
+}
+
+function dayHasEveningHours(day: MeteoDayForecast): boolean {
+  return day.hours.some((h) => h.hour >= 20 && h.hour <= FORECAST_HOUR_TO);
+}
+
+function snapshotNeedsEveningHours(snapshot: MeteoSnapshot): boolean {
+  const nowHour = new Date().getHours();
+  if (nowHour < FORECAST_DISPLAY_HOUR_TO) return false;
+  const today = snapshot.days[0];
+  if (!today) return true;
+  return !dayHasEveningHours(today);
 }
 
 function rainChanceForNow(
@@ -435,6 +451,11 @@ export function describeWeatherCode(code: number): { labelKey: string; icon: str
   if (code <= 86) return { labelKey: 'meteo.weather.snow_showers', icon: 'ac_unit' };
   if (code <= 99) return { labelKey: 'meteo.weather.thunderstorm', icon: 'thunderstorm' };
   return { labelKey: 'meteo.weather.unknown', icon: 'help_outline' };
+}
+
+export function meteoSnapshotNeedsEveningRefetch(snapshot: MeteoSnapshot | null): boolean {
+  if (!snapshot) return false;
+  return snapshotNeedsEveningHours(snapshot);
 }
 
 export async function refreshMeteoData(force = false): Promise<MeteoSnapshot | null> {
