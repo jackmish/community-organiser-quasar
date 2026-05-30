@@ -5,21 +5,17 @@
     :class="{ 'meteo-panel--colorize': panelTheme.colorize }"
     :style="panelStyle"
   >
-    <div class="row items-center no-wrap meteo-panel__header" style="gap: 8px">
-      <div class="col" style="min-width: 0">
-        <strong>{{ $text('meteo.title') }}</strong>
-      </div>
-      <q-btn
-        flat
-        dense
-        round
-        icon="refresh"
-        :style="{ color: panelTheme.fg }"
-        :loading="loading"
-        :aria-label="$text('meteo.refresh')"
-        @click="void loadForecast(true)"
-      />
-    </div>
+    <q-btn
+      flat
+      dense
+      round
+      icon="refresh"
+      class="meteo-panel__refresh-btn"
+      :style="{ color: panelTheme.fg }"
+      :loading="loading"
+      :aria-label="$text('meteo.refresh')"
+      @click="void loadForecast(true)"
+    />
 
     <div v-if="loading && !snapshot" class="text-caption meteo-panel__muted q-mt-sm">
       <q-spinner size="14px" class="q-mr-xs" />
@@ -30,7 +26,7 @@
     </div>
 
     <template v-else-if="snapshot">
-      <div class="row q-col-gutter-md q-mt-sm meteo-panel__now-row">
+      <div class="row q-col-gutter-md meteo-panel__now-row">
         <div class="col-12 col-sm-auto meteo-panel__now">
           <div class="row items-center no-wrap meteo-panel__now-main" style="gap: 12px">
             <q-icon :name="weatherIcon" size="42px" class="meteo-panel__now-icon" />
@@ -488,17 +484,21 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .meteo-panel {
+  position: relative;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0 0 8px 8px;
   color: var(--meteo-panel-fg, #ffffff);
 }
 
-.meteo-panel__muted {
-  opacity: 0.82;
+.meteo-panel__refresh-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
 }
 
-.meteo-panel__header strong {
-  font-size: 0.95rem;
+.meteo-panel__muted {
+  opacity: 0.82;
 }
 
 .meteo-panel__now-row {
