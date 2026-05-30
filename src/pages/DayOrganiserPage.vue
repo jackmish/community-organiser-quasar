@@ -162,8 +162,10 @@
           <q-btn
             v-show="panelHidden || !previewFloating"
             class="list-add-btn"
-            color="positive"
+            :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
+            :color="addTaskBtnColorize ? undefined : 'positive'"
             unelevated
+            :style="addTaskBtnStyle"
             :aria-label="$text('ui.add_new_task')"
             @click="onListAdd"
           >
@@ -315,10 +317,12 @@
     <q-btn
       v-if="panelHidden || CC.task.active.mode.value !== 'add'"
       class="floating-add-btn"
-      color="green"
+      :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
+      :color="addTaskBtnColorize ? undefined : 'green'"
       fab
       icon="add"
       dense
+      :style="addTaskBtnStyle"
       @click="onFloatingAddClick"
       :title="$text('ui.add_new_task')"
     />
@@ -418,6 +422,11 @@ import { useCalendarHandlers } from "src/composables/useCalendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
 import { useTaskCrud } from "src/composables/useTaskCrud";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
+import {
+  isGroupBackgroundColorizeActive,
+  readGroupBackgroundFields,
+} from "src/modules/group/utils/groupBackground";
+import { getContrastColor } from "src/utils/colorUtils";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
@@ -1277,6 +1286,32 @@ const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGrou
   CC.group.active.activeGroup
 );
 
+function resolveActiveGroupRecord(): Record<string, unknown> | null {
+  try {
+    const gid = CC.group.active.activeGroup.value?.value ?? null;
+    if (!gid) return null;
+    const g = CC.group.list.all.value.find((x) => String(x?.id) === String(gid));
+    return g && typeof g === "object" ? (g as unknown as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Inverted add-button colors when group bg colorize is active: text color as bg, group color as icon. */
+const addTaskBtnColorize = computed(() => isGroupBackgroundColorizeActive(resolveActiveGroupRecord()));
+
+const addTaskBtnStyle = computed(() => {
+  if (!addTaskBtnColorize.value) return undefined;
+  const { color, textColor } = readGroupBackgroundFields(resolveActiveGroupRecord());
+  const bg = textColor.trim() || getContrastColor(color);
+  return {
+    backgroundColor: bg,
+    color,
+    "--add-task-btn-bg": bg,
+    "--add-task-btn-icon": color,
+  } as Record<string, string>;
+});
+
 // Extract add/update handlers into a task CRUD module
 const { handleAddTask, handleUpdateTask } = useTaskCrud({
   setCurrentDate: CC.task.time.setCurrentDate,
@@ -1884,6 +1919,16 @@ onMounted(async () => {
 }
 .list-add-btn .q-icon {
   color: #fff !important;
+}
+
+.add-task-btn--colorize.list-add-btn,
+.add-task-btn--colorize.floating-add-btn {
+  background-color: var(--add-task-btn-bg, inherit) !important;
+}
+
+.add-task-btn--colorize.list-add-btn .q-icon,
+.add-task-btn--colorize.floating-add-btn .q-icon {
+  color: var(--add-task-btn-icon) !important;
 }
 
 .task-header-row {
