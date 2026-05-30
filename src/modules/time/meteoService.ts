@@ -335,6 +335,13 @@ function formatGeocodingLabel(hit: {
   return hit.name;
 }
 
+/** City only — strips county/province/country suffix from geocoding labels. */
+export function locationCityName(name: string): string {
+  const trimmed = name.trim();
+  const comma = trimmed.indexOf(',');
+  return comma >= 0 ? trimmed.slice(0, comma).trim() : trimmed;
+}
+
 export async function searchMeteoCities(query: string): Promise<MeteoLocation[]> {
   const q = query.trim();
   if (q.length < 2) return [];

@@ -238,6 +238,23 @@ html body .q-select.use-default .q-select__input::placeholder {
   -webkit-text-fill-color: var(--co21-field-placeholder, rgba(127, 127, 127, 0.8)) !important;
 }
 
+/* Buttons tinted with field surface colors only — keep normal q-btn chrome (shadow, no border). */
+html body .q-btn.co21-field-btn {
+  background: var(--co21-field-bg, transparent) !important;
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+}
+
+html body .q-btn.co21-field-btn .q-btn__content,
+html body .q-btn.co21-field-btn .q-icon {
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+}
+
+html body .q-btn.co21-field-btn.co21-field-btn--active {
+  font-weight: 700;
+}
+
 /* Themed q-select popups — bind `--co21-menu-*` via `popup-content-class="use-default co21-themed-menu"` + `:popup-content-style`. */
 .q-menu.use-default,
 .q-menu.use-default .q-menu__content,

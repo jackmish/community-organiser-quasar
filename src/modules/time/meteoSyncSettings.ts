@@ -4,7 +4,7 @@ import type { MeteoLocation } from './meteoService';
 export const METEO_SYNC_CHANGED_EVENT = 'co21:meteo-sync-changed';
 export const METEO_LOCATION_CHANGED_EVENT = 'co21:meteo-location-changed';
 
-const METEO_RECENT_MAX = 3;
+const METEO_RECENT_MAX = 4;
 
 export async function loadMeteoSyncEnabled(): Promise<boolean> {
   const data = await loadCo21Settings();

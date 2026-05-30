@@ -58,17 +58,18 @@
             :key="locationSelectThemeKey"
             v-model="selectedLocation"
             class="use-default meteo-panel__location-select"
+            :class="{ 'meteo-panel__location-select--has-value': !!selectedLocation }"
             :style="locationFieldStyle"
             :options="cityOptions"
-            option-label="name"
+            :option-label="locationSelectLabel"
             use-input
             fill-input
             hide-selected
             input-debounce="400"
-            dense
             outlined
+            hide-bottom-space
             behavior="menu"
-            :label="$text('meteo.location_search')"
+            :label="locationSelectFieldLabel"
             :loading="searchLoading"
             :disable="locationSaving"
             :input-style="locationFieldInputStyle"
@@ -93,16 +94,16 @@
             </template>
           </q-select>
 
-          <div class="row items-center q-mt-xs meteo-panel__location-actions" style="gap: 4px">
+          <div class="row items-center q-mt-xs meteo-panel__location-actions" style="gap: 6px">
             <q-btn
               v-for="loc in recentLocations"
               :key="locationKey(loc)"
-              dense
               no-caps
-              size="sm"
-              class="meteo-panel__recent-btn"
-              :class="{ 'meteo-panel__recent-btn--active': isActiveLocation(loc) }"
-              :label="shortLocationLabel(loc.name)"
+              unelevated
+              class="co21-field-btn meteo-panel__recent-btn"
+              :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
+              :style="locationFieldStyle"
+              :label="locationCityName(loc.name)"
               :disable="locationSaving || loading"
               @click="void applyLocation(loc)"
             />
@@ -164,7 +165,7 @@ import {
   readGroupBackgroundFields,
   isGroupBackgroundColorizeActive,
 } from 'src/modules/group/utils/groupBackground';
-import { getContrastColor, hexToRgba } from 'src/utils/colorUtils';
+import { getContrastColor } from 'src/utils/colorUtils';
 import {
   METEO_SYNC_CHANGED_EVENT,
   METEO_LOCATION_CHANGED_EVENT,
@@ -179,6 +180,7 @@ import {
   refreshMeteoData,
   resolveDeviceMeteoLocation,
   searchMeteoCities,
+  locationCityName,
   type MeteoDayForecast,
   type MeteoLocation,
   type MeteoSnapshot,
@@ -261,9 +263,6 @@ const panelStyle = computed(() => {
   return {
     backgroundColor,
     '--meteo-panel-fg': fg,
-    '--meteo-recent-bg': hexToRgba(color, 0.34),
-    '--meteo-recent-active-bg': hexToRgba(color, 0.54),
-    '--meteo-recent-fg': fg,
   };
 });
 
@@ -285,7 +284,15 @@ const locationFieldStyle = computed(() => {
 
 const locationFieldInputStyle = computed(() => {
   const fg = locationFieldStyle.value['--co21-field-fg'] ?? '#000000';
-  return { color: fg, WebkitTextFillColor: fg, caretColor: fg };
+  const hasValue = !!selectedLocation.value;
+  return {
+    color: fg,
+    WebkitTextFillColor: fg,
+    caretColor: fg,
+    fontSize: hasValue ? '2.2rem' : '1.1rem',
+    fontWeight: '700',
+    lineHeight: hasValue ? '1.05' : '1.25',
+  };
 });
 
 const locationPopupStyle = computed(() =>
@@ -306,6 +313,14 @@ function onLocationPopupShow() {
 watch(surfaceThemeInput, (input) => {
   pinCo21MenuPopupThemeWhenReady(input);
 }, { deep: true });
+
+function locationSelectLabel(opt: MeteoLocation): string {
+  return locationCityName(opt.name);
+}
+
+const locationSelectFieldLabel = computed(() =>
+  selectedLocation.value ? undefined : $text('meteo.location_search'),
+);
 
 const weatherMeta = computed(() =>
   snapshot.value ? describeWeatherCode(snapshot.value.current.weatherCode) : null,
@@ -329,12 +344,6 @@ function hourIcon(code: number): string {
 
 function locationKey(loc: MeteoLocation): string {
   return `${loc.latitude.toFixed(3)}:${loc.longitude.toFixed(3)}`;
-}
-
-function shortLocationLabel(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length <= 14) return trimmed;
-  return `${trimmed.slice(0, 12)}…`;
 }
 
 function isActiveLocation(loc: MeteoLocation): boolean {
@@ -508,29 +517,99 @@ onBeforeUnmount(() => {
   color: unset;
 }
 
+.meteo-panel__location-select :deep(.q-field__control) {
+  min-height: 44px;
+  height: auto !important;
+}
+
+.meteo-panel__location-select :deep(.q-field__append) {
+  align-self: center;
+}
+
+.meteo-panel__location-select :deep(.q-field__native),
+.meteo-panel__location-select :deep(input),
+.meteo-panel__location-select :deep(.q-field__input),
+.meteo-panel__location-select :deep(.q-select__input) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+  caret-color: var(--co21-field-fg) !important;
+}
+
+.meteo-panel__location-select :deep(.q-field__label) {
+  font-size: 1rem;
+}
+
+.meteo-panel__location-select :deep(.q-field__marginal .q-icon) {
+  font-size: 1.35rem;
+}
+
+.meteo-panel__now-temp,
+.meteo-panel__location-select--has-value :deep(.q-field__native),
+.meteo-panel__location-select--has-value :deep(input),
+.meteo-panel__location-select--has-value :deep(.q-field__input),
+.meteo-panel__location-select--has-value :deep(.q-select__input) {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+  caret-color: var(--co21-field-fg) !important;
+}
+
+/* Quasar q-select input uses height:0 + line-height:24px — override or large text clips. */
+.meteo-panel__location-select--has-value :deep(.q-field__control) {
+  min-height: calc(2.2rem * 1.05 + 12px);
+  padding: 6px 12px;
+  overflow: visible !important;
+}
+
+.meteo-panel__location-select--has-value :deep(.q-field__control-container) {
+  height: auto !important;
+  min-height: calc(2.2rem * 1.05);
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: visible !important;
+}
+
+.meteo-panel__location-select--has-value :deep(.q-field__input),
+.meteo-panel__location-select--has-value :deep(.q-select__input) {
+  height: auto !important;
+  min-height: calc(2.2rem * 1.05) !important;
+  line-height: 1.05 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.meteo-panel__location-select--has-value :deep(.q-field__marginal) {
+  height: auto !important;
+  min-height: calc(2.2rem * 1.05 + 12px);
+}
+
+.meteo-panel__location-select--has-value :deep(.q-field__marginal .q-icon) {
+  font-size: 1.75rem;
+}
+
 .meteo-panel__location-actions {
   flex-wrap: wrap;
 }
 
-.meteo-panel__recent-btn {
-  background: rgba(255, 255, 255, 0.14);
-  color: inherit;
-  max-width: 120px;
+.meteo-panel__recent-btn.q-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.meteo-panel__recent-btn--active {
-  background: rgba(255, 255, 255, 0.32);
-  font-weight: 700;
-}
-
-.meteo-panel--colorize .meteo-panel__recent-btn {
-  background: var(--meteo-recent-bg);
-  color: var(--meteo-recent-fg);
-}
-
-.meteo-panel--colorize .meteo-panel__recent-btn--active {
-  background: var(--meteo-recent-active-bg);
-  color: var(--meteo-recent-fg);
+.meteo-panel__recent-btn.q-btn :deep(.q-btn__content) {
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .meteo-panel__now-label {
@@ -539,12 +618,6 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.85;
-}
-
-.meteo-panel__now-temp {
-  font-size: 2.2rem;
-  font-weight: 700;
-  line-height: 1.05;
 }
 
 .meteo-panel__now-icon {
