@@ -56,7 +56,7 @@
         <div class="col-12 col-sm-6 meteo-panel__location-col">
           <q-select
             v-model="selectedLocation"
-            class="meteo-panel__location-select"
+            class="use-default meteo-panel__location-select"
             :options="cityOptions"
             option-label="name"
             use-input
@@ -68,12 +68,19 @@
             :label="$text('meteo.location_search')"
             :loading="searchLoading"
             :disable="locationSaving"
+            popup-content-class="use-default meteo-panel__location-popup"
+            :popup-content-style="locationPopupStyle"
             @filter="filterCities"
             @update:model-value="onLocationPicked"
           >
+            <template #option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>{{ scope.opt.name }}</q-item-section>
+              </q-item>
+            </template>
             <template #no-option>
               <q-item>
-                <q-item-section class="text-grey">
+                <q-item-section class="meteo-panel__location-popup-hint">
                   {{ citySearchHint }}
                 </q-item-section>
               </q-item>
@@ -142,7 +149,7 @@ import {
   readGroupBackgroundFields,
   isGroupBackgroundColorizeActive,
 } from 'src/modules/group/utils/groupBackground';
-import { darkenHex, getContrastColor, hexToRgba } from 'src/utils/colorUtils';
+import { darkenHex, getContrastColor, hexToRgba, blendHex } from 'src/utils/colorUtils';
 import {
   METEO_SYNC_CHANGED_EVENT,
   METEO_LOCATION_CHANGED_EVENT,
@@ -204,12 +211,48 @@ const panelTheme = computed(() => {
 
 const panelStyle = computed(() => {
   if (!panelTheme.value.colorize) {
-    return { backgroundColor: METEO_DEFAULT_BG, color: METEO_DEFAULT_FG };
+    return {
+      backgroundColor: METEO_DEFAULT_BG,
+      color: METEO_DEFAULT_FG,
+      '--co21-field-fg': METEO_DEFAULT_FG,
+      '--co21-field-bg': 'rgba(255, 255, 255, 0.12)',
+      '--co21-field-border': 'rgba(255, 255, 255, 0.45)',
+      '--co21-field-border-focus': 'rgba(255, 255, 255, 0.7)',
+      '--co21-field-placeholder': 'rgba(255, 255, 255, 0.65)',
+    };
   }
-  const bg = hexToRgba(darkenHex(panelTheme.value.color, 0.1), 0.9);
+  const { color, fg } = panelTheme.value;
   return {
-    backgroundColor: bg,
-    color: panelTheme.value.fg,
+    backgroundColor: hexToRgba(darkenHex(color, 0.1), 0.9),
+    color: fg,
+    '--co21-field-fg': fg,
+    '--co21-field-bg': hexToRgba(blendHex(color, '#ffffff', 0.2), 0.58),
+    '--co21-field-border': hexToRgba(fg, 0.45),
+    '--co21-field-border-focus': hexToRgba(fg, 0.68),
+    '--co21-field-placeholder': hexToRgba(fg, 0.62),
+    '--meteo-recent-bg': hexToRgba(color, 0.34),
+    '--meteo-recent-active-bg': hexToRgba(color, 0.54),
+    '--meteo-recent-fg': fg,
+  };
+});
+
+const locationPopupStyle = computed((): Record<string, string> => {
+  if (!panelTheme.value.colorize) {
+    return {
+      '--co21-menu-bg': hexToRgba('#ffffff', 0.98),
+      '--co21-menu-fg': '#1d1d1d',
+      '--co21-menu-placeholder': 'rgba(0, 0, 0, 0.45)',
+      '--meteo-menu-hover': 'rgba(25, 118, 210, 0.1)',
+      '--meteo-menu-active': 'rgba(25, 118, 210, 0.18)',
+    };
+  }
+  const { color, fg } = panelTheme.value;
+  return {
+    '--co21-menu-bg': hexToRgba(darkenHex(color, 0.04), 0.98),
+    '--co21-menu-fg': fg,
+    '--co21-menu-placeholder': hexToRgba(fg, 0.62),
+    '--meteo-menu-hover': hexToRgba(fg, 0.14),
+    '--meteo-menu-active': hexToRgba(fg, 0.24),
   };
 });
 
@@ -410,17 +453,6 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.meteo-panel__location-select :deep(.q-field__control) {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.meteo-panel__location-select :deep(.q-field__label),
-.meteo-panel__location-select :deep(.q-field__native),
-.meteo-panel__location-select :deep(.q-field__input),
-.meteo-panel__location-select :deep(.q-icon) {
-  color: inherit;
-}
-
 .meteo-panel__location-actions {
   flex-wrap: wrap;
 }
@@ -437,11 +469,13 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel--colorize .meteo-panel__recent-btn {
-  background: rgba(0, 0, 0, 0.16);
+  background: var(--meteo-recent-bg);
+  color: var(--meteo-recent-fg);
 }
 
 .meteo-panel--colorize .meteo-panel__recent-btn--active {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--meteo-recent-active-bg);
+  color: var(--meteo-recent-fg);
 }
 
 .meteo-panel__now-label {
@@ -533,5 +567,27 @@ onBeforeUnmount(() => {
 
 .meteo-panel__hour-icon {
   opacity: 0.92;
+}
+</style>
+
+<style lang="scss">
+.meteo-panel__location-popup .q-item {
+  color: inherit;
+  min-height: 36px;
+}
+
+.meteo-panel__location-popup .q-item:hover,
+.meteo-panel__location-popup .q-item.q-manual-focusable--focused {
+  background: var(--meteo-menu-hover, rgba(0, 0, 0, 0.06)) !important;
+}
+
+.meteo-panel__location-popup .q-item--active {
+  background: var(--meteo-menu-active, rgba(0, 0, 0, 0.1)) !important;
+  color: inherit;
+  font-weight: 600;
+}
+
+.meteo-panel__location-popup-hint {
+  opacity: 0.78;
 }
 </style>

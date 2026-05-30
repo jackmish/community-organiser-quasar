@@ -30,6 +30,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 4. Project-specific conventions & patterns
 
+- **Quasar theme opt-out (`use-default`):** Global styles in `src/css/app.scss` paint most `q-select` fields blue and menus/popups light blue via selectors like `.q-select:not(.use-default)`. Green outlined borders apply to `.q-select:not(.use-default)` only. To style a select or dropdown with custom/group colors, add class **`use-default`** on the `q-select` and on the dropdown (`popup-content-class="use-default …"` or `class="use-default"` on `q-menu`). Set CSS variables on a parent (e.g. the panel root): field `--co21-field-fg`, `--co21-field-bg`, `--co21-field-border`, `--co21-field-border-focus`, `--co21-field-placeholder`; popup `--co21-menu-bg`, `--co21-menu-fg`, `--co21-menu-placeholder`. Without `use-default`, global `!important` rules win over local styles.
 - Domain grouping: domain-specific components live in `src/modules/<domain>/components/` (e.g. `src/modules/task/components/AddTaskForm.vue`); shared/cross-cutting components stay in `src/components/` (e.g. `ui/`, `time/`, `settings/`) — follow this when adding UI.
 - Composition API + TypeScript: prefer composables for reusable logic; avoid ad-hoc cross-component string-based emits where a service call is clearer.
 - Storage: desktop data saved under `%APPDATA%/community-organiser/` — for Electron-only changes consider `src-electron` codepaths.

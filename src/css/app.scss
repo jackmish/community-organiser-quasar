@@ -43,10 +43,10 @@ main {
 }
 
 /* Global background and text for menus, popovers and dialog inners */
-.q-menu,
-.q-menu__content,
-.q-popover,
-.q-select__popup {
+.q-menu:not(.use-default),
+.q-menu:not(.use-default) .q-menu__content,
+.q-popover:not(.use-default),
+.q-select__popup:not(.use-default) {
   background-color: #adf !important;
   color: #000 !important;
 }
@@ -117,12 +117,12 @@ main {
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep input,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep textarea,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-select__input,
-.q-menu ::v-deep input,
-.q-menu ::v-deep textarea,
-.q-menu ::v-deep .q-select__input,
-.q-select__popup ::v-deep input,
-.q-select__popup ::v-deep textarea,
-.q-select__popup ::v-deep .q-select__input,
+.q-menu:not(.use-default) ::v-deep input,
+.q-menu:not(.use-default) ::v-deep textarea,
+.q-menu:not(.use-default) ::v-deep .q-select__input,
+.q-select__popup:not(.use-default) ::v-deep input,
+.q-select__popup:not(.use-default) ::v-deep textarea,
+.q-select__popup:not(.use-default) ::v-deep .q-select__input,
 .group-select--header ::v-deep input,
 .group-select--header ::v-deep .q-select__input {
   color: #ffffff !important;
@@ -142,12 +142,12 @@ main {
   .q-dialog__inner
   ::v-deep
   .q-select__input::placeholder,
-.q-menu ::v-deep input::placeholder,
-.q-menu ::v-deep textarea::placeholder,
-.q-menu ::v-deep .q-select__input::placeholder,
-.q-select__popup ::v-deep input::placeholder,
-.q-select__popup ::v-deep textarea::placeholder,
-.q-select__popup ::v-deep .q-select__input::placeholder {
+.q-menu:not(.use-default) ::v-deep input::placeholder,
+.q-menu:not(.use-default) ::v-deep textarea::placeholder,
+.q-menu:not(.use-default) ::v-deep .q-select__input::placeholder,
+.q-select__popup:not(.use-default) ::v-deep input::placeholder,
+.q-select__popup:not(.use-default) ::v-deep textarea::placeholder,
+.q-select__popup:not(.use-default) ::v-deep .q-select__input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -156,12 +156,12 @@ main {
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__suffix,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__prefix,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__suffix,
-.q-menu ::v-deep .q-field__prefix,
-.q-menu ::v-deep .q-field__suffix,
-.q-select__popup ::v-deep .q-field__prefix,
-.q-select__popup ::v-deep .q-field__suffix,
-.q-menu ::v-deep .q-icon,
-.q-select__popup ::v-deep .q-icon {
+.q-menu:not(.use-default) ::v-deep .q-field__prefix,
+.q-menu:not(.use-default) ::v-deep .q-field__suffix,
+.q-select__popup:not(.use-default) ::v-deep .q-field__prefix,
+.q-select__popup:not(.use-default) ::v-deep .q-field__suffix,
+.q-menu:not(.use-default) ::v-deep .q-icon,
+.q-select__popup:not(.use-default) ::v-deep .q-icon {
   color: rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -170,12 +170,94 @@ body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__
 body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input,
 body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep textarea,
 body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep .q-select__input,
-body .q-select ::v-deep .q-field__control,
+body .q-select:not(.use-default) ::v-deep .q-field__control,
 .group-select--header ::v-deep .q-field__control,
 .group-select--header ::v-deep .q-select__control {
   border: none !important;
   box-shadow: none !important;
   background-image: none !important;
+}
+
+/* Opt out of global blue menu/select theme — add class `use-default` on q-select / q-menu / popup-content-class */
+html body .q-select.use-default .q-field {
+  background: transparent !important;
+  color: var(--co21-field-fg, inherit) !important;
+  -webkit-text-fill-color: var(--co21-field-fg, inherit) !important;
+  caret-color: var(--co21-field-fg, inherit) !important;
+}
+
+html body .q-select.use-default .q-field--outlined .q-field__control {
+  background: var(--co21-field-bg, transparent) !important;
+  color: var(--co21-field-fg, inherit) !important;
+}
+
+html body .q-select.use-default .q-field--outlined .q-field__control::before,
+html body .q-select.use-default .q-field--outlined .q-field__control::after,
+html body .q-select.use-default .q-field--outlined .q-field__control:before,
+html body .q-select.use-default .q-field--outlined .q-field__control:after {
+  border: 1px solid var(--co21-field-border, rgba(0, 0, 0, 0.24)) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body .q-select.use-default .q-field--outlined .q-field__control:hover::before,
+html body .q-select.use-default .q-field--outlined .q-field__control:hover:before,
+html body .q-select.use-default .q-field.q-field--focused .q-field__control::before,
+html body .q-select.use-default .q-field--outlined.q-field--focused .q-field__control::before {
+  border-color: var(
+    --co21-field-border-focus,
+    var(--co21-field-border, rgba(0, 0, 0, 0.35))
+  ) !important;
+}
+
+html body .q-select.use-default .q-field__native,
+html body .q-select.use-default .q-field__input,
+html body .q-select.use-default .q-select__input,
+html body .q-select.use-default .q-field__label,
+html body .q-select.use-default .q-icon {
+  color: var(--co21-field-fg, inherit) !important;
+  -webkit-text-fill-color: var(--co21-field-fg, inherit) !important;
+  caret-color: var(--co21-field-fg, inherit) !important;
+}
+
+html body .q-select.use-default .q-field__native::placeholder,
+html body .q-select.use-default .q-field__input::placeholder,
+html body .q-select.use-default .q-select__input::placeholder {
+  color: var(--co21-field-placeholder, rgba(127, 127, 127, 0.8)) !important;
+  -webkit-text-fill-color: var(--co21-field-placeholder, rgba(127, 127, 127, 0.8)) !important;
+}
+
+.q-menu.use-default,
+.q-menu.use-default .q-menu__content,
+.q-select__popup.use-default {
+  background-color: var(--co21-menu-bg, #ffffff) !important;
+  color: var(--co21-menu-fg, #1d1d1d) !important;
+}
+
+.q-menu.use-default .q-item,
+.q-select__popup.use-default .q-item,
+.q-menu.use-default .q-select__input,
+.q-select__popup.use-default .q-select__input,
+.q-menu.use-default .q-icon,
+.q-select__popup.use-default .q-icon {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+.q-menu.use-default ::v-deep input,
+.q-menu.use-default ::v-deep .q-select__input,
+.q-select__popup.use-default ::v-deep input,
+.q-select__popup.use-default ::v-deep .q-select__input {
+  color: var(--co21-menu-fg, inherit) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
+  caret-color: var(--co21-menu-fg, inherit) !important;
+}
+
+.q-menu.use-default ::v-deep input::placeholder,
+.q-menu.use-default ::v-deep .q-select__input::placeholder,
+.q-select__popup.use-default ::v-deep input::placeholder,
+.q-select__popup.use-default ::v-deep .q-select__input::placeholder {
+  color: var(--co21-menu-placeholder, rgba(127, 127, 127, 0.75)) !important;
 }
 
 /* Specific high-precedence fixes observed in DevTools */
@@ -203,8 +285,9 @@ body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input[type='color'
   caret-color: #ffffff !important;
 }
 
-/* Centralized border: replace Quasar's default outlined pseudo-element */
-.q-field--outlined .q-field__control::before {
+/* Centralized border: replace Quasar's default outlined pseudo-element (themed selects only) */
+.q-select:not(.use-default) .q-field--outlined .q-field__control::before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control::before {
   border: 1px solid rgba(255, 255, 255, 0.32) !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -212,7 +295,7 @@ body .q-dialog:not(.day-organiser-task-panel-dialog) ::v-deep input[type='color'
 
 /* Keep focused state subtle */
 html body .q-dialog ::v-deep .q-field--focused .q-field__control,
-html body .q-select ::v-deep .q-field--focused .q-field__control,
+html body .q-select:not(.use-default) ::v-deep .q-field--focused .q-field__control,
 html body .group-select--header ::v-deep .q-field--focused .q-field__control {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04) !important;
 }
@@ -225,24 +308,31 @@ html body .group-select--header ::v-deep .q-field--focused .q-field__control {
 //   color: #ffffff !important;
 // }
 
-/* Force outlined field pseudo-element borders to white */
-.q-field--outlined .q-field__control::before,
-.q-field--outlined .q-field__control:before,
-.q-field--outlined .q-field__control::after,
-.q-field--outlined .q-field__control:after {
+/* Force outlined field pseudo-element borders to white (themed selects — not use-default) */
+.q-select:not(.use-default) .q-field--outlined .q-field__control::before,
+.q-select:not(.use-default) .q-field--outlined .q-field__control:before,
+.q-select:not(.use-default) .q-field--outlined .q-field__control::after,
+.q-select:not(.use-default) .q-field--outlined .q-field__control:after,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control::before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control:before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control::after,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control:after {
   border: 1px solid rgba(155, 255, 155, 0.75) !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 /* Hover/focus variants */
-.q-field--outlined .q-field__control:hover::before,
-.q-field--outlined .q-field__control:hover:before,
-.q-field--outlined.q-focused .q-field__control::before {
+.q-select:not(.use-default) .q-field--outlined .q-field__control:hover::before,
+.q-select:not(.use-default) .q-field--outlined .q-field__control:hover:before,
+.q-select:not(.use-default) .q-field--outlined.q-field--focused .q-field__control::before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control:hover::before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined .q-field__control:hover:before,
+.q-dialog:not(.day-organiser-task-panel-dialog) .q-field--outlined.q-field--focused .q-field__control::before {
   border-color: rgba(155, 255, 155, 0.15) !important;
 }
 /* TASK-LIST BLUE on field control (rounded), not square outer .q-field */
 /* Do NOT touch .q-menu or .q-select__popup (expanded options) */
-html body .q-select .q-field,
+html body .q-select:not(.use-default) .q-field,
 html body .group-select--header .q-field,
 .q-select:not(.use-default) {
   background: #26b !important;
