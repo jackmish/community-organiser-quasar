@@ -7,7 +7,22 @@
         <q-btn flat round dense icon="close" @click="dialogVisible = false" />
       </q-toolbar>
 
-      <q-card-section v-if="!showGoogleConfig" class="q-pa-md">
+      <q-card-section v-if="!showGoogleConfig" class="q-pa-none accounts-dialog__body">
+        <q-tabs
+          v-model="activeTab"
+          dense
+          class="text-primary accounts-dialog__tabs"
+          active-color="primary"
+          indicator-color="primary"
+          align="left"
+        >
+          <q-tab name="services" :label="$text('accounts.tab_services')" />
+          <q-tab name="plugins" :label="$text('accounts.tab_plugins')" />
+        </q-tabs>
+        <q-separator />
+
+        <q-tab-panels v-model="activeTab" animated class="accounts-dialog__panels">
+          <q-tab-panel name="services" class="q-pa-md">
         <!-- CO21 Account -->
         <q-list class="rounded-borders">
           <q-item-label header class="text-weight-bold text-subtitle1">
@@ -169,6 +184,30 @@
             </q-item-section>
           </q-item>
         </q-list>
+          </q-tab-panel>
+
+          <q-tab-panel name="plugins" class="q-pa-md">
+            <q-list class="rounded-borders">
+              <q-item tag="label">
+                <q-item-section avatar>
+                  <q-avatar color="teal-8" text-color="white" icon="extension" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ $text('accounts.plugins_title') }}</q-item-label>
+                  <q-item-label caption>{{ pluginsCaption }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-toggle
+                    v-model="pluginsSyncEnabled"
+                    color="teal-8"
+                    :disable="pluginsSyncSaving"
+                    @update:model-value="onPluginsSyncToggle"
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card-section>
 
       <!-- Google Config sub-view -->
@@ -200,6 +239,10 @@ import {
   loadMeteoSyncEnabled,
   saveMeteoSyncEnabled,
 } from 'src/modules/time/meteoSyncSettings';
+import {
+  loadPluginsSyncEnabled,
+  savePluginsSyncEnabled,
+} from 'src/modules/plugins/pluginSyncSettings';
 import { OPEN_METEO_FORECAST_API } from 'src/modules/time/meteoService';
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -217,6 +260,7 @@ const user = UserStoreController();
 const showEmailInput = ref(false);
 const showPasswordInput = ref(false);
 const showGoogleConfig = ref(false);
+const activeTab = ref<'services' | 'plugins'>('services');
 const emailDraft = ref('');
 const passwordDraft = ref('');
 const holidaySyncEnabled = ref(true);
@@ -225,6 +269,8 @@ const clockSyncEnabled = ref(true);
 const clockSyncSaving = ref(false);
 const meteoSyncEnabled = ref(false);
 const meteoSyncSaving = ref(false);
+const pluginsSyncEnabled = ref(false);
+const pluginsSyncSaving = ref(false);
 
 const nagerHolidaysCaption = computed(() =>
   $text('accounts.nager_holidays_desc')
@@ -237,6 +283,8 @@ const meteoCaption = computed(() =>
 );
 
 const clockCaption = computed(() => $text('accounts.clock_desc'));
+
+const pluginsCaption = computed(() => $text('accounts.plugins_desc'));
 
 const identifier = computed(() => user.identifier);
 const identifierType = computed(() => user.identifierType);
@@ -255,11 +303,13 @@ watch(dialogVisible, async (open) => {
     holidaySyncEnabled.value = await loadHolidaySyncEnabled();
     clockSyncEnabled.value = await loadClockSyncEnabled();
     meteoSyncEnabled.value = await loadMeteoSyncEnabled();
+    pluginsSyncEnabled.value = await loadPluginsSyncEnabled();
   }
   if (!open) {
     showEmailInput.value = false;
     showPasswordInput.value = false;
     showGoogleConfig.value = false;
+    activeTab.value = 'services';
   }
 });
 
@@ -353,11 +403,37 @@ async function onMeteoSyncToggle(enabled: boolean) {
     meteoSyncSaving.value = false;
   }
 }
+
+async function onPluginsSyncToggle(enabled: boolean) {
+  pluginsSyncSaving.value = true;
+  try {
+    const ok = await savePluginsSyncEnabled(enabled);
+    if (!ok) pluginsSyncEnabled.value = !enabled;
+  } finally {
+    pluginsSyncSaving.value = false;
+  }
+}
 </script>
 
 <style scoped>
 .accounts-dialog {
   display: flex;
   flex-direction: column;
+}
+
+.accounts-dialog__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.accounts-dialog__tabs {
+  padding: 0 12px;
+}
+
+.accounts-dialog__panels {
+  flex: 1;
+  min-height: 0;
 }
 </style>
