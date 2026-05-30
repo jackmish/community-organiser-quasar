@@ -130,7 +130,8 @@
                           : '')
                       "
                       :background="`blur(60px) ${overlayColorForMonth(day)[0]}`"
-                      color="#00000085"
+                      :color="overlayColorForMonth(day)[1]"
+                      text-blend-mode="normal"
                       justifyContent="flex-start"
                       class="calendar-month-label-above"
                       size="small"

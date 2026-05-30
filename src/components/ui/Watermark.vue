@@ -6,7 +6,7 @@
   ]" :title="resolveLabel()" :style="{ justifyContent: resolveJustify() }" aria-hidden="true">
     <div v-if="resolveBackgroundStyle()" ref="bgEl" class="co21-watermark-bg"
       :style="bgFinalStyle || resolveBackgroundStyle()"></div>
-    <div ref="textEl" class="co21-watermark-text" :style="{ color: resolveTextColor() }">
+    <div ref="textEl" class="co21-watermark-text" :style="textInlineStyle">
       {{ resolveLabel() }}
     </div>
   </div>
@@ -14,8 +14,8 @@
 
 <script setup lang="ts">
 defineOptions({ name: "Co21Watermark" });
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
-import type { Ref } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import type { CSSProperties, Ref } from "vue";
 
 const props = defineProps<{
   activeGroup?: unknown;
@@ -24,12 +24,22 @@ const props = defineProps<{
   justifyContent?: string | Ref<string>;
   background?: string | Ref<string>;
   size?: string | Ref<string>;
+  /** Override label text mix-blend-mode (calendar passes `normal`). */
+  textBlendMode?: string;
   /**
    * When true (default for size=large), keep watermark out of LCP until the user
    * interacts — avoids late LCP when activeGroup label arrives after storage load.
    */
   deferUntilInteraction?: boolean;
 }>();
+
+const textInlineStyle = computed((): CSSProperties => {
+  const style: CSSProperties = { color: resolveTextColor() };
+  if (props.textBlendMode) {
+    style.mixBlendMode = props.textBlendMode as CSSProperties['mixBlendMode'];
+  }
+  return style;
+});
 
 const rootEl = ref<HTMLElement | null>(null);
 const textEl = ref<HTMLElement | null>(null);
