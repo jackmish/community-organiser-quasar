@@ -66,13 +66,6 @@
               <tr
                 v-for="(week, weekIndex) in allCalendarWeeks"
                 :key="'week-' + weekIndex"
-                :class="{
-                  'new-month-week': shouldWeekHaveMargin(
-                    week,
-                    weekIndex,
-                    allCalendarWeeks
-                  ),
-                }"
               >
                 <td class="calendar-nav-col calendar-nav-col--before">
                   <q-btn
@@ -1503,14 +1496,6 @@ function getWeekLabel(dayDate: string) {
   }
 
   return null;
-}
-
-function shouldWeekHaveMargin(week: string[], weekIndex: number, allWeeks: string[][]) {
-  if (weekIndex === 0) return false;
-  const firstDayOfWeek = parseDay(week[0]!);
-  const prevWeek = allWeeks[weekIndex - 1]!;
-  const lastDayOfPrevWeek = new Date(prevWeek[prevWeek.length - 1]!);
-  return firstDayOfWeek.getMonth() !== lastDayOfPrevWeek.getMonth();
 }
 
 function isNewMonthStart(
