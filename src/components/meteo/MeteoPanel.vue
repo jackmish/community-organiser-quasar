@@ -40,7 +40,7 @@
     </div>
 
     <template v-else-if="snapshot">
-      <div class="row q-col-gutter-md meteo-panel__now-row">
+      <div class="row q-col-gutter-lg meteo-panel__now-row">
         <div class="col-12 col-sm-auto meteo-panel__now">
           <div class="row items-center no-wrap meteo-panel__now-main" style="gap: 12px">
             <q-icon :name="weatherIcon" size="42px" class="meteo-panel__now-icon" />
@@ -522,7 +522,7 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__now-row {
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 
@@ -744,10 +744,20 @@ onBeforeUnmount(() => {
   margin-top: 10px;
 }
 
+@media (min-width: 600px) {
+  .meteo-panel__day {
+    margin-left: auto;
+    margin-right: auto;
+    width: fit-content;
+    max-width: 100%;
+  }
+}
+
 .meteo-panel__day-title {
   opacity: 0.9;
   margin-bottom: 2px;
   line-height: 1.2;
+  text-align: center;
 }
 
 .meteo-panel__hours {
