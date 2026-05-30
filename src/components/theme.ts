@@ -5,7 +5,10 @@ import {
   GROUP_DEFAULT_BACKGROUND,
   GROUP_DEFAULT_TEXT_COLOR,
 } from 'src/modules/group/constants/groupPaletteColors';
-import { readGroupBackgroundFields } from 'src/modules/group/utils/groupBackground';
+import {
+  isGroupCalendarColorizeActive,
+  readGroupBackgroundFields,
+} from 'src/modules/group/utils/groupBackground';
 import {
   blendHex,
   darkenHex,
@@ -187,7 +190,7 @@ const CALENDAR_PRIMARY = '#1976d2';
 const LEGACY_MONTH_OVERLAY_STOPS: ReadonlyArray<readonly [string, string]> = [
   ['#ffffff', '#fff'],
   ['#4cafe0', '#000'],
-  ['#9ff800', '#fff'],
+  ['#9ff800', '#000'],
   ['#ff9800', '#fff'],
   ['#9c27b0', '#fff'],
   ['#009688', '#fff'],
@@ -204,22 +207,20 @@ export function buildCalendarColorizeTones(groupHex: string): CalendarColorizeTo
   return { bright, alternate };
 }
 
-export function calendarBandColorForOffset(
-  offset: number,
-  tones: CalendarColorizeTones,
-): string {
+export function calendarBandColorForOffset(offset: number, tones: CalendarColorizeTones): string {
   return offset % 2 === 0 ? tones.bright : tones.alternate;
 }
 
 export function resolveCalendarTheme(
   group: Record<string, unknown> | null | undefined,
 ): CalendarThemeOptions {
-  const { calendarColorize, color, textColor } = readGroupBackgroundFields(group);
+  const { color, textColor } = readGroupBackgroundFields(group);
+  const colorize = isGroupCalendarColorizeActive(group);
   return {
-    colorize: calendarColorize,
+    colorize,
     groupColor: color,
     groupTextColor: textColor,
-    colorizeTones: calendarColorize ? buildCalendarColorizeTones(color) : null,
+    colorizeTones: colorize ? buildCalendarColorizeTones(color) : null,
   };
 }
 
@@ -278,9 +279,10 @@ export function getCalendarChromeBarStyle(theme?: CalendarThemeOptions): Record<
 }
 
 /** Group color for today / prev / next / pagination controls when colorize is on. */
-export function getCalendarControlColors(
-  theme?: CalendarThemeOptions,
-): { backgroundColor: string; color: string } {
+export function getCalendarControlColors(theme?: CalendarThemeOptions): {
+  backgroundColor: string;
+  color: string;
+} {
   if (!theme?.colorize) {
     return { backgroundColor: CALENDAR_PRIMARY, color: '#ffffff' };
   }
@@ -297,10 +299,12 @@ const CALENDAR_WEEKEND_HIGHLIGHT_ALPHA = 0.34;
 function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, string> {
   const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
   const groupText = theme.groupTextColor || getContrastColor(g);
-  const tones =
-    theme.colorizeTones ?? buildCalendarColorizeTones(g);
+  const tones = theme.colorizeTones ?? buildCalendarColorizeTones(g);
   return {
-    '--cal-weekday-bg': hexToRgba(blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT), 0.96),
+    '--cal-weekday-bg': hexToRgba(
+      blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT),
+      0.96,
+    ),
     '--cal-weekday-alt-bg': hexToRgba(
       blendHex('#f7f7f7', tones.alternate, CALENDAR_WEEKDAY_TH_TINT),
       0.96,

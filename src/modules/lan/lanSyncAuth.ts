@@ -56,6 +56,7 @@ export type LanSyncGroupPayload = {
   icon?: string;
   textColor?: string;
   backgroundImage?: string;
+  layoutColorize?: boolean;
   backgroundColorize?: boolean;
   calendarColorize?: boolean;
   parentId?: string | null;

@@ -82,7 +82,6 @@ export function useGroupPageBackground(
           ? {
               ...group,
               backgroundImage: displayUrl,
-              backgroundColorize: fields.backgroundColorize,
             }
           : null,
       ),

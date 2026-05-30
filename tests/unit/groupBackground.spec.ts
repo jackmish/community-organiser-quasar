@@ -28,6 +28,7 @@ describe('groupBackground', () => {
     const state = resolveGroupBackground({
       id: 'g-test',
       color: '#e91e63',
+      layoutColorize: true,
       backgroundColorize: true,
     });
     const bundle = groupBackgroundLayerBundle(state);
@@ -35,6 +36,16 @@ describe('groupBackground', () => {
     expect(bundle.wash?.backgroundColor).toContain('rgba');
     expect(bundle.photo.filter).toContain('hue-rotate');
     expect(bundle.photo.backgroundImage).toContain('bg_04');
+  });
+
+  it('does not tint background when only bg flag is set without layout', () => {
+    const state = resolveGroupBackground({
+      id: 'g-test',
+      layoutColorize: false,
+      backgroundColorize: true,
+      color: '#e91e63',
+    });
+    expect(state.colorize).toBe(false);
   });
 
   it('does not tint custom image when colorize is off', () => {
@@ -57,6 +68,7 @@ describe('groupBackground', () => {
     const state = resolveGroupBackground({
       id: 'g-test',
       backgroundImage: 'data:image/png;base64,abc',
+      layoutColorize: true,
       backgroundColorize: true,
       color: '#e91e63',
     });

@@ -339,14 +339,23 @@
           @click="clearBackgroundImage"
         />
         <q-checkbox
-          v-model="localBackgroundColorize"
-          :label="$text('label.colorize_group_background')"
+          v-model="localLayoutColorize"
+          :label="$text('label.colorize_group_layout')"
           dense
         />
         <q-checkbox
+          v-if="localLayoutColorize"
+          v-model="localBgColorize"
+          :label="$text('label.colorize_group_bg')"
+          dense
+          class="q-ml-lg"
+        />
+        <q-checkbox
+          v-if="localLayoutColorize"
           v-model="localCalendarColorize"
           :label="$text('label.colorize_group_calendar')"
           dense
+          class="q-ml-lg"
         />
         <div class="gm-bg-preview" :title="$text('label.group_background_preview')">
           <div class="gm-bg-preview__photo" :style="bgPreviewPhotoStyle" />
@@ -528,8 +537,9 @@ const localHideTasksInParent = ref(false);
 const localShortcut = ref(false);
 const localTextColor = ref(GROUP_DEFAULT_TEXT_COLOR);
 const localBackgroundImage = ref<string | null>(null);
-const localBackgroundColorize = ref(false);
-const localCalendarColorize = ref(false);
+const localLayoutColorize = ref(false);
+const localBgColorize = ref(true);
+const localCalendarColorize = ref(true);
 const bgImageInput = ref<HTMLInputElement | null>(null);
 
 const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
@@ -539,7 +549,8 @@ const bgPreviewBundle = computed(() =>
     resolveGroupBackground({
       id: props.editingGroupId || '__preview',
       backgroundImage: localBackgroundImage.value,
-      backgroundColorize: localBackgroundColorize.value,
+      layoutColorize: localLayoutColorize.value,
+      backgroundColorize: localBgColorize.value,
       color: localColor.value,
     }),
   ),
@@ -768,8 +779,9 @@ watch(
       localShortcut.value = false;
       localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
       localBackgroundImage.value = null;
-      localBackgroundColorize.value = false;
-  localCalendarColorize.value = false;
+      localLayoutColorize.value = false;
+      localBgColorize.value = true;
+      localCalendarColorize.value = true;
       return;
     }
     try {
@@ -813,7 +825,8 @@ watch(
         localHideTasksInParent.value = Boolean(src.hideTasksFromParent);
         localShortcut.value = Boolean(src.shortcut);
         const bg = readGroupBackgroundFields(src);
-        localBackgroundColorize.value = bg.backgroundColorize;
+        localLayoutColorize.value = bg.layoutColorize;
+        localBgColorize.value = bg.backgroundColorize;
         localCalendarColorize.value = bg.calendarColorize;
         void resolveGroupBackgroundDisplayUrl(bg.backgroundImage).then((url) => {
           localBackgroundImage.value = url;
@@ -832,10 +845,21 @@ function pickBackgroundImage() {
 
 function clearBackgroundImage() {
   localBackgroundImage.value = null;
-  localBackgroundColorize.value = false;
+  localLayoutColorize.value = false;
+  localBgColorize.value = false;
   localCalendarColorize.value = false;
   if (bgImageInput.value) bgImageInput.value.value = "";
 }
+
+watch(localLayoutColorize, (on, prev) => {
+  if (!on) {
+    localBgColorize.value = false;
+    localCalendarColorize.value = false;
+  } else if (!prev) {
+    localBgColorize.value = true;
+    localCalendarColorize.value = true;
+  }
+});
 
 function onBackgroundImageSelected(ev: Event) {
   const input = ev.target as HTMLInputElement | null;
@@ -921,8 +945,9 @@ function onSubmit() {
     hideTasksFromParent: localHideTasksInParent.value,
     shortcut: localShortcut.value,
     backgroundImage: localBackgroundImage.value || null,
-    backgroundColorize: localBackgroundColorize.value,
-    calendarColorize: localCalendarColorize.value,
+    layoutColorize: localLayoutColorize.value,
+    backgroundColorize: localLayoutColorize.value && localBgColorize.value,
+    calendarColorize: localLayoutColorize.value && localCalendarColorize.value,
   };
   if (!payload.name) return;
   emit("submit", payload);

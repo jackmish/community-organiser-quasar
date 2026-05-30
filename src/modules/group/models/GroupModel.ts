@@ -1,5 +1,6 @@
 import { BaseModel } from 'src/types/BaseModel';
 import type { RoleData } from 'src/modules/storage/sync/RoleModel';
+import { readGroupBackgroundFields } from 'src/modules/group/utils/groupBackground';
 
 export class GroupModel extends BaseModel {
   name: string;
@@ -10,6 +11,7 @@ export class GroupModel extends BaseModel {
   icon: string | undefined;
   textColor?: string | undefined;
   backgroundImage?: string | undefined;
+  layoutColorize?: boolean | undefined;
   backgroundColorize?: boolean | undefined;
   calendarColorize?: boolean | undefined;
   parentId: string | undefined;
@@ -34,12 +36,10 @@ export class GroupModel extends BaseModel {
     this.textColor = (data as any).textColor ?? (data as any).text_color;
     this.backgroundImage =
       (data as any).backgroundImage ?? (data as any).background_image;
-    this.backgroundColorize = Boolean(
-      (data as any).backgroundColorize ?? (data as any).background_colorize,
-    );
-    this.calendarColorize = Boolean(
-      (data as any).calendarColorize ?? (data as any).calendar_colorize,
-    );
+    const bgFields = readGroupBackgroundFields(data as Record<string, unknown>);
+    this.layoutColorize = bgFields.layoutColorize;
+    this.backgroundColorize = bgFields.backgroundColorize;
+    this.calendarColorize = bgFields.calendarColorize;
     // Normalize parent relationship: accept both camelCase and snake_case from legacy data.
     // `parentId` is canonical going forward.
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
@@ -59,6 +59,7 @@ export class GroupModel extends BaseModel {
       icon: this.icon,
       ...(this.textColor ? { textColor: this.textColor } : {}),
       ...(this.backgroundImage ? { backgroundImage: this.backgroundImage } : {}),
+      ...(this.layoutColorize ? { layoutColorize: this.layoutColorize } : {}),
       ...(this.backgroundColorize ? { backgroundColorize: this.backgroundColorize } : {}),
       ...(this.calendarColorize ? { calendarColorize: this.calendarColorize } : {}),
       parentId: this.parentId,

@@ -19,6 +19,7 @@ export type CreateGroupInput = {
   shortcut?: boolean | undefined;
   textColor?: string | undefined;
   backgroundImage?: string | undefined;
+  layoutColorize?: boolean | undefined;
   backgroundColorize?: boolean | undefined;
   calendarColorize?: boolean | undefined;
 };
@@ -34,6 +35,7 @@ export function addGroup(organiserData: OrganiserData | any[], payload: CreateGr
     shortcut,
     textColor,
     backgroundImage,
+    layoutColorize,
     backgroundColorize,
     calendarColorize,
   } = payload;
@@ -47,6 +49,7 @@ export function addGroup(organiserData: OrganiserData | any[], payload: CreateGr
     ...(icon && { icon }),
     ...(textColor && { textColor }),
     ...(backgroundImage && { backgroundImage }),
+    ...(typeof layoutColorize === 'boolean' ? { layoutColorize } : {}),
     ...(typeof backgroundColorize === 'boolean' ? { backgroundColorize } : {}),
     ...(typeof calendarColorize === 'boolean' ? { calendarColorize } : {}),
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),

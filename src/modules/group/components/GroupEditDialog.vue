@@ -89,6 +89,9 @@ async function handleSubmit(payload: any) {
         ...(typeof payload.shareSubgroups === 'boolean' ? { shareSubgroups: payload.shareSubgroups } : {}),
         ...(typeof payload.hideTasksFromParent === 'boolean' ? { hideTasksFromParent: payload.hideTasksFromParent } : {}),
         ...(typeof payload.shortcut === 'boolean' ? { shortcut: payload.shortcut } : {}),
+        ...(typeof payload.layoutColorize === 'boolean'
+          ? { layoutColorize: payload.layoutColorize }
+          : {}),
         ...(typeof payload.backgroundColorize === 'boolean'
           ? { backgroundColorize: payload.backgroundColorize }
           : {}),
@@ -122,6 +125,9 @@ async function handleSubmit(payload: any) {
         hideTasksFromParent: payload.hideTasksFromParent,
         shortcut: payload.shortcut,
         ...(payload.backgroundImage ? { backgroundImage: payload.backgroundImage } : {}),
+        ...(typeof payload.layoutColorize === 'boolean'
+          ? { layoutColorize: payload.layoutColorize }
+          : {}),
         ...(typeof payload.backgroundColorize === 'boolean'
           ? { backgroundColorize: payload.backgroundColorize }
           : {}),

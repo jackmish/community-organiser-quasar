@@ -12,6 +12,7 @@ import { isHexBright } from 'src/utils/colorUtils';
 describe('calendar theme', () => {
   it('resolveCalendarTheme builds two tones when colorize is on', () => {
     const t = resolveCalendarTheme({
+      layoutColorize: true,
       calendarColorize: true,
       color: '#1976d2',
       textColor: '#ffffff',
@@ -55,6 +56,7 @@ describe('calendar theme', () => {
   it('colorize exposes grid CSS variables from group color', () => {
     const vars = getCalendarCssVariables(
       resolveCalendarTheme({
+        layoutColorize: true,
         calendarColorize: true,
         color: '#2e7d32',
       }),
@@ -64,6 +66,16 @@ describe('calendar theme', () => {
     expect(vars['--cal-selected-day-fg']).toBeDefined();
     expect(vars['--cal-today-column-bg']).toContain('rgba');
     expect(vars['--cal-day-bg']).toContain('255');
+  });
+
+  it('does not colorize calendar when only calendar flag is set', () => {
+    const t = resolveCalendarTheme({
+      layoutColorize: false,
+      calendarColorize: true,
+      color: '#1976d2',
+    });
+    expect(t.colorize).toBe(false);
+    expect(t.colorizeTones).toBeNull();
   });
 
   it('legacy palette when colorize is off', () => {

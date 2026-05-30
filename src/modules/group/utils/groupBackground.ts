@@ -32,6 +32,7 @@ export type GroupBackgroundState = {
 
 export function readGroupBackgroundFields(group: Record<string, unknown> | null | undefined): {
   backgroundImage: string | null;
+  layoutColorize: boolean;
   backgroundColorize: boolean;
   calendarColorize: boolean;
   color: string;
@@ -40,6 +41,7 @@ export function readGroupBackgroundFields(group: Record<string, unknown> | null 
   if (!group) {
     return {
       backgroundImage: null,
+      layoutColorize: false,
       backgroundColorize: false,
       calendarColorize: false,
       color: GROUP_DEFAULT_BACKGROUND,
@@ -48,25 +50,59 @@ export function readGroupBackgroundFields(group: Record<string, unknown> | null 
   }
   const rawImg = group.backgroundImage ?? group.background_image;
   const backgroundImage = typeof rawImg === 'string' && rawImg.trim() ? rawImg.trim() : null;
-  const backgroundColorize = Boolean(group.backgroundColorize ?? group.background_colorize);
-  const calendarColorize = Boolean(group.calendarColorize ?? group.calendar_colorize);
+  const legacyBg = group.backgroundColorize ?? group.background_colorize;
+  const legacyCal = group.calendarColorize ?? group.calendar_colorize;
+  const layoutRaw = group.layoutColorize ?? group.layout_colorize;
+  const layoutColorize =
+    layoutRaw !== undefined && layoutRaw !== null
+      ? Boolean(layoutRaw)
+      : Boolean(legacyBg) || Boolean(legacyCal);
+  const bgRaw = group.backgroundColorize ?? group.background_colorize;
+  const backgroundColorize =
+    bgRaw !== undefined && bgRaw !== null ? Boolean(bgRaw) : layoutColorize;
+  const calRaw = group.calendarColorize ?? group.calendar_colorize;
+  const calendarColorize =
+    calRaw !== undefined && calRaw !== null ? Boolean(calRaw) : layoutColorize;
   const color =
     typeof group.color === 'string' && group.color ? group.color : GROUP_DEFAULT_BACKGROUND;
   const rawText = group.textColor ?? group.text_color;
   const textColor =
     typeof rawText === 'string' && rawText.trim() ? rawText.trim() : GROUP_DEFAULT_TEXT_COLOR;
-  return { backgroundImage, backgroundColorize, calendarColorize, color, textColor };
+  return {
+    backgroundImage,
+    layoutColorize,
+    backgroundColorize,
+    calendarColorize,
+    color,
+    textColor,
+  };
+}
+
+/** Background image tint when layout colorize and bg colorize are enabled. */
+export function isGroupBackgroundColorizeActive(
+  group: Record<string, unknown> | null | undefined,
+): boolean {
+  const { layoutColorize, backgroundColorize } = readGroupBackgroundFields(group);
+  return layoutColorize && backgroundColorize;
+}
+
+/** Calendar tint applies only when layout colorize and calendar colorize are enabled. */
+export function isGroupCalendarColorizeActive(
+  group: Record<string, unknown> | null | undefined,
+): boolean {
+  const { layoutColorize, calendarColorize } = readGroupBackgroundFields(group);
+  return layoutColorize && calendarColorize;
 }
 
 export function resolveGroupBackground(
   group: Record<string, unknown> | null | undefined,
   month?: number,
 ): GroupBackgroundState {
-  const { backgroundImage, backgroundColorize } = readGroupBackgroundFields(group);
+  const { backgroundImage } = readGroupBackgroundFields(group);
   return {
     imageUrl: backgroundImage,
     color: pageBackgroundAccentColor(group),
-    colorize: backgroundColorize,
+    colorize: isGroupBackgroundColorizeActive(group),
     fallbackImageUrl: getMonthBackgroundUrl(month),
   };
 }
