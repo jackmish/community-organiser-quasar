@@ -439,10 +439,7 @@ $calendar-nav-col-width: 122px;
 .bottom-row,
 .top-row {
   padding: 10px;
-  // background: rgba(255, 255, 255, 0.6);
-  // background-color: rgba(156, 169, 32, 1);
-  // background-color: $opposite-color;
-  background-color: $highlight;
+  /* background: set inline from active group wash (CalendarView) */
   margin-top: 20px;
   margin-bottom: 20px;
   position: relative;

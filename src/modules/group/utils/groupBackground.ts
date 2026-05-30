@@ -236,9 +236,9 @@ export function groupColorOverlayOpacity(hex: string): number {
   const vivid = tintVividness(hex);
   const neutral = neutralWashStrength(hex);
   if (neutral >= 0.5) {
-    return 0.74 + hexRelativeLuminance(hex) * 0.22;
+    return 0.04 + hexRelativeLuminance(hex) * 0.22;
   }
-  return 0.22 + vivid * 0.38;
+  return 0.02 + vivid * 0.38;
 }
 
 export function groupBackgroundWashStyle(hex: string): Record<string, string> {

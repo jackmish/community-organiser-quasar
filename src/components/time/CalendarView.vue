@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Quick Date Buttons and Next button (moved to top) -->
-    <div class="top-row row items-center">
+    <div class="top-row row items-center" :style="calendarChromeBarStyle">
       <div class="col">
         <div class="calendar-month-btns">
           <q-btn
@@ -263,7 +263,7 @@
     </div>
   </div>
   <!-- Visible days per page -->
-  <div class="bottom-row row q-mb-md items-center">
+  <div class="bottom-row row q-mb-md items-center" :style="calendarChromeBarStyle">
     <div class="col pagination-range-options">
       <div class="visible-days-control">
         <span class="visible-days-label text-subtitle2">{{
@@ -324,6 +324,10 @@ import {
   priorityTextColor as themePriorityTextColor,
   getOverlayColorForMonth,
 } from "../theme";
+import {
+  groupBackgroundWashStyle,
+  pageBackgroundAccentColor,
+} from "src/modules/group/utils/groupBackground";
 import Watermark from "src/components/ui/Watermark.vue";
 
 const props = defineProps<{
@@ -1314,6 +1318,20 @@ const nextSixMonths = computed(() => {
   }
 
   return months;
+});
+
+/** Top/bottom chrome bars: same tinted wash as the page background. */
+const calendarChromeBarStyle = computed(() => {
+  try {
+    const gid = CC.group.active.activeGroup.value?.value ?? null;
+    const list = CC.group.list.all.value ?? [];
+    const group = gid
+      ? (list.find((g: any) => String(g?.id) === String(gid)) as Record<string, unknown> | undefined)
+      : undefined;
+    return groupBackgroundWashStyle(pageBackgroundAccentColor(group ?? null));
+  } catch {
+    return groupBackgroundWashStyle(pageBackgroundAccentColor(null));
+  }
 });
 
 // Button colors derived from getOverlayColorForMonth so they match calendar overlays
