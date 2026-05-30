@@ -288,9 +288,47 @@ export function getCalendarControlColors(
   return { backgroundColor: g, color: getContrastColor(g) };
 }
 
-/**
- * CSS variables for chrome rows and controls only (not day cells — avoids muddy overlays).
- */
+/** Weekday cell / header tint toward group (Mon–Fri base). */
+const CALENDAR_WEEKDAY_SURFACE_TINT = 0.22;
+
+/** Weekday `th` background tint (more visible than cells). */
+const CALENDAR_WEEKDAY_TH_TINT = 0.38;
+
+/** Weekend / holiday cell wash over day background. */
+const CALENDAR_WEEKEND_HIGHLIGHT_ALPHA = 0.34;
+
+function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, string> {
+  const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  const groupText = theme.groupTextColor || getContrastColor(g);
+  const tones =
+    theme.colorizeTones ?? buildCalendarColorizeTones(g);
+  const holidayLabelFg = getContrastColor(g);
+  const holidayPillBg = isHexBright(g)
+    ? darkenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP * 1.2)
+    : lightenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP);
+
+  return {
+    '--cal-weekday-bg': hexToRgba(blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT), 0.96),
+    '--cal-weekday-alt-bg': hexToRgba(
+      blendHex('#f7f7f7', tones.alternate, CALENDAR_WEEKDAY_TH_TINT),
+      0.96,
+    ),
+    '--cal-weekend-th-bg': g,
+    '--cal-weekend-th-fg': getContrastColor(g),
+    '--cal-weekend-highlight': hexToRgba(g, CALENDAR_WEEKEND_HIGHLIGHT_ALPHA),
+    '--cal-today-column-bg': hexToRgba(g, 0.28),
+    '--cal-day-bg': hexToRgba(blendHex('#ffffff', g, CALENDAR_WEEKDAY_SURFACE_TINT), 0.92),
+    '--cal-past-day-bg': hexToRgba(blendHex('#ffffff', g, 0.1), 0.82),
+    '--cal-selected-bg': g,
+    '--cal-selected-fg': getContrastColor(g),
+    '--cal-selected-day-fg': groupText,
+    '--cal-holiday-label-bg': g,
+    '--cal-holiday-label-fg': holidayLabelFg,
+    '--cal-holiday-pill-bg': holidayPillBg,
+    '--cal-holiday-pill-fg': getContrastColor(holidayPillBg),
+  };
+}
+
 export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<string, string> {
   if (!theme?.colorize) return {};
   const control = getCalendarControlColors(theme);
@@ -301,5 +339,6 @@ export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<st
     '--cal-nav-btn-fg': control.color,
     '--cal-pagination-bg': control.backgroundColor,
     '--cal-pagination-fg': control.color,
+    ...calendarGridCssVariables(theme),
   };
 }

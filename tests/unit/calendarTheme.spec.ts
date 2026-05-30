@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCalendarColorizeTones,
   calendarBandColorForOffset,
+  getCalendarCssVariables,
   getOverlayColorForMonth,
   monthOffsetFromToday,
   resolveCalendarTheme,
@@ -49,6 +50,21 @@ describe('calendar theme', () => {
       return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255);
     };
     expect(sum(tones.alternate)).toBeLessThan(sum(tones.bright));
+  });
+
+  it('colorize exposes grid CSS variables from group color', () => {
+    const vars = getCalendarCssVariables(
+      resolveCalendarTheme({
+        calendarColorize: true,
+        color: '#2e7d32',
+      }),
+    );
+    expect(vars['--cal-weekend-th-bg']).toBe('#2e7d32');
+    expect(vars['--cal-selected-bg']).toBe('#2e7d32');
+    expect(vars['--cal-selected-day-fg']).toBeDefined();
+    expect(vars['--cal-today-column-bg']).toContain('rgba');
+    expect(vars['--cal-day-bg']).toContain('rgba');
+    expect(vars['--cal-holiday-label-bg']).toBe('#2e7d32');
   });
 
   it('legacy palette when colorize is off', () => {

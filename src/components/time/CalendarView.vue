@@ -1674,5 +1674,31 @@ function getEventsForDay(day: string) {
     background-color: var(--cal-pagination-bg) !important;
     color: var(--cal-pagination-fg) !important;
   }
+
+  .calendar-table th.calendar-weekday-th:not(.calendar-weekend-th) {
+    background: var(--cal-weekday-bg) !important;
+  }
+
+  .calendar-table th.calendar-weekday-th--alt:not(.calendar-weekend-th) {
+    background: var(--cal-weekday-alt-bg) !important;
+  }
+
+  td.calendar-today-column {
+    background-color: var(--cal-today-column-bg) !important;
+  }
+
+  .calendar-day-btn.calendar-weekend::before,
+  .calendar-day-btn.calendar-holiday::before {
+    background-color: var(--cal-weekend-highlight) !important;
+  }
+
+  .calendar-day-btn.calendar-selected {
+    background-color: var(--cal-selected-bg) !important;
+    color: var(--cal-selected-fg) !important;
+
+    .calendar-day-number {
+      color: var(--cal-selected-day-fg) !important;
+    }
+  }
 }
 </style>
