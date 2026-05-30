@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="meteoEnabled"
-    class="meteo-panel q-px-sm q-py-sm"
+    class="meteo-panel q-px-sm q-pb-sm"
     :class="{ 'meteo-panel--colorize': panelTheme.colorize }"
     :style="panelStyle"
   >
@@ -16,6 +16,20 @@
       :aria-label="$text('meteo.refresh')"
       @click="void loadForecast(true)"
     />
+    <q-btn
+      flat
+      dense
+      round
+      icon="my_location"
+      class="meteo-panel__gps-btn"
+      :style="{ color: panelTheme.fg }"
+      :loading="gpsLoading"
+      :disable="locationSaving || loading"
+      :aria-label="$text('meteo.location_gps')"
+      @click="void useDeviceLocation()"
+    >
+      <q-tooltip>{{ $text('meteo.location_gps') }}</q-tooltip>
+    </q-btn>
 
     <div v-if="loading && !snapshot" class="text-caption meteo-panel__muted q-mt-sm">
       <q-spinner size="14px" class="q-mr-xs" />
@@ -84,42 +98,32 @@
             </template>
           </q-select>
 
-          <div class="row items-center q-mt-xs meteo-panel__location-actions justify-center" style="gap: 6px">
-            <q-btn
-              v-for="loc in recentLocations"
-              :key="locationKey(loc)"
-              no-caps
-              unelevated
-              class="co21-field-btn meteo-panel__recent-btn"
-              :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
-              :style="locationFieldStyle"
-              :label="locationCityName(loc.name)"
-              :disable="locationSaving || loading"
-              @click="void applyLocation(loc)"
-            />
-            <q-btn
-              dense
-              round
-              flat
-              icon="my_location"
-              size="sm"
-              :style="{ color: panelTheme.fg }"
-              :loading="gpsLoading"
-              :disable="locationSaving || loading"
-              :aria-label="$text('meteo.location_gps')"
-              @click="void useDeviceLocation()"
-            >
-              <q-tooltip>{{ $text('meteo.location_gps') }}</q-tooltip>
-            </q-btn>
+          <div class="meteo-panel__location-actions">
+            <div class="meteo-panel__recent-scroll meteo-panel__nice-scroll">
+              <div class="meteo-panel__recent-list">
+                <q-btn
+                  v-for="loc in recentLocations"
+                  :key="locationKey(loc)"
+                  no-caps
+                  unelevated
+                  class="co21-field-btn meteo-panel__recent-btn"
+                  :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
+                  :style="locationFieldStyle"
+                  :label="locationCityName(loc.name)"
+                  :disable="locationSaving || loading"
+                  @click="void applyLocation(loc)"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div v-for="day in snapshot.days" :key="day.date" class="meteo-panel__day q-mt-md">
-        <div class="text-caption text-weight-bold meteo-panel__day-title q-mb-xs">
+      <div v-for="day in snapshot.days" :key="day.date" class="meteo-panel__day">
+        <div class="text-caption text-weight-bold meteo-panel__day-title">
           {{ dayLabel(day) }}
         </div>
-        <div class="meteo-panel__hours">
+        <div class="meteo-panel__hours meteo-panel__nice-scroll meteo-panel__nice-scroll--horizontal">
           <div
             v-for="slot in day.hours"
             :key="slot.time"
@@ -485,12 +489,28 @@ onBeforeUnmount(() => {
 <style scoped>
 .meteo-panel {
   position: relative;
+  --meteo-panel-inset: 24px;
+  padding-top: var(--meteo-panel-inset);
+  --meteo-scroll-thumb: rgba(255, 255, 255, 0.32);
+  --meteo-scroll-thumb-hover: rgba(255, 255, 255, 0.5);
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0 0 8px 8px;
   color: var(--meteo-panel-fg, #ffffff);
 }
 
+.meteo-panel--colorize {
+  --meteo-scroll-thumb: rgba(0, 0, 0, 0.24);
+  --meteo-scroll-thumb-hover: rgba(0, 0, 0, 0.38);
+}
+
 .meteo-panel__refresh-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+}
+
+.meteo-panel__gps-btn {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -502,7 +522,7 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__now-row {
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
@@ -617,7 +637,60 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__location-actions {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.meteo-panel__recent-scroll {
+  width: 100%;
+  /* 2 button rows + row gap + vertical padding (border-box) */
+  max-height: calc(42px * 2 + 6px + 10px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 5px 4px;
+  box-sizing: border-box;
+}
+
+.meteo-panel__recent-list {
+  display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.meteo-panel__nice-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--meteo-scroll-thumb) transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.meteo-panel__nice-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.meteo-panel__nice-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.meteo-panel__nice-scroll::-webkit-scrollbar-thumb {
+  background: var(--meteo-scroll-thumb);
+  border-radius: 999px;
+}
+
+.meteo-panel__nice-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--meteo-scroll-thumb-hover);
+}
+
+.meteo-panel__nice-scroll--horizontal {
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+}
+
+.meteo-panel__nice-scroll--horizontal .meteo-panel__hour {
+  scroll-snap-align: start;
 }
 
 .meteo-panel__recent-btn.q-btn {
@@ -663,8 +736,18 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 
+.meteo-panel__day {
+  margin-top: 8px;
+}
+
+.meteo-panel__day + .meteo-panel__day {
+  margin-top: 10px;
+}
+
 .meteo-panel__day-title {
   opacity: 0.9;
+  margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .meteo-panel__hours {
@@ -672,8 +755,7 @@ onBeforeUnmount(() => {
   flex-wrap: nowrap;
   gap: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: hidden;
 }
 
 .meteo-panel__hour {
