@@ -30,9 +30,9 @@
     </div>
 
     <template v-else-if="snapshot">
-      <div class="row q-col-gutter-sm q-mt-sm meteo-panel__now-row">
-        <div class="col-12 col-sm-6 meteo-panel__now">
-          <div class="row items-center no-wrap" style="gap: 12px">
+      <div class="row q-col-gutter-md q-mt-sm meteo-panel__now-row">
+        <div class="col-12 col-sm-auto meteo-panel__now">
+          <div class="row items-center no-wrap meteo-panel__now-main" style="gap: 12px">
             <q-icon :name="weatherIcon" size="42px" class="meteo-panel__now-icon" />
             <div>
               <div class="meteo-panel__now-label">{{ $text('meteo.now') }}</div>
@@ -41,19 +41,13 @@
             </div>
           </div>
           <div class="row q-mt-sm meteo-panel__now-stats" style="gap: 14px">
-            <span class="meteo-panel__stat">
-              {{ $text('meteo.humidity').replace('{value}', String(snapshot.current.humidity)) }}
-            </span>
-            <span class="meteo-panel__stat">
-              {{ $text('meteo.wind').replace('{value}', snapshot.current.windSpeed.toFixed(1)) }}
-            </span>
             <span class="meteo-panel__stat meteo-panel__stat--rain">
               {{ $text('meteo.rain_chance').replace('{value}', String(snapshot.current.rainChance)) }}
             </span>
           </div>
         </div>
 
-        <div class="col-12 col-sm-6 meteo-panel__location-col" :style="locationColThemeStyle">
+        <div class="col-12 col-sm-auto meteo-panel__location-col" :style="locationColThemeStyle">
           <q-select
             :key="locationSelectThemeKey"
             v-model="selectedLocation"
@@ -94,7 +88,7 @@
             </template>
           </q-select>
 
-          <div class="row items-center q-mt-xs meteo-panel__location-actions" style="gap: 6px">
+          <div class="row items-center q-mt-xs meteo-panel__location-actions justify-center" style="gap: 6px">
             <q-btn
               v-for="loc in recentLocations"
               :key="locationKey(loc)"
@@ -508,13 +502,38 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__now-row {
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+}
+
+.meteo-panel__now {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.meteo-panel__now-main {
+  justify-content: center;
+}
+
+.meteo-panel__now-stats {
+  justify-content: center;
 }
 
 .meteo-panel__location-col {
   min-width: 0;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   /* Field/menu use resolveCo21FieldTheme — not group textColor from the panel. */
   color: unset;
+}
+
+.meteo-panel__location-select {
+  width: 100%;
+  min-width: min(100%, 280px);
 }
 
 .meteo-panel__location-select :deep(.q-field__control) {
@@ -546,7 +565,12 @@ onBeforeUnmount(() => {
   font-size: 1.35rem;
 }
 
-.meteo-panel__now-temp,
+.meteo-panel__now-temp {
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
 .meteo-panel__location-select--has-value :deep(.q-field__native),
 .meteo-panel__location-select--has-value :deep(input),
 .meteo-panel__location-select--has-value :deep(.q-field__input),
@@ -634,7 +658,9 @@ onBeforeUnmount(() => {
 }
 
 .meteo-panel__stat--rain {
+  font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .meteo-panel__day-title {
