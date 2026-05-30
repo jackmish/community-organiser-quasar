@@ -336,7 +336,6 @@ import {
   getCalendarChromeBarStyle,
   getCalendarControlColors,
   getCalendarCssVariables,
-  getCalendarSeparatorColor,
   resolveCalendarTheme,
 } from "../theme";
 import Watermark from "src/components/ui/Watermark.vue";
@@ -736,7 +735,7 @@ function createOverlaysFromEdges() {
         height: `${seg.height}px`,
         backgroundColor: overlayColor,
         pointerEvents: "none",
-        opacity: "0.6",
+        opacity: "0.8",
         mixBlendMode: "normal",
         zIndex: String(Math.max(0, Number(z) + 1)),
       } as any);
@@ -758,7 +757,12 @@ function createOverlaysFromEdges() {
       try {
         const sepThickness = 4;
 
-        const createHSep = (leftPx: number, topPx: number, widthPx: number) => {
+        const createHSep = (
+          leftPx: number,
+          topPx: number,
+          widthPx: number,
+          monthKey: string,
+        ) => {
           const s = document.createElement("div");
           s.className = "co21-month-separator";
           Object.assign(s.style, {
@@ -767,7 +771,7 @@ function createOverlaysFromEdges() {
             top: `${Math.max(0, Math.round(topPx))}px`,
             width: `${Math.max(0, Math.round(widthPx))}px`,
             height: `${sepThickness}px`,
-            backgroundColor: getCalendarSeparatorColor(calendarTheme.value),
+            backgroundColor: overlayColorForMonth(monthKey)[0],
             pointerEvents: "none",
             zIndex: "9999",
             boxShadow: "0 0 6px rgba(0,0,0,0.12)",
@@ -792,7 +796,8 @@ function createOverlaysFromEdges() {
               const rightRect = aboveCells[c - 1]!.getBoundingClientRect();
               const leftPx = Math.round(leftRect.left - tableRect.left);
               const widthPx = Math.round(rightRect.right - leftRect.left);
-              createHSep(leftPx, segTop, widthPx);
+              const prevMonth = aboveCells[runStart]?.dataset.month ?? month;
+              createHSep(leftPx, segTop, widthPx, prevMonth);
               runStart = -1;
             }
           }
@@ -801,7 +806,8 @@ function createOverlaysFromEdges() {
             const rightRect = aboveCells[segEnd]!.getBoundingClientRect();
             const leftPx = Math.round(leftRect.left - tableRect.left);
             const widthPx = Math.round(rightRect.right - leftRect.left);
-            createHSep(leftPx, segTop, widthPx);
+            const prevMonth = aboveCells[runStart]?.dataset.month ?? month;
+            createHSep(leftPx, segTop, widthPx, prevMonth);
           }
         }
 
@@ -822,7 +828,7 @@ function createOverlaysFromEdges() {
               const rightRect = belowCells[c - 1]!.getBoundingClientRect();
               const leftPx = Math.round(leftRect.left - tableRect.left);
               const widthPx = Math.round(rightRect.right - leftRect.left);
-              createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
+              createHSep(leftPx, segTop + segHeight - sepThickness, widthPx, month);
               runStart = -1;
             }
           }
@@ -831,7 +837,7 @@ function createOverlaysFromEdges() {
             const rightRect = belowCells[segEnd]!.getBoundingClientRect();
             const leftPx = Math.round(leftRect.left - tableRect.left);
             const widthPx = Math.round(rightRect.right - leftRect.left);
-            createHSep(leftPx, segTop + segHeight - sepThickness, widthPx);
+            createHSep(leftPx, segTop + segHeight - sepThickness, widthPx, month);
           }
         }
       } catch (e) {
@@ -870,7 +876,7 @@ function createOverlaysFromEdges() {
             left: `${Math.max(0, Math.round(boundaryX - 4))}px`,
             width: `8px`,
             height: `${height}px`,
-            backgroundColor: getCalendarSeparatorColor(calendarTheme.value),
+            backgroundColor: overlayColorForMonth(mA)[0],
             opacity: `1`,
             pointerEvents: "none",
             zIndex: "9999",

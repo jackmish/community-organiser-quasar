@@ -263,11 +263,6 @@ export function getOverlayColorForMonth(
   return [bg, getContrastColor(bg)];
 }
 
-export function getCalendarSeparatorColor(theme?: CalendarThemeOptions): string {
-  if (!theme?.colorize) return CALENDAR_PRIMARY;
-  return theme.groupColor || GROUP_DEFAULT_BACKGROUND;
-}
-
 export function calendarChromeBackground(theme: CalendarThemeOptions): string {
   const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
   return hexToRgba(blendHex('#ffffff', g, 0.52), 0.78);
