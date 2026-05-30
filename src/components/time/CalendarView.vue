@@ -736,7 +736,7 @@ function createOverlaysFromEdges() {
         backgroundColor: overlayColor,
         pointerEvents: "none",
         opacity: "0.6",
-        mixBlendMode: "lighten",
+        mixBlendMode: "normal",
         zIndex: String(Math.max(0, Number(z) + 1)),
       } as any);
       wrapper.prepend(div);
