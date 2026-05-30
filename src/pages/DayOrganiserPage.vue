@@ -205,6 +205,7 @@
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
             <DoneTasksList :done-tasks="doneTasks" />
+            <ClockPanel />
             <MeteoPanel />
             <PluginSlot name="below-done-list" />
           </div>
@@ -398,6 +399,7 @@ import { dayOrganiserPanelKey, type DayOrganiserPanelContext } from "src/pages/d
 
 import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
 import PluginSlot from "../components/ui/PluginSlot.vue";
+import ClockPanel from "../components/time/ClockPanel.vue";
 import MeteoPanel from "../components/meteo/MeteoPanel.vue";
 import GroupManagementDialog from "src/modules/group/components/GroupManagementDialog.vue";
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";

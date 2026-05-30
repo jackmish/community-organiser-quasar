@@ -135,6 +135,24 @@
 
           <q-item tag="label">
             <q-item-section avatar>
+              <q-avatar color="blue-grey-8" text-color="white" icon="schedule" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ $text('accounts.clock_title') }}</q-item-label>
+              <q-item-label caption>{{ clockCaption }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-toggle
+                v-model="clockSyncEnabled"
+                color="blue-grey-8"
+                :disable="clockSyncSaving"
+                @update:model-value="onClockSyncToggle"
+              />
+            </q-item-section>
+          </q-item>
+
+          <q-item tag="label">
+            <q-item-section avatar>
               <q-avatar color="light-blue-8" text-color="white" icon="cloud" />
             </q-item-section>
             <q-item-section>
@@ -175,6 +193,10 @@ import {
 } from 'src/modules/time/holidaySyncSettings';
 import { NAGER_HOLIDAYS_API } from 'src/modules/time/holidaySyncService';
 import {
+  loadClockSyncEnabled,
+  saveClockSyncEnabled,
+} from 'src/modules/time/clockSyncSettings';
+import {
   loadMeteoSyncEnabled,
   saveMeteoSyncEnabled,
 } from 'src/modules/time/meteoSyncSettings';
@@ -199,6 +221,8 @@ const emailDraft = ref('');
 const passwordDraft = ref('');
 const holidaySyncEnabled = ref(true);
 const holidaySyncSaving = ref(false);
+const clockSyncEnabled = ref(true);
+const clockSyncSaving = ref(false);
 const meteoSyncEnabled = ref(false);
 const meteoSyncSaving = ref(false);
 
@@ -211,6 +235,8 @@ const nagerHolidaysCaption = computed(() =>
 const meteoCaption = computed(() =>
   $text('accounts.meteo_desc').replace('{api}', OPEN_METEO_FORECAST_API),
 );
+
+const clockCaption = computed(() => $text('accounts.clock_desc'));
 
 const identifier = computed(() => user.identifier);
 const identifierType = computed(() => user.identifierType);
@@ -227,6 +253,7 @@ watch(dialogVisible, async (open) => {
   }
   if (open) {
     holidaySyncEnabled.value = await loadHolidaySyncEnabled();
+    clockSyncEnabled.value = await loadClockSyncEnabled();
     meteoSyncEnabled.value = await loadMeteoSyncEnabled();
   }
   if (!open) {
@@ -304,6 +331,16 @@ async function onHolidaySyncToggle(enabled: boolean) {
     if (!ok) holidaySyncEnabled.value = !enabled;
   } finally {
     holidaySyncSaving.value = false;
+  }
+}
+
+async function onClockSyncToggle(enabled: boolean) {
+  clockSyncSaving.value = true;
+  try {
+    const ok = await saveClockSyncEnabled(enabled);
+    if (!ok) clockSyncEnabled.value = !enabled;
+  } finally {
+    clockSyncSaving.value = false;
   }
 }
 
