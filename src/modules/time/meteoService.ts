@@ -17,11 +17,27 @@ export interface MeteoCurrent {
   humidity: number;
   windSpeed: number;
   weatherCode: number;
+  rainChance: number;
+}
+
+export interface MeteoHourSlot {
+  time: string;
+  hour: number;
+  temperature: number;
+  rainChance: number;
+  weatherCode: number;
+}
+
+export interface MeteoDayForecast {
+  date: string;
+  dayIndex: number;
+  hours: MeteoHourSlot[];
 }
 
 export interface MeteoSnapshot {
   location: MeteoLocation;
   current: MeteoCurrent;
+  days: MeteoDayForecast[];
   fetchedAt: number;
 }
 
@@ -30,6 +46,9 @@ interface MeteoCachePayload {
 }
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const FORECAST_DAY_COUNT = 3;
+const FORECAST_HOUR_FROM = 7;
+const FORECAST_HOUR_TO = 19;
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
 
 const COUNTRY_DEFAULTS: Record<string, MeteoLocation> = {
@@ -126,8 +145,74 @@ async function saveMeteoCache(snapshot: MeteoSnapshot): Promise<void> {
 }
 
 function isCacheFresh(snapshot: MeteoSnapshot | null): boolean {
-  if (!snapshot?.fetchedAt) return false;
+  if (!snapshot?.fetchedAt || !snapshot.days?.length) return false;
   return Date.now() - snapshot.fetchedAt < CACHE_TTL_MS;
+}
+
+function localDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseHourFromIso(iso: string): number {
+  const match = /T(\d{2}):/.exec(iso);
+  return match ? Number(match[1]) : 0;
+}
+
+function rainChanceForNow(
+  times: string[],
+  rainChances: Array<number | null | undefined>,
+): number {
+  const now = new Date();
+  const todayKey = localDateKey(now);
+  const hour = now.getHours();
+  const exact = `${todayKey}T${String(hour).padStart(2, '0')}:00`;
+  let idx = times.indexOf(exact);
+  if (idx < 0) {
+    idx = times.findIndex((t) => t.startsWith(todayKey) && parseHourFromIso(t) === hour);
+  }
+  if (idx < 0) {
+    idx = times.findIndex((t) => t.startsWith(todayKey));
+  }
+  if (idx < 0) return 0;
+  return rainChances[idx] ?? 0;
+}
+
+function buildDayForecasts(
+  times: string[],
+  temperatures: Array<number | null | undefined>,
+  rainChances: Array<number | null | undefined>,
+  weatherCodes: Array<number | null | undefined>,
+): MeteoDayForecast[] {
+  const slotsByDate = new Map<string, MeteoHourSlot[]>();
+
+  for (let i = 0; i < times.length; i++) {
+    const time = times[i];
+    if (!time) continue;
+    const hour = parseHourFromIso(time);
+    if (hour < FORECAST_HOUR_FROM || hour > FORECAST_HOUR_TO) continue;
+    const date = time.slice(0, 10);
+    const slot: MeteoHourSlot = {
+      time,
+      hour,
+      temperature: temperatures[i] ?? 0,
+      rainChance: rainChances[i] ?? 0,
+      weatherCode: weatherCodes[i] ?? 0,
+    };
+    const list = slotsByDate.get(date) ?? [];
+    list.push(slot);
+    slotsByDate.set(date, list);
+  }
+
+  const todayKey = localDateKey(new Date());
+  const sortedDates = [...slotsByDate.keys()].sort().filter((d) => d >= todayKey);
+  return sortedDates.slice(0, FORECAST_DAY_COUNT).map((date, dayIndex) => ({
+    date,
+    dayIndex,
+    hours: (slotsByDate.get(date) ?? []).sort((a, b) => a.hour - b.hour),
+  }));
 }
 
 async function resolveLocationName(latitude: number, longitude: number): Promise<string> {
@@ -173,6 +258,8 @@ async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
     `${OPEN_METEO_FORECAST_API}?latitude=${location.latitude}` +
     `&longitude=${location.longitude}` +
     '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m' +
+    '&hourly=temperature_2m,precipitation_probability,weather_code' +
+    `&forecast_days=${FORECAST_DAY_COUNT}` +
     '&wind_speed_unit=ms&timezone=auto';
   const data = await xhrGetJson<{
     current?: {
@@ -182,12 +269,28 @@ async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
       weather_code?: number;
       wind_speed_10m?: number;
     };
+    hourly?: {
+      time?: string[];
+      temperature_2m?: Array<number | null>;
+      precipitation_probability?: Array<number | null>;
+      weather_code?: Array<number | null>;
+    };
   }>(url);
 
   const current = data.current;
-  if (!current || typeof current.temperature_2m !== 'number') {
+  const hourly = data.hourly;
+  if (!current || typeof current.temperature_2m !== 'number' || !hourly?.time?.length) {
     throw new Error('Invalid forecast response');
   }
+
+  const times = hourly.time;
+  const rainChances = hourly.precipitation_probability ?? [];
+  const days = buildDayForecasts(
+    times,
+    hourly.temperature_2m ?? [],
+    rainChances,
+    hourly.weather_code ?? [],
+  );
 
   return {
     location,
@@ -197,7 +300,9 @@ async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
       humidity: current.relative_humidity_2m ?? 0,
       windSpeed: current.wind_speed_10m ?? 0,
       weatherCode: current.weather_code ?? 0,
+      rainChance: rainChanceForNow(times, rainChances),
     },
+    days,
     fetchedAt: Date.now(),
   };
 }

@@ -39,7 +39,7 @@ Purpose: Help AI coding agents get productive quickly in this repository (Quasar
 
 -User instructions section (for AI agents):
 
-- After making code changes, automatically run the following checks **without asking**: `npm run lint`, `npx tsc --noEmit`, `node scripts/check-imports.cjs`, and `npm run test:unit`. If any step fails, fix the failures and re-run the checks until the test suite passes. Do **not** run `npm run format` (formatting can create noisy diffs and may conflict with local editor settings).
+- After making code changes, automatically run the following checks **without asking**: `npm run lint`, `npm run typecheck`, `node scripts/check-imports.cjs`, and `npm run test:unit`. Use `npm run typecheck` (`vue-tsc --noEmit`) — not plain `tsc` — so `.vue` files are included. If any step fails, fix the failures and re-run the checks until the test suite passes. Do **not** run `npm run format` (formatting can create noisy diffs and may conflict with local editor settings).
 - When the changes are complete and tests pass, remove or silence ordinary `console.log` output so the console remains clean; keep error, warning and important informational messages visible.
 - Try to update this `copilot-instructions.md` file after significant refactorings once the refactor is implemented and its tests pass.
 - If you discover a better, more reliable way to enforce or communicate these policies to the agent (for example, a pre-commit hook, CI job, or a dedicated checklist file), adopt that approach and add a short note here linking to it.
