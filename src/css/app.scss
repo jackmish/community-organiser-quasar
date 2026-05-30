@@ -179,31 +179,42 @@ body .q-select:not(.use-default) ::v-deep .q-field__control,
 }
 
 /* Opt out of global blue menu/select theme — add class `use-default` on q-select / q-menu / popup-content-class */
-html body .q-select.use-default .q-field {
+/* Quasar merges q-field + q-select + q-field--outlined on one root label — do not use descendant .q-field / .q-field--outlined. */
+html body .q-field.q-select.use-default {
   background: transparent !important;
   color: var(--co21-field-fg, inherit) !important;
   -webkit-text-fill-color: var(--co21-field-fg, inherit) !important;
   caret-color: var(--co21-field-fg, inherit) !important;
 }
 
-html body .q-select.use-default .q-field--outlined .q-field__control {
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control {
   background: var(--co21-field-bg, transparent) !important;
   color: var(--co21-field-fg, inherit) !important;
 }
 
-html body .q-select.use-default .q-field--outlined .q-field__control::before,
-html body .q-select.use-default .q-field--outlined .q-field__control::after,
-html body .q-select.use-default .q-field--outlined .q-field__control:before,
-html body .q-select.use-default .q-field--outlined .q-field__control:after {
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control::before,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control::after,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:before,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:after {
   border: 1px solid var(--co21-field-border, rgba(0, 0, 0, 0.24)) !important;
-  background: transparent !important;
   box-shadow: none !important;
 }
 
-html body .q-select.use-default .q-field--outlined .q-field__control:hover::before,
-html body .q-select.use-default .q-field--outlined .q-field__control:hover:before,
-html body .q-select.use-default .q-field.q-field--focused .q-field__control::before,
-html body .q-select.use-default .q-field--outlined.q-field--focused .q-field__control::before {
+/* Outlined Quasar fields paint the visible fill on ::before (full inset overlay). */
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control::before,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:before {
+  background: var(--co21-field-bg, transparent) !important;
+}
+
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control::after,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:after {
+  background: transparent !important;
+}
+
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:hover::before,
+html body .q-field.q-select.use-default.q-field--outlined .q-field__control:hover:before,
+html body .q-field.q-select.use-default.q-field--outlined.q-field--focused .q-field__control::before,
+html body .q-field.q-select.use-default.q-field--outlined.q-field--highlighted .q-field__control::before {
   border-color: var(
     --co21-field-border-focus,
     var(--co21-field-border, rgba(0, 0, 0, 0.35))
@@ -236,12 +247,31 @@ html body .q-select.use-default .q-select__input::placeholder {
 
 .q-menu.use-default .q-item,
 .q-select__popup.use-default .q-item,
+.q-menu.use-default .q-item .q-item__section,
+.q-select__popup.use-default .q-item .q-item__section,
+.q-menu.use-default .q-item .q-item__label,
+.q-select__popup.use-default .q-item .q-item__label,
 .q-menu.use-default .q-select__input,
 .q-select__popup.use-default .q-select__input,
 .q-menu.use-default .q-icon,
 .q-select__popup.use-default .q-icon {
-  color: inherit !important;
-  -webkit-text-fill-color: inherit !important;
+  color: var(--co21-menu-fg, inherit) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
+}
+
+.q-menu.use-default .q-item:hover,
+.q-menu.use-default .q-item.q-manual-focusable--focused,
+.q-select__popup.use-default .q-item:hover,
+.q-select__popup.use-default .q-item.q-manual-focusable--focused {
+  background: var(--co21-menu-hover, rgba(0, 0, 0, 0.06)) !important;
+}
+
+.q-menu.use-default .q-item--active,
+.q-select__popup.use-default .q-item--active {
+  background: var(--co21-menu-active, rgba(0, 0, 0, 0.1)) !important;
+  color: var(--co21-menu-fg, inherit) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
+  font-weight: 600;
 }
 
 .q-menu.use-default ::v-deep input,

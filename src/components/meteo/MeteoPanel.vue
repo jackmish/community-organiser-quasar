@@ -57,6 +57,7 @@
           <q-select
             v-model="selectedLocation"
             class="use-default meteo-panel__location-select"
+            :style="locationFieldStyle"
             :options="cityOptions"
             option-label="name"
             use-input
@@ -146,10 +147,15 @@ import { $text } from 'src/modules/lang';
 import { formatAppWeekday } from 'src/modules/lang/dateFormat';
 import CC from 'src/CCAccess';
 import {
+  getCo21FieldCssVariables,
+  getCo21MenuCssVariables,
+  getCo21SurfaceBackgroundStyle,
+} from 'src/components/theme';
+import {
   readGroupBackgroundFields,
   isGroupBackgroundColorizeActive,
 } from 'src/modules/group/utils/groupBackground';
-import { darkenHex, getContrastColor, hexToRgba, blendHex } from 'src/utils/colorUtils';
+import { getContrastColor, hexToRgba } from 'src/utils/colorUtils';
 import {
   METEO_SYNC_CHANGED_EVENT,
   METEO_LOCATION_CHANGED_EVENT,
@@ -170,6 +176,7 @@ import {
 } from 'src/modules/time/meteoService';
 
 const METEO_DEFAULT_BG = 'rgba(2, 119, 189, 0.82)';
+const METEO_DEFAULT_HEX = '#0277bd';
 const METEO_DEFAULT_FG = '#ffffff';
 
 const meteoEnabled = ref(false);
@@ -209,52 +216,38 @@ const panelTheme = computed(() => {
   return { colorize, color, fg };
 });
 
+const surfaceThemeInput = computed(() => {
+  if (!panelTheme.value.colorize) {
+    return {
+      baseHex: METEO_DEFAULT_HEX,
+      textHex: METEO_DEFAULT_FG,
+      panelHex: METEO_DEFAULT_HEX,
+    };
+  }
+  const { color, fg } = panelTheme.value;
+  return { baseHex: color, textHex: fg };
+});
+
 const panelStyle = computed(() => {
+  const input = surfaceThemeInput.value;
   if (!panelTheme.value.colorize) {
     return {
       backgroundColor: METEO_DEFAULT_BG,
       color: METEO_DEFAULT_FG,
-      '--co21-field-fg': METEO_DEFAULT_FG,
-      '--co21-field-bg': 'rgba(255, 255, 255, 0.12)',
-      '--co21-field-border': 'rgba(255, 255, 255, 0.45)',
-      '--co21-field-border-focus': 'rgba(255, 255, 255, 0.7)',
-      '--co21-field-placeholder': 'rgba(255, 255, 255, 0.65)',
     };
   }
   const { color, fg } = panelTheme.value;
   return {
-    backgroundColor: hexToRgba(darkenHex(color, 0.1), 0.9),
-    color: fg,
-    '--co21-field-fg': fg,
-    '--co21-field-bg': hexToRgba(blendHex(color, '#ffffff', 0.2), 0.58),
-    '--co21-field-border': hexToRgba(fg, 0.45),
-    '--co21-field-border-focus': hexToRgba(fg, 0.68),
-    '--co21-field-placeholder': hexToRgba(fg, 0.62),
+    ...getCo21SurfaceBackgroundStyle(input),
     '--meteo-recent-bg': hexToRgba(color, 0.34),
     '--meteo-recent-active-bg': hexToRgba(color, 0.54),
     '--meteo-recent-fg': fg,
   };
 });
 
-const locationPopupStyle = computed((): Record<string, string> => {
-  if (!panelTheme.value.colorize) {
-    return {
-      '--co21-menu-bg': hexToRgba('#ffffff', 0.98),
-      '--co21-menu-fg': '#1d1d1d',
-      '--co21-menu-placeholder': 'rgba(0, 0, 0, 0.45)',
-      '--meteo-menu-hover': 'rgba(25, 118, 210, 0.1)',
-      '--meteo-menu-active': 'rgba(25, 118, 210, 0.18)',
-    };
-  }
-  const { color, fg } = panelTheme.value;
-  return {
-    '--co21-menu-bg': hexToRgba(darkenHex(color, 0.04), 0.98),
-    '--co21-menu-fg': fg,
-    '--co21-menu-placeholder': hexToRgba(fg, 0.62),
-    '--meteo-menu-hover': hexToRgba(fg, 0.14),
-    '--meteo-menu-active': hexToRgba(fg, 0.24),
-  };
-});
+const locationFieldStyle = computed(() => getCo21FieldCssVariables(surfaceThemeInput.value));
+
+const locationPopupStyle = computed(() => getCo21MenuCssVariables(surfaceThemeInput.value));
 
 const weatherMeta = computed(() =>
   snapshot.value ? describeWeatherCode(snapshot.value.current.weatherCode) : null,
@@ -571,20 +564,13 @@ onBeforeUnmount(() => {
 </style>
 
 <style lang="scss">
+.meteo-panel__location-select.use-default.q-field--outlined .q-field__control,
+.meteo-panel__location-select.use-default.q-field--outlined .q-field__control::before {
+  background: var(--co21-field-bg) !important;
+}
+
 .meteo-panel__location-popup .q-item {
-  color: inherit;
   min-height: 36px;
-}
-
-.meteo-panel__location-popup .q-item:hover,
-.meteo-panel__location-popup .q-item.q-manual-focusable--focused {
-  background: var(--meteo-menu-hover, rgba(0, 0, 0, 0.06)) !important;
-}
-
-.meteo-panel__location-popup .q-item--active {
-  background: var(--meteo-menu-active, rgba(0, 0, 0, 0.1)) !important;
-  color: inherit;
-  font-weight: 600;
 }
 
 .meteo-panel__location-popup-hint {

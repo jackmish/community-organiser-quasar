@@ -334,3 +334,93 @@ export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<st
     ...calendarGridCssVariables(theme),
   };
 }
+
+// ── Shared surface / field / menu theming (use-default q-select & q-menu) ─────
+
+/** Input for auto-derived `--co21-field-*` and `--co21-menu-*` CSS variables. */
+export type Co21SurfaceThemeInput = {
+  /** Primary accent hex (group color, panel brand color, …). */
+  baseHex: string;
+  /** Foreground on the parent surface; menu text is auto-contrasted when omitted. */
+  textHex?: string;
+  /** Actual panel fill hex when it differs from `co21SurfaceHex(baseHex)` (e.g. default meteo panel). */
+  panelHex?: string;
+};
+
+const CO21_SURFACE_DARKEN = 0.1;
+const CO21_MENU_DARKEN = 0.16;
+/** Opaque field fill: lighten dark panels / darken bright panels — must read clearly against panel. */
+const CO21_FIELD_LIGHTEN = 0.32;
+const CO21_FIELD_DARKEN = 0.22;
+
+function co21SurfaceHex(baseHex: string): string {
+  return darkenHex(baseHex, CO21_SURFACE_DARKEN);
+}
+
+function co21PanelHex(input: Co21SurfaceThemeInput): string {
+  return (input.panelHex || co21SurfaceHex(input.baseHex)).trim();
+}
+
+/** Solid field fill contrasting with the panel behind it. */
+function co21FieldBackgroundHex(panelHex: string): string {
+  if (isHexBright(panelHex)) {
+    return darkenHex(panelHex, CO21_FIELD_DARKEN);
+  }
+  return lightenHex(panelHex, CO21_FIELD_LIGHTEN);
+}
+
+function resolveCo21SurfaceTheme(input: Co21SurfaceThemeInput): {
+  baseHex: string;
+  surfaceFg: string;
+  menuBaseHex: string;
+  menuFg: '#000' | '#fff';
+} {
+  const baseHex = (input.baseHex || GROUP_DEFAULT_BACKGROUND).trim();
+  const surfaceFg = (input.textHex || getContrastColor(baseHex)).trim();
+  const menuBaseHex = darkenHex(baseHex, CO21_MENU_DARKEN);
+  const menuFg = getContrastColor(menuBaseHex);
+  return { baseHex, surfaceFg, menuBaseHex, menuFg };
+}
+
+/** Outlined field tokens for `q-select.use-default` — bind on the q-select via `:style`. */
+export function getCo21FieldCssVariables(input: Co21SurfaceThemeInput): Record<string, string> {
+  const panelHex = co21PanelHex(input);
+  const fieldHex = co21FieldBackgroundHex(panelHex);
+  const fieldFg = getContrastColor(fieldHex);
+  return {
+    '--co21-field-fg': fieldFg,
+    '--co21-field-bg': fieldHex,
+    '--co21-field-border': hexToRgba(fieldFg, 0.38),
+    '--co21-field-border-focus': hexToRgba(fieldFg, 0.62),
+    '--co21-field-placeholder': hexToRgba(fieldFg, 0.58),
+  };
+}
+
+/** Dropdown / menu tokens for `q-menu.use-default` / `q-select__popup.use-default`. */
+export function getCo21MenuCssVariables(input: Co21SurfaceThemeInput): Record<string, string> {
+  const { menuBaseHex, menuFg } = resolveCo21SurfaceTheme(input);
+  return {
+    '--co21-menu-bg': hexToRgba(menuBaseHex, 0.97),
+    '--co21-menu-fg': menuFg,
+    '--co21-menu-placeholder': hexToRgba(menuFg, 0.62),
+    '--co21-menu-hover': hexToRgba(menuFg, 0.14),
+    '--co21-menu-active': hexToRgba(menuFg, 0.24),
+  };
+}
+
+/** Field + menu tokens together (e.g. non-teleported menus). */
+export function getCo21SurfaceCssVariables(input: Co21SurfaceThemeInput): Record<string, string> {
+  return {
+    ...getCo21FieldCssVariables(input),
+    ...getCo21MenuCssVariables(input),
+  };
+}
+
+/** Panel/card background from the same accent as field/menu tokens. */
+export function getCo21SurfaceBackgroundStyle(input: Co21SurfaceThemeInput): Record<string, string> {
+  const { baseHex, surfaceFg } = resolveCo21SurfaceTheme(input);
+  return {
+    backgroundColor: hexToRgba(co21SurfaceHex(baseHex), 0.9),
+    color: surfaceFg,
+  };
+}

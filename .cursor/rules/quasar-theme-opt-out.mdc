@@ -11,10 +11,12 @@ When a component needs custom or group-based colors on `q-select`, `q-menu`, or 
 
 1. Add class **`use-default`** on the control (`q-select` / `q-menu`).
 2. For `q-select` dropdowns, also set `popup-content-class="use-default …"`.
-3. Style locally via CSS variables on a parent container:
+3. Style locally via CSS variables — **bind field vars on the `q-select`** (`:style="getCo21FieldCssVariables(…)"`); menu vars on the teleported popup (`popup-content-style`).
 
-**Field (q-select.use-default):** `--co21-field-fg`, `--co21-field-bg`, `--co21-field-border`, `--co21-field-border-focus`, `--co21-field-placeholder`
+**Field (q-select.use-default):** `--co21-field-fg`, `--co21-field-bg`, `--co21-field-border`, `--co21-field-border-focus`, `--co21-field-placeholder` — fill is painted on `.q-field__control::before` for outlined fields.
 
-**Popup (q-menu.use-default / q-select__popup.use-default):** `--co21-menu-bg`, `--co21-menu-fg`, `--co21-menu-placeholder`
+**Popup (q-menu.use-default / q-select__popup.use-default):** `--co21-menu-bg`, `--co21-menu-fg`, `--co21-menu-placeholder`, `--co21-menu-hover`, `--co21-menu-active`
 
 Without `use-default`, global `!important` rules (blue field, green border, white popup text) override component styles.
+
+**Selector note:** Quasar puts `q-field`, `q-select`, and `q-field--outlined` on the **same root element**. Use `.q-field.q-select.use-default.q-field--outlined .q-field__control`, not `.q-select.use-default .q-field--outlined …` (descendant — never matches).
