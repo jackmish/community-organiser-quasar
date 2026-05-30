@@ -288,11 +288,8 @@ export function getCalendarControlColors(
   return { backgroundColor: g, color: getContrastColor(g) };
 }
 
-/** Weekday cell / header tint toward group (Mon–Fri base). */
-const CALENDAR_WEEKDAY_SURFACE_TINT = 0.22;
-
-/** Weekday `th` background tint (more visible than cells). */
-const CALENDAR_WEEKDAY_TH_TINT = 0.38;
+/** Weekday `th` (Mon–Fri) background tint toward group color. */
+const CALENDAR_WEEKDAY_TH_TINT = 0.52;
 
 /** Weekend / holiday cell wash over day background. */
 const CALENDAR_WEEKEND_HIGHLIGHT_ALPHA = 0.34;
@@ -302,11 +299,6 @@ function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, s
   const groupText = theme.groupTextColor || getContrastColor(g);
   const tones =
     theme.colorizeTones ?? buildCalendarColorizeTones(g);
-  const holidayLabelFg = getContrastColor(g);
-  const holidayPillBg = isHexBright(g)
-    ? darkenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP * 1.2)
-    : lightenHex(g, CALENDAR_COLORIZE_ALTERNATE_STEP);
-
   return {
     '--cal-weekday-bg': hexToRgba(blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT), 0.96),
     '--cal-weekday-alt-bg': hexToRgba(
@@ -317,15 +309,11 @@ function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, s
     '--cal-weekend-th-fg': getContrastColor(g),
     '--cal-weekend-highlight': hexToRgba(g, CALENDAR_WEEKEND_HIGHLIGHT_ALPHA),
     '--cal-today-column-bg': hexToRgba(g, 0.28),
-    '--cal-day-bg': hexToRgba(blendHex('#ffffff', g, CALENDAR_WEEKDAY_SURFACE_TINT), 0.92),
-    '--cal-past-day-bg': hexToRgba(blendHex('#ffffff', g, 0.1), 0.82),
+    '--cal-day-bg': 'rgba(255, 255, 255, 0.92)',
+    '--cal-past-day-bg': 'rgba(255, 255, 255, 0.82)',
     '--cal-selected-bg': g,
     '--cal-selected-fg': getContrastColor(g),
     '--cal-selected-day-fg': groupText,
-    '--cal-holiday-label-bg': g,
-    '--cal-holiday-label-fg': holidayLabelFg,
-    '--cal-holiday-pill-bg': holidayPillBg,
-    '--cal-holiday-pill-fg': getContrastColor(holidayPillBg),
   };
 }
 

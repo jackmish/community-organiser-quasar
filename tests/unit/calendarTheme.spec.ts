@@ -63,8 +63,7 @@ describe('calendar theme', () => {
     expect(vars['--cal-selected-bg']).toBe('#2e7d32');
     expect(vars['--cal-selected-day-fg']).toBeDefined();
     expect(vars['--cal-today-column-bg']).toContain('rgba');
-    expect(vars['--cal-day-bg']).toContain('rgba');
-    expect(vars['--cal-holiday-label-bg']).toBe('#2e7d32');
+    expect(vars['--cal-day-bg']).toContain('255');
   });
 
   it('legacy palette when colorize is off', () => {
