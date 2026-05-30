@@ -53,8 +53,9 @@
           </div>
         </div>
 
-        <div class="col-12 col-sm-6 meteo-panel__location-col">
+        <div class="col-12 col-sm-6 meteo-panel__location-col" :style="locationColThemeStyle">
           <q-select
+            :key="locationSelectThemeKey"
             v-model="selectedLocation"
             class="use-default meteo-panel__location-select"
             :style="locationFieldStyle"
@@ -66,22 +67,26 @@
             input-debounce="400"
             dense
             outlined
+            behavior="menu"
             :label="$text('meteo.location_search')"
             :loading="searchLoading"
             :disable="locationSaving"
-            popup-content-class="use-default meteo-panel__location-popup"
+            :input-style="locationFieldInputStyle"
+            popup-content-class="use-default co21-themed-menu"
             :popup-content-style="locationPopupStyle"
+            :options-dark="false"
             @filter="filterCities"
             @update:model-value="onLocationPicked"
+            @popup-show="onLocationPopupShow"
           >
             <template #option="scope">
-              <q-item v-bind="scope.itemProps">
+              <q-item v-bind="scope.itemProps" class="co21-menu-option">
                 <q-item-section>{{ scope.opt.name }}</q-item-section>
               </q-item>
             </template>
             <template #no-option>
-              <q-item>
-                <q-item-section class="meteo-panel__location-popup-hint">
+              <q-item class="co21-menu-option">
+                <q-item-section class="co21-menu-option-hint">
                   {{ citySearchHint }}
                 </q-item-section>
               </q-item>
@@ -142,13 +147,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { $text } from 'src/modules/lang';
 import { formatAppWeekday } from 'src/modules/lang/dateFormat';
 import CC from 'src/CCAccess';
 import {
+  buildCo21SurfaceThemeInputFromGroup,
   getCo21FieldCssVariables,
-  getCo21MenuCssVariables,
+  getCo21MenuPopupStyleInline,
+  pinCo21MenuPopupThemeWhenReady,
+  resolveCo21FieldTheme,
+  resolveCo21MenuTheme,
   getCo21SurfaceBackgroundStyle,
 } from 'src/components/theme';
 import {
@@ -196,7 +205,18 @@ const citySearchHint = computed(() =>
   searchLoading.value ? $text('meteo.loading') : $text('meteo.location_type_hint'),
 );
 
-const activeGroupRecord = computed((): Record<string, unknown> | null => {
+/** Bump when group list / active group / color fields change (deep). */
+const groupThemeRevision = ref(0);
+
+watch(
+  () => [CC.group.list.all.value, CC.group.active.activeGroup.value] as const,
+  () => {
+    groupThemeRevision.value += 1;
+  },
+  { deep: true },
+);
+
+function resolveActiveGroupRecord(): Record<string, unknown> | null {
   try {
     const gid = CC.group.active.activeGroup.value?.value ?? null;
     if (!gid) return null;
@@ -206,10 +226,11 @@ const activeGroupRecord = computed((): Record<string, unknown> | null => {
   } catch {
     return null;
   }
-});
+}
 
 const panelTheme = computed(() => {
-  const group = activeGroupRecord.value;
+  void groupThemeRevision.value;
+  const group = resolveActiveGroupRecord();
   const colorize = isGroupBackgroundColorizeActive(group);
   const { color, textColor } = readGroupBackgroundFields(group);
   const fg = textColor || getContrastColor(color);
@@ -217,15 +238,14 @@ const panelTheme = computed(() => {
 });
 
 const surfaceThemeInput = computed(() => {
-  if (!panelTheme.value.colorize) {
-    return {
-      baseHex: METEO_DEFAULT_HEX,
-      textHex: METEO_DEFAULT_FG,
-      panelHex: METEO_DEFAULT_HEX,
-    };
-  }
-  const { color, fg } = panelTheme.value;
-  return { baseHex: color, textHex: fg };
+  void groupThemeRevision.value;
+  const fromGroup = buildCo21SurfaceThemeInputFromGroup(resolveActiveGroupRecord());
+  if (fromGroup) return fromGroup;
+  return {
+    baseHex: METEO_DEFAULT_HEX,
+    textHex: METEO_DEFAULT_FG,
+    panelHex: METEO_DEFAULT_HEX,
+  };
 });
 
 const panelStyle = computed(() => {
@@ -233,21 +253,59 @@ const panelStyle = computed(() => {
   if (!panelTheme.value.colorize) {
     return {
       backgroundColor: METEO_DEFAULT_BG,
-      color: METEO_DEFAULT_FG,
+      '--meteo-panel-fg': METEO_DEFAULT_FG,
     };
   }
   const { color, fg } = panelTheme.value;
+  const { backgroundColor } = getCo21SurfaceBackgroundStyle(input);
   return {
-    ...getCo21SurfaceBackgroundStyle(input),
+    backgroundColor,
+    '--meteo-panel-fg': fg,
     '--meteo-recent-bg': hexToRgba(color, 0.34),
     '--meteo-recent-active-bg': hexToRgba(color, 0.54),
     '--meteo-recent-fg': fg,
   };
 });
 
-const locationFieldStyle = computed(() => getCo21FieldCssVariables(surfaceThemeInput.value));
+const locationColThemeStyle = computed(() => {
+  const { fieldFg } = resolveCo21FieldTheme(surfaceThemeInput.value);
+  return { color: fieldFg };
+});
 
-const locationPopupStyle = computed(() => getCo21MenuCssVariables(surfaceThemeInput.value));
+const locationFieldStyle = computed(() => {
+  const { fieldBg, fieldFg } = resolveCo21FieldTheme(surfaceThemeInput.value);
+  return {
+    ...getCo21FieldCssVariables(surfaceThemeInput.value),
+    color: fieldFg,
+    backgroundColor: 'transparent',
+    '--co21-field-fg': fieldFg,
+    '--co21-field-bg': fieldBg,
+  };
+});
+
+const locationFieldInputStyle = computed(() => {
+  const fg = locationFieldStyle.value['--co21-field-fg'] ?? '#000000';
+  return { color: fg, WebkitTextFillColor: fg, caretColor: fg };
+});
+
+const locationPopupStyle = computed(() =>
+  getCo21MenuPopupStyleInline(surfaceThemeInput.value),
+);
+
+const locationSelectThemeKey = computed(() => {
+  void groupThemeRevision.value;
+  const { fieldBg } = resolveCo21FieldTheme(surfaceThemeInput.value);
+  const { menuBg } = resolveCo21MenuTheme(surfaceThemeInput.value);
+  return `${fieldBg}|${menuBg}`;
+});
+
+function onLocationPopupShow() {
+  pinCo21MenuPopupThemeWhenReady(surfaceThemeInput.value);
+}
+
+watch(surfaceThemeInput, (input) => {
+  pinCo21MenuPopupThemeWhenReady(input);
+}, { deep: true });
 
 const weatherMeta = computed(() =>
   snapshot.value ? describeWeatherCode(snapshot.value.current.weatherCode) : null,
@@ -377,6 +435,7 @@ function filterCities(
       update(() => {
         cityOptions.value = results;
       });
+      pinCo21MenuPopupThemeWhenReady(surfaceThemeInput.value);
     })
     .finally(() => {
       if (token === citySearchToken) searchLoading.value = false;
@@ -428,6 +487,7 @@ onBeforeUnmount(() => {
 .meteo-panel {
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0 0 8px 8px;
+  color: var(--meteo-panel-fg, #ffffff);
 }
 
 .meteo-panel__muted {
@@ -444,6 +504,8 @@ onBeforeUnmount(() => {
 
 .meteo-panel__location-col {
   min-width: 0;
+  /* Field/menu use resolveCo21FieldTheme — not group textColor from the panel. */
+  color: unset;
 }
 
 .meteo-panel__location-actions {
@@ -560,20 +622,5 @@ onBeforeUnmount(() => {
 
 .meteo-panel__hour-icon {
   opacity: 0.92;
-}
-</style>
-
-<style lang="scss">
-.meteo-panel__location-select.use-default.q-field--outlined .q-field__control,
-.meteo-panel__location-select.use-default.q-field--outlined .q-field__control::before {
-  background: var(--co21-field-bg) !important;
-}
-
-.meteo-panel__location-popup .q-item {
-  min-height: 36px;
-}
-
-.meteo-panel__location-popup-hint {
-  opacity: 0.78;
 }
 </style>

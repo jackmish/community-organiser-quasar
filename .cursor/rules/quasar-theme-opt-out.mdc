@@ -15,7 +15,7 @@ When a component needs custom or group-based colors on `q-select`, `q-menu`, or 
 
 **Field (q-select.use-default):** `--co21-field-fg`, `--co21-field-bg`, `--co21-field-border`, `--co21-field-border-focus`, `--co21-field-placeholder` — fill is painted on `.q-field__control::before` for outlined fields.
 
-**Popup (q-menu.use-default / q-select__popup.use-default):** `--co21-menu-bg`, `--co21-menu-fg`, `--co21-menu-placeholder`, `--co21-menu-hover`, `--co21-menu-active`
+**Popup:** `popup-content-class="use-default co21-themed-menu"` and `:popup-content-style="getCo21MenuPopupStyle(…)"` from `theme.ts`. Global rules in `app.scss` read `--co21-menu-*` from the teleported popup root. Set `:options-dark="false"` on `q-select`. Menu text is auto-contrast on menu bg — not group `textColor`.
 
 Without `use-default`, global `!important` rules (blue field, green border, white popup text) override component styles.
 

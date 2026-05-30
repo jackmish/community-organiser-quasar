@@ -43,10 +43,10 @@ main {
 }
 
 /* Global background and text for menus, popovers and dialog inners */
-.q-menu:not(.use-default),
-.q-menu:not(.use-default) .q-menu__content,
+.q-menu:not(.use-default):not(.co21-themed-menu),
+.q-menu:not(.use-default):not(.co21-themed-menu) .q-menu__content,
 .q-popover:not(.use-default),
-.q-select__popup:not(.use-default) {
+.q-select__popup:not(.use-default):not(.co21-themed-menu) {
   background-color: #adf !important;
   color: #000 !important;
 }
@@ -117,12 +117,12 @@ main {
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep input,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep textarea,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-select__input,
-.q-menu:not(.use-default) ::v-deep input,
-.q-menu:not(.use-default) ::v-deep textarea,
-.q-menu:not(.use-default) ::v-deep .q-select__input,
-.q-select__popup:not(.use-default) ::v-deep input,
-.q-select__popup:not(.use-default) ::v-deep textarea,
-.q-select__popup:not(.use-default) ::v-deep .q-select__input,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep input,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep textarea,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep .q-select__input,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep input,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep textarea,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep .q-select__input,
 .group-select--header ::v-deep input,
 .group-select--header ::v-deep .q-select__input {
   color: #ffffff !important;
@@ -142,12 +142,12 @@ main {
   .q-dialog__inner
   ::v-deep
   .q-select__input::placeholder,
-.q-menu:not(.use-default) ::v-deep input::placeholder,
-.q-menu:not(.use-default) ::v-deep textarea::placeholder,
-.q-menu:not(.use-default) ::v-deep .q-select__input::placeholder,
-.q-select__popup:not(.use-default) ::v-deep input::placeholder,
-.q-select__popup:not(.use-default) ::v-deep textarea::placeholder,
-.q-select__popup:not(.use-default) ::v-deep .q-select__input::placeholder {
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep input::placeholder,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep textarea::placeholder,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep .q-select__input::placeholder,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep input::placeholder,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep textarea::placeholder,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep .q-select__input::placeholder {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
@@ -156,12 +156,12 @@ main {
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-card ::v-deep .q-field__suffix,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__prefix,
 .q-dialog:not(.day-organiser-task-panel-dialog) .q-dialog__inner ::v-deep .q-field__suffix,
-.q-menu:not(.use-default) ::v-deep .q-field__prefix,
-.q-menu:not(.use-default) ::v-deep .q-field__suffix,
-.q-select__popup:not(.use-default) ::v-deep .q-field__prefix,
-.q-select__popup:not(.use-default) ::v-deep .q-field__suffix,
-.q-menu:not(.use-default) ::v-deep .q-icon,
-.q-select__popup:not(.use-default) ::v-deep .q-icon {
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep .q-field__prefix,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep .q-field__suffix,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep .q-field__prefix,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep .q-field__suffix,
+.q-menu:not(.use-default):not(.co21-themed-menu) ::v-deep .q-icon,
+.q-select__popup:not(.use-default):not(.co21-themed-menu) ::v-deep .q-icon {
   color: rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -182,14 +182,14 @@ body .q-select:not(.use-default) ::v-deep .q-field__control,
 /* Quasar merges q-field + q-select + q-field--outlined on one root label — do not use descendant .q-field / .q-field--outlined. */
 html body .q-field.q-select.use-default {
   background: transparent !important;
-  color: var(--co21-field-fg, inherit) !important;
-  -webkit-text-fill-color: var(--co21-field-fg, inherit) !important;
-  caret-color: var(--co21-field-fg, inherit) !important;
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+  caret-color: var(--co21-field-fg) !important;
 }
 
 html body .q-field.q-select.use-default.q-field--outlined .q-field__control {
   background: var(--co21-field-bg, transparent) !important;
-  color: var(--co21-field-fg, inherit) !important;
+  color: var(--co21-field-fg) !important;
 }
 
 html body .q-field.q-select.use-default.q-field--outlined .q-field__control::before,
@@ -226,9 +226,9 @@ html body .q-select.use-default .q-field__input,
 html body .q-select.use-default .q-select__input,
 html body .q-select.use-default .q-field__label,
 html body .q-select.use-default .q-icon {
-  color: var(--co21-field-fg, inherit) !important;
-  -webkit-text-fill-color: var(--co21-field-fg, inherit) !important;
-  caret-color: var(--co21-field-fg, inherit) !important;
+  color: var(--co21-field-fg) !important;
+  -webkit-text-fill-color: var(--co21-field-fg) !important;
+  caret-color: var(--co21-field-fg) !important;
 }
 
 html body .q-select.use-default .q-field__native::placeholder,
@@ -238,56 +238,140 @@ html body .q-select.use-default .q-select__input::placeholder {
   -webkit-text-fill-color: var(--co21-field-placeholder, rgba(127, 127, 127, 0.8)) !important;
 }
 
+/* Themed q-select popups — bind `--co21-menu-*` via `popup-content-class="use-default co21-themed-menu"` + `:popup-content-style`. */
 .q-menu.use-default,
 .q-menu.use-default .q-menu__content,
-.q-select__popup.use-default {
-  background-color: var(--co21-menu-bg, #ffffff) !important;
-  color: var(--co21-menu-fg, #1d1d1d) !important;
+.q-menu.co21-themed-menu,
+.q-select__popup.use-default,
+.q-select__popup.co21-themed-menu,
+.co21-themed-menu,
+.q-select__dialog .co21-themed-menu {
+  background: var(--co21-menu-bg) !important;
+  background-color: var(--co21-menu-bg) !important;
+  color: var(--co21-menu-fg) !important;
+}
+
+/* Quasar `q-dark` on QMenu forces light text — theme vars win. */
+.q-menu.use-default.q-dark,
+.q-menu.use-default.q-dark .q-menu__content,
+.q-menu.co21-themed-menu.q-dark,
+.q-menu.co21-themed-menu.q-dark .q-menu__content,
+.q-menu.use-default.q-dark .q-item,
+.q-menu.use-default.q-dark .q-item .q-item__section,
+.q-menu.use-default.q-dark .q-item .q-item__label,
+.q-menu.co21-themed-menu.q-dark .q-item,
+.q-menu.co21-themed-menu.q-dark .q-item .q-item__section,
+.q-menu.co21-themed-menu.q-dark .q-item .q-item__label,
+.q-menu.use-default.q-dark .q-select__input,
+.q-menu.co21-themed-menu.q-dark .q-select__input,
+.q-menu.use-default.q-dark .q-icon,
+.q-menu.co21-themed-menu.q-dark .q-icon {
+  color: var(--co21-menu-fg) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg) !important;
+  caret-color: var(--co21-menu-fg) !important;
+}
+
+.q-menu.use-default.q-dark,
+.q-menu.use-default.q-dark .q-menu__content,
+.q-menu.co21-themed-menu.q-dark,
+.q-menu.co21-themed-menu.q-dark .q-menu__content {
+  background: var(--co21-menu-bg) !important;
+  background-color: var(--co21-menu-bg) !important;
 }
 
 .q-menu.use-default .q-item,
+.q-menu.co21-themed-menu .q-item,
+.q-menu.use-default .co21-menu-option,
+.q-menu.co21-themed-menu .co21-menu-option,
 .q-select__popup.use-default .q-item,
+.q-select__popup.co21-themed-menu .q-item,
+.co21-themed-menu .q-item,
+.q-select__dialog .co21-themed-menu .q-item,
 .q-menu.use-default .q-item .q-item__section,
-.q-select__popup.use-default .q-item .q-item__section,
+.q-menu.co21-themed-menu .q-item .q-item__section,
 .q-menu.use-default .q-item .q-item__label,
-.q-select__popup.use-default .q-item .q-item__label,
+.q-menu.co21-themed-menu .q-item .q-item__label,
+.q-select__popup.use-default .q-item .q-item__section,
+.co21-themed-menu .q-item .q-item__section,
+.q-select__dialog .co21-themed-menu .q-item .q-item__section {
+  color: var(--co21-menu-fg) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg) !important;
+}
+
 .q-menu.use-default .q-select__input,
 .q-select__popup.use-default .q-select__input,
+.q-menu.co21-themed-menu .q-select__input,
+.co21-themed-menu .q-select__input,
 .q-menu.use-default .q-icon,
-.q-select__popup.use-default .q-icon {
-  color: var(--co21-menu-fg, inherit) !important;
-  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
+.q-menu.co21-themed-menu .q-icon,
+.q-select__popup.use-default .q-icon,
+.co21-themed-menu .q-icon {
+  color: var(--co21-menu-fg) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg) !important;
+}
+
+/* body--dark sets color:#fff globally — reset themed select option rows */
+body.body--dark .q-menu.co21-themed-menu .q-item,
+body.body--dark .q-menu.co21-themed-menu .q-item .q-item__section,
+body.body--dark .co21-themed-menu .q-item,
+body.body--dark .co21-themed-menu .q-item .q-item__section,
+body.body--dark .q-select__dialog .co21-themed-menu .q-item {
+  color: var(--co21-menu-fg, #212121) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg, #212121) !important;
 }
 
 .q-menu.use-default .q-item:hover,
 .q-menu.use-default .q-item.q-manual-focusable--focused,
+.q-menu.co21-themed-menu .q-item:hover,
+.q-menu.co21-themed-menu .q-item.q-manual-focusable--focused,
 .q-select__popup.use-default .q-item:hover,
-.q-select__popup.use-default .q-item.q-manual-focusable--focused {
-  background: var(--co21-menu-hover, rgba(0, 0, 0, 0.06)) !important;
+.q-select__popup.use-default .q-item.q-manual-focusable--focused,
+.co21-themed-menu .q-item:hover,
+.co21-themed-menu .q-item.q-manual-focusable--focused {
+  background-color: var(--co21-menu-hover) !important;
 }
 
 .q-menu.use-default .q-item--active,
-.q-select__popup.use-default .q-item--active {
-  background: var(--co21-menu-active, rgba(0, 0, 0, 0.1)) !important;
-  color: var(--co21-menu-fg, inherit) !important;
-  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
+.q-menu.co21-themed-menu .q-item--active,
+.q-select__popup.use-default .q-item--active,
+.co21-themed-menu .q-item--active {
+  background-color: var(--co21-menu-active) !important;
+  color: var(--co21-menu-fg) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg) !important;
   font-weight: 600;
 }
 
 .q-menu.use-default ::v-deep input,
 .q-menu.use-default ::v-deep .q-select__input,
+.q-menu.co21-themed-menu ::v-deep input,
+.q-menu.co21-themed-menu ::v-deep .q-select__input,
+.co21-themed-menu ::v-deep input,
+.co21-themed-menu ::v-deep .q-select__input,
 .q-select__popup.use-default ::v-deep input,
 .q-select__popup.use-default ::v-deep .q-select__input {
-  color: var(--co21-menu-fg, inherit) !important;
-  -webkit-text-fill-color: var(--co21-menu-fg, inherit) !important;
-  caret-color: var(--co21-menu-fg, inherit) !important;
+  color: var(--co21-menu-fg) !important;
+  -webkit-text-fill-color: var(--co21-menu-fg) !important;
+  caret-color: var(--co21-menu-fg) !important;
+  background: transparent !important;
 }
 
 .q-menu.use-default ::v-deep input::placeholder,
 .q-menu.use-default ::v-deep .q-select__input::placeholder,
+.q-menu.co21-themed-menu ::v-deep input::placeholder,
+.q-menu.co21-themed-menu ::v-deep .q-select__input::placeholder,
+.co21-themed-menu ::v-deep input::placeholder,
+.co21-themed-menu ::v-deep .q-select__input::placeholder,
 .q-select__popup.use-default ::v-deep input::placeholder,
 .q-select__popup.use-default ::v-deep .q-select__input::placeholder {
   color: var(--co21-menu-placeholder, rgba(127, 127, 127, 0.75)) !important;
+}
+
+.co21-themed-menu .co21-menu-option-hint {
+  opacity: 0.78;
+}
+
+.co21-themed-menu .q-item {
+  min-height: 36px;
 }
 
 /* Specific high-precedence fixes observed in DevTools */

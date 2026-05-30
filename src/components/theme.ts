@@ -6,8 +6,10 @@ import {
   GROUP_DEFAULT_TEXT_COLOR,
 } from 'src/modules/group/constants/groupPaletteColors';
 import {
+  isGroupBackgroundColorizeActive,
   isGroupCalendarColorizeActive,
   readGroupBackgroundFields,
+  hexRelativeLuminance as groupHexRelativeLuminance,
 } from 'src/modules/group/utils/groupBackground';
 import {
   blendHex,
@@ -341,17 +343,47 @@ export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<st
 export type Co21SurfaceThemeInput = {
   /** Primary accent hex (group color, panel brand color, …). */
   baseHex: string;
-  /** Foreground on the parent surface; menu text is auto-contrasted when omitted. */
+  /** Foreground on the panel surface; not applied to field/menu (those auto-contrast their fill). */
   textHex?: string;
   /** Actual panel fill hex when it differs from `co21SurfaceHex(baseHex)` (e.g. default meteo panel). */
   panelHex?: string;
 };
 
 const CO21_SURFACE_DARKEN = 0.1;
-const CO21_MENU_DARKEN = 0.16;
-/** Opaque field fill: lighten dark panels / darken bright panels — must read clearly against panel. */
-const CO21_FIELD_LIGHTEN = 0.32;
-const CO21_FIELD_DARKEN = 0.22;
+/** Field inset — always darker than the panel surface. */
+const CO21_FIELD_DARKEN = 0.16;
+const CO21_FIELD_DARKEN_BRIGHT = 0.24;
+const CO21_MENU_HOVER_SHIFT = 0.1;
+const CO21_MENU_ACTIVE_SHIFT = 0.17;
+
+/** Solid field fill — darker inset against the panel (both bright and dark panels). */
+function co21FieldBackgroundHex(input: Co21SurfaceThemeInput): string {
+  const panel = co21PanelHex(input);
+  const amount = isHexBright(panel) ? CO21_FIELD_DARKEN_BRIGHT : CO21_FIELD_DARKEN;
+  return darkenHex(panel, amount);
+}
+
+/** Popup list — lifted from panel, always brighter than the dark field inset. */
+function co21MenuBackgroundHex(input: Co21SurfaceThemeInput): string {
+  const panel = co21PanelHex(input);
+  const fieldBg = co21FieldBackgroundHex(input);
+  const fieldL = groupHexRelativeLuminance(fieldBg);
+  const targetL = fieldL + 0.12;
+
+  for (const lift of [0.14, 0.22, 0.3, 0.38, 0.46]) {
+    const candidate = lightenHex(panel, lift);
+    if (groupHexRelativeLuminance(candidate) >= targetL) {
+      return candidate;
+    }
+  }
+  return lightenHex(panel, 0.5);
+}
+
+/** Hover / active row fill — shift menu bg (lighten when dark, darken when bright). */
+function co21MenuStateBackgroundHex(menuBg: string, level: 'hover' | 'active'): string {
+  const shift = level === 'hover' ? CO21_MENU_HOVER_SHIFT : CO21_MENU_ACTIVE_SHIFT;
+  return isHexBright(menuBg) ? darkenHex(menuBg, shift) : lightenHex(menuBg, shift);
+}
 
 function co21SurfaceHex(baseHex: string): string {
   return darkenHex(baseHex, CO21_SURFACE_DARKEN);
@@ -361,51 +393,183 @@ function co21PanelHex(input: Co21SurfaceThemeInput): string {
   return (input.panelHex || co21SurfaceHex(input.baseHex)).trim();
 }
 
-/** Solid field fill contrasting with the panel behind it. */
-function co21FieldBackgroundHex(panelHex: string): string {
-  if (isHexBright(panelHex)) {
-    return darkenHex(panelHex, CO21_FIELD_DARKEN);
-  }
-  return lightenHex(panelHex, CO21_FIELD_LIGHTEN);
+function co21AccentHex(input: Co21SurfaceThemeInput): string {
+  return (input.baseHex || GROUP_DEFAULT_BACKGROUND).trim();
 }
 
-function resolveCo21SurfaceTheme(input: Co21SurfaceThemeInput): {
-  baseHex: string;
-  surfaceFg: string;
-  menuBaseHex: string;
-  menuFg: '#000' | '#fff';
-} {
-  const baseHex = (input.baseHex || GROUP_DEFAULT_BACKGROUND).trim();
-  const surfaceFg = (input.textHex || getContrastColor(baseHex)).trim();
-  const menuBaseHex = darkenHex(baseHex, CO21_MENU_DARKEN);
-  const menuFg = getContrastColor(menuBaseHex);
-  return { baseHex, surfaceFg, menuBaseHex, menuFg };
+function co21SurfaceFg(input: Co21SurfaceThemeInput): string {
+  return co21ReadableFg(co21PanelHex(input), input.textHex);
+}
+
+/** WCAG contrast ratio between two sRGB hex colors. */
+function co21ContrastRatio(fgHex: string, bgHex: string): number {
+  const lFg = groupHexRelativeLuminance(fgHex);
+  const lBg = groupHexRelativeLuminance(bgHex);
+  const lighter = Math.max(lFg, lBg);
+  const darker = Math.min(lFg, lBg);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Use preferred text (e.g. group textColor) only when readable on `bgHex`.
+ * Field/menu surfaces must call `getContrastColor` on their own fill instead.
+ */
+function co21ReadableFg(bgHex: string, preferredFg?: string): string {
+  const auto = getContrastColor(bgHex);
+  const pref = preferredFg?.trim();
+  if (!pref) return auto;
+  return co21ContrastRatio(pref, bgHex) >= 4.5 ? pref : auto;
+}
+
+/** Best #000 / #fff for `bgHex` (never uses group textColor). */
+function co21AutoFgOnBg(bgHex: string): '#000' | '#fff' {
+  const black = co21ContrastRatio('#000000', bgHex);
+  const white = co21ContrastRatio('#ffffff', bgHex);
+  return white > black ? '#fff' : '#000';
+}
+
+export type Co21MenuThemeTokens = {
+  menuBg: string;
+  menuFg: string;
+  menuHover: string;
+  menuActive: string;
+};
+
+export type Co21FieldThemeTokens = {
+  fieldBg: string;
+  fieldFg: string;
+};
+
+/** Resolved field colors — fg is auto-contrast on field bg, not group textColor. */
+export function resolveCo21FieldTheme(input: Co21SurfaceThemeInput): Co21FieldThemeTokens {
+  const fieldBg = co21FieldBackgroundHex(input);
+  return { fieldBg, fieldFg: co21AutoFgOnBg(fieldBg) };
+}
+
+/** Build surface theme input from an active group colorize config. */
+export function buildCo21SurfaceThemeInputFromGroup(
+  group: Record<string, unknown> | null | undefined,
+): Co21SurfaceThemeInput | null {
+  if (!isGroupBackgroundColorizeActive(group)) return null;
+  const { color, textColor } = readGroupBackgroundFields(group);
+  const accent = color.trim() || GROUP_DEFAULT_BACKGROUND;
+  return {
+    baseHex: accent,
+    textHex: textColor.trim() || getContrastColor(accent),
+    panelHex: co21SurfaceHex(accent),
+  };
+}
+
+/** Resolved menu colors — fg is auto-contrast on menu bg, not group textColor. */
+export function resolveCo21MenuTheme(input: Co21SurfaceThemeInput): Co21MenuThemeTokens {
+  const menuBg = co21MenuBackgroundHex(input);
+  return {
+    menuBg,
+    menuFg: co21AutoFgOnBg(menuBg),
+    menuHover: co21MenuStateBackgroundHex(menuBg, 'hover'),
+    menuActive: co21MenuStateBackgroundHex(menuBg, 'active'),
+  };
 }
 
 /** Outlined field tokens for `q-select.use-default` — bind on the q-select via `:style`. */
 export function getCo21FieldCssVariables(input: Co21SurfaceThemeInput): Record<string, string> {
-  const panelHex = co21PanelHex(input);
-  const fieldHex = co21FieldBackgroundHex(panelHex);
-  const fieldFg = getContrastColor(fieldHex);
+  const { fieldBg, fieldFg } = resolveCo21FieldTheme(input);
   return {
     '--co21-field-fg': fieldFg,
-    '--co21-field-bg': fieldHex,
+    '--co21-field-bg': fieldBg,
     '--co21-field-border': hexToRgba(fieldFg, 0.38),
     '--co21-field-border-focus': hexToRgba(fieldFg, 0.62),
     '--co21-field-placeholder': hexToRgba(fieldFg, 0.58),
   };
 }
 
-/** Dropdown / menu tokens for `q-menu.use-default` / `q-select__popup.use-default`. */
+/** Dropdown / menu tokens for `q-menu.use-default` — bind via `popup-content-style`. */
 export function getCo21MenuCssVariables(input: Co21SurfaceThemeInput): Record<string, string> {
-  const { menuBaseHex, menuFg } = resolveCo21SurfaceTheme(input);
+  const { menuBg, menuFg, menuHover, menuActive } = resolveCo21MenuTheme(input);
   return {
-    '--co21-menu-bg': hexToRgba(menuBaseHex, 0.97),
+    '--co21-menu-bg': menuBg,
     '--co21-menu-fg': menuFg,
-    '--co21-menu-placeholder': hexToRgba(menuFg, 0.62),
-    '--co21-menu-hover': hexToRgba(menuFg, 0.14),
-    '--co21-menu-active': hexToRgba(menuFg, 0.24),
+    '--co21-menu-placeholder': hexToRgba(menuFg, 0.58),
+    '--co21-menu-hover': menuHover,
+    '--co21-menu-active': menuActive,
   };
+}
+
+/** Popup style object for `:popup-content-style` (object form). */
+export function getCo21MenuPopupStyle(input: Co21SurfaceThemeInput): Record<string, string> {
+  const { menuBg, menuFg } = resolveCo21MenuTheme(input);
+  const vars = getCo21MenuCssVariables(input);
+  return {
+    ...vars,
+    background: menuBg,
+    backgroundColor: menuBg,
+    color: menuFg,
+  };
+}
+
+/**
+ * Inline CSS string for `:popup-content-style` — Quasar teleports the menu and applies this
+ * as the root `style` attribute (more reliable than CSS vars alone on the popup node).
+ */
+export function getCo21MenuPopupStyleInline(input: Co21SurfaceThemeInput): string {
+  const { menuBg, menuFg } = resolveCo21MenuTheme(input);
+  const vars = getCo21MenuCssVariables(input);
+  const parts = [
+    ...Object.entries(vars).map(([key, value]) => `${key}:${value}`),
+    `background:${menuBg} !important`,
+    `background-color:${menuBg} !important`,
+    `color:${menuFg} !important`,
+  ];
+  return parts.join(';');
+}
+
+const CO21_MENU_POPUP_SELECTORS = [
+  '.q-menu.co21-themed-menu',
+  '.q-menu.use-default.co21-themed-menu',
+  '.co21-themed-menu',
+  '.q-select__dialog .co21-themed-menu',
+].join(',');
+
+function applyCo21MenuPopupThemeToElement(el: HTMLElement, style: Record<string, string>): void {
+  Object.entries(style).forEach(([key, value]) => {
+    if (key.startsWith('--')) {
+      el.style.setProperty(key, value);
+    } else if (key === 'background' || key === 'backgroundColor') {
+      el.style.setProperty('background-color', value, 'important');
+      el.style.setProperty('background', value, 'important');
+    } else if (key === 'color') {
+      el.style.setProperty('color', value, 'important');
+    }
+  });
+}
+
+/**
+ * Apply menu theme tokens on teleported popup nodes (menu or dialog-inner scroll div).
+ * Returns true when at least one node was styled.
+ */
+export function pinCo21MenuPopupTheme(
+  input: Co21SurfaceThemeInput,
+  scope: ParentNode = document,
+): boolean {
+  if (typeof document === 'undefined') return false;
+  const style = getCo21MenuPopupStyle(input);
+  const nodes = scope.querySelectorAll(CO21_MENU_POPUP_SELECTORS);
+  if (nodes.length === 0) return false;
+  nodes.forEach((node) => applyCo21MenuPopupThemeToElement(node as HTMLElement, style));
+  return true;
+}
+
+/** Retry until the teleported popup exists (popup-show fires before the node mounts). */
+export function pinCo21MenuPopupThemeWhenReady(input: Co21SurfaceThemeInput): void {
+  if (typeof document === 'undefined') return;
+  if (pinCo21MenuPopupTheme(input)) return;
+  let attempts = 0;
+  const tryPin = () => {
+    if (pinCo21MenuPopupTheme(input) || attempts >= 24) return;
+    attempts += 1;
+    requestAnimationFrame(tryPin);
+  };
+  requestAnimationFrame(tryPin);
 }
 
 /** Field + menu tokens together (e.g. non-teleported menus). */
@@ -418,9 +582,8 @@ export function getCo21SurfaceCssVariables(input: Co21SurfaceThemeInput): Record
 
 /** Panel/card background from the same accent as field/menu tokens. */
 export function getCo21SurfaceBackgroundStyle(input: Co21SurfaceThemeInput): Record<string, string> {
-  const { baseHex, surfaceFg } = resolveCo21SurfaceTheme(input);
   return {
-    backgroundColor: hexToRgba(co21SurfaceHex(baseHex), 0.9),
-    color: surfaceFg,
+    backgroundColor: hexToRgba(co21PanelHex(input), 0.9),
+    color: co21SurfaceFg(input),
   };
 }
