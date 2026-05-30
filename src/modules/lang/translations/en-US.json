@@ -57,6 +57,7 @@
   "action.load_group_image": "Load background image",
   "action.remove_group_image": "Remove image",
   "label.colorize_group_background": "Tint image with group color",
+  "label.colorize_group_calendar": "Tint calendar with group color",
   "label.group_background_preview": "Background preview",
   "ui.join_device": "Connect/disconnect device",
   "ui.select_group": "Select group",

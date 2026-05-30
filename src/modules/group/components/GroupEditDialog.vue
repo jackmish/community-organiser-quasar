@@ -92,6 +92,9 @@ async function handleSubmit(payload: any) {
         ...(typeof payload.backgroundColorize === 'boolean'
           ? { backgroundColorize: payload.backgroundColorize }
           : {}),
+        ...(typeof payload.calendarColorize === 'boolean'
+          ? { calendarColorize: payload.calendarColorize }
+          : {}),
         ...(payload.backgroundImage
           ? { backgroundImage: payload.backgroundImage }
           : { backgroundImage: undefined }),
@@ -121,6 +124,9 @@ async function handleSubmit(payload: any) {
         ...(payload.backgroundImage ? { backgroundImage: payload.backgroundImage } : {}),
         ...(typeof payload.backgroundColorize === 'boolean'
           ? { backgroundColorize: payload.backgroundColorize }
+          : {}),
+        ...(typeof payload.calendarColorize === 'boolean'
+          ? { calendarColorize: payload.calendarColorize }
           : {}),
       });
       const createdId = String(created?.id || '').trim();

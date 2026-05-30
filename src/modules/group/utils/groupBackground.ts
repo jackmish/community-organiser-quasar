@@ -1,5 +1,8 @@
 import { appMainBg } from 'src/components/theme';
-import { GROUP_DEFAULT_BACKGROUND } from 'src/modules/group/constants/groupPaletteColors';
+import {
+  GROUP_DEFAULT_BACKGROUND,
+  GROUP_DEFAULT_TEXT_COLOR,
+} from 'src/modules/group/constants/groupPaletteColors';
 import { hexToRgb, hexToRgba, rgbToHex } from 'src/utils/colorUtils';
 
 /** Matches {@link useGroupColor} when no group is selected. */
@@ -30,21 +33,29 @@ export type GroupBackgroundState = {
 export function readGroupBackgroundFields(group: Record<string, unknown> | null | undefined): {
   backgroundImage: string | null;
   backgroundColorize: boolean;
+  calendarColorize: boolean;
   color: string;
+  textColor: string;
 } {
   if (!group) {
     return {
       backgroundImage: null,
       backgroundColorize: false,
+      calendarColorize: false,
       color: GROUP_DEFAULT_BACKGROUND,
+      textColor: GROUP_DEFAULT_TEXT_COLOR,
     };
   }
   const rawImg = group.backgroundImage ?? group.background_image;
   const backgroundImage = typeof rawImg === 'string' && rawImg.trim() ? rawImg.trim() : null;
   const backgroundColorize = Boolean(group.backgroundColorize ?? group.background_colorize);
+  const calendarColorize = Boolean(group.calendarColorize ?? group.calendar_colorize);
   const color =
     typeof group.color === 'string' && group.color ? group.color : GROUP_DEFAULT_BACKGROUND;
-  return { backgroundImage, backgroundColorize, color };
+  const rawText = group.textColor ?? group.text_color;
+  const textColor =
+    typeof rawText === 'string' && rawText.trim() ? rawText.trim() : GROUP_DEFAULT_TEXT_COLOR;
+  return { backgroundImage, backgroundColorize, calendarColorize, color, textColor };
 }
 
 export function resolveGroupBackground(

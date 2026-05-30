@@ -1,6 +1,20 @@
 // date helpers (formatDisplayDate, formatEventHoursDiff) are exported from
 // the occursOnDay util to keep theme focused on styling/helpers only.
 
+import {
+  GROUP_DEFAULT_BACKGROUND,
+  GROUP_DEFAULT_TEXT_COLOR,
+} from 'src/modules/group/constants/groupPaletteColors';
+import { readGroupBackgroundFields } from 'src/modules/group/utils/groupBackground';
+import {
+  blendHex,
+  darkenHex,
+  getContrastColor,
+  hexToRgba,
+  isHexBright,
+  lightenHex,
+} from 'src/utils/colorUtils';
+
 // Grouped priority definitions: each priority has a background and a preferred text color
 export const priorityDefinitions: Record<string, { bg: string; text: string; icon?: string }> = {
   low: { bg: '#c7e3ef', text: '#263238', icon: 'low_priority' },
@@ -145,50 +159,158 @@ export function resolveTaskListSizeVariant(
   return 'small';
 }
 
-// Overlay color chooser used for calendar overlays and jump-button alignment.
+// ── Calendar theming (month bands, chrome, neutrals, nav) ─────────────────────
+
+export type CalendarThemeOptions = {
+  colorize: boolean;
+  groupColor: string;
+  groupTextColor: string;
+};
+
+/** Top/bottom bars above and below the grid when calendar colorize is off. */
+export const CALENDAR_CHROME_BG_DEFAULT = 'rgba(50, 200, 255, 0.5)';
+
+const CALENDAR_PRIMARY = '#1976d2';
+
+const LEGACY_MONTH_OVERLAY_STOPS: ReadonlyArray<readonly [string, string]> = [
+  ['#ffffff', '#fff'],
+  ['#4cafe0', '#000'],
+  ['#9ff800', '#fff'],
+  ['#ff9800', '#fff'],
+  ['#9c27b0', '#fff'],
+  ['#009688', '#fff'],
+  ['#3f51b5', '#fff'],
+];
+
+/** First N months use toned group bg; later months morph toward group text color. */
+export const CALENDAR_TONED_MONTH_COUNT = 3;
+
+const CALENDAR_MONTH_TONE_STEP = 0.14;
+const CALENDAR_MONTH_TONE_MAX = 0.72;
+const CALENDAR_MONTHS_IN_YEAR = 12;
+
+export function resolveCalendarTheme(
+  group: Record<string, unknown> | null | undefined,
+): CalendarThemeOptions {
+  const { calendarColorize, color, textColor } = readGroupBackgroundFields(group);
+  return {
+    colorize: calendarColorize,
+    groupColor: color,
+    groupTextColor: textColor,
+  };
+}
+
+export function parseCalendarMonthNumber(monthLike: string | number | Date): number {
+  if (typeof monthLike === 'number') return monthLike;
+  if (monthLike instanceof Date) return monthLike.getMonth() + 1;
+  if (typeof monthLike === 'string') {
+    const parsed = new Date(monthLike);
+    if (!isNaN(parsed.getTime())) return parsed.getMonth() + 1;
+    const n = Number(monthLike);
+    return isNaN(n) ? 1 : n;
+  }
+  const n = Number(String(monthLike));
+  return isNaN(n) ? 1 : n;
+}
+
+/** Months ahead of the current calendar month (0 = this month, 1 = next, …). */
+export function monthOffsetFromToday(monthLike: string | number | Date): number {
+  const monthNum = parseCalendarMonthNumber(monthLike);
+  const todayMonth = new Date().getMonth() + 1;
+  return (monthNum - todayMonth + 12) % 12;
+}
+
+/** Tone steps 0..2 from group bg (bright → darker, dark → lighter). */
+export function calendarTonedMonthColor(groupHex: string, toneIndex: number): string {
+  const idx = Math.max(0, Math.min(CALENDAR_TONED_MONTH_COUNT - 1, toneIndex));
+  if (idx === 0) return groupHex;
+  const amount = Math.min(CALENDAR_MONTH_TONE_MAX, idx * CALENDAR_MONTH_TONE_STEP);
+  return isHexBright(groupHex) ? darkenHex(groupHex, amount) : lightenHex(groupHex, amount);
+}
+
+function groupMonthBandColor(groupHex: string, textHex: string, offset: number): string {
+  if (offset < CALENDAR_TONED_MONTH_COUNT) {
+    return calendarTonedMonthColor(groupHex, offset);
+  }
+  const anchor = calendarTonedMonthColor(groupHex, CALENDAR_TONED_MONTH_COUNT - 1);
+  const morphSpan = CALENDAR_MONTHS_IN_YEAR - CALENDAR_TONED_MONTH_COUNT;
+  const morphIndex = offset - CALENDAR_TONED_MONTH_COUNT;
+  const t = morphSpan <= 1 ? 1 : morphIndex / (morphSpan - 1);
+  return blendHex(anchor, textHex, Math.min(1, Math.max(0, t)));
+}
+
+/** Month band / jump-button / label colors: [background, foreground]. */
 export function getOverlayColorForMonth(
   monthLike: string | number | Date,
+  theme?: CalendarThemeOptions,
 ): [bg: string, color: string] {
-  const overlayColorArray: Array<string | [string, string]> = [
-    ['#ffffff', '#fff'],
-    ['#4cafe0', '#000'],
-    ['#9ff800', '#fff'],
-    ['#ff9800', '#fff'],
-    ['#9c27b0', '#fff'],
-    ['#009688', '#fff'],
-    ['#3f51b5', '#fff'],
-  ];
-  // ['#4cfff0', '#fff'],
-  // ['#9ff800', '#000'],
-  // ['#ff9800', '#fff'],
-  // ['#9c27b0', '#fff'],
-  // ['#009688', '#fff'],
-  // ['#e91e63', '#fff'],
-  // ['#3f51b5', '#fff'],
+  const monthNum = parseCalendarMonthNumber(monthLike);
+  const offset = monthOffsetFromToday(monthLike);
 
-  let monthNum: number;
-  if (typeof monthLike === 'number') monthNum = monthLike;
-  else if (monthLike instanceof Date) monthNum = monthLike.getMonth() + 1;
-  else if (typeof monthLike === 'string') {
-    const parsed = new Date(monthLike);
-    if (!isNaN(parsed.getTime())) monthNum = parsed.getMonth() + 1;
-    else {
-      const n = Number(monthLike);
-      monthNum = isNaN(n) ? 1 : n;
+  if (!theme?.colorize) {
+    if (offset >= 0 && offset < LEGACY_MONTH_OVERLAY_STOPS.length) {
+      const entry = LEGACY_MONTH_OVERLAY_STOPS[offset] ?? LEGACY_MONTH_OVERLAY_STOPS[0]!;
+      return [entry[0], entry[1]];
     }
-  } else {
-    const n = Number(String(monthLike));
-    monthNum = isNaN(n) ? 1 : n;
+    const key = String(monthNum).padStart(2, '0');
+    const bg = monthColors[key] ?? CALENDAR_PRIMARY;
+    return [bg, getContrastColor(bg)];
   }
 
-  const todayMonth = new Date().getMonth() + 1;
-  const offset = (monthNum - todayMonth + 12) % 12;
+  const groupHex = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  const textHex = theme.groupTextColor || GROUP_DEFAULT_TEXT_COLOR;
+  const bg = groupMonthBandColor(groupHex, textHex, offset);
+  return [bg, getContrastColor(bg)];
+}
 
-  if (offset >= 0 && offset < overlayColorArray.length) {
-    const entry = overlayColorArray[offset] ?? overlayColorArray[0] ?? ['#1976d2', '#fff'];
-    return Array.isArray(entry) ? [entry[0], entry[1] ?? '#fff'] : [entry, '#fff'];
+export function getCalendarSeparatorColor(theme?: CalendarThemeOptions): string {
+  if (!theme?.colorize) return CALENDAR_PRIMARY;
+  return theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+}
+
+export function calendarChromeBackground(theme: CalendarThemeOptions): string {
+  const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  return hexToRgba(blendHex('#ffffff', g, 0.52), 0.78);
+}
+
+export function getCalendarChromeBarStyle(theme?: CalendarThemeOptions): Record<string, string> {
+  if (!theme?.colorize) return {};
+  return { backgroundColor: calendarChromeBackground(theme) };
+}
+
+/** Direct group color for prev/next nav and visible-days pagination control. */
+export function getCalendarControlColors(
+  theme?: CalendarThemeOptions,
+): { backgroundColor: string; color: string } {
+  if (!theme?.colorize) {
+    return { backgroundColor: CALENDAR_PRIMARY, color: '#ffffff' };
   }
+  const bg = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  return { backgroundColor: bg, color: getContrastColor(bg) };
+}
 
-  const key = String(monthNum).padStart(2, '0');
-  return [monthColors[key] ?? '#1976d2', '#fff'];
+/**
+ * CSS variables for calendar neutrals (day cells, weekday headers, accents).
+ * Empty when colorize is off — SCSS fallbacks apply.
+ */
+export function getCalendarCssVariables(theme?: CalendarThemeOptions): Record<string, string> {
+  if (!theme?.colorize) return {};
+  const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
+  const control = getCalendarControlColors(theme);
+  const chromeBg = calendarChromeBackground(theme);
+  return {
+    '--cal-chrome-bg': chromeBg,
+    '--cal-day-bg': hexToRgba(blendHex('#ffffff', g, 0.14), 0.92),
+    '--cal-weekday-bg': hexToRgba(blendHex('#eeeeee', g, 0.2), 0.93),
+    '--cal-weekday-alt-bg': hexToRgba(blendHex('#ffffff', g, 0.12), 0.93),
+    '--cal-weekend-th-bg': blendHex('#55bbff', g, 0.28),
+    '--cal-past-day-bg': hexToRgba(blendHex('#ffffff', g, 0.1), 0.82),
+    '--cal-weekend-highlight': hexToRgba(g, 0.38),
+    '--cal-today-column-bg': hexToRgba(g, 0.42),
+    '--cal-accent': g,
+    '--cal-nav-btn-bg': control.backgroundColor,
+    '--cal-nav-btn-fg': control.color,
+    '--cal-pagination-bg': control.backgroundColor,
+    '--cal-pagination-fg': control.color,
+  };
 }

@@ -34,6 +34,7 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
       if (r.icon !== undefined) init.icon = r.icon;
       if (r.backgroundImage !== undefined) init.backgroundImage = r.backgroundImage;
       if (r.backgroundColorize !== undefined) init.backgroundColorize = r.backgroundColorize;
+      if (r.calendarColorize !== undefined) init.calendarColorize = r.calendarColorize;
       if (r.parentId != null) init.parentId = r.parentId ?? undefined;
       if (r.hideTasksFromParent !== undefined) init.hideTasksFromParent = r.hideTasksFromParent;
       if (r.shareSubgroups !== undefined) init.shareSubgroups = r.shareSubgroups;
@@ -67,6 +68,8 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
           r.backgroundColorize !== undefined
             ? r.backgroundColorize
             : existing.backgroundColorize,
+        calendarColorize:
+          r.calendarColorize !== undefined ? r.calendarColorize : existing.calendarColorize,
         parentId: r.parentId !== undefined ? (r.parentId ?? undefined) : existing.parentId,
         hideTasksFromParent:
           r.hideTasksFromParent !== undefined
@@ -239,6 +242,7 @@ export function groupPayloadFromLocal(g: Group): LanSyncGroupPayload {
   if (style.textColor) p.textColor = style.textColor;
   if (g.backgroundImage !== undefined) p.backgroundImage = g.backgroundImage;
   if (g.backgroundColorize !== undefined) p.backgroundColorize = g.backgroundColorize;
+  if (g.calendarColorize !== undefined) p.calendarColorize = g.calendarColorize;
   if (g.hideTasksFromParent !== undefined) p.hideTasksFromParent = g.hideTasksFromParent;
   if (g.shareSubgroups !== undefined) p.shareSubgroups = g.shareSubgroups;
   if (g.shortcut !== undefined) p.shortcut = g.shortcut;

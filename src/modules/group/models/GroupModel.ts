@@ -11,6 +11,7 @@ export class GroupModel extends BaseModel {
   textColor?: string | undefined;
   backgroundImage?: string | undefined;
   backgroundColorize?: boolean | undefined;
+  calendarColorize?: boolean | undefined;
   parentId: string | undefined;
   parent_id?: string | null;
   roles: RoleData[];
@@ -36,6 +37,9 @@ export class GroupModel extends BaseModel {
     this.backgroundColorize = Boolean(
       (data as any).backgroundColorize ?? (data as any).background_colorize,
     );
+    this.calendarColorize = Boolean(
+      (data as any).calendarColorize ?? (data as any).calendar_colorize,
+    );
     // Normalize parent relationship: accept both camelCase and snake_case from legacy data.
     // `parentId` is canonical going forward.
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
@@ -56,6 +60,7 @@ export class GroupModel extends BaseModel {
       ...(this.textColor ? { textColor: this.textColor } : {}),
       ...(this.backgroundImage ? { backgroundImage: this.backgroundImage } : {}),
       ...(this.backgroundColorize ? { backgroundColorize: this.backgroundColorize } : {}),
+      ...(this.calendarColorize ? { calendarColorize: this.calendarColorize } : {}),
       parentId: this.parentId,
       // parent_id mirrors parentId for backward compatibility with older persisted data.
       parent_id: this.parentId ?? null,

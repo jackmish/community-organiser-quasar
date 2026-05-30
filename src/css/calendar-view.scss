@@ -12,7 +12,7 @@ $sep-color: $primary;
   width: calc(100% - 8px);
   margin: 0 auto;
   min-height: 60px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--cal-day-bg, rgba(255, 255, 255, 0.9));
   color: black !important;
   //   border: 2px solid $muted;
   position: relative;
@@ -120,15 +120,15 @@ $calendar-nav-col-width: 122px;
     text-align: center;
     border-left: 1px dashed #bbb;
     border-right: 1px dashed #bbb;
-    background: #eeeeeeee;
+    background: var(--cal-weekday-bg, #eeeeeeee);
   }
 
   th.calendar-weekday-th--alt {
-    background: #ffffffee;
+    background: var(--cal-weekday-alt-bg, #ffffffee);
   }
 
   th.calendar-weekend-th {
-    background: #5bf !important;
+    background: var(--cal-weekend-th-bg, #5bf) !important;
   }
 
   th:first-child,
@@ -171,7 +171,7 @@ $calendar-nav-col-width: 122px;
     content: '';
     position: absolute;
     inset: 0;
-    background-color: $highlight;
+    background-color: var(--cal-weekend-highlight, #{$highlight});
     z-index: 0;
   }
 
@@ -181,7 +181,7 @@ $calendar-nav-col-width: 122px;
   }
 
   &.calendar-past {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: var(--cal-past-day-bg, rgba(255, 255, 255, 0.8));
     border: none !important;
     // filter: sepia(100%) hue-rotate(180deg) brightness(50%);
     filter: grayscale(70%) brightness(65%);
@@ -265,7 +265,7 @@ $calendar-nav-col-width: 122px;
   color: $primary;
 }
 .new-month-week {
-  border-top: 3px solid $primary;
+  border-top: 3px solid var(--cal-accent, #{$primary});
 }
 .calendar-day-btn.first-day-of-month {
   //   border-left: 5px solid $primary !important;
@@ -283,7 +283,7 @@ $calendar-nav-col-width: 122px;
 }
 
 .calendar-today-column {
-  background-color: rgba(25, 118, 210, 0.6);
+  background-color: var(--cal-today-column-bg, rgba(25, 118, 210, 0.6));
 }
 
 .calendar-events {
@@ -439,7 +439,7 @@ $calendar-nav-col-width: 122px;
 .bottom-row,
 .top-row {
   padding: 10px;
-  /* background: set inline from active group wash (CalendarView) */
+  background-color: $highlight;
   margin-top: 20px;
   margin-bottom: 20px;
   position: relative;
@@ -465,8 +465,8 @@ $calendar-nav-col-width: 122px;
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: rgba(25, 118, 210, 1);
-  color: white;
+  background: var(--cal-pagination-bg, rgba(25, 118, 210, 1));
+  color: var(--cal-pagination-fg, white);
   padding: 10px 16px;
   border-radius: 6px;
 }
@@ -479,5 +479,18 @@ $calendar-nav-col-width: 122px;
   margin: 0;
 }
 .visible-days-control .q-radio__label {
-  color: white;
+  color: var(--cal-pagination-fg, white);
+}
+
+.calendar-root--colorize {
+  .top-row,
+  .bottom-row {
+    background-color: var(--cal-chrome-bg) !important;
+  }
+
+  .calendar-nav-arrow.q-btn,
+  .today-jump-btn.q-btn {
+    background-color: var(--cal-nav-btn-bg) !important;
+    color: var(--cal-nav-btn-fg) !important;
+  }
 }

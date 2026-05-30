@@ -1,14 +1,20 @@
 <template>
+  <div
+    class="calendar-root"
+    :class="{ 'calendar-root--colorize': calendarTheme.colorize }"
+    :style="calendarThemeVars"
+  >
   <div>
     <!-- Quick Date Buttons and Next button (moved to top) -->
-    <div class="top-row row items-center" :style="calendarChromeBarStyle">
+    <div class="top-row row items-center" :style="calendarChromeRowStyle">
       <div class="col">
         <div class="calendar-month-btns">
           <q-btn
             unelevated
             size="md"
-            color="blue"
-            text-color="white"
+            :color="calendarTheme.colorize ? undefined : 'blue'"
+            :text-color="calendarTheme.colorize ? undefined : 'white'"
+            :style="calendarControlBtnStyle"
             @click="setEventDateToToday"
             class="text-weight-bold today-jump-btn"
           >
@@ -73,8 +79,9 @@
                     v-if="weekIndex === 0"
                     unelevated
                     dense
-                    color="primary"
-                    text-color="white"
+                    :color="calendarTheme.colorize ? undefined : 'primary'"
+                    :text-color="calendarTheme.colorize ? undefined : 'white'"
+                    :style="calendarControlBtnStyle"
                     :aria-label="`${$text('ui.prev')}: ${calendarNavPrevRange.from}, ${calendarNavPrevRange.to}`"
                     :title="`${$text('ui.prev')}: ${calendarNavPrevRange.from} — ${calendarNavPrevRange.to}`"
                     class="calendar-nav-arrow calendar-nav-arrow--prev"
@@ -122,7 +129,7 @@
                           ? ' ' + new Date(day).getFullYear()
                           : '')
                       "
-                      :background="`blur(60px) ${getOverlayColorForMonth(day)[0]}`"
+                      :background="`blur(60px) ${overlayColorForMonth(day)[0]}`"
                       color="#00000085"
                       justifyContent="flex-start"
                       class="calendar-month-label-above"
@@ -239,8 +246,9 @@
                     v-if="weekIndex === allCalendarWeeks.length - 1"
                     unelevated
                     dense
-                    color="primary"
-                    text-color="white"
+                    :color="calendarTheme.colorize ? undefined : 'primary'"
+                    :text-color="calendarTheme.colorize ? undefined : 'white'"
+                    :style="calendarControlBtnStyle"
                     :aria-label="`${$text('ui.next')}: ${calendarNavNextRange.from}, ${calendarNavNextRange.to}`"
                     :title="`${$text('ui.next')}: ${calendarNavNextRange.from} — ${calendarNavNextRange.to}`"
                     class="calendar-nav-arrow calendar-nav-arrow--next"
@@ -263,9 +271,9 @@
     </div>
   </div>
   <!-- Visible days per page -->
-  <div class="bottom-row row q-mb-md items-center" :style="calendarChromeBarStyle">
+  <div class="bottom-row row q-mb-md items-center" :style="calendarChromeRowStyle">
     <div class="col pagination-range-options">
-      <div class="visible-days-control">
+      <div class="visible-days-control" :style="calendarPaginationStyle">
         <span class="visible-days-label text-subtitle2">{{
           $text("ui.visible_days")
         }}</span>
@@ -284,6 +292,7 @@
         />
       </div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -323,11 +332,12 @@ import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
   getOverlayColorForMonth,
+  getCalendarChromeBarStyle,
+  getCalendarControlColors,
+  getCalendarCssVariables,
+  getCalendarSeparatorColor,
+  resolveCalendarTheme,
 } from "../theme";
-import {
-  groupBackgroundWashStyle,
-  pageBackgroundAccentColor,
-} from "src/modules/group/utils/groupBackground";
 import Watermark from "src/components/ui/Watermark.vue";
 
 const props = defineProps<{
@@ -542,6 +552,43 @@ function scrollToDay(dateStr: string) {
     // ignore — non-critical
   }
 }
+const activeGroupRecord = computed((): Record<string, unknown> | null => {
+  try {
+    const gid = CC.group.active.activeGroup.value?.value ?? null;
+    if (!gid) return null;
+    const list = CC.group.list.all.value ?? [];
+    const g = list.find((x: any) => String(x?.id) === String(gid));
+    return g && typeof g === "object" ? (g as unknown as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+});
+
+const calendarTheme = computed(() => resolveCalendarTheme(activeGroupRecord.value));
+
+const calendarThemeVars = computed(() => getCalendarCssVariables(calendarTheme.value));
+
+/** Inline chrome strip behind month buttons + pagination (scoped SCSS vars were not applying). */
+const calendarChromeRowStyle = computed(() =>
+  getCalendarChromeBarStyle(calendarTheme.value),
+);
+
+const calendarControlBtnStyle = computed(() => {
+  if (!calendarTheme.value.colorize) return {};
+  const { backgroundColor, color } = getCalendarControlColors(calendarTheme.value);
+  return { backgroundColor, color };
+});
+
+const calendarPaginationStyle = computed(() => {
+  if (!calendarTheme.value.colorize) return {};
+  const { backgroundColor, color } = getCalendarControlColors(calendarTheme.value);
+  return { backgroundColor, color };
+});
+
+function overlayColorForMonth(monthLike: string | number | Date): [string, string] {
+  return getOverlayColorForMonth(monthLike, calendarTheme.value);
+}
+
 const monthEdges = ref<Array<[HTMLElement, HTMLElement]>>([]);
 
 function collectMonthEdges() {
@@ -679,7 +726,7 @@ function createOverlaysFromEdges() {
         div.dataset.startCol = String((seg as any).startCol);
       if ((seg as any).endCol !== undefined)
         div.dataset.endCol = String((seg as any).endCol);
-      const [overlayColor] = getOverlayColorForMonth(month);
+      const [overlayColor] = overlayColorForMonth(month);
       Object.assign(div.style, {
         position: "absolute",
         top: `${seg.top}px`,
@@ -719,7 +766,7 @@ function createOverlaysFromEdges() {
             top: `${Math.max(0, Math.round(topPx))}px`,
             width: `${Math.max(0, Math.round(widthPx))}px`,
             height: `${sepThickness}px`,
-            backgroundColor: "#1976d2",
+            backgroundColor: getCalendarSeparatorColor(calendarTheme.value),
             pointerEvents: "none",
             zIndex: "9999",
             boxShadow: "0 0 6px rgba(0,0,0,0.12)",
@@ -822,7 +869,7 @@ function createOverlaysFromEdges() {
             left: `${Math.max(0, Math.round(boundaryX - 4))}px`,
             width: `8px`,
             height: `${height}px`,
-            backgroundColor: `#1976d2`,
+            backgroundColor: getCalendarSeparatorColor(calendarTheme.value),
             opacity: `1`,
             pointerEvents: "none",
             zIndex: "9999",
@@ -1320,26 +1367,27 @@ const nextSixMonths = computed(() => {
   return months;
 });
 
-/** Top/bottom chrome bars: same tinted wash as the page background. */
-const calendarChromeBarStyle = computed(() => {
-  try {
-    const gid = CC.group.active.activeGroup.value?.value ?? null;
-    const list = CC.group.list.all.value ?? [];
-    const group = gid
-      ? (list.find((g: any) => String(g?.id) === String(gid)) as Record<string, unknown> | undefined)
-      : undefined;
-    return groupBackgroundWashStyle(pageBackgroundAccentColor(group ?? null));
-  } catch {
-    return groupBackgroundWashStyle(pageBackgroundAccentColor(null));
-  }
-});
+watch(
+  () =>
+    [
+      calendarTheme.value.colorize,
+      calendarTheme.value.groupColor,
+      calendarTheme.value.groupTextColor,
+    ] as const,
+  () => {
+    nextTick().then(() => {
+      collectMonthEdges();
+      createOverlaysFromEdges();
+    });
+  },
+);
 
 // Button colors derived from getOverlayColorForMonth so they match calendar overlays
 const buttonColors = computed(() =>
-  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value)[0])
+  nextSixMonths.value.map((m) => overlayColorForMonth(m.value)[0]),
 );
 const buttonTextColors = computed(() =>
-  nextSixMonths.value.map((m) => getOverlayColorForMonth(m.value)[1])
+  nextSixMonths.value.map((m) => overlayColorForMonth(m.value)[1]),
 );
 
 function previousCalendarWeeks() {
@@ -1596,3 +1644,13 @@ function getEventsForDay(day: string) {
 </style>
 
 <style scoped src="../../css/calendar-view.scss"></style>
+
+<style lang="scss">
+/* Chrome row bg: unscoped so it applies with imported scoped calendar-view.scss */
+.calendar-root.calendar-root--colorize {
+  .top-row,
+  .bottom-row {
+    background-color: var(--cal-chrome-bg) !important;
+  }
+}
+</style>

@@ -66,18 +66,56 @@ export function darkenHex(hex: string, amount = 0.12): string {
   }
 }
 
+/** Lighten a hex color by blending toward white (amount 0–1). */
+export function lightenHex(hex: string, amount = 0.12): string {
+  try {
+    const rgb = hexToRgb(String(hex || '#1976d2'));
+    if (!rgb) return hex;
+    const w = Math.max(0, Math.min(1, amount));
+    return rgbToHex(
+      Math.round(rgb.r + (255 - rgb.r) * w),
+      Math.round(rgb.g + (255 - rgb.g) * w),
+      Math.round(rgb.b + (255 - rgb.b) * w),
+    );
+  } catch {
+    return hex;
+  }
+}
+
+/** Blend two hex colors; `accentWeight` is the fraction of `accent`. */
+export function blendHex(base: string, accent: string, accentWeight: number): string {
+  const a = hexToRgb(base);
+  const b = hexToRgb(accent);
+  if (!a || !b) return base;
+  const w = Math.max(0, Math.min(1, accentWeight));
+  return rgbToHex(
+    Math.round(a.r * (1 - w) + b.r * w),
+    Math.round(a.g * (1 - w) + b.g * w),
+    Math.round(a.b * (1 - w) + b.b * w),
+  );
+}
+
+/** Relative luminance 0–1 (sRGB, same weights as contrast helpers). */
+export function hexRelativeLuminance(hex: string): number {
+  const rgb = hexToRgb(String(hex || '#1976d2'));
+  if (!rgb) return 0.5;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** True when the color reads as light on screen (default threshold ≈ getContrastColor flip). */
+export function isHexBright(hex: string, threshold = 0.55): boolean {
+  return hexRelativeLuminance(hex) > threshold;
+}
+
 /**
  * Return '#000' or '#fff' depending on which has better contrast against the given hex color.
  */
 export function getContrastColor(hex: string): '#000' | '#fff' {
   try {
-    const rgb = hexToRgb(String(hex || '#1976d2'));
-    if (!rgb) return '#000';
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.6 ? '#000' : '#fff';
+    return hexRelativeLuminance(hex) > 0.6 ? '#000' : '#fff';
   } catch {
     return '#000';
   }

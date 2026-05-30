@@ -57,6 +57,7 @@
   "action.load_group_image": "Wczytaj tło",
   "action.remove_group_image": "Usuń obraz",
   "label.colorize_group_background": "Tonuj obraz kolorem grupy",
+  "label.colorize_group_calendar": "Tonuj kalendarz kolorem grupy",
   "label.group_background_preview": "Podgląd tła",
   "ui.join_device": "Dołącz do grupy urządzenie",
   "ui.select_group": "Wybierz grupę",

@@ -343,6 +343,11 @@
           :label="$text('label.colorize_group_background')"
           dense
         />
+        <q-checkbox
+          v-model="localCalendarColorize"
+          :label="$text('label.colorize_group_calendar')"
+          dense
+        />
         <div class="gm-bg-preview" :title="$text('label.group_background_preview')">
           <div class="gm-bg-preview__photo" :style="bgPreviewPhotoStyle" />
           <div
@@ -524,6 +529,7 @@ const localShortcut = ref(false);
 const localTextColor = ref(GROUP_DEFAULT_TEXT_COLOR);
 const localBackgroundImage = ref<string | null>(null);
 const localBackgroundColorize = ref(false);
+const localCalendarColorize = ref(false);
 const bgImageInput = ref<HTMLInputElement | null>(null);
 
 const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
@@ -763,6 +769,7 @@ watch(
       localTextColor.value = GROUP_DEFAULT_TEXT_COLOR;
       localBackgroundImage.value = null;
       localBackgroundColorize.value = false;
+  localCalendarColorize.value = false;
       return;
     }
     try {
@@ -807,6 +814,7 @@ watch(
         localShortcut.value = Boolean(src.shortcut);
         const bg = readGroupBackgroundFields(src);
         localBackgroundColorize.value = bg.backgroundColorize;
+        localCalendarColorize.value = bg.calendarColorize;
         void resolveGroupBackgroundDisplayUrl(bg.backgroundImage).then((url) => {
           localBackgroundImage.value = url;
         });
@@ -825,6 +833,7 @@ function pickBackgroundImage() {
 function clearBackgroundImage() {
   localBackgroundImage.value = null;
   localBackgroundColorize.value = false;
+  localCalendarColorize.value = false;
   if (bgImageInput.value) bgImageInput.value.value = "";
 }
 
@@ -913,6 +922,7 @@ function onSubmit() {
     shortcut: localShortcut.value,
     backgroundImage: localBackgroundImage.value || null,
     backgroundColorize: localBackgroundColorize.value,
+    calendarColorize: localCalendarColorize.value,
   };
   if (!payload.name) return;
   emit("submit", payload);
