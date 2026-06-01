@@ -105,6 +105,13 @@
                     </q-item-section>
                     <q-item-section>{{ $text("menu.about") }} v{{ appVersion }}</q-item-section>
                   </q-item>
+                  <q-separator />
+                  <q-item clickable v-ripple @click="openInfoscreenSettings">
+                    <q-item-section avatar>
+                      <q-icon name="tv" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.infoscreen") }}</q-item-section>
+                  </q-item>
                 </q-list>
               </q-menu>
             </q-btn>
@@ -122,6 +129,8 @@
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
         <AccountsDialog v-model="showAccountsDialog" />
+        <InfoscreenSettingsDialog v-model="showInfoscreenDialog" />
+        <InfoscreenHost />
       </q-toolbar>
 
     </q-header>
@@ -166,6 +175,11 @@ import { useSyncContractRevokedNotice } from "src/composables/useSyncContractRev
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
+import InfoscreenSettingsDialog from "src/modules/infoscreen/components/InfoscreenSettingsDialog.vue";
+import InfoscreenHost from "src/modules/infoscreen/components/InfoscreenHost.vue";
+import {
+  OPEN_INFOSCREEN_SETTINGS_EVENT,
+} from "src/modules/infoscreen/infoscreenUi";
 import { usePendingActions } from "src/composables/usePendingActions";
 import { useSyncRuns } from "src/composables/useSyncRuns";
 import {
@@ -208,6 +222,7 @@ const showJoinMemberDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
 const showAccountsDialog = ref(false);
+const showInfoscreenDialog = ref(false);
 const showPendingActionsDialog = ref(false);
 
 const {
@@ -469,6 +484,10 @@ onMounted(async () => {
       "co21:open-roles-setup",
       openRolesSetupDialog as EventListener
     );
+    window.addEventListener(
+      OPEN_INFOSCREEN_SETTINGS_EVENT,
+      onOpenInfoscreenSettingsEvent as EventListener
+    );
     // Pull injected app version (set by main process) if available
     // appVersion is populated from preload; nothing else required
   } catch (e) {
@@ -546,6 +565,15 @@ function openManageHeader() {
 function openAbout() {
   showAboutDialog.value = true;
   menuOpen.value = false;
+}
+
+function openInfoscreenSettings() {
+  showInfoscreenDialog.value = true;
+  menuOpen.value = false;
+}
+
+function onOpenInfoscreenSettingsEvent(): void {
+  showInfoscreenDialog.value = true;
 }
 
 async function toggleTestMode() {
@@ -633,6 +661,10 @@ onUnmounted(() => {
     // ignore
   }
   window.removeEventListener("co21:open-roles-setup", openRolesSetupDialog as EventListener);
+  window.removeEventListener(
+    OPEN_INFOSCREEN_SETTINGS_EVENT,
+    onOpenInfoscreenSettingsEvent as EventListener
+  );
 });
 
 // NextEventNotification component handles computation and display

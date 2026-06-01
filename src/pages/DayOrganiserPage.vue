@@ -434,7 +434,9 @@ import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
 import { loadSyncPeerStates } from "src/modules/storage/sync/syncPeerState";
 import {
   loadActiveContractForSync,
+  loadSyncIntervalSeconds,
 } from "src/modules/storage/sync/syncContractSettings";
+import { INFOSCREEN_RESET_CALENDAR_VIEW_EVENT } from "src/modules/infoscreen/infoscreenUi";
 import {
   normalizeDeviceId,
   resolveEffectiveRole,
@@ -780,7 +782,9 @@ let organiserCommunityOpenHandler: any = null;
 let organiserSyncNowHandler: any = null;
 let organiserSyncFullHandler: any = null;
 let organiserGroupMergeOpenHandler: any = null;
+let infoscreenResetCalendarHandler: (() => void) | null = null;
 let headerDevicesInterval: ReturnType<typeof setInterval> | null = null;
+let headerDeviceProbeInFlight = false;
 
 const DEVICE_PROBE_SLOW_MS = 1000;
 const deviceProbeChecking = ref<Record<string, boolean>>({});
@@ -833,6 +837,8 @@ async function probeOneDeviceForStrip(device: ConnectedDevice): Promise<void> {
 }
 
 async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void> {
+  if (headerDeviceProbeInFlight && !opts?.launch) return;
+  headerDeviceProbeInFlight = true;
   if (opts?.launch) headerDeviceProbeDone.value = false;
   try {
     const devices = await loadConnectionsDevices();
@@ -843,6 +849,7 @@ async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void
     void 0;
   } finally {
     headerDeviceProbeDone.value = true;
+    headerDeviceProbeInFlight = false;
     await refreshHeaderDeviceStatus();
   }
 }
@@ -893,6 +900,13 @@ onBeforeUnmount(() => {
   if (headerDevicesInterval) {
     clearInterval(headerDevicesInterval);
     headerDevicesInterval = null;
+  }
+  if (infoscreenResetCalendarHandler) {
+    window.removeEventListener(
+      INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
+      infoscreenResetCalendarHandler,
+    );
+    infoscreenResetCalendarHandler = null;
   }
 });
 
@@ -1884,9 +1898,24 @@ onMounted(async () => {
   window.addEventListener("group:merge-open", organiserGroupMergeOpenHandler as EventListener);
 
   void probeHeaderDeviceStrip({ launch: true });
-  headerDevicesInterval = setInterval(() => {
-    void probeHeaderDeviceStrip();
-  }, 15000);
+  void (async () => {
+    const intervalSec = await loadSyncIntervalSeconds();
+    headerDevicesInterval = setInterval(() => {
+      void probeHeaderDeviceStrip();
+    }, intervalSec * 1000);
+  })();
+
+  infoscreenResetCalendarHandler = () => {
+    try {
+      calendarSectionRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      void 0;
+    }
+  };
+  window.addEventListener(
+    INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
+    infoscreenResetCalendarHandler,
+  );
 
   // Show first run dialog if no groups exist
   if (CC.group.list.all.value.length === 0) {

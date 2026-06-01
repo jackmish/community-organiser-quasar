@@ -1,0 +1,58 @@
+// Info screen: variant-specific behaviour on the normal Day Organiser layout.
+
+html.co21-infoscreen-mode {
+  --co21-infoscreen-drift-x: 0px;
+  --co21-infoscreen-drift-y: 0px;
+  --co21-infoscreen-drift-duration: 90s;
+}
+
+// --- Layout drift: always read-only + slow pixel drift ---
+html.co21-infoscreen-mode--layout-drift .co21-main-layout {
+  transition: transform var(--co21-infoscreen-drift-duration) linear;
+  transform: translate3d(
+    var(--co21-infoscreen-drift-x),
+    var(--co21-infoscreen-drift-y),
+    0
+  );
+}
+
+html.co21-infoscreen-mode--layout-drift .q-page-container {
+  pointer-events: none;
+  user-select: none;
+}
+
+html.co21-infoscreen-mode--layout-drift .list-add-btn,
+html.co21-infoscreen-mode--layout-drift .task-header-sync-tools,
+html.co21-infoscreen-mode--layout-drift .task-header-date-nav .task-header-date-btn {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+// --- Wall clock: interactive unless optional lock while idle ---
+html.co21-infoscreen-mode--wall-clock.co21-infoscreen-mode--locked .q-page-container {
+  pointer-events: none;
+  user-select: none;
+}
+
+html.co21-infoscreen-mode--wall-clock.co21-infoscreen-mode--locked .list-add-btn,
+html.co21-infoscreen-mode--wall-clock.co21-infoscreen-mode--locked .task-header-sync-tools,
+html.co21-infoscreen-mode--wall-clock.co21-infoscreen-mode--locked .task-header-date-nav .task-header-date-btn {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+// Header menu always reachable (faded until hover in any infoscreen mode).
+html.co21-infoscreen-mode .co21-app-header {
+  pointer-events: auto;
+  user-select: auto;
+}
+
+html.co21-infoscreen-mode .co21-header-menu-btn {
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+}
+
+html.co21-infoscreen-mode .co21-header-menu-btn:hover,
+html.co21-infoscreen-mode .co21-header-menu-btn:focus-visible {
+  opacity: 1;
+}
