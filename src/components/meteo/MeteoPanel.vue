@@ -120,8 +120,22 @@
       </div>
 
       <div v-for="day in snapshot.days" :key="day.date" class="meteo-panel__day">
-        <div class="text-caption text-weight-bold meteo-panel__day-title">
-          {{ dayLabel(day) }}
+        <div class="meteo-panel__day-head">
+          <div class="meteo-panel__day-title">{{ dayLabel(day) }}</div>
+          <div class="meteo-panel__day-range">
+            <span class="meteo-panel__day-temp meteo-panel__day-temp--high">{{
+              formatTemp(dayTempRange(day).max)
+            }}</span>
+            <span class="meteo-panel__day-temp-sep">/</span>
+            <span
+              v-if="dayTempAt7(day) !== null"
+              class="meteo-panel__day-temp meteo-panel__day-temp--morning"
+            >{{ formatTemp(dayTempAt7(day)!) }}</span>
+            <span v-if="dayTempAt7(day) !== null" class="meteo-panel__day-temp-sep">/</span>
+            <span class="meteo-panel__day-temp meteo-panel__day-temp--low">{{
+              formatTemp(dayTempRange(day).min)
+            }}</span>
+          </div>
         </div>
         <div class="meteo-panel__hours meteo-panel__nice-scroll meteo-panel__nice-scroll--horizontal">
           <div
@@ -263,7 +277,7 @@ const panelStyle = computed(() => {
       '--meteo-panel-fg': METEO_DEFAULT_FG,
     };
   }
-  const { color, fg } = panelTheme.value;
+  const { fg } = panelTheme.value;
   const { backgroundColor } = getCo21SurfaceBackgroundStyle(input);
   return {
     backgroundColor,
@@ -382,6 +396,23 @@ function locationKey(loc: MeteoLocation): string {
 function isActiveLocation(loc: MeteoLocation): boolean {
   if (!selectedLocation.value) return false;
   return meteoLocationsMatch(loc, selectedLocation.value);
+}
+
+function dayTempRange(day: MeteoDayForecast): { min: number; max: number } {
+  let min: number | undefined;
+  let max: number | undefined;
+  for (const slot of day.hours) {
+    const t = slot.temperature;
+    if (min === undefined || t < min) min = t;
+    if (max === undefined || t > max) max = t;
+  }
+  return { min: min ?? 0, max: max ?? 0 };
+}
+
+/** Temperature at 7:00 for the forecast day (matches first hourly column). */
+function dayTempAt7(day: MeteoDayForecast): number | null {
+  const slot = day.hours.find((h) => h.hour === FORECAST_HOUR_FROM);
+  return slot != null ? slot.temperature : null;
 }
 
 function dayLabel(day: MeteoDayForecast): string {
@@ -795,11 +826,52 @@ onBeforeUnmount(() => {
   }
 }
 
+.meteo-panel__day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 4px;
+}
+
 .meteo-panel__day-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   opacity: 0.9;
-  margin-bottom: 2px;
   line-height: 1.2;
-  text-align: center;
+}
+
+.meteo-panel__day-range {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+}
+
+.meteo-panel__day-temp {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.meteo-panel__day-temp--high {
+  opacity: 1;
+}
+
+.meteo-panel__day-temp--morning {
+  opacity: 0.92;
+}
+
+.meteo-panel__day-temp--low {
+  opacity: 0.82;
+}
+
+.meteo-panel__day-temp-sep {
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0.65;
 }
 
 .meteo-panel__hours {
