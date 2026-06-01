@@ -187,35 +187,10 @@
           </div>
         </div>
 
-        <!-- quick add moved to top of description -->
-        <div
+        <QuickAddSubtaskForm
           v-if="(task.type_id || '') === 'Todo' || (task.type_id || '') === 'TimeEvent'"
-          class="q-mt-sm"
-          style="display: flex; gap: 8px; align-items: center"
-        >
-          <q-input
-            dense
-            outlined
-            type="textarea"
-            autosize
-            rows="1"
-            :placeholder="$text('label.quick_add_subtask')"
-            v-model="quickSubtask"
-            @keydown.enter.prevent="addQuickSubtask"
-            style="flex: 1; min-height: 40px"
-          />
-          <q-btn
-            dense
-            flat
-            round
-            size="sm"
-            :icon="highlightIcon"
-            :color="quickSubtaskStar ? 'amber' : undefined"
-            @click.stop="quickSubtaskStar = !quickSubtaskStar"
-            :title="quickSubtaskStar ? $text('label.pinned') : $text('action.pin')"
-          />
-          <q-btn dense unelevated color="positive" icon="add" @click="addQuickSubtask" />
-        </div>
+          @add="addQuickSubtask"
+        />
 
         <div>
           <div v-for="(line, idx) in parsedLines" :key="line.uid">
@@ -376,6 +351,7 @@ import {
   todoCalendarSchedule,
   type TodoScheduleTask,
 } from "src/composables/useTodoCalendarSchedule";
+import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 
 const props = defineProps<{
   task: Task;
@@ -395,10 +371,6 @@ const emit = defineEmits([
   "line-collapsed",
   "line-expanded",
 ]);
-
-// Quick-add subtask helper
-const quickSubtask = ref("");
-const quickSubtaskStar = ref(false);
 
 // refs to each rendered list item so we can animate height directly
 const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>);
@@ -476,12 +448,9 @@ function setItemRef(el: Element | ComponentPublicInstance | null, idx: string | 
   itemRefs.value[i] = null;
 }
 
-function addQuickSubtask() {
-  const text = quickSubtask.value.trim();
-  // Delegate insertion and persistence to the task API which will trim/validate input.
-  void CC.task.subtaskLine.add(text);
-  quickSubtask.value = "";
-  quickSubtaskStar.value = false;
+function addQuickSubtask(payload: { text: string; starred: boolean }) {
+  const lineText = payload.starred ? `${payload.text} *` : payload.text;
+  void CC.task.subtaskLine.add(lineText);
   nextTick(() => {
     // parent will re-render after API updates
   });
