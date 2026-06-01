@@ -1222,19 +1222,6 @@ function onSubmit(event: Event) {
         </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
-        <div
-          v-if="showTodoCalendarBtn && localNewTask.type_id !== 'TimeEvent'"
-          class="row items-center q-mb-sm"
-        >
-          <q-btn
-            dense
-            unelevated
-            color="primary"
-            icon="event"
-            :label="$text('task.todo.schedule_on_calendar')"
-            @click="openTodoCalendarSchedule"
-          />
-        </div>
         <!-- Type selector moved into Priority card below; header removed -->
 
         <!-- Date/time panels relocated into the description column below -->
@@ -1258,18 +1245,6 @@ function onSubmit(event: Event) {
                         <div class="text-caption text-grey-7">
                           {{ $text("label.date") }}
                         </div>
-                        <q-btn
-                          v-if="showTodoCalendarBtn"
-                          dense
-                          round
-                          unelevated
-                          color="primary"
-                          icon="event"
-                          class="todo-schedule-calendar-btn"
-                          :title="$text('task.todo.schedule_on_calendar')"
-                          @click="openTodoCalendarSchedule"
-                        />
-
                         <div class="col-auto">
                           <q-btn-toggle
                             v-model="repeatMode"
@@ -1517,6 +1492,18 @@ function onSubmit(event: Event) {
                           <!-- day/month inputs -->
                         </div>
                       </div>
+                      <div class="row q-mb-sm" style="align-items: center; gap: 8px">
+                        <div class="col">
+                          <q-btn-toggle
+                            v-model="eventTimeMode"
+                            :options="timeModeOptions"
+                            dense
+                            inline
+                            rounded
+                            class="time-toggle"
+                          />
+                        </div>
+                      </div>
                       <div
                         class="row q-gutter-xs"
                         style="
@@ -1573,19 +1560,6 @@ function onSubmit(event: Event) {
                           <q-btn-toggle
                             v-model="timeType"
                             :options="timeTypeOptions"
-                            dense
-                            inline
-                            rounded
-                            class="time-toggle"
-                          />
-                        </div>
-                      </div>
-
-                      <div class="row q-mt-sm" style="align-items: center; gap: 8px">
-                        <div class="col">
-                          <q-btn-toggle
-                            v-model="eventTimeMode"
-                            :options="timeModeOptions"
                             dense
                             inline
                             rounded
@@ -1911,7 +1885,20 @@ function onSubmit(event: Event) {
                     <div class="text-caption text-grey-7 q-mb-xs">
                       {{ $text("label.task_type") }}
                     </div>
-                    <div class="column">
+                    <div class="column todo-schedule-type-column">
+                      <q-btn
+                        v-if="showTodoCalendarBtn"
+                        dense
+                        unelevated
+                        no-caps
+                        size="sm"
+                        align="left"
+                        color="primary"
+                        icon="event"
+                        class="full-width todo-schedule-inline-btn"
+                        :label="$text('task.todo.schedule_on_calendar')"
+                        @click="openTodoCalendarSchedule"
+                      />
                       <q-btn
                         v-for="opt in typeOptions"
                         :key="opt.value"
@@ -1920,6 +1907,10 @@ function onSubmit(event: Event) {
                         :icon="opt.icon"
                         :size="btnSize"
                         class="full-width type-btn q-mb-sm"
+                        :class="{
+                          'todo-schedule-type-glued':
+                            showTodoCalendarBtn && opt.value === 'TimeEvent',
+                        }"
                         :outline="localNewTask.type_id !== opt.value"
                         :unelevated="localNewTask.type_id === opt.value"
                         @click="localNewTask.type_id = opt.value"
@@ -2175,6 +2166,53 @@ function onSubmit(event: Event) {
 .priority-btn .q-icon {
   font-size: 18px !important;
   margin-bottom: 2px !important;
+}
+
+/* Plan-on-calendar: single placement in task-type column, glued above Time type */
+.todo-schedule-type-column {
+  gap: 0;
+}
+.todo-schedule-type-column .todo-schedule-inline-btn {
+  margin-bottom: 0 !important;
+}
+.todo-schedule-inline-btn {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 2px 6px !important;
+  line-height: 1.15 !important;
+  font-size: 12px !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+.todo-schedule-inline-btn :deep(.q-btn__content) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  line-height: 1.15 !important;
+  min-height: 0 !important;
+  padding: 2px 4px !important;
+  gap: 4px !important;
+  font-size: 12px !important;
+}
+.todo-schedule-inline-btn :deep(.q-icon) {
+  font-size: 20px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+.todo-schedule-inline-btn :deep(.q-btn__label) {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.15 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.todo-schedule-type-glued.type-btn {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  margin-top: 0 !important;
 }
 
 /* Small adjustments for the time type toggle inside date/time card */
