@@ -3,6 +3,7 @@ import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
 import type { TaskRepository } from '../taskRepository';
 import { getCycleType } from '../../utils/occursOnDay';
+import { appendSubtaskLineToDescription } from './appendSubtaskLine';
 
 export class SubtaskLineRepository {
   parsedLines: Ref<
@@ -293,54 +294,8 @@ export class SubtaskLineRepository {
   }
 
   private async addCompute(task: any, text: string) {
-    try {
-      if (!task || typeof text !== 'string' || !text.trim()) return null;
-      const cur = task.description || '';
-      const lines = cur.split(/\r?\n/);
-      let lastStarredUndone = -1;
-      for (let i = 0; i < lines.length; i++) {
-        try {
-          const ln = lines[i] || '';
-          const dashMatch = ln.match(/^\s*-\s*(.*)$/);
-          if (!dashMatch) continue;
-          const content = dashMatch[1] || '';
-          const checked = /^\s*\[[xX]\]/.test(content);
-          const starred = /\*\s*$/.test(content);
-          if (starred && !checked) lastStarredUndone = i;
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      let updated: string;
-      if (lastStarredUndone >= 0) {
-        const newLines = [...lines];
-        newLines.splice(lastStarredUndone + 1, 0, `- ${text}`);
-        updated = newLines.join('\n');
-      } else {
-        const title = (task.name || '').trim();
-        if (title && lines.length > 0) {
-          const first = lines[0] || '';
-          const firstNorm = first.trim().toLowerCase();
-          const titleNorm = title.toLowerCase();
-          if (firstNorm.startsWith(titleNorm)) {
-            if (lines.length === 1) {
-              updated = `${first}\n- ${text}`;
-            } else {
-              updated = `${first}\n- ${text}\n${lines.slice(1).join('\n')}`;
-            }
-          } else {
-            updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-          }
-        } else {
-          updated = cur ? `- ${text}\n${cur}` : `- ${text}`;
-        }
-      }
-
-      return { newDesc: updated };
-    } catch (e) {
-      return null;
-    }
+    const newDesc = appendSubtaskLineToDescription(task, text);
+    return newDesc != null ? { newDesc } : null;
   }
 
   async toggleStatusAndPersist(task: any, lineIndex: number) {

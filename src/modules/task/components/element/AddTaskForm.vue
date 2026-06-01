@@ -9,6 +9,8 @@ import { parseYmdLocal } from "src/utils/dateUtils";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "../list/ReplenishmentList.vue";
+import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
+import { appendSubtaskLineToDescription } from "src/modules/task/managers/subtaskLine/appendSubtaskLine";
 import {
   priorityColors as themePriorityColors,
   priorityTextColor as themePriorityTextColor,
@@ -820,6 +822,25 @@ function updateTaskField(field: string, value: any) {
   else {
     (localNewTask.value as any)[field] = value;
   }
+}
+
+const showQuickAddSubtask = computed(() => {
+  const typeId = localNewTask.value.type_id || "";
+  if (typeId !== "Todo" && typeId !== "TimeEvent") return false;
+  if (isReplenish.value && props.mode === "add") return false;
+  return true;
+});
+
+function onQuickAddSubtask(payload: { text: string; starred: boolean }) {
+  const lineText = payload.starred ? `${payload.text} *` : payload.text;
+  const newDesc = appendSubtaskLineToDescription(
+    {
+      description: localNewTask.value.description,
+      name: localNewTask.value.name,
+    },
+    lineText,
+  );
+  if (newDesc != null) updateTaskField("description", newDesc);
 }
 
 function onCalendarDateSelect(date: string) {
@@ -1641,6 +1662,10 @@ function onSubmit(event: Event) {
                         rows="1"
                         class="col"
                         @update:model-value="(val) => updateTaskField('description', val)"
+                      />
+                      <QuickAddSubtaskForm
+                        v-if="showQuickAddSubtask && !(isReplenish && mode === 'add')"
+                        @add="onQuickAddSubtask"
                       />
                       <!-- Title is auto-generated from description; input removed -->
 
