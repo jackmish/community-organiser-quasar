@@ -14,6 +14,8 @@ export class GroupModel extends BaseModel {
   layoutColorize?: boolean | undefined;
   backgroundColorize?: boolean | undefined;
   calendarColorize?: boolean | undefined;
+  /** When true, group supports calendar ↔ files view switching. */
+  mediaEnabled?: boolean | undefined;
   parentId: string | undefined;
   parent_id?: string | null;
   roles: RoleData[];
@@ -40,6 +42,7 @@ export class GroupModel extends BaseModel {
     this.layoutColorize = bgFields.layoutColorize;
     this.backgroundColorize = bgFields.backgroundColorize;
     this.calendarColorize = bgFields.calendarColorize;
+    this.mediaEnabled = typeof data.mediaEnabled === 'boolean' ? data.mediaEnabled : undefined;
     // Normalize parent relationship: accept both camelCase and snake_case from legacy data.
     // `parentId` is canonical going forward.
     this.parentId = (data as any).parentId ?? (data.parent_id as any) ?? undefined;
@@ -62,6 +65,7 @@ export class GroupModel extends BaseModel {
       ...(this.layoutColorize ? { layoutColorize: this.layoutColorize } : {}),
       ...(this.backgroundColorize ? { backgroundColorize: this.backgroundColorize } : {}),
       ...(this.calendarColorize ? { calendarColorize: this.calendarColorize } : {}),
+      ...(this.mediaEnabled ? { mediaEnabled: this.mediaEnabled } : {}),
       parentId: this.parentId,
       // parent_id mirrors parentId for backward compatibility with older persisted data.
       parent_id: this.parentId ?? null,

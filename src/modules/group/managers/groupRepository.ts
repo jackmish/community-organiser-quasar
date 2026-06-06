@@ -22,6 +22,7 @@ export type CreateGroupInput = {
   layoutColorize?: boolean | undefined;
   backgroundColorize?: boolean | undefined;
   calendarColorize?: boolean | undefined;
+  mediaEnabled?: boolean | undefined;
 };
 
 export function addGroup(organiserData: OrganiserData | any[], payload: CreateGroupInput): Group {
@@ -38,6 +39,7 @@ export function addGroup(organiserData: OrganiserData | any[], payload: CreateGr
     layoutColorize,
     backgroundColorize,
     calendarColorize,
+    mediaEnabled,
   } = payload;
   const now = new Date().toISOString();
   const group = new GroupClass({
@@ -52,6 +54,7 @@ export function addGroup(organiserData: OrganiserData | any[], payload: CreateGr
     ...(typeof layoutColorize === 'boolean' ? { layoutColorize } : {}),
     ...(typeof backgroundColorize === 'boolean' ? { backgroundColorize } : {}),
     ...(typeof calendarColorize === 'boolean' ? { calendarColorize } : {}),
+    ...(typeof mediaEnabled === 'boolean' ? { mediaEnabled } : {}),
     ...(typeof shareSubgroups === 'boolean' ? { shareSubgroups } : {}),
     ...(typeof hideTasksFromParent === 'boolean' ? { hideTasksFromParent } : {}),
     ...(typeof shortcut === 'boolean' ? { shortcut } : {}),

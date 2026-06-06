@@ -81,7 +81,33 @@
                     </q-btn>
                     <div class="task-header-v-separator" aria-hidden="true" />
                   </div>
-                  <div class="row items-center no-wrap task-header-date-nav">
+                  <button
+                    type="button"
+                    class="task-header-mode-btn"
+                    :style="filesModeBtnStyle"
+                    :title="
+                      isFilesMode
+                        ? $text('files.switch_to_calendar')
+                        : $text('files.switch_to_files')
+                    "
+                    :aria-label="
+                      isFilesMode
+                        ? $text('files.switch_to_calendar')
+                        : $text('files.switch_to_files')
+                    "
+                    @click="void onToggleAppViewMode()"
+                  >
+                    <q-icon
+                      :name="isFilesMode ? 'calendar_month' : 'folder_shared'"
+                      size="20px"
+                      class="q-mr-xs task-header-mode-btn__icon"
+                    />
+                    {{ isFilesMode ? $text('files.calendar_label') : $text('files.label') }}
+                  </button>
+                  <div
+                    v-if="!isFilesMode"
+                    class="row items-center no-wrap task-header-date-nav"
+                  >
                     <q-btn
                       flat
                       dense
@@ -137,12 +163,13 @@
                 justifyContent="flex-start"
               />
             </q-card-section>
-            <q-card-section v-if="sortedTasks.length === 0">
+            <q-card-section v-if="!isFilesMode && sortedTasks.length === 0">
               <p class="text-grey-6">{{ $text("ui.no_tasks_for_day") }}</p>
             </q-card-section>
 
             <!-- hidden groups are rendered inside TasksListSmall now | Maybe it would be available to switch inside app to TasksListMedium in the future -->
             <TasksListSmall
+              v-if="!isFilesMode"
               :key="reloadKey"
               :tasks-with-time="tasksWithTime"
               :tasks-without-time="tasksWithoutTime"
@@ -156,11 +183,12 @@
               @toggle-status="handleToggleStatus"
               @add-task="onInlineAdd"
             />
+            <MediaFilesPanel v-if="isFilesMode" />
           </q-card>
 
           <!-- Parent-level add button to sit above list without z-index hacks -->
           <q-btn
-            v-show="panelHidden || !previewFloating"
+            v-show="!isFilesMode && (panelHidden || !previewFloating)"
             class="list-add-btn"
             :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
             :color="addTaskBtnColorize ? undefined : 'positive'"
@@ -174,7 +202,7 @@
         </div>
       </div>
 
-      <div class="row q-col-gutter-md q-mt-md">
+      <div v-if="!isFilesMode" class="row q-col-gutter-md q-mt-md">
         <div
           ref="calendarSectionRef"
           class="col-12 col-md-8 day-organiser-calendar-section day-organiser-scroll-anchor"
@@ -471,6 +499,7 @@ import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
+import { MediaFilesPanel, useAppViewMode, MEDIA_VIEW_MODE_CHANGED_EVENT } from "src/modules/media";
 
 const $q = useQuasar();
 const headerSyncRunning = ref(false);
@@ -857,6 +886,7 @@ async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
   window.removeEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
+  window.removeEventListener(MEDIA_VIEW_MODE_CHANGED_EVENT, onAppViewModeExternalChange);
   try {
     if (organiserReloadHandler)
       window.removeEventListener(
@@ -1217,6 +1247,28 @@ const mergeSourceGroup = computed(() => {
   if (!activeId) return null;
   return (CC.group.list.all.value || []).find((g: any) => String(g.id) === activeId) || null;
 });
+
+const {
+  isFilesMode,
+  toggleViewMode: toggleAppViewMode,
+  refreshModes: refreshAppViewModes,
+  onExternalChange: onAppViewModeExternalChange,
+} = useAppViewMode(mergeSourceGroup);
+
+async function onToggleAppViewMode(): Promise<void> {
+  const group = mergeSourceGroup.value;
+  if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
+    try {
+      if (typeof CC.group.update === "function") {
+        await CC.group.update(String(group.id), { mediaEnabled: true });
+      }
+    } catch (e) {
+      logger.error("[DayOrganiser] enable files module failed", e);
+    }
+  }
+  await toggleAppViewMode();
+}
+
 const canMergeCurrentGroup = computed(() => !!mergeSourceGroup.value);
 const mergeSourceLabel = computed(() =>
   mergeSourceGroup.value ? resolveLocalGroupName(mergeSourceGroup.value) : ""
@@ -1295,10 +1347,18 @@ async function confirmGroupMerge(): Promise<void> {
 }
 
 // Color/style computeds derived from the active group
-const { activeGroupColor, headerStyle, cardStyle, watermarkTextColor } = useGroupColor(
-  CC.group.list.all,
-  CC.group.active.activeGroup
-);
+const { activeGroupColor, activeGroupTextColor, headerStyle, cardStyle, watermarkTextColor } =
+  useGroupColor(CC.group.list.all, CC.group.active.activeGroup);
+
+/** Mode toggle: same as header — text color as button bg, group bg as button label/icon. */
+const filesModeBtnStyle = computed(() => {
+  const btnBg = String(headerStyle.value.color || activeGroupTextColor.value);
+  const btnFg = String(headerStyle.value.background || activeGroupColor.value);
+  return {
+    backgroundColor: btnBg,
+    color: btnFg,
+  };
+});
 
 function resolveActiveGroupRecord(): Record<string, unknown> | null {
   try {
@@ -1779,6 +1839,8 @@ useDayRollover({
 
 onMounted(async () => {
   window.addEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
+  window.addEventListener(MEDIA_VIEW_MODE_CHANGED_EVENT, onAppViewModeExternalChange);
+  void refreshAppViewModes();
   try {
     await CC.storage.loadData();
     if ((CC.group.list.all.value || []).length === 0) {
@@ -1970,6 +2032,36 @@ onMounted(async () => {
 .task-header-date-nav {
   gap: 4px;
   flex-shrink: 0;
+}
+
+.task-header-mode-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: inherit;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.task-header-mode-btn:hover {
+  filter: brightness(0.95);
+}
+
+.task-header-mode-btn:active {
+  filter: brightness(0.9);
+}
+
+.task-header-mode-btn__icon,
+.task-header-mode-btn :deep(.q-icon) {
+  color: inherit !important;
 }
 
 .task-header-sync-tools {

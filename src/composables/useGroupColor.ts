@@ -49,7 +49,7 @@ export function useGroupColor(
 
   const headerStyle = computed(() => ({
     background: activeGroupColor.value,
-    color: getContrastColor(activeGroupColor.value),
+    color: activeGroupTextColor.value,
     padding: '6px 10px',
     borderRadius: '6px',
   }));

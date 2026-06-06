@@ -463,6 +463,14 @@
 
         <div style="display: flex; align-items: center; gap: 8px">
           <q-checkbox
+            v-model="localMediaEnabled"
+            :label="$text('label.group_files_module')"
+            dense
+          />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px">
+          <q-checkbox
             v-model="localShortcut"
             :label="$text('label.make_shortcut')"
             dense
@@ -540,6 +548,7 @@ const localBackgroundImage = ref<string | null>(null);
 const localLayoutColorize = ref(false);
 const localBgColorize = ref(true);
 const localCalendarColorize = ref(true);
+const localMediaEnabled = ref(false);
 const bgImageInput = ref<HTMLInputElement | null>(null);
 
 const MAX_GROUP_BG_BYTES = 5 * 1024 * 1024;
@@ -828,6 +837,7 @@ watch(
         localLayoutColorize.value = bg.layoutColorize;
         localBgColorize.value = bg.backgroundColorize;
         localCalendarColorize.value = bg.calendarColorize;
+        localMediaEnabled.value = Boolean(src.mediaEnabled);
         void resolveGroupBackgroundDisplayUrl(bg.backgroundImage).then((url) => {
           localBackgroundImage.value = url;
         });
@@ -948,6 +958,7 @@ function onSubmit() {
     layoutColorize: localLayoutColorize.value,
     backgroundColorize: localLayoutColorize.value && localBgColorize.value,
     calendarColorize: localLayoutColorize.value && localCalendarColorize.value,
+    mediaEnabled: localMediaEnabled.value,
   };
   if (!payload.name) return;
   emit("submit", payload);

@@ -98,6 +98,7 @@ async function handleSubmit(payload: any) {
         ...(typeof payload.calendarColorize === 'boolean'
           ? { calendarColorize: payload.calendarColorize }
           : {}),
+        ...(typeof payload.mediaEnabled === 'boolean' ? { mediaEnabled: payload.mediaEnabled } : {}),
         ...(payload.backgroundImage
           ? { backgroundImage: payload.backgroundImage }
           : { backgroundImage: undefined }),
@@ -134,6 +135,7 @@ async function handleSubmit(payload: any) {
         ...(typeof payload.calendarColorize === 'boolean'
           ? { calendarColorize: payload.calendarColorize }
           : {}),
+        ...(typeof payload.mediaEnabled === 'boolean' ? { mediaEnabled: payload.mediaEnabled } : {}),
       });
       const createdId = String(created?.id || '').trim();
       if (createdId) setLocalGroupName(createdId, payload.localName ?? '');
