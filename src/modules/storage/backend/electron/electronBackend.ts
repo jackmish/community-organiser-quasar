@@ -245,60 +245,83 @@ export async function getGroupFilesDirectory(): Promise<string> {
   return '';
 }
 
+function sanitizeJsonReplacer() {
+  const seen = new WeakSet<object>();
+  return function (k: string, v: unknown) {
+    if (typeof v === 'object' && v !== null) {
+      if (seen.has(v)) return undefined;
+      seen.add(v);
+    }
+    if (typeof v === 'function') return undefined;
+    if (k && k.startsWith('_')) return undefined;
+    return v;
+  };
+}
+
+function sanitizeJsonValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value, sanitizeJsonReplacer())) as T;
+}
+
+function prepareGroupForDisk(group: Record<string, unknown>): Record<string, unknown> {
+  const safeTasks = Array.isArray(group.tasks)
+    ? group.tasks.map((task: Record<string, unknown>) => {
+        const t = { ...task, groupId: group.id };
+        if ('_group' in t) delete t._group;
+        return t;
+      })
+    : undefined;
+  const groupToWrite = { ...group };
+  if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
+  return groupToWrite;
+}
+
+async function sanitizeGroupsForStorage(groups: unknown[]): Promise<Record<string, unknown>[]> {
+  const { prepareGroupBackgroundForDisk } = await import(
+    'src/modules/group/utils/groupBackgroundStorage'
+  );
+  const sanitized: Record<string, unknown>[] = [];
+  for (const group of groups) {
+    if (!group || typeof group !== 'object') continue;
+    const groupToWrite = prepareGroupForDisk(group as Record<string, unknown>);
+    try {
+      await prepareGroupBackgroundForDisk(
+        groupToWrite as {
+          id: string;
+          backgroundImage?: string | null;
+          background_image?: string | null;
+        },
+      );
+    } catch (err) {
+      logger.warn('[saveGroupsToFiles] group background persist failed', groupToWrite.id, err);
+    }
+    sanitized.push(sanitizeJsonValue(groupToWrite));
+  }
+  return sanitized;
+}
+
 export async function saveGroupsToFiles(groups: any[]): Promise<void> {
+  const sanitizedGroups = await sanitizeGroupsForStorage(groups);
+
   if (
     window.electronAPI &&
     (await isActiveSpaceSqliteStorage()) &&
     typeof window.electronAPI.saveGroupsSqlite === 'function'
   ) {
-    await window.electronAPI.saveGroupsSqlite(groups);
+    await window.electronAPI.saveGroupsSqlite(sanitizedGroups);
     return;
   }
   if (window.electronAPI && window.electronAPI.writeFile && window.electronAPI.joinPath) {
     const appDataDir = await window.electronAPI.getAppDataPath();
-    const { prepareGroupBackgroundForDisk } = await import(
-      'src/modules/group/utils/groupBackgroundStorage'
-    );
-    for (const group of groups) {
-      // Do not mutate the original group object (may contain circular refs).
-      const safeTasks = Array.isArray(group.tasks)
-        ? group.tasks.map((task: any) => {
-            // copy primitive and plain properties only
-            const t = Object.assign({}, task);
-            t.groupId = group.id;
-            // remove internal back-references that commonly cause circular refs
-            if (t._group) delete t._group;
-            return t;
-          })
-        : undefined;
-      const groupToWrite: any = Object.assign({}, group);
-      if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
-      try {
-        await prepareGroupBackgroundForDisk(groupToWrite);
-      } catch (err) {
-        logger.warn('[saveGroupsToFiles] group background persist failed', group.id, err);
-      }
-      const filename = getGroupFilename(group.id);
+    for (const groupToWrite of sanitizedGroups) {
+      const groupId = typeof groupToWrite.id === 'string' ? groupToWrite.id : '';
+      if (!groupId) continue;
+      const filename = getGroupFilename(groupId);
       const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
       await window.electronAPI.ensureDir(groupDir);
 
       const filePath = window.electronAPI.joinPath(groupDir, filename);
       try {
-        // Safe stringify to avoid circular references (skip properties starting with underscore and functions)
-        const seen = new WeakSet();
-        const text = JSON.stringify(
-          groupToWrite,
-          function (k: string, v: any) {
-            if (typeof v === 'object' && v !== null) {
-              if (seen.has(v)) return undefined;
-              seen.add(v);
-            }
-            if (typeof v === 'function') return undefined;
-            if (k && k.startsWith('_')) return undefined;
-            return v;
-          },
-          2,
-        );
+        const text = JSON.stringify(groupToWrite, null, 2);
         await window.electronAPI.writeFile(filePath, text);
       } catch (err) {
         logger.error('[saveGroupsToFiles] Error writing file:', filePath, err);
@@ -307,21 +330,7 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
     }
   } else if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      const seen = new WeakSet();
-      const text = JSON.stringify(
-        groups,
-        function (k: string, v: any) {
-          if (typeof v === 'object' && v !== null) {
-            if (seen.has(v)) return undefined;
-            seen.add(v);
-          }
-          if (typeof v === 'function') return undefined;
-          if (k && k.startsWith('_')) return undefined;
-          return v;
-        },
-        2,
-      );
-      localStorage.setItem('day-organiser-groups', text);
+      localStorage.setItem('day-organiser-groups', JSON.stringify(sanitizedGroups, null, 2));
     } catch (e) {
       // ignore storage errors
     }
