@@ -25,6 +25,7 @@ import {
 } from '../src/modules/lan/lanPairingHosts';
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
+import { resolveActiveDataPath } from './spaceRegistryMain';
 
 export type LanIdentityPublic = {
   deviceId: string;
@@ -69,8 +70,12 @@ let trustedContractLanKeys = new Set<string>();
 /** Active contract on this device (set on propose / cleared on reject). */
 let lanServerActiveContract: Record<string, unknown> | null = null;
 
+function activeCo21SettingsFile(): string {
+  return path.join(resolveActiveDataPath(), 'co21', 'settings.json');
+}
+
 async function readCo21SettingsFile(): Promise<Record<string, unknown>> {
-  const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+  const settingsFile = activeCo21SettingsFile();
   try {
     const raw = await fs.readFile(settingsFile, 'utf8');
     const parsed = JSON.parse(raw) as unknown;
@@ -83,7 +88,7 @@ async function readCo21SettingsFile(): Promise<Record<string, unknown>> {
 }
 
 async function writeCo21SettingsPatch(patch: Record<string, unknown>): Promise<void> {
-  const settingsFile = path.join(app.getPath('userData'), 'co21', 'settings.json');
+  const settingsFile = activeCo21SettingsFile();
   const existing = await readCo21SettingsFile();
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
   await fs.writeFile(

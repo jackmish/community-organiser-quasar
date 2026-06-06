@@ -1,0 +1,310 @@
+<template>
+  <q-dialog v-model="dialogVisible" v-bind="dialogBind">
+    <q-card :class="cardClass" :style="cardStyle">
+      <q-card-section :class="headerClass">
+        <div class="row items-center no-wrap">
+          <q-icon name="space_dashboard" size="28px" class="q-mr-sm text-primary" />
+          <div class="col">
+            <div class="text-h6">{{ $text('space.title') }}</div>
+            <div class="text-caption text-grey-7">{{ $text('space.subtitle') }}</div>
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-card-section :class="bodyClass" :style="bodyStyle">
+        <q-banner v-if="!available" dense rounded class="bg-orange-1 text-dark q-mb-md">
+          {{ $text('space.desktop_only') }}
+        </q-banner>
+
+        <template v-else>
+          <div class="row q-mb-md">
+            <q-btn
+              color="primary"
+              icon="add"
+              :label="$text('space.create_new')"
+              :disable="showCreateForm"
+              @click="openCreateForm"
+            />
+          </div>
+
+          <q-slide-transition>
+            <q-card v-if="showCreateForm" flat bordered class="q-mb-md space-create-card">
+              <q-card-section>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('space.create_new') }}</div>
+                <q-input
+                  v-model="createName"
+                  dense
+                  outlined
+                  :label="$text('space.name_label')"
+                  class="q-mb-sm"
+                  @keyup.enter="submitCreate"
+                />
+                <div class="row q-col-gutter-sm items-start">
+                  <div class="col">
+                    <q-input
+                      v-model="createPath"
+                      dense
+                      outlined
+                      readonly
+                      :label="$text('space.path_label')"
+                      :hint="$text('space.path_hint')"
+                    />
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      outline
+                      color="primary"
+                      icon="folder_open"
+                      :label="$text('space.browse')"
+                      class="q-mt-xs"
+                      @click="pickFolder"
+                    />
+                  </div>
+                </div>
+              </q-card-section>
+              <q-card-actions align="right">
+                <q-btn flat :label="$text('action.close')" @click="cancelCreate" />
+                <q-btn
+                  color="primary"
+                  :label="$text('action.create')"
+                  :loading="creating"
+                  :disable="!createName.trim() || !createPath.trim()"
+                  @click="submitCreate"
+                />
+              </q-card-actions>
+            </q-card>
+          </q-slide-transition>
+
+          <q-list bordered separator class="rounded-borders">
+            <q-item v-for="space in spaces" :key="space.id" class="space-list-item">
+              <q-item-section avatar>
+                <q-avatar
+                  :color="isActive(space.id) ? 'primary' : 'grey-4'"
+                  :text-color="isActive(space.id) ? 'white' : 'dark'"
+                  :icon="isSystemSpace(space) ? 'computer' : 'folder_shared'"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ displayName(space) }}
+                  <q-badge v-if="isActive(space.id)" color="primary" class="q-ml-sm">
+                    {{ $text('space.active') }}
+                  </q-badge>
+                </q-item-label>
+                <q-item-label caption>
+                  {{ spaceCaption(space) }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <div class="row items-center no-wrap q-gutter-xs space-list-item__actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="folder_open"
+                    color="primary"
+                    :title="$text('space.open_folder')"
+                    :aria-label="$text('space.open_folder')"
+                    @click="openFolder(space)"
+                  />
+                  <q-btn
+                    v-if="!isActive(space.id)"
+                    flat
+                    dense
+                    color="primary"
+                    :label="$text('space.switch')"
+                    @click="confirmSwitch(space)"
+                  />
+                </div>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </template>
+      </q-card-section>
+
+      <q-card-actions align="right" class="settings-dialog-footer">
+        <q-btn flat :label="$text('action.close')" color="primary" @click="dialogVisible = false" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="switchConfirmOpen" persistent>
+    <q-card style="min-width: 320px; max-width: 420px">
+      <q-card-section>
+        <div class="text-h6">{{ $text('space.switch_confirm_title') }}</div>
+        <p class="q-mt-sm q-mb-none">{{ $text('space.switch_confirm_body') }}</p>
+        <p v-if="pendingSwitchSpace" class="q-mt-sm text-weight-medium q-mb-none">
+          {{ displayName(pendingSwitchSpace) }}
+        </p>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat :label="$text('action.close')" @click="switchConfirmOpen = false" />
+        <q-btn color="primary" :label="$text('space.switch')" :loading="switching" @click="doSwitch" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</template>
+
+<script setup lang="ts">
+import { ref, watch } from 'vue';
+import { $text } from 'src/modules/lang';
+import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+import { appNotify } from 'src/utils/appNotify';
+import {
+  SYSTEM_SPACE_ID,
+  browseSpaceFolder,
+  createCustomSpace,
+  isSpaceManagementAvailable,
+  isSystemSpace,
+  loadSpaceRegistrySnapshot,
+  openSpaceFolder,
+  switchSpaceAndRestart,
+  type SpaceEntry,
+} from 'src/modules/space';
+
+const props = defineProps<{ modelValue: boolean }>();
+const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
+
+const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
+  useSettingsDialogLayout(520, 640);
+
+const dialogVisible = ref(!!props.modelValue);
+watch(
+  () => props.modelValue,
+  (v) => {
+    dialogVisible.value = v;
+  },
+);
+watch(dialogVisible, (v) => emit('update:modelValue', v));
+
+const available = ref(isSpaceManagementAvailable());
+const spaces = ref<SpaceEntry[]>([]);
+const activeSpaceId = ref(SYSTEM_SPACE_ID);
+const defaultUserDataPath = ref('');
+
+const showCreateForm = ref(false);
+const createName = ref('');
+const createPath = ref('');
+const creating = ref(false);
+
+const switchConfirmOpen = ref(false);
+const pendingSwitchSpace = ref<SpaceEntry | null>(null);
+const switching = ref(false);
+
+function isActive(spaceId: string): boolean {
+  return activeSpaceId.value === spaceId;
+}
+
+function displayName(space: SpaceEntry): string {
+  if (isSystemSpace(space)) return $text('space.system_user');
+  return space.name;
+}
+
+function spaceCaption(space: SpaceEntry): string {
+  if (isSystemSpace(space)) {
+    return $text('space.system_user_desc').replace('{path}', defaultUserDataPath.value || '—');
+  }
+  return space.dataPath || '—';
+}
+
+function spaceFolderPath(space: SpaceEntry): string {
+  if (isSystemSpace(space)) return defaultUserDataPath.value;
+  return space.dataPath?.trim() || '';
+}
+
+async function openFolder(space: SpaceEntry): Promise<void> {
+  const folderPath = spaceFolderPath(space);
+  if (!folderPath) {
+    appNotify('warning', $text('space.open_folder_failed'));
+    return;
+  }
+  try {
+    await openSpaceFolder(folderPath);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.open_folder_failed'));
+  }
+}
+
+async function refresh(): Promise<void> {
+  available.value = isSpaceManagementAvailable();
+  if (!available.value) return;
+  const snapshot = await loadSpaceRegistrySnapshot();
+  if (!snapshot) return;
+  spaces.value = snapshot.registry.spaces;
+  activeSpaceId.value = snapshot.registry.activeSpaceId;
+  defaultUserDataPath.value = snapshot.defaultUserDataPath;
+}
+
+function openCreateForm(): void {
+  showCreateForm.value = true;
+  createName.value = '';
+  createPath.value = '';
+}
+
+function cancelCreate(): void {
+  showCreateForm.value = false;
+  createName.value = '';
+  createPath.value = '';
+}
+
+async function pickFolder(): Promise<void> {
+  const folder = await browseSpaceFolder();
+  if (folder) createPath.value = folder;
+}
+
+async function submitCreate(): Promise<void> {
+  if (!createName.value.trim() || !createPath.value.trim()) return;
+  creating.value = true;
+  try {
+    await createCustomSpace(createName.value.trim(), createPath.value.trim());
+    appNotify('positive', $text('space.created_ok'));
+    cancelCreate();
+    await refresh();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.create_failed'));
+  } finally {
+    creating.value = false;
+  }
+}
+
+function confirmSwitch(space: SpaceEntry): void {
+  pendingSwitchSpace.value = space;
+  switchConfirmOpen.value = true;
+}
+
+async function doSwitch(): Promise<void> {
+  if (!pendingSwitchSpace.value) return;
+  switching.value = true;
+  try {
+    await switchSpaceAndRestart(pendingSwitchSpace.value.id);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.switch_failed'));
+    switching.value = false;
+    switchConfirmOpen.value = false;
+  }
+}
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (open) void refresh();
+  },
+);
+</script>
+
+<style scoped>
+.space-create-card {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.space-list-item {
+  align-items: flex-start;
+}
+
+.space-list-item__actions {
+  min-height: 40px;
+}
+</style>

@@ -45,6 +45,12 @@
                     </q-item-section>
                   </q-item>
                   <q-separator />
+                  <q-item clickable v-ripple @click="openSpaces">
+                    <q-item-section avatar>
+                      <q-icon name="space_dashboard" />
+                    </q-item-section>
+                    <q-item-section>{{ $text("menu.spaces") }}</q-item-section>
+                  </q-item>
                   <q-item clickable v-ripple @click="openManageHeader">
                     <q-item-section avatar>
                       <q-icon name="folder_special" />
@@ -129,6 +135,7 @@
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
         <AccountsDialog v-model="showAccountsDialog" />
+        <SpaceManagementDialog v-model="showSpacesDialog" />
         <InfoscreenSettingsDialog v-model="showInfoscreenDialog" />
         <InfoscreenHost />
       </q-toolbar>
@@ -175,6 +182,7 @@ import { useSyncContractRevokedNotice } from "src/composables/useSyncContractRev
 import PendingActionsDialog from "src/components/settings/PendingActionsDialog.vue";
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
+import SpaceManagementDialog from "src/modules/space/components/SpaceManagementDialog.vue";
 import InfoscreenSettingsDialog from "src/modules/infoscreen/components/InfoscreenSettingsDialog.vue";
 import InfoscreenHost from "src/modules/infoscreen/components/InfoscreenHost.vue";
 import {
@@ -222,6 +230,7 @@ const showJoinMemberDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
 const showAccountsDialog = ref(false);
+const showSpacesDialog = ref(false);
 const showInfoscreenDialog = ref(false);
 const showPendingActionsDialog = ref(false);
 
@@ -547,6 +556,11 @@ function openAccounts() {
 
 function openSettings() {
   showConfigDialog.value = true;
+  menuOpen.value = false;
+}
+
+function openSpaces() {
+  showSpacesDialog.value = true;
   menuOpen.value = false;
 }
 

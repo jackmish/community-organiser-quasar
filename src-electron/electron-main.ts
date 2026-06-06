@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import { loadDotEnv } from './loadDotEnv';
 loadDotEnv();
 import {
@@ -23,6 +23,12 @@ import http from 'http';
 import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
 import logger from 'src/utils/logger';
+import {
+  createCustomSpace,
+  loadSpaceRegistrySnapshot,
+  resolveActiveDataPath,
+  setActiveSpaceId,
+} from './spaceRegistryMain';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,7 +157,48 @@ function createWindow() {
 
 // Handle IPC requests
 ipcMain.handle('get-app-data-path', () => {
-  return app.getPath('userData');
+  return resolveActiveDataPath();
+});
+
+ipcMain.handle('space:get-registry', () => loadSpaceRegistrySnapshot());
+
+ipcMain.handle('space:create', (_evt, payload: { name?: string; dataPath?: string }) => {
+  try {
+    const name = typeof payload?.name === 'string' ? payload.name : '';
+    const dataPath = typeof payload?.dataPath === 'string' ? payload.dataPath : '';
+    const entry = createCustomSpace(name, dataPath);
+    return { ok: true as const, entry };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:switch-and-restart', (_evt, spaceId: unknown) => {
+  try {
+    if (typeof spaceId !== 'string' || !spaceId) throw new Error('Invalid space');
+    setActiveSpaceId(spaceId);
+    app.relaunch();
+    app.exit(0);
+    return { ok: true as const };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:open-folder', async (_evt, folderPath: unknown) => {
+  try {
+    if (typeof folderPath !== 'string' || !folderPath.trim()) throw new Error('Invalid folder');
+    const resolved = path.resolve(folderPath.trim());
+    if (!fs.existsSync(resolved)) throw new Error('Folder does not exist');
+    const err = await shell.openPath(resolved);
+    if (err) throw new Error(err);
+    return { ok: true as const };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
 });
 
 /** Windows COMPUTERNAME / hostname — often matches the router device list. */

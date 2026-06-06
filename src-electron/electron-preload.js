@@ -180,6 +180,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export:zip', folder, zipName, jsonString),
 });
 
+contextBridge.exposeInMainWorld('electronSpace', {
+  getRegistry: () => ipcRenderer.invoke('space:get-registry'),
+  createSpace: (payload) => ipcRenderer.invoke('space:create', payload),
+  switchAndRestart: (spaceId) => ipcRenderer.invoke('space:switch-and-restart', spaceId),
+  openFolder: (folderPath) => ipcRenderer.invoke('space:open-folder', folderPath),
+});
+
 // ── Google Auth bridge ──────────────────────────────────────────────────────
 contextBridge.exposeInMainWorld('electronGoogleAuth', {
   /** Start the full OAuth loopback flow. Opens system browser. */
