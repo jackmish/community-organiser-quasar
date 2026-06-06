@@ -155,6 +155,30 @@ function createWindow() {
   setLanPairingMainWindowProvider(() => mainWindow);
 }
 
+/** After switching space: full process restart when packaged; reload window in dev (relaunch loses APP_URL). */
+function restartAppAfterSpaceSwitch(): void {
+  stopLanPairingServer();
+  destroyBonjour();
+
+  if (app.isPackaged) {
+    app.relaunch();
+    app.exit(0);
+    return;
+  }
+
+  const devUrl = process.env.APP_URL || '';
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (devUrl) {
+      void mainWindow.loadURL(devUrl);
+    } else {
+      mainWindow.webContents.reloadIgnoringCache();
+    }
+    return;
+  }
+
+  createWindow();
+}
+
 // Handle IPC requests
 ipcMain.handle('get-app-data-path', () => {
   return resolveActiveDataPath();
@@ -178,8 +202,7 @@ ipcMain.handle('space:switch-and-restart', (_evt, spaceId: unknown) => {
   try {
     if (typeof spaceId !== 'string' || !spaceId) throw new Error('Invalid space');
     setActiveSpaceId(spaceId);
-    app.relaunch();
-    app.exit(0);
+    setImmediate(() => restartAppAfterSpaceSwitch());
     return { ok: true as const };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
