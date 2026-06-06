@@ -188,7 +188,7 @@
 
           <!-- Parent-level add button to sit above list without z-index hacks -->
           <q-btn
-            v-show="!isFilesMode && (panelHidden || !previewFloating)"
+            v-show="panelHidden || !previewFloating"
             class="list-add-btn"
             :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
             :color="addTaskBtnColorize ? undefined : 'positive'"
