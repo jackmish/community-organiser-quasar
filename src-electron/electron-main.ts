@@ -24,12 +24,14 @@ import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
 import logger from 'src/utils/logger';
 import {
+  applyColdBootSpaceSelection,
   createCustomSpace,
   loadSpaceRegistrySnapshot,
   migrateSpaceStorageToSqlite,
   resolveActiveDataPath,
   resolveActiveSpaceContext,
   setActiveSpaceId,
+  setDefaultSpaceId,
   setSpaceStorageMode,
 } from './spaceRegistryMain';
 import {
@@ -230,6 +232,23 @@ ipcMain.handle('space:open-folder', async (_evt, folderPath: unknown) => {
     const err = await shell.openPath(resolved);
     if (err) throw new Error(err);
     return { ok: true as const };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:set-default-space', (_evt, spaceId: unknown) => {
+  try {
+    const id =
+      spaceId === null || spaceId === undefined
+        ? null
+        : typeof spaceId === 'string'
+          ? spaceId
+          : '';
+    if (id === '') throw new Error('Invalid space');
+    const registry = setDefaultSpaceId(id);
+    return { ok: true as const, defaultSpaceId: registry.defaultSpaceId ?? null };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false as const, error: msg };
@@ -599,7 +618,10 @@ ipcMain.handle(
   },
 );
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  applyColdBootSpaceSelection();
+  createWindow();
+});
 
 app.on('before-quit', () => {
   stopLanPairingServer();

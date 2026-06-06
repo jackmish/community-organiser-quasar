@@ -22,6 +22,7 @@ export {
   migrateSpaceToSqlite,
   openSpaceFolder,
   restartAppForSpaceChanges,
+  setDefaultSpace,
   setSpaceStorageMode,
   switchSpaceAndRestart,
   type SpaceElectronAPI,

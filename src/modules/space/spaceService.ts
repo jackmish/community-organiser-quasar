@@ -28,6 +28,9 @@ export interface SpaceElectronAPI {
   }) => Promise<SpaceSetModeResult>;
   migrateToSqlite: (spaceId: string) => Promise<SpaceMigrateResultPayload>;
   restartApp: () => Promise<SpaceOkResult<Record<string, never>> | SpaceErrResult>;
+  setDefaultSpace: (spaceId: string | null) => Promise<
+    SpaceOkResult<{ defaultSpaceId: string | null }> | SpaceErrResult
+  >;
 }
 
 function spaceApi(): SpaceElectronAPI | null {
@@ -94,6 +97,14 @@ export async function browseSpaceFolder(): Promise<string | null> {
     .electronAPI;
   if (!api || typeof api.showOpenFolder !== 'function') return null;
   return api.showOpenFolder();
+}
+
+export async function setDefaultSpace(spaceId: string | null): Promise<string | null> {
+  const api = spaceApi();
+  if (!api) throw new Error('Space management is only available in the desktop app');
+  const result = await api.setDefaultSpace(spaceId);
+  if (!result.ok) throw new Error(result.error);
+  return result.defaultSpaceId;
 }
 
 export async function openSpaceFolder(folderPath: string): Promise<void> {

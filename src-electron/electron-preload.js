@@ -198,6 +198,7 @@ contextBridge.exposeInMainWorld('electronSpace', {
   setStorageMode: (payload) => ipcRenderer.invoke('space:set-storage-mode', payload),
   migrateToSqlite: (spaceId) => ipcRenderer.invoke('space:migrate-to-sqlite', spaceId),
   restartApp: () => ipcRenderer.invoke('space:restart-app'),
+  setDefaultSpace: (spaceId) => ipcRenderer.invoke('space:set-default-space', spaceId),
 });
 
 // ── Google Auth bridge ──────────────────────────────────────────────────────

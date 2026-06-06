@@ -75,6 +75,10 @@
             </q-card>
           </q-slide-transition>
 
+          <div class="text-caption text-grey-7 q-mb-sm">
+            {{ $text('space.default_space_hint') }}
+          </div>
+
           <q-list bordered separator class="rounded-borders">
             <q-item v-for="space in spaces" :key="space.id" class="space-list-item">
               <q-item-section avatar>
@@ -89,6 +93,9 @@
                   {{ displayName(space) }}
                   <q-badge v-if="isActive(space.id)" color="primary" class="q-ml-sm">
                     {{ $text('space.active') }}
+                  </q-badge>
+                  <q-badge v-if="isDefaultSpace(space.id)" color="secondary" class="q-ml-sm">
+                    {{ $text('space.default_on_start') }}
                   </q-badge>
                 </q-item-label>
                 <q-item-label caption>
@@ -129,8 +136,21 @@
                   />
                 </div>
               </q-item-section>
-              <q-item-section side>
-                <div class="row items-center no-wrap q-gutter-xs space-list-item__actions">
+              <q-item-section side top>
+                <div class="column items-end q-gutter-xs space-list-item__actions">
+                  <div
+                    class="row items-center no-wrap"
+                    :title="$text('space.default_on_start')"
+                  >
+                    <q-radio
+                      dense
+                      :model-value="defaultSpaceId"
+                      :val="space.id"
+                      :label="$text('space.default_space_radio')"
+                      @click.stop="toggleDefaultSpace(space.id)"
+                    />
+                  </div>
+                  <div class="row items-center no-wrap q-gutter-xs">
                   <q-btn
                     flat
                     dense
@@ -149,6 +169,7 @@
                     :label="$text('space.switch')"
                     @click="confirmSwitch(space)"
                   />
+                  </div>
                 </div>
               </q-item-section>
             </q-item>
@@ -194,6 +215,7 @@ import {
   migrateSpaceToSqlite,
   openSpaceFolder,
   restartAppForSpaceChanges,
+  setDefaultSpace,
   setSpaceStorageMode,
   switchSpaceAndRestart,
   type SpaceEntry,
@@ -218,6 +240,7 @@ watch(dialogVisible, (v) => emit('update:modelValue', v));
 const available = ref(isSpaceManagementAvailable());
 const spaces = ref<SpaceEntry[]>([]);
 const activeSpaceId = ref(SYSTEM_SPACE_ID);
+const defaultSpaceId = ref<string | null>(null);
 const defaultUserDataPath = ref('');
 
 const showCreateForm = ref(false);
@@ -251,6 +274,29 @@ function formatMigratedAt(iso: string): string {
 
 function isActive(spaceId: string): boolean {
   return activeSpaceId.value === spaceId;
+}
+
+function isDefaultSpace(spaceId: string): boolean {
+  return defaultSpaceId.value === spaceId;
+}
+
+async function toggleDefaultSpace(spaceId: string): Promise<void> {
+  const next = defaultSpaceId.value === spaceId ? null : spaceId;
+  await applyDefaultSpace(next);
+}
+
+async function applyDefaultSpace(spaceId: string | null): Promise<void> {
+  try {
+    defaultSpaceId.value = await setDefaultSpace(spaceId);
+    appNotify(
+      'positive',
+      spaceId ? $text('space.default_space_set') : $text('space.default_space_cleared'),
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.default_space_save_failed'));
+    await refresh();
+  }
 }
 
 function displayName(space: SpaceEntry): string {
@@ -291,6 +337,7 @@ async function refresh(): Promise<void> {
   if (!snapshot) return;
   spaces.value = snapshot.registry.spaces;
   activeSpaceId.value = snapshot.registry.activeSpaceId;
+  defaultSpaceId.value = snapshot.defaultSpaceId ?? snapshot.registry.defaultSpaceId ?? null;
   defaultUserDataPath.value = snapshot.defaultUserDataPath;
 }
 

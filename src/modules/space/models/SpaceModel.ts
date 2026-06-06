@@ -24,6 +24,8 @@ export interface SpaceEntry {
 
 export interface SpaceRegistry {
   activeSpaceId: string;
+  /** When set, this space opens on a fresh app launch. Otherwise last accessed (activeSpaceId). */
+  defaultSpaceId?: string | null;
   spaces: SpaceEntry[];
 }
 
@@ -32,6 +34,7 @@ export interface SpaceRegistrySnapshot {
   defaultUserDataPath: string;
   activeDataPath: string;
   activeStorageMode: SpaceStorageMode;
+  defaultSpaceId: string | null;
 }
 
 export interface SpaceMigrateResult {
@@ -55,6 +58,7 @@ export function createSystemSpaceEntry(): SpaceEntry {
 export function createDefaultSpaceRegistry(): SpaceRegistry {
   return {
     activeSpaceId: SYSTEM_SPACE_ID,
+    defaultSpaceId: null,
     spaces: [createSystemSpaceEntry()],
   };
 }

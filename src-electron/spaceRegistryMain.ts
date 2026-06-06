@@ -44,10 +44,20 @@ function normalizeRegistry(raw: unknown): SpaceRegistry {
       typeof obj.activeSpaceId === 'string' && obj.activeSpaceId.length
         ? obj.activeSpaceId
         : SYSTEM_SPACE_ID,
+    defaultSpaceId:
+      typeof obj.defaultSpaceId === 'string' && obj.defaultSpaceId.length
+        ? obj.defaultSpaceId
+        : null,
     spaces: [normalizeSpaceEntry(system), ...custom.map(normalizeSpaceEntry)],
   };
   if (!merged.spaces.some((s) => s.id === merged.activeSpaceId)) {
     merged.activeSpaceId = SYSTEM_SPACE_ID;
+  }
+  if (
+    merged.defaultSpaceId &&
+    !merged.spaces.some((s) => s.id === merged.defaultSpaceId)
+  ) {
+    merged.defaultSpaceId = null;
   }
   return merged;
 }
@@ -106,6 +116,7 @@ export function loadSpaceRegistrySnapshot(): SpaceRegistrySnapshot {
     defaultUserDataPath: getDefaultUserDataPath(),
     activeDataPath: resolveActiveDataPath(registry),
     activeStorageMode: active?.storageMode ?? DEFAULT_SPACE_STORAGE_MODE,
+    defaultSpaceId: registry.defaultSpaceId ?? null,
   };
 }
 
@@ -149,6 +160,27 @@ export function resolveActiveDataPath(registry?: SpaceRegistry): string {
   if (!active || isSystemSpace(active)) return getDefaultUserDataPath();
   const customPath = active.dataPath?.trim();
   return customPath || getDefaultUserDataPath();
+}
+
+/** On a fresh app launch: open default space when set, otherwise keep last accessed. */
+export function applyColdBootSpaceSelection(): void {
+  const registry = readRegistrySync();
+  const defaultId = registry.defaultSpaceId;
+  if (!defaultId || !registry.spaces.some((s) => s.id === defaultId)) return;
+  if (registry.activeSpaceId === defaultId) return;
+  registry.activeSpaceId = defaultId;
+  writeRegistrySync(registry);
+}
+
+export function setDefaultSpaceId(spaceId: string | null): SpaceRegistry {
+  const registry = readRegistrySync();
+  const trimmed = spaceId?.trim() || null;
+  if (trimmed && !registry.spaces.some((s) => s.id === trimmed)) {
+    throw new Error('Unknown space');
+  }
+  registry.defaultSpaceId = trimmed;
+  writeRegistrySync(registry);
+  return registry;
 }
 
 export function createCustomSpace(name: string, dataPath: string): SpaceEntry {
