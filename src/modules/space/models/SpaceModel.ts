@@ -2,6 +2,13 @@ export const SYSTEM_SPACE_ID = 'system';
 
 export type SpaceType = 'system' | 'custom';
 
+/** How structured data is persisted inside the space folder. */
+export type SpaceStorageMode = 'files' | 'sqlite';
+
+export const DEFAULT_SPACE_STORAGE_MODE: SpaceStorageMode = 'files';
+
+export const CO21_SQLITE_DB_FILENAME = 'co21.db';
+
 /** One switchable data context (folder + isolated settings). */
 export interface SpaceEntry {
   id: string;
@@ -9,6 +16,9 @@ export interface SpaceEntry {
   type: SpaceType;
   /** Absolute data root — only for custom spaces. */
   dataPath?: string;
+  storageMode: SpaceStorageMode;
+  /** Set when file data was copied into SQLite (original files kept). */
+  sqliteMigratedAt?: string | null;
   createdAt: string;
 }
 
@@ -21,6 +31,14 @@ export interface SpaceRegistrySnapshot {
   registry: SpaceRegistry;
   defaultUserDataPath: string;
   activeDataPath: string;
+  activeStorageMode: SpaceStorageMode;
+}
+
+export interface SpaceMigrateResult {
+  groupCount: number;
+  settingsKeyCount: number;
+  co21SettingsImported: boolean;
+  dbPath: string;
 }
 
 export function createSystemSpaceEntry(): SpaceEntry {
@@ -28,6 +46,8 @@ export function createSystemSpaceEntry(): SpaceEntry {
     id: SYSTEM_SPACE_ID,
     name: 'System User',
     type: 'system',
+    storageMode: DEFAULT_SPACE_STORAGE_MODE,
+    sqliteMigratedAt: null,
     createdAt: '1970-01-01T00:00:00.000Z',
   };
 }
@@ -41,4 +61,8 @@ export function createDefaultSpaceRegistry(): SpaceRegistry {
 
 export function isSystemSpace(space: SpaceEntry): boolean {
   return space.type === 'system' || space.id === SYSTEM_SPACE_ID;
+}
+
+export function normalizeSpaceStorageMode(value: unknown): SpaceStorageMode {
+  return value === 'sqlite' ? 'sqlite' : DEFAULT_SPACE_STORAGE_MODE;
 }

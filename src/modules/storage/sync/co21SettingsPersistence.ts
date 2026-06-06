@@ -16,6 +16,19 @@ async function readCo21SettingsFromElectronFile(): Promise<Co21SettingsJson | nu
   const api = electronApi();
   if (!api) return null;
   try {
+    if (
+      typeof api.getStorageContext === 'function' &&
+      typeof api.loadCo21SettingsSqlite === 'function'
+    ) {
+      const ctx = await (api.getStorageContext as () => Promise<{
+        storageMode: string;
+        sqliteReady: boolean;
+      }>)();
+      if (ctx.storageMode === 'sqlite' && ctx.sqliteReady) {
+        const data = await (api.loadCo21SettingsSqlite as () => Promise<unknown>)();
+        return data && typeof data === 'object' ? (data as Co21SettingsJson) : {};
+      }
+    }
     const appPath = await (api.getAppDataPath as () => Promise<string>)();
     const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
     const settingsFile = (api.joinPath as (a: string, b: string) => string)(
@@ -36,6 +49,19 @@ async function writeCo21SettingsToElectronFile(payload: Co21SettingsJson): Promi
   const api = electronApi();
   if (!api) return false;
   try {
+    if (
+      typeof api.getStorageContext === 'function' &&
+      typeof api.saveCo21SettingsSqlite === 'function'
+    ) {
+      const ctx = await (api.getStorageContext as () => Promise<{
+        storageMode: string;
+        sqliteReady: boolean;
+      }>)();
+      if (ctx.storageMode === 'sqlite' && ctx.sqliteReady) {
+        await (api.saveCo21SettingsSqlite as (d: Co21SettingsJson) => Promise<unknown>)(payload);
+        return true;
+      }
+    }
     const appPath = await (api.getAppDataPath as () => Promise<string>)();
     const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
     const settingsFile = (api.joinPath as (a: string, b: string) => string)(

@@ -1,5 +1,6 @@
 import logger from '../../../../utils/logger';
 import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
+import { isActiveSpaceSqliteStorage } from './ElectronAppdataAPI';
 import { loadGroupsFromGroupDirectory } from './groupFileLoader';
 import type { StorageBackend } from '../StorageBackend';
 // Re-export so existing callers that import OrganiserData from this module keep working.
@@ -185,6 +186,19 @@ class DayOrganiserStorage implements StorageBackend {
     if (
       typeof window !== 'undefined' &&
       window.electronAPI &&
+      (await isActiveSpaceSqliteStorage()) &&
+      typeof window.electronAPI.loadGroupsSqlite === 'function'
+    ) {
+      try {
+        return await window.electronAPI.loadGroupsSqlite();
+      } catch (err) {
+        logger.error('Error reading groups from SQLite:', err);
+        return [];
+      }
+    }
+    if (
+      typeof window !== 'undefined' &&
+      window.electronAPI &&
       typeof window.electronAPI.readJsonFile === 'function' &&
       typeof window.electronAPI.joinPath === 'function'
     ) {
@@ -232,6 +246,14 @@ export async function getGroupFilesDirectory(): Promise<string> {
 }
 
 export async function saveGroupsToFiles(groups: any[]): Promise<void> {
+  if (
+    window.electronAPI &&
+    (await isActiveSpaceSqliteStorage()) &&
+    typeof window.electronAPI.saveGroupsSqlite === 'function'
+  ) {
+    await window.electronAPI.saveGroupsSqlite(groups);
+    return;
+  }
   if (window.electronAPI && window.electronAPI.writeFile && window.electronAPI.joinPath) {
     const appDataDir = await window.electronAPI.getAppDataPath();
     const { prepareGroupBackgroundForDisk } = await import(
@@ -311,6 +333,18 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
 export async function loadSettings(): Promise<any> {
   if (
     window.electronAPI &&
+    (await isActiveSpaceSqliteStorage()) &&
+    typeof window.electronAPI.loadSettingsSqlite === 'function'
+  ) {
+    try {
+      return (await window.electronAPI.loadSettingsSqlite()) || {};
+    } catch (err) {
+      logger.error('[loadSettings] sqlite failed', err);
+      return {};
+    }
+  }
+  if (
+    window.electronAPI &&
     window.electronAPI.getAppDataPath &&
     window.electronAPI.joinPath &&
     window.electronAPI.readJsonFile
@@ -344,6 +378,14 @@ export async function loadSettings(): Promise<any> {
 }
 
 export async function saveSettings(settings: any): Promise<void> {
+  if (
+    window.electronAPI &&
+    (await isActiveSpaceSqliteStorage()) &&
+    typeof window.electronAPI.saveSettingsSqlite === 'function'
+  ) {
+    await window.electronAPI.saveSettingsSqlite(settings || {});
+    return;
+  }
   if (
     window.electronAPI &&
     window.electronAPI.getAppDataPath &&
@@ -403,6 +445,14 @@ export async function setSetting(key: string, value: any): Promise<void> {
 }
 
 export async function deleteGroupFile(groupId: string): Promise<void> {
+  if (
+    window.electronAPI &&
+    (await isActiveSpaceSqliteStorage()) &&
+    typeof window.electronAPI.deleteGroupSqlite === 'function'
+  ) {
+    await window.electronAPI.deleteGroupSqlite(groupId);
+    return;
+  }
   if (window.electronAPI && window.electronAPI.joinPath && window.electronAPI.deleteFile) {
     const appDataDir = await window.electronAPI.getAppDataPath();
     const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');

@@ -94,6 +94,40 @@
                 <q-item-label caption>
                   {{ spaceCaption(space) }}
                 </q-item-label>
+                <div class="space-storage-mode q-mt-sm">
+                  <div class="text-caption text-weight-medium q-mb-xs">
+                    {{ $text('space.storage_mode') }}
+                  </div>
+                  <q-option-group
+                    :model-value="space.storageMode"
+                    :options="storageModeOptionsFor(space)"
+                    type="radio"
+                    dense
+                    inline
+                    @update:model-value="(v: SpaceStorageMode) => onStorageModeChange(space, v)"
+                  />
+                  <div class="text-caption text-grey-7 q-mt-xs">
+                    {{
+                      space.storageMode === 'sqlite'
+                        ? $text('space.mode_sqlite_desc')
+                        : $text('space.mode_files_desc')
+                    }}
+                  </div>
+                  <div v-if="space.sqliteMigratedAt" class="text-caption text-positive q-mt-xs">
+                    {{ $text('space.sqlite_migrated').replace('{date}', formatMigratedAt(space.sqliteMigratedAt)) }}
+                  </div>
+                  <q-btn
+                    v-if="!space.sqliteMigratedAt"
+                    flat
+                    dense
+                    color="primary"
+                    class="q-mt-sm"
+                    icon="upgrade"
+                    :label="$text('space.migrate_to_sqlite')"
+                    :loading="migratingId === space.id"
+                    @click="runMigrate(space)"
+                  />
+                </div>
               </q-item-section>
               <q-item-section side>
                 <div class="row items-center no-wrap q-gutter-xs space-list-item__actions">
@@ -157,16 +191,20 @@ import {
   isSpaceManagementAvailable,
   isSystemSpace,
   loadSpaceRegistrySnapshot,
+  migrateSpaceToSqlite,
   openSpaceFolder,
+  restartAppForSpaceChanges,
+  setSpaceStorageMode,
   switchSpaceAndRestart,
   type SpaceEntry,
+  type SpaceStorageMode,
 } from 'src/modules/space';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
-  useSettingsDialogLayout(520, 640);
+  useSettingsDialogLayout(560, 720);
 
 const dialogVisible = ref(!!props.modelValue);
 watch(
@@ -190,6 +228,26 @@ const creating = ref(false);
 const switchConfirmOpen = ref(false);
 const pendingSwitchSpace = ref<SpaceEntry | null>(null);
 const switching = ref(false);
+const migratingId = ref<string | null>(null);
+
+function storageModeOptionsFor(space: SpaceEntry) {
+  return [
+    { label: $text('space.mode_files'), value: 'files' as const },
+    {
+      label: $text('space.mode_sqlite'),
+      value: 'sqlite' as const,
+      disable: !space.sqliteMigratedAt,
+    },
+  ];
+}
+
+function formatMigratedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
 
 function isActive(spaceId: string): boolean {
   return activeSpaceId.value === spaceId;
@@ -269,6 +327,48 @@ async function submitCreate(): Promise<void> {
   }
 }
 
+async function runMigrate(space: SpaceEntry): Promise<void> {
+  migratingId.value = space.id;
+  try {
+    const { result } = await migrateSpaceToSqlite(space.id);
+    appNotify(
+      'positive',
+      $text('space.migrate_ok')
+        .replace('{groups}', String(result.groupCount))
+        .replace('{settings}', String(result.settingsKeyCount)),
+    );
+    await refresh();
+    if (isActive(space.id)) {
+      await restartAppForSpaceChanges();
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.migrate_failed'));
+  } finally {
+    migratingId.value = null;
+  }
+}
+
+async function onStorageModeChange(space: SpaceEntry, mode: SpaceStorageMode): Promise<void> {
+  if (mode === space.storageMode) return;
+  if (mode === 'sqlite' && !space.sqliteMigratedAt) {
+    appNotify('warning', $text('space.migrate_first'));
+    return;
+  }
+  try {
+    await setSpaceStorageMode(space.id, mode);
+    await refresh();
+    if (isActive(space.id)) {
+      await restartAppForSpaceChanges();
+    } else {
+      appNotify('positive', $text('space.mode_saved'));
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.mode_save_failed'));
+  }
+}
+
 function confirmSwitch(space: SpaceEntry): void {
   pendingSwitchSpace.value = space;
   switchConfirmOpen.value = true;
@@ -306,5 +406,9 @@ watch(
 
 .space-list-item__actions {
   min-height: 40px;
+}
+
+.space-storage-mode {
+  max-width: 100%;
 }
 </style>

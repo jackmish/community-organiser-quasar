@@ -1,17 +1,33 @@
-import type { SpaceEntry, SpaceRegistrySnapshot } from './models/SpaceModel';
+import type {
+  SpaceEntry,
+  SpaceMigrateResult,
+  SpaceRegistrySnapshot,
+  SpaceStorageMode,
+} from './models/SpaceModel';
 
-type SpaceCreateResult =
-  | { ok: true; entry: SpaceEntry }
-  | { ok: false; error: string };
+type SpaceOkResult<T> = { ok: true } & T;
+type SpaceErrResult = { ok: false; error: string };
 
-type SpaceSwitchResult = { ok: true } | { ok: false; error: string };
-type SpaceOpenFolderResult = { ok: true } | { ok: false; error: string };
+type SpaceCreateResult = SpaceOkResult<{ entry: SpaceEntry }> | SpaceErrResult;
+type SpaceSwitchResult = SpaceOkResult<Record<string, never>> | SpaceErrResult;
+type SpaceOpenFolderResult = SpaceOkResult<Record<string, never>> | SpaceErrResult;
+type SpaceSetModeResult = SpaceOkResult<{ space: SpaceEntry }> | SpaceErrResult;
+type SpaceMigrateResultPayload = SpaceOkResult<{
+  space: SpaceEntry;
+  result: SpaceMigrateResult;
+}> | SpaceErrResult;
 
 export interface SpaceElectronAPI {
   getRegistry: () => Promise<SpaceRegistrySnapshot>;
   createSpace: (payload: { name: string; dataPath: string }) => Promise<SpaceCreateResult>;
   switchAndRestart: (spaceId: string) => Promise<SpaceSwitchResult>;
   openFolder: (folderPath: string) => Promise<SpaceOpenFolderResult>;
+  setStorageMode: (payload: {
+    spaceId: string;
+    mode: SpaceStorageMode;
+  }) => Promise<SpaceSetModeResult>;
+  migrateToSqlite: (spaceId: string) => Promise<SpaceMigrateResultPayload>;
+  restartApp: () => Promise<SpaceOkResult<Record<string, never>> | SpaceErrResult>;
 }
 
 function spaceApi(): SpaceElectronAPI | null {
@@ -42,6 +58,34 @@ export async function switchSpaceAndRestart(spaceId: string): Promise<void> {
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.switchAndRestart(spaceId);
+  if (!result.ok) throw new Error(result.error);
+}
+
+export async function setSpaceStorageMode(
+  spaceId: string,
+  mode: SpaceStorageMode,
+): Promise<SpaceEntry> {
+  const api = spaceApi();
+  if (!api) throw new Error('Space management is only available in the desktop app');
+  const result = await api.setStorageMode({ spaceId, mode });
+  if (!result.ok) throw new Error(result.error);
+  return result.space;
+}
+
+export async function migrateSpaceToSqlite(
+  spaceId: string,
+): Promise<{ space: SpaceEntry; result: SpaceMigrateResult }> {
+  const api = spaceApi();
+  if (!api) throw new Error('Space management is only available in the desktop app');
+  const result = await api.migrateToSqlite(spaceId);
+  if (!result.ok) throw new Error(result.error);
+  return { space: result.space, result: result.result };
+}
+
+export async function restartAppForSpaceChanges(): Promise<void> {
+  const api = spaceApi();
+  if (!api) throw new Error('Space management is only available in the desktop app');
+  const result = await api.restartApp();
   if (!result.ok) throw new Error(result.error);
 }
 

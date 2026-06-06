@@ -26,9 +26,21 @@ import logger from 'src/utils/logger';
 import {
   createCustomSpace,
   loadSpaceRegistrySnapshot,
+  migrateSpaceStorageToSqlite,
   resolveActiveDataPath,
+  resolveActiveSpaceContext,
   setActiveSpaceId,
+  setSpaceStorageMode,
 } from './spaceRegistryMain';
+import {
+  deleteGroupFromSqlite,
+  loadAppSettingsFromSqlite,
+  loadCo21SettingsFromSqlite,
+  loadGroupsFromSqlite,
+  saveAppSettingsToSqlite,
+  saveCo21SettingsToSqlite,
+  saveGroupsToSqlite,
+} from './spaceSqliteMain';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -222,6 +234,91 @@ ipcMain.handle('space:open-folder', async (_evt, folderPath: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false as const, error: msg };
   }
+});
+
+ipcMain.handle('space:set-storage-mode', (_evt, payload: { spaceId?: string; mode?: string }) => {
+  try {
+    const spaceId = typeof payload?.spaceId === 'string' ? payload.spaceId : '';
+    const mode = payload?.mode === 'sqlite' ? 'sqlite' : 'files';
+    if (!spaceId) throw new Error('Invalid space');
+    const space = setSpaceStorageMode(spaceId, mode);
+    return { ok: true as const, space };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:migrate-to-sqlite', (_evt, spaceId: unknown) => {
+  try {
+    if (typeof spaceId !== 'string' || !spaceId) throw new Error('Invalid space');
+    const { space, result } = migrateSpaceStorageToSqlite(spaceId);
+    return { ok: true as const, space, result };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:restart-app', () => {
+  setImmediate(() => restartAppAfterSpaceSwitch());
+  return { ok: true as const };
+});
+
+ipcMain.handle('storage:get-context', () => resolveActiveSpaceContext());
+
+ipcMain.handle('storage:sqlite-load-groups', () => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) return [];
+  return loadGroupsFromSqlite(ctx.dataPath);
+});
+
+ipcMain.handle('storage:sqlite-save-groups', (_evt, groups: unknown) => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) throw new Error('SQLite storage not active');
+  saveGroupsToSqlite(ctx.dataPath, Array.isArray(groups) ? groups : []);
+  return { ok: true as const };
+});
+
+ipcMain.handle('storage:sqlite-delete-group', (_evt, groupId: unknown) => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) return { ok: true as const };
+  if (typeof groupId === 'string' && groupId) deleteGroupFromSqlite(ctx.dataPath, groupId);
+  return { ok: true as const };
+});
+
+ipcMain.handle('storage:sqlite-load-settings', () => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) return {};
+  return loadAppSettingsFromSqlite(ctx.dataPath);
+});
+
+ipcMain.handle('storage:sqlite-save-settings', (_evt, settings: unknown) => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) throw new Error('SQLite storage not active');
+  const payload =
+    settings && typeof settings === 'object' && !Array.isArray(settings)
+      ? (settings as Record<string, unknown>)
+      : {};
+  saveAppSettingsToSqlite(ctx.dataPath, payload);
+  return { ok: true as const };
+});
+
+ipcMain.handle('storage:sqlite-load-co21-settings', () => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) return {};
+  return loadCo21SettingsFromSqlite(ctx.dataPath);
+});
+
+ipcMain.handle('storage:sqlite-save-co21-settings', (_evt, settings: unknown) => {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode !== 'sqlite' || !ctx.sqliteReady) throw new Error('SQLite storage not active');
+  const payload =
+    settings && typeof settings === 'object' && !Array.isArray(settings)
+      ? (settings as Record<string, unknown>)
+      : {};
+  saveCo21SettingsToSqlite(ctx.dataPath, payload);
+  return { ok: true as const };
 });
 
 /** Windows COMPUTERNAME / hostname — often matches the router device list. */

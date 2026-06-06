@@ -25,7 +25,11 @@ import {
 } from '../src/modules/lan/lanPairingHosts';
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
-import { resolveActiveDataPath } from './spaceRegistryMain';
+import { resolveActiveDataPath, resolveActiveSpaceContext } from './spaceRegistryMain';
+import {
+  loadCo21SettingsFromSqlite,
+  saveCo21SettingsToSqlite,
+} from './spaceSqliteMain';
 
 export type LanIdentityPublic = {
   deviceId: string;
@@ -75,6 +79,10 @@ function activeCo21SettingsFile(): string {
 }
 
 async function readCo21SettingsFile(): Promise<Record<string, unknown>> {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode === 'sqlite' && ctx.sqliteReady) {
+    return loadCo21SettingsFromSqlite(ctx.dataPath);
+  }
   const settingsFile = activeCo21SettingsFile();
   try {
     const raw = await fs.readFile(settingsFile, 'utf8');
@@ -88,6 +96,12 @@ async function readCo21SettingsFile(): Promise<Record<string, unknown>> {
 }
 
 async function writeCo21SettingsPatch(patch: Record<string, unknown>): Promise<void> {
+  const ctx = resolveActiveSpaceContext();
+  if (ctx.storageMode === 'sqlite' && ctx.sqliteReady) {
+    const existing = loadCo21SettingsFromSqlite(ctx.dataPath);
+    saveCo21SettingsToSqlite(ctx.dataPath, { ...existing, ...patch });
+    return;
+  }
   const settingsFile = activeCo21SettingsFile();
   const existing = await readCo21SettingsFile();
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });

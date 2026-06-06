@@ -161,6 +161,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Get app data path
   getAppDataPath: () => ipcRenderer.invoke('get-app-data-path'),
 
+  getStorageContext: () => ipcRenderer.invoke('storage:get-context'),
+  loadGroupsSqlite: () => ipcRenderer.invoke('storage:sqlite-load-groups'),
+  saveGroupsSqlite: (groups) => ipcRenderer.invoke('storage:sqlite-save-groups', groups),
+  deleteGroupSqlite: (groupId) => ipcRenderer.invoke('storage:sqlite-delete-group', groupId),
+  loadSettingsSqlite: () => ipcRenderer.invoke('storage:sqlite-load-settings'),
+  saveSettingsSqlite: (settings) => ipcRenderer.invoke('storage:sqlite-save-settings', settings),
+  loadCo21SettingsSqlite: () => ipcRenderer.invoke('storage:sqlite-load-co21-settings'),
+  saveCo21SettingsSqlite: (settings) =>
+    ipcRenderer.invoke('storage:sqlite-save-co21-settings', settings),
+
   /** OS computer name / hostname (router-style device label on Windows). */
   getHostDeviceLabel: () => ipcRenderer.invoke('system:host-device-label'),
 
@@ -185,6 +195,9 @@ contextBridge.exposeInMainWorld('electronSpace', {
   createSpace: (payload) => ipcRenderer.invoke('space:create', payload),
   switchAndRestart: (spaceId) => ipcRenderer.invoke('space:switch-and-restart', spaceId),
   openFolder: (folderPath) => ipcRenderer.invoke('space:open-folder', folderPath),
+  setStorageMode: (payload) => ipcRenderer.invoke('space:set-storage-mode', payload),
+  migrateToSqlite: (spaceId) => ipcRenderer.invoke('space:migrate-to-sqlite', spaceId),
+  restartApp: () => ipcRenderer.invoke('space:restart-app'),
 });
 
 // ── Google Auth bridge ──────────────────────────────────────────────────────
