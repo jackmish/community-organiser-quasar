@@ -9,6 +9,21 @@
   >
     <q-menu auto-close>
       <q-list style="min-width: 160px">
+        <template v-if="showMobileViewModeToggle">
+          <q-item clickable @click="void onToggleAppViewMode()">
+            <q-item-section avatar>
+              <q-icon :name="isFilesMode ? 'calendar_month' : 'folder_shared'" />
+            </q-item-section>
+            <q-item-section>
+              {{
+                isFilesMode
+                  ? $text('files.switch_to_calendar')
+                  : $text('files.switch_to_files')
+              }}
+            </q-item-section>
+          </q-item>
+          <q-separator />
+        </template>
         <template v-if="showMobileStatus">
           <q-item>
             <q-item-section>
@@ -91,6 +106,8 @@ import {
   deviceStatusMenuPillClass,
   type DeviceStatusRow,
 } from 'src/utils/deviceStatusDisplay';
+import { useAppViewMode } from 'src/modules/media/composables/useAppViewMode';
+import logger from 'src/utils/logger';
 
 const props = defineProps<{
   textColor?: string;
@@ -98,7 +115,32 @@ const props = defineProps<{
 }>();
 
 const $q = useQuasar();
+const showMobileViewModeToggle = computed(() => $q.screen.lt.md);
 const showMobileStatus = computed(() => $q.screen.lt.md && (props.deviceStatuses?.length || 0) > 0);
+
+const groups = CC.group.list.all;
+
+const modeGroup = computed(() => {
+  const activeId = String(CC.group.active.activeGroup.value?.value || '').trim();
+  if (!activeId) return null;
+  return (groups.value || []).find((g: { id?: string }) => String(g.id) === activeId) || null;
+});
+
+const { isFilesMode, toggleViewMode } = useAppViewMode(modeGroup);
+
+async function onToggleAppViewMode(): Promise<void> {
+  const group = modeGroup.value;
+  if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
+    try {
+      if (typeof CC.group.update === 'function') {
+        await CC.group.update(String(group.id), { mediaEnabled: true });
+      }
+    } catch (e) {
+      logger.error('[TaskListOptionsMenu] enable files module failed', e);
+    }
+  }
+  await toggleViewMode();
+}
 
 function onEditGroup() {
   const active = CC.group.active.activeGroup.value;

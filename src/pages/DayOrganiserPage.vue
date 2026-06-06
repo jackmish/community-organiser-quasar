@@ -82,6 +82,7 @@
                     <div class="task-header-v-separator" aria-hidden="true" />
                   </div>
                   <button
+                    v-if="!$q.screen.lt.md"
                     type="button"
                     class="task-header-mode-btn"
                     :style="filesModeBtnStyle"
