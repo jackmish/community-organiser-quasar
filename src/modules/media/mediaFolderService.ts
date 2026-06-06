@@ -19,8 +19,16 @@ export type ListMediaFolderResult =
   | { ok: false; error: string };
 
 export type GetMediaThumbnailResult =
-  | { ok: true; dataUrl: string }
+  | { ok: true; url: string }
   | { ok: false; error?: string; noThumb?: boolean };
+
+export type GetMediaThumbnailsBatchResult =
+  | { ok: true; thumbs: Record<string, GetMediaThumbnailResult> }
+  | { ok: false; error?: string };
+
+export type ClearMediaThumbnailCacheResult =
+  | { ok: true; fileCount: number }
+  | { ok: false; error?: string };
 
 type MediaFolderElectronAPI = {
   listMediaFolder?: (payload: {
@@ -32,6 +40,11 @@ type MediaFolderElectronAPI = {
     filePath: string;
     modifiedMs?: number | null;
   }) => Promise<GetMediaThumbnailResult>;
+  getMediaThumbnails?: (payload: {
+    rootPath: string;
+    items: Array<{ filePath: string; modifiedMs?: number | null }>;
+  }) => Promise<GetMediaThumbnailsBatchResult>;
+  clearMediaThumbnailCache?: () => Promise<ClearMediaThumbnailCacheResult>;
   openMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
   revealMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
 };
@@ -88,6 +101,25 @@ export async function getMediaThumbnail(
   });
 }
 
+export async function getMediaThumbnails(
+  rootPath: string,
+  items: Array<{ filePath: string; modifiedMs?: number | null }>,
+): Promise<GetMediaThumbnailsBatchResult> {
+  const api = mediaFolderApi();
+  if (!api?.getMediaThumbnails) {
+    return { ok: false, error: 'Thumbnails are only available in the desktop app' };
+  }
+  return api.getMediaThumbnails({ rootPath, items });
+}
+
+export async function clearMediaThumbnailCache(): Promise<ClearMediaThumbnailCacheResult> {
+  const api = mediaFolderApi();
+  if (!api?.clearMediaThumbnailCache) {
+    return { ok: false, error: 'Thumbnails are only available in the desktop app' };
+  }
+  return api.clearMediaThumbnailCache();
+}
+
 export const IMAGE_FILE_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
@@ -107,7 +139,7 @@ export function isImageFileName(name: string): boolean {
   return IMAGE_FILE_EXTENSIONS.has(lower.slice(dot));
 }
 
-/** Raster formats supported for cached thumbnails (excludes svg/heic). */
+/** Raster formats supported for cached thumbnails (excludes svg). */
 export const THUMBABLE_FILE_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
@@ -116,6 +148,8 @@ export const THUMBABLE_FILE_EXTENSIONS = new Set([
   '.webp',
   '.bmp',
   '.avif',
+  '.heic',
+  '.heif',
 ]);
 
 export function isThumbableFileName(name: string): boolean {

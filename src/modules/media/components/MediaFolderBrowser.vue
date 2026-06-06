@@ -109,7 +109,7 @@
 import { computed, ref, watch } from 'vue';
 import { $text, getLocale } from 'src/modules/lang';
 import {
-  getMediaThumbnail,
+  getMediaThumbnails,
   isImageFileName,
   isThumbableFileName,
   listMediaFolder,
@@ -222,13 +222,25 @@ async function loadThumbs(list: MediaFolderEntry[]): Promise<void> {
 
   const gen = ++thumbRequestGen;
   const targets = list.filter((e) => !e.isDirectory && isThumbableFileName(e.name));
-  await Promise.all(
-    targets.map(async (entry) => {
-      const result = await getMediaThumbnail(root, entry.path, entry.modifiedMs);
-      if (gen !== thumbRequestGen || !result.ok || !result.dataUrl) return;
-      thumbUrls.value = { ...thumbUrls.value, [entry.path]: result.dataUrl };
-    }),
+  if (!targets.length) return;
+
+  const result = await getMediaThumbnails(
+    root,
+    targets.map((entry) => ({
+      filePath: entry.path,
+      modifiedMs: entry.modifiedMs,
+    })),
   );
+  if (gen !== thumbRequestGen || !result.ok) return;
+
+  const next: Record<string, string> = { ...thumbUrls.value };
+  for (const entry of targets) {
+    const thumb = result.thumbs[entry.path];
+    if (thumb?.ok && thumb.url) {
+      next[entry.path] = thumb.url;
+    }
+  }
+  thumbUrls.value = next;
 }
 
 function formatSize(bytes: number | null | undefined): string {

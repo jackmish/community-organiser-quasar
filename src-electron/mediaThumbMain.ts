@@ -1,5 +1,6 @@
 import type { IpcMain } from 'electron';
-import { nativeImage } from 'electron';
+import { protocol } from 'electron';
+import sharp from 'sharp';
 import crypto from 'crypto';
 import type { Dirent } from 'fs';
 import { promises as fsPromises } from 'fs';
@@ -10,10 +11,13 @@ import { resolveActiveDataPath } from './spaceRegistryMain';
 /** Bump folder name when thumb spec / algorithm changes (old cache left for TTL sweep). */
 export const MEDIA_THUMB_CACHE_VERSION = 'v1';
 export const MEDIA_THUMB_MAX_EDGE = 160;
-const MEDIA_THUMB_JPEG_QUALITY = 82;
+const MEDIA_THUMB_JPEG_QUALITY = 78;
 const MEDIA_THUMB_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MEDIA_THUMB_MAX_BYTES = 250 * 1024 * 1024;
 const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const MAX_CONCURRENT_GENERATIONS = 2;
+const BATCH_THUMB_CONCURRENCY = 6;
+const META_TOUCH_FLUSH_MS = 60_000;
 
 const THUMBABLE_EXTENSIONS = new Set([
   '.jpg',
@@ -23,6 +27,8 @@ const THUMBABLE_EXTENSIONS = new Set([
   '.webp',
   '.bmp',
   '.avif',
+  '.heic',
+  '.heif',
 ]);
 
 type ThumbMeta = {
@@ -33,10 +39,18 @@ type ThumbMeta = {
   sizeBytes: number;
 };
 
-type GetThumbOk = { ok: true; dataUrl: string };
+type GetThumbOk = { ok: true; url: string };
 type GetThumbErr = { ok: false; error?: string; noThumb?: boolean };
 
 export type GetMediaThumbPayload = GetThumbOk | GetThumbErr;
+
+export type GetMediaThumbsBatchPayload =
+  | { ok: true; thumbs: Record<string, GetMediaThumbPayload> }
+  | { ok: false; error: string };
+
+export type ClearMediaThumbCachePayload =
+  | { ok: true; fileCount: number }
+  | { ok: false; error: string };
 
 function thumbSpecLabel(): string {
   return `s${MEDIA_THUMB_MAX_EDGE}`;
@@ -77,6 +91,64 @@ function thumbAbsPaths(appDataPath: string, hash: string): { imagePath: string; 
   };
 }
 
+function thumbCacheUrl(imageRel: string): string {
+  const normalized = imageRel.replace(/\\/g, '/');
+  const encoded = normalized.split('/').map(encodeURIComponent).join('/');
+  return `media-thumb://cache/${encoded}`;
+}
+
+function resolveCachedThumbPath(imageRel: string): string | null {
+  const rel = String(imageRel || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+  if (!rel || rel.includes('..')) return null;
+
+  const appDataPath = resolveActiveDataPath();
+  const root = path.resolve(thumbCacheRoot(appDataPath));
+  const filePath = path.resolve(path.join(root, rel));
+  const relCheck = path.relative(root, filePath);
+  if (relCheck.startsWith('..') || path.isAbsolute(relCheck)) return null;
+  return filePath;
+}
+
+export function registerMediaThumbProtocolSchemes(): void {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'media-thumb',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true,
+        bypassCSP: true,
+      },
+    },
+  ]);
+}
+
+export function registerMediaThumbProtocol(): void {
+  protocol.handle('media-thumb', async (request) => {
+    try {
+      const url = new URL(request.url);
+      const rel = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+      const filePath = resolveCachedThumbPath(rel);
+      if (!filePath) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const data = await fsPromises.readFile(filePath);
+      return new Response(data, {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'private, max-age=31536000, immutable',
+        },
+      });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
+
 async function readThumbMeta(metaPath: string): Promise<ThumbMeta | null> {
   try {
     const raw = await fsPromises.readFile(metaPath, 'utf8');
@@ -107,47 +179,72 @@ async function writeThumbMeta(metaPath: string, meta: ThumbMeta): Promise<void> 
 }
 
 async function deleteThumbFiles(imagePath: string, metaPath: string): Promise<void> {
+  pendingMetaTouches.delete(metaPath);
   await Promise.all([
     fsPromises.unlink(imagePath).catch(() => undefined),
     fsPromises.unlink(metaPath).catch(() => undefined),
   ]);
 }
 
-async function touchThumbMeta(metaPath: string, meta: ThumbMeta): Promise<void> {
-  const next: ThumbMeta = { ...meta, lastUsedMs: Date.now() };
-  await writeThumbMeta(metaPath, next);
+const pendingMetaTouches = new Map<string, ThumbMeta>();
+let metaFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleMetaTouch(metaPath: string, meta: ThumbMeta): void {
+  pendingMetaTouches.set(metaPath, { ...meta, lastUsedMs: Date.now() });
+  if (metaFlushTimer) return;
+  metaFlushTimer = setTimeout(() => {
+    metaFlushTimer = null;
+    void flushMediaThumbMetaTouches();
+  }, META_TOUCH_FLUSH_MS);
 }
 
-async function fileToDataUrl(imagePath: string): Promise<string> {
-  const buf = await fsPromises.readFile(imagePath);
-  return `data:image/jpeg;base64,${buf.toString('base64')}`;
+export async function flushMediaThumbMetaTouches(): Promise<void> {
+  if (metaFlushTimer) {
+    clearTimeout(metaFlushTimer);
+    metaFlushTimer = null;
+  }
+  const entries = [...pendingMetaTouches.entries()];
+  pendingMetaTouches.clear();
+  await Promise.all(entries.map(([p, m]) => writeThumbMeta(p, m).catch(() => undefined)));
+}
+
+let activeGenerations = 0;
+const generationWaiters: Array<() => void> = [];
+
+function runWithGenerationSlot<T>(fn: () => Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      activeGenerations += 1;
+      fn()
+        .then(resolve, reject)
+        .finally(() => {
+          activeGenerations -= 1;
+          const next = generationWaiters.shift();
+          if (next) next();
+        });
+    };
+    if (activeGenerations < MAX_CONCURRENT_GENERATIONS) run();
+    else generationWaiters.push(run);
+  });
 }
 
 async function generateThumbBuffer(sourcePath: string): Promise<Buffer | null> {
-  const image = nativeImage.createFromPath(sourcePath);
-  if (image.isEmpty()) return null;
-
-  const { width: srcW, height: srcH } = image.getSize();
-  if (srcW <= 0 || srcH <= 0) return null;
-
-  let width = srcW;
-  let height = srcH;
-  const maxEdge = MEDIA_THUMB_MAX_EDGE;
-  if (width > maxEdge || height > maxEdge) {
-    if (width >= height) {
-      height = Math.max(1, Math.round((height * maxEdge) / width));
-      width = maxEdge;
-    } else {
-      width = Math.max(1, Math.round((width * maxEdge) / height));
-      height = maxEdge;
+  return runWithGenerationSlot(async () => {
+    try {
+      const buffer = await sharp(sourcePath, { failOn: 'none', sequentialRead: true })
+        .rotate()
+        .resize(MEDIA_THUMB_MAX_EDGE, MEDIA_THUMB_MAX_EDGE, {
+          fit: 'inside',
+          withoutEnlargement: true,
+          fastShrinkOnLoad: true,
+        })
+        .jpeg({ quality: MEDIA_THUMB_JPEG_QUALITY, mozjpeg: false })
+        .toBuffer();
+      return buffer.length > 0 ? buffer : null;
+    } catch {
+      return null;
     }
-  }
-
-  const resized =
-    width === srcW && height === srcH
-      ? image
-      : image.resize({ width, height, quality: 'good' });
-  return resized.toJPEG(MEDIA_THUMB_JPEG_QUALITY);
+  });
 }
 
 async function walkMetaFiles(dir: string): Promise<string[]> {
@@ -167,6 +264,50 @@ async function walkMetaFiles(dir: string): Promise<string[]> {
     }
   }
   return out;
+}
+
+async function countCacheFiles(dir: string): Promise<number> {
+  let count = 0;
+  let entries: Dirent[];
+  try {
+    entries = await fsPromises.readdir(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      count += await countCacheFiles(full);
+    } else if (entry.isFile()) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+export async function clearMediaThumbCacheForPath(
+  appDataPath: string,
+): Promise<ClearMediaThumbCachePayload> {
+  await flushMediaThumbMetaTouches();
+  const root = thumbCacheRoot(appDataPath);
+  try {
+    await fsPromises.access(root);
+  } catch {
+    lastSweepMs = 0;
+    sweepScheduled = false;
+    return { ok: true, fileCount: 0 };
+  }
+
+  try {
+    const fileCount = await countCacheFiles(root);
+    await fsPromises.rm(root, { recursive: true, force: true });
+    lastSweepMs = 0;
+    sweepScheduled = false;
+    return { ok: true, fileCount };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg || 'Failed to clear thumbnail cache' };
+  }
 }
 
 let lastSweepMs = 0;
@@ -243,15 +384,15 @@ async function getOrCreateThumb(
   mtimeMs: number,
 ): Promise<GetMediaThumbPayload> {
   const hash = thumbCacheKey(sourcePath, mtimeMs);
+  const { imageRel } = thumbRelPaths(hash);
   const { imagePath, metaPath } = thumbAbsPaths(appDataPath, hash);
 
   try {
     await fsPromises.access(imagePath);
     const meta = await readThumbMeta(metaPath);
     if (meta && Math.round(meta.mtimeMs) === Math.round(mtimeMs)) {
-      void touchThumbMeta(metaPath, meta);
-      const dataUrl = await fileToDataUrl(imagePath);
-      return { ok: true, dataUrl };
+      scheduleMetaTouch(metaPath, meta);
+      return { ok: true, url: thumbCacheUrl(imageRel) };
     }
     await deleteThumbFiles(imagePath, metaPath);
   } catch {
@@ -274,7 +415,61 @@ async function getOrCreateThumb(
   };
   await writeThumbMeta(metaPath, meta);
 
-  return { ok: true, dataUrl: `data:image/jpeg;base64,${buffer.toString('base64')}` };
+  return { ok: true, url: thumbCacheUrl(imageRel) };
+}
+
+async function resolveThumbRequest(
+  rootPath: string,
+  filePath: string,
+  modifiedMs: number | null | undefined,
+  appDataPath: string,
+): Promise<GetMediaThumbPayload> {
+  const resolvedFile = resolveInsideRoot(rootPath, filePath);
+  if (!resolvedFile) {
+    return { ok: false, error: 'Path outside task folder' };
+  }
+
+  if (!isThumbableFileName(path.basename(resolvedFile))) {
+    return { ok: false, noThumb: true };
+  }
+
+  let mtimeMs: number | null =
+    modifiedMs != null && Number.isFinite(modifiedMs) ? Number(modifiedMs) : null;
+
+  if (mtimeMs == null) {
+    try {
+      const stat = await fsPromises.stat(resolvedFile);
+      if (!stat.isFile()) return { ok: false, error: 'Not a file' };
+      mtimeMs = stat.mtimeMs;
+    } catch {
+      return { ok: false, error: 'File not found' };
+    }
+  }
+
+  return getOrCreateThumb(appDataPath, resolvedFile, mtimeMs);
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (!items.length) return [];
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await fn(items[index]!);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+  return results;
 }
 
 export function registerMediaThumbIpc(ipcMain: IpcMain): void {
@@ -291,37 +486,61 @@ export function registerMediaThumbIpc(ipcMain: IpcMain): void {
           return { ok: false, error: 'Missing path' };
         }
 
-        const resolvedFile = resolveInsideRoot(rootPath, filePath);
-        if (!resolvedFile) {
-          return { ok: false, error: 'Path outside task folder' };
-        }
-
-        if (!isThumbableFileName(path.basename(resolvedFile))) {
-          return { ok: false, noThumb: true };
-        }
-
-        let stat;
-        try {
-          stat = await fsPromises.stat(resolvedFile);
-        } catch {
-          return { ok: false, error: 'File not found' };
-        }
-        if (!stat.isFile()) {
-          return { ok: false, error: 'Not a file' };
-        }
-
-        const mtimeMs =
-          payload?.modifiedMs != null && Number.isFinite(payload.modifiedMs)
-            ? Number(payload.modifiedMs)
-            : stat.mtimeMs;
-
         const appDataPath = resolveActiveDataPath();
         scheduleThumbSweep(appDataPath);
-        return await getOrCreateThumb(appDataPath, resolvedFile, mtimeMs);
+        return await resolveThumbRequest(rootPath, filePath, payload?.modifiedMs, appDataPath);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { ok: false, error: msg || 'Failed to load thumbnail' };
       }
     },
   );
+
+  ipcMain.handle(
+    'media:get-thumbs',
+    async (
+      _evt,
+      payload: {
+        rootPath?: string;
+        items?: Array<{ filePath?: string; modifiedMs?: number | null }>;
+      },
+    ): Promise<GetMediaThumbsBatchPayload> => {
+      try {
+        const rootPath = String(payload?.rootPath || '').trim();
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        if (!rootPath) {
+          return { ok: false, error: 'Missing root path' };
+        }
+
+        const appDataPath = resolveActiveDataPath();
+        scheduleThumbSweep(appDataPath);
+
+        const thumbs: Record<string, GetMediaThumbPayload> = {};
+        await mapWithConcurrency(items, BATCH_THUMB_CONCURRENCY, async (item) => {
+          const filePath = String(item?.filePath || '').trim();
+          if (!filePath) return;
+          thumbs[filePath] = await resolveThumbRequest(
+            rootPath,
+            filePath,
+            item?.modifiedMs,
+            appDataPath,
+          );
+        });
+
+        return { ok: true, thumbs };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: msg || 'Failed to load thumbnails' };
+      }
+    },
+  );
+
+  ipcMain.handle('media:clear-thumb-cache', async (): Promise<ClearMediaThumbCachePayload> => {
+    try {
+      return await clearMediaThumbCacheForPath(resolveActiveDataPath());
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: msg || 'Failed to clear thumbnail cache' };
+    }
+  });
 }

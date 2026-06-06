@@ -34,6 +34,24 @@
             <span v-else class="text-warning">Fixed {{ fixResult }} date value(s). Data saved.</span>
           </div>
         </div>
+
+        <q-separator class="q-my-md debug-tools-dialog__sep" />
+
+        <div class="debug-tools-dialog__repair">
+          <div class="text-subtitle2 q-mb-sm">{{ $text('debug.media_thumbs.title') }}</div>
+          <q-btn
+            outline
+            color="primary"
+            icon="photo_size_select_large"
+            :label="$text('debug.media_thumbs.clear')"
+            class="debug-tools-dialog__repair-btn"
+            :loading="clearingThumbs"
+            @click="runClearThumbCache"
+          />
+          <div v-if="clearThumbResult !== null" class="q-mt-sm text-caption text-positive">
+            {{ clearThumbResultMessage }}
+          </div>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right" class="debug-tools-dialog__footer col-auto">
@@ -50,6 +68,8 @@ import { fixInvalidDatesInDays } from 'src/utils/dateUtils';
 import { saveData } from 'src/utils/storageUtils';
 import LanDebugLogPanel from './LanDebugLogPanel.vue';
 import { setLanDebugForceCapture, type LanDebugEntry } from 'src/modules/lan/lanDebugLog';
+import { clearMediaThumbnailCache } from 'src/modules/media/mediaFolderService';
+import { $text } from 'src/modules/lang';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 import { Notify } from 'quasar';
 import { watch } from 'vue';
@@ -79,6 +99,13 @@ const show = computed({
 
 const fixing = ref(false);
 const fixResult = ref<number | null>(null);
+const clearingThumbs = ref(false);
+const clearThumbResult = ref<number | null>(null);
+
+const clearThumbResultMessage = computed(() => {
+  if (clearThumbResult.value === null) return '';
+  return $text('debug.media_thumbs.cleared').replace('{count}', String(clearThumbResult.value));
+});
 
 async function runFixDates() {
   fixing.value = true;
@@ -95,6 +122,36 @@ async function runFixDates() {
     fixResult.value = 0;
   } finally {
     fixing.value = false;
+  }
+}
+
+async function runClearThumbCache() {
+  clearingThumbs.value = true;
+  clearThumbResult.value = null;
+  try {
+    const result = await clearMediaThumbnailCache();
+    if (!result.ok) {
+      Notify.create({
+        type: 'negative',
+        message: result.error || $text('debug.media_thumbs.failed'),
+        timeout: 3000,
+      });
+      return;
+    }
+    clearThumbResult.value = result.fileCount;
+    Notify.create({
+      type: 'positive',
+      message: $text('debug.media_thumbs.cleared').replace('{count}', String(result.fileCount)),
+      timeout: 3000,
+    });
+  } catch {
+    Notify.create({
+      type: 'negative',
+      message: $text('debug.media_thumbs.failed'),
+      timeout: 3000,
+    });
+  } finally {
+    clearingThumbs.value = false;
   }
 }
 

@@ -28,8 +28,8 @@
     "docker:down": "docker compose down",
     "docker:shell": "docker compose exec debian-peer bash",
     "docker:ubuntu": "docker compose --profile ubuntu up -d ubuntu-peer",
-    "postinstall": "quasar prepare && electron-rebuild -f -w better-sqlite3",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "quasar prepare && electron-rebuild -f -w better-sqlite3,sharp",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3,sharp"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.0.0",
@@ -45,6 +45,7 @@
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
     "quasar": "^2.16.0",
+    "sharp": "^0.34.5",
     "uuid": "^13.0.0",
     "vue": "^3.5.22",
     "vue-router": "^4.0.12",

@@ -185,6 +185,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   listMediaFolder: (payload) => ipcRenderer.invoke('media:list-folder', payload),
   getMediaThumbnail: (payload) => ipcRenderer.invoke('media:get-thumb', payload),
+  getMediaThumbnails: (payload) => ipcRenderer.invoke('media:get-thumbs', payload),
+  clearMediaThumbnailCache: () => ipcRenderer.invoke('media:clear-thumb-cache'),
   openMediaPath: (targetPath) => ipcRenderer.invoke('media:open-path', targetPath),
   revealMediaPath: (targetPath) => ipcRenderer.invoke('media:reveal-path', targetPath),
 
