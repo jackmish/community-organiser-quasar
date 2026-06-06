@@ -193,7 +193,6 @@
             />
           </q-card>
 
-          <!-- Parent-level add button to sit above list without z-index hacks -->
           <q-btn
             v-show="panelHidden || !previewFloating"
             class="list-add-btn"
@@ -206,6 +205,23 @@
           >
             <q-icon name="add" />
           </q-btn>
+        </div>
+      </div>
+
+      <div v-if="isFilesModePreviewActive" class="row q-col-gutter-md q-mt-md">
+        <div ref="mediaPreviewSectionRef" class="col-12 media-files-preview-section" :style="mediaPreviewSectionStyle">
+            <TaskPreview
+              :task="activeTask!"
+              :group-name="getGroupName(activeTask?.groupId)"
+            :animating-lines="animatingLines"
+            @line-collapsed="onLineCollapsed"
+            @line-expanded="onLineExpanded"
+            @edit="() => { CC.task.active.mode.value = 'edit'; panelHidden = false }"
+            @close="clearTaskToEdit"
+            @delete-task="handleDeleteTask"
+            @update-task="(t) => handleUpdateTask(t)"
+            :fixed="false"
+          />
         </div>
       </div>
 
@@ -363,7 +379,7 @@
     />
     <!-- Show button visible when the panel is hidden and a task is selected (edit/preview) -->
     <q-btn
-      v-if="panelHidden && CC.task.active.mode.value !== 'add'"
+      v-if="panelHidden && CC.task.active.mode.value !== 'add' && !isFilesModePreviewActive"
       class="panel-show-btn"
       unelevated
       color="dark"
@@ -434,6 +450,7 @@ import { useDayRollover } from "src/composables/useDayRollover";
 
 import Watermark from "src/components/ui/Watermark.vue";
 import DayOrganiserTaskPanelContent from "src/pages/components/DayOrganiserTaskPanelContent.vue";
+import TaskPreview from "src/modules/task/components/element/TaskPreview.vue";
 import { dayOrganiserPanelKey, type DayOrganiserPanelContext } from "src/pages/dayOrganiserPanelKey";
 
 import DoneTasksList from "src/modules/task/components/list/DoneTasksList.vue";
@@ -507,6 +524,7 @@ import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSu
 import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 import { MediaFilesPanel, useAppViewMode, MEDIA_VIEW_MODE_CHANGED_EVENT, DEFAULT_MEDIA_TASK_TYPE_ID } from "src/modules/media";
+import { useMediaFilesPreviewLayout } from "src/modules/media/composables/useMediaFilesPreviewLayout";
 import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
 import type { AddFormDefaultTypeId } from "src/pages/dayOrganiserPanelKey";
 
@@ -514,6 +532,7 @@ const $q = useQuasar();
 const headerSyncRunning = ref(false);
 
 const dayViewSectionRef = ref<HTMLElement | null>(null);
+const mediaPreviewSectionRef = ref<HTMLElement | null>(null);
 const calendarSectionRef = ref<HTMLElement | null>(null);
 const {
   active: todoScheduleActive,
@@ -541,20 +560,64 @@ const currentDayData = computed(() => {
   return days[d] || ({ date: d, tasks: [], notes: "" } as any);
 });
 
+const mergeSourceGroup = computed(() => {
+  const activeId = String(CC.group.active.activeGroup.value?.value || "").trim();
+  if (!activeId) return null;
+  return (CC.group.list.all.value || []).find((g: any) => String(g.id) === activeId) || null;
+});
+
+const {
+  isFilesMode,
+  toggleViewMode: toggleAppViewMode,
+  refreshModes: refreshAppViewModes,
+  onExternalChange: onAppViewModeExternalChange,
+} = useAppViewMode(mergeSourceGroup);
+
+async function onToggleAppViewMode(): Promise<void> {
+  const group = mergeSourceGroup.value;
+  if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
+    try {
+      if (typeof CC.group.update === "function") {
+        await CC.group.update(String(group.id), { mediaEnabled: true });
+      }
+    } catch (e) {
+      logger.error("[DayOrganiser] enable files module failed", e);
+    }
+  }
+  await toggleAppViewMode();
+}
+
 async function onTaskClicked(task: any, rect?: DOMRect | null) {
   try {
     const activeId = CC.task.active.task.value?.id;
-    if (
-      activeId &&
-      task &&
-      String(activeId) === String(task.id) &&
-      previewFloating.value
-    ) {
-      // second click on same task -> return preview to default place
-      previewFloating.value = false;
-      previewRect.value = null;
+    if (activeId && task && String(activeId) === String(task.id)) {
+      if (isFilesMode.value) {
+        clearTaskToEdit();
+        return;
+      }
+      if (previewFloating.value) {
+        // second click on same task -> return preview to default place
+        previewFloating.value = false;
+        previewRect.value = null;
+        return;
+      }
+    }
+
+    if (isFilesMode.value) {
+      try {
+        handleTaskClick(task);
+      } catch (e) {
+        try {
+          CC.task.active.setTask(task);
+          CC.task.active.mode.value = "preview";
+        } catch (err) {
+          void err;
+        }
+      }
+      setPreviewFloating(null);
       return;
     }
+
     // Delegate to existing handler which sets preview task and mode
     try {
       handleTaskClick(task);
@@ -792,7 +855,22 @@ const openDeleteMenu = ref<string | null>(null);
 // Start hidden so the task list is the first thing users see on app launch
 const panelHidden = ref(true);
 
-const selectedTaskId = computed(() => CC.task.active.task.value?.id ?? null);
+const activeTask = CC.task.active.task;
+const activeMode = CC.task.active.mode;
+
+const selectedTaskId = computed(() => activeTask.value?.id ?? null);
+const isFilesModePreviewActive = computed(
+  () =>
+    isFilesMode.value &&
+    activeMode.value === "preview" &&
+    !!activeTask.value,
+);
+
+const { previewSectionStyle: mediaPreviewSectionStyle } = useMediaFilesPreviewLayout({
+  enabled: isFilesModePreviewActive,
+  listAnchorRef: dayViewSectionRef,
+  previewSectionRef: mediaPreviewSectionRef,
+});
 /** False until disk load + startup LAN sync finish — keeps task list hidden until then. */
 const organiserReady = ref(false);
 const reloadKey = ref(0);
@@ -808,6 +886,7 @@ const { setTaskToEdit, editTask, clearTaskToEdit, closeTaskPanel } = useTaskUiHa
     CC.task.active.setTask(p),
   panelHidden,
   currentDate: CC.task.time.currentDate,
+  inlinePreview: isFilesMode,
 });
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
@@ -1254,33 +1333,6 @@ async function runHeaderSync(forceFullSync: boolean): Promise<void> {
   } finally {
     headerSyncRunning.value = false;
   }
-}
-
-const mergeSourceGroup = computed(() => {
-  const activeId = String(CC.group.active.activeGroup.value?.value || "").trim();
-  if (!activeId) return null;
-  return (CC.group.list.all.value || []).find((g: any) => String(g.id) === activeId) || null;
-});
-
-const {
-  isFilesMode,
-  toggleViewMode: toggleAppViewMode,
-  refreshModes: refreshAppViewModes,
-  onExternalChange: onAppViewModeExternalChange,
-} = useAppViewMode(mergeSourceGroup);
-
-async function onToggleAppViewMode(): Promise<void> {
-  const group = mergeSourceGroup.value;
-  if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
-    try {
-      if (typeof CC.group.update === "function") {
-        await CC.group.update(String(group.id), { mediaEnabled: true });
-      }
-    } catch (e) {
-      logger.error("[DayOrganiser] enable files module failed", e);
-    }
-  }
-  await toggleAppViewMode();
 }
 
 const canMergeCurrentGroup = computed(() => !!mergeSourceGroup.value);

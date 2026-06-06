@@ -8,8 +8,10 @@ export function useTaskUiHandlers(args: {
   setActiveTask?: (t: Task | null) => void;
   panelHidden: Ref<boolean>;
   currentDate: Ref<string>;
+  /** When true, preview stays inline and does not open the fixed side panel. */
+  inlinePreview?: Ref<boolean>;
 }) {
-  const { activeTask, activeMode, setActiveTask, panelHidden, currentDate } = args;
+  const { activeTask, activeMode, setActiveTask, panelHidden, currentDate, inlinePreview } = args;
 
   function setTaskToEdit(task: Task) {
     let toShow: Task = task;
@@ -26,7 +28,7 @@ export function useTaskUiHandlers(args: {
     if (setActiveTask) setActiveTask(toShow);
     else activeTask.value = toShow;
     activeMode.value = 'preview';
-    panelHidden.value = false;
+    if (!inlinePreview?.value) panelHidden.value = false;
   }
 
   function editTask(task: Task) {

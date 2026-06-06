@@ -11,7 +11,7 @@
     </div>
 
     <div v-else class="tasks-list-wrapper">
-      <div class="task-list">
+      <div class="task-list" :class="`task-list--${listSizeVariant}`">
         <TaskCardSmall
           v-for="task in sortedMediaTasks"
           :key="task.id"
@@ -82,7 +82,15 @@ const listSizeVariant = computed(() =>
   padding: 24px 16px;
 }
 
+.tasks-list-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
 .task-list {
+  width: 100%;
+  min-width: 0;
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
   gap: 8px 10px !important;

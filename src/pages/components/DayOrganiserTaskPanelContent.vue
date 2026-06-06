@@ -25,7 +25,11 @@
     />
 
     <TaskPreview
-      v-if="ctx.CC.task.active.mode.value === 'preview' && ctx.CC.task.active.task.value"
+      v-if="
+        !ctx.isFilesMode.value &&
+        ctx.CC.task.active.mode.value === 'preview' &&
+        ctx.CC.task.active.task.value
+      "
       :task="ctx.CC.task.active.task.value"
       :group-name="ctx.getGroupName(ctx.CC.task.active.task.value.groupId)"
       :animating-lines="ctx.animatingLines.value"

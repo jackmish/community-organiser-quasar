@@ -183,6 +183,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
+  listMediaFolder: (payload) => ipcRenderer.invoke('media:list-folder', payload),
+  openMediaPath: (targetPath) => ipcRenderer.invoke('media:open-path', targetPath),
+  revealMediaPath: (targetPath) => ipcRenderer.invoke('media:reveal-path', targetPath),
+
   // Join paths
   joinPath: (...paths) => path.join(...paths),
   // Create a zip containing provided JSON (main process will write file)

@@ -1,9 +1,15 @@
 <template>
   <q-card
-    :class="['q-mb-md task-preview', { 'fixed-preview': props.fixed === true }]"
+    :class="[
+      'q-mb-md task-preview',
+      {
+        'fixed-preview': props.fixed === true,
+        'task-preview--folder-fill': showMediaFolderBrowser && props.fixed !== true,
+      },
+    ]"
     :style="previewCardStyle"
   >
-    <q-card-section>
+    <q-card-section class="task-preview__section">
       <!-- header: title on left, copy on right -->
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-h5">{{ task.name }}</div>
@@ -67,7 +73,7 @@
           <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
         </div>
       </div>
-      <div>
+      <div :class="{ 'task-preview__body': showMediaFolderBrowser && props.fixed !== true }">
         <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">
           <div class="text-caption text-grey-7 preview-datetime">
             <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{
@@ -187,12 +193,27 @@
           </div>
         </div>
 
+        <MediaFolderBrowser
+          v-if="showMediaFolderBrowser"
+          :root-path="mediaRootFolder"
+          :images-only="isMediaGalleryTask"
+          fill-available
+        />
+        <q-banner
+          v-else-if="showMediaFolderMissing"
+          dense
+          rounded
+          class="bg-grey-3 text-grey-9 q-mb-md"
+        >
+          {{ $text('files.no_task_folder') }}
+        </q-banner>
+
         <QuickAddSubtaskForm
           v-if="(task.type_id || '') === 'Todo' || (task.type_id || '') === 'TimeEvent'"
           @add="addQuickSubtask"
         />
 
-        <div>
+        <div v-if="!isInlineMediaFolderPreview">
           <div v-for="(line, idx) in parsedLines" :key="line.uid">
             <div v-if="line.type === 'list'">
               <div
@@ -352,6 +373,8 @@ import {
   type TodoScheduleTask,
 } from "src/composables/useTodoCalendarSchedule";
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
+import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
+import { MEDIA_TASK_TYPE } from "src/modules/media/mediaTaskTypes";
 
 const props = defineProps<{
   task: Task;
@@ -579,6 +602,24 @@ const groupName = computed(() => props.groupName || "");
 
 const isTimeEvent = computed(() => (activeTask.value?.type_id || "") === "TimeEvent");
 const isTodo = computed(() => (activeTask.value?.type_id || "") === "Todo");
+const isMediaFilesTask = computed(
+  () => (activeTask.value?.type_id || "") === MEDIA_TASK_TYPE.Files,
+);
+const isMediaGalleryTask = computed(
+  () => (activeTask.value?.type_id || "") === MEDIA_TASK_TYPE.Gallery,
+);
+const mediaRootFolder = computed(() =>
+  String(activeTask.value?.mediaSharedFolderPath || "").trim(),
+);
+const showMediaFolderBrowser = computed(
+  () => (isMediaFilesTask.value || isMediaGalleryTask.value) && !!mediaRootFolder.value,
+);
+const isInlineMediaFolderPreview = computed(
+  () => showMediaFolderBrowser.value && props.fixed !== true,
+);
+const showMediaFolderMissing = computed(
+  () => (isMediaFilesTask.value || isMediaGalleryTask.value) && !mediaRootFolder.value,
+);
 
 function onScheduleTodoClick() {
   const t = activeTask.value;

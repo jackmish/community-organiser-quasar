@@ -51,6 +51,7 @@ import {
   saveCo21SettingsToSqlite,
   saveGroupsToSqlite,
 } from './spaceSqliteMain';
+import { registerMediaFolderIpc } from './mediaFolderMain';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -515,6 +516,8 @@ ipcMain.handle('dialog:select-folder', async (event) => {
   if (res.canceled || !res.filePaths || res.filePaths.length === 0) return null;
   return res.filePaths[0];
 });
+
+registerMediaFolderIpc(ipcMain);
 
 // Create a .zip archive containing a single JSON file named 'connections.json'
 ipcMain.handle(
