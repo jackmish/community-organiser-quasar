@@ -56,44 +56,65 @@
       <q-item v-else-if="!visibleEntries.length" dense>
         <q-item-section class="text-grey-7">{{ $text('files.folder_empty') }}</q-item-section>
       </q-item>
-      <q-item
-        v-for="entry in visibleEntries"
-        :key="entry.path"
-        clickable
-        v-ripple
-        dense
-        @click="onEntryClick(entry)"
-      >
-        <q-item-section avatar>
-          <q-icon
-            :name="entryIcon(entry)"
-            :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
-          />
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ entry.name }}</q-item-label>
-          <q-item-label v-if="!entry.isDirectory && entry.size != null" caption>
-            {{ formatSize(entry.size) }}
-          </q-item-label>
-        </q-item-section>
-        <q-item-section v-if="!entry.isDirectory" side>
-          <q-btn
-            dense
-            flat
-            round
-            icon="open_in_new"
-            :title="$text('files.open_file')"
-            @click.stop="openFile(entry.path)"
-          />
-        </q-item-section>
-      </q-item>
+      <template v-else>
+        <q-item dense class="media-folder-browser__header text-caption text-grey-7">
+          <q-item-section avatar />
+          <q-item-section>{{ $text('files.col_name') }}</q-item-section>
+          <q-item-section side class="media-folder-browser__date-col">
+            {{ $text('files.col_created') }}
+          </q-item-section>
+          <q-item-section side class="media-folder-browser__size-col">
+            {{ $text('files.col_size') }}
+          </q-item-section>
+          <q-item-section side class="media-folder-browser__actions-col" />
+        </q-item>
+        <q-item
+          v-for="entry in visibleEntries"
+          :key="entry.path"
+          clickable
+          v-ripple
+          dense
+          @click="onEntryClick(entry)"
+        >
+          <q-item-section avatar>
+            <q-icon
+              :name="entryIcon(entry)"
+              :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
+            />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="ellipsis">{{ entry.name }}</q-item-label>
+          </q-item-section>
+          <q-item-section side class="media-folder-browser__date-col">
+            <q-item-label caption class="media-folder-browser__date">
+              {{ formatCreated(entry.createdMs) }}
+            </q-item-label>
+          </q-item-section>
+          <q-item-section side class="media-folder-browser__size-col">
+            <q-item-label caption>
+              {{ entry.isDirectory ? '—' : formatSize(entry.size) }}
+            </q-item-label>
+          </q-item-section>
+          <q-item-section v-if="!entry.isDirectory" side class="media-folder-browser__actions-col">
+            <q-btn
+              dense
+              flat
+              round
+              icon="open_in_new"
+              :title="$text('files.open_file')"
+              @click.stop="openFile(entry.path)"
+            />
+          </q-item-section>
+          <q-item-section v-else side class="media-folder-browser__actions-col" />
+        </q-item>
+      </template>
     </q-list>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { $text } from 'src/modules/lang';
+import { $text, getLocale } from 'src/modules/lang';
 import {
   isImageFileName,
   listMediaFolder,
@@ -187,10 +208,22 @@ function entryIcon(entry: MediaFolderEntry): string {
   return 'insert_drive_file';
 }
 
-function formatSize(bytes: number): string {
+function formatSize(bytes: number | null | undefined): string {
+  if (bytes == null) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatCreated(ms: number | null | undefined): string {
+  if (ms == null || !Number.isFinite(ms)) return '—';
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat(getLocale(), {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(d);
 }
 
 watch(
@@ -224,6 +257,30 @@ watch(
   max-height: 280px;
   overflow-y: auto;
   border-radius: 8px;
+}
+
+.media-folder-browser__header {
+  min-height: 32px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.media-folder-browser__date-col {
+  min-width: 108px;
+  text-align: right;
+}
+
+.media-folder-browser__size-col {
+  min-width: 72px;
+  text-align: right;
+}
+
+.media-folder-browser__actions-col {
+  min-width: 40px;
+}
+
+.media-folder-browser__date {
+  white-space: nowrap;
 }
 
 .ellipsis {

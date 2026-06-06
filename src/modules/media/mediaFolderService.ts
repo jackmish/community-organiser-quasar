@@ -3,6 +3,7 @@ export type MediaFolderEntry = {
   path: string;
   isDirectory: boolean;
   size: number | null;
+  createdMs: number | null;
   modifiedMs: number | null;
 };
 

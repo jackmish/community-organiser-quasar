@@ -9,6 +9,7 @@ export type MediaFolderEntryPayload = {
   path: string;
   isDirectory: boolean;
   size: number | null;
+  createdMs: number | null;
   modifiedMs: number | null;
 };
 
@@ -43,11 +44,16 @@ async function listDirectory(currentPath: string): Promise<MediaFolderEntryPaylo
     if (!name || name === '.' || name === '..') continue;
     const fullPath = path.join(currentPath, name);
     let size: number | null = null;
+    let createdMs: number | null = null;
     let modifiedMs: number | null = null;
     try {
       const stat = await fsPromises.stat(fullPath);
       if (!stat.isDirectory()) size = stat.size;
       modifiedMs = stat.mtimeMs;
+      createdMs = stat.birthtimeMs;
+      if (!createdMs || !Number.isFinite(createdMs)) {
+        createdMs = stat.ctimeMs;
+      }
     } catch {
       // ignore unreadable entries
     }
@@ -56,6 +62,7 @@ async function listDirectory(currentPath: string): Promise<MediaFolderEntryPaylo
       path: fullPath,
       isDirectory: dirent.isDirectory(),
       size,
+      createdMs,
       modifiedMs,
     });
   }
