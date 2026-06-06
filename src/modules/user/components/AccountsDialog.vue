@@ -63,6 +63,7 @@
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ $text('accounts.password') }}</q-item-label>
+              <q-item-label caption>{{ $text('accounts.password_lock_hint') }}</q-item-label>
               <q-item-label caption>
                 <q-badge v-if="hasCo21Password" color="positive" :label="$text('accounts.password_set')" />
                 <q-badge v-else color="grey-5" text-color="dark" :label="$text('accounts.password_not_set')" />
@@ -87,6 +88,176 @@
               </q-input>
             </q-item-section>
           </q-item>
+
+          <q-separator spaced />
+
+          <!-- Active space access -->
+          <div ref="spaceSectionAnchor">
+          <q-item-label header class="text-weight-bold text-subtitle1">
+            {{ $text('accounts.space_section') }}
+          </q-item-label>
+
+          <q-banner
+            v-if="!spaceAccessAvailable"
+            dense
+            rounded
+            class="bg-orange-1 text-dark q-mb-sm"
+          >
+            {{ $text('space.desktop_only') }}
+          </q-banner>
+
+          <template v-else>
+            <q-item>
+              <q-item-section avatar>
+                <q-avatar color="indigo-8" text-color="white" icon="space_dashboard" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ $text('space.access.method_password') }}</q-item-label>
+                <q-item-label caption>
+                  <span v-if="activeSpaceName" class="text-weight-medium">{{ activeSpaceName }}</span>
+                </q-item-label>
+                <q-item-label caption>
+                  <q-badge
+                    v-if="spaceProtected"
+                    color="positive"
+                    :label="$text('space.access.enabled')"
+                  />
+                  <q-badge
+                    v-else
+                    color="grey-5"
+                    text-color="dark"
+                    :label="$text('space.access.disabled')"
+                  />
+                </q-item-label>
+                <q-item-label caption class="q-mt-xs">
+                  {{ $text('space.access.device_local_hint') }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  flat
+                  dense
+                  color="primary"
+                  :label="
+                    spaceProtected
+                      ? $text('space.access.change_password')
+                      : $text('space.access.set_password')
+                  "
+                  @click="openSpacePasswordForm"
+                />
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="showSpacePasswordForm">
+              <q-item-section avatar />
+              <q-item-section>
+                <q-input
+                  v-if="spaceProtected"
+                  v-model="spaceCurrentPassword"
+                  dense
+                  outlined
+                  class="q-mb-sm"
+                  :type="showSpaceCurrent ? 'text' : 'password'"
+                  :label="$text('space.access.current_password')"
+                >
+                  <template #append>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      :icon="showSpaceCurrent ? 'visibility_off' : 'visibility'"
+                      @click="showSpaceCurrent = !showSpaceCurrent"
+                    />
+                  </template>
+                </q-input>
+                <q-input
+                  v-model="spaceNewPassword"
+                  dense
+                  outlined
+                  :type="showSpaceNew ? 'text' : 'password'"
+                  :label="
+                    spaceProtected
+                      ? $text('space.access.new_password')
+                      : $text('space.access.password_label')
+                  "
+                >
+                  <template #append>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      :icon="showSpaceNew ? 'visibility_off' : 'visibility'"
+                      @click="showSpaceNew = !showSpaceNew"
+                    />
+                  </template>
+                </q-input>
+                <q-input
+                  v-model="spaceConfirmPassword"
+                  dense
+                  outlined
+                  class="q-mt-sm"
+                  :type="showSpaceNew ? 'text' : 'password'"
+                  :label="$text('space.access.confirm_password')"
+                  @keyup.enter="saveSpacePassword"
+                />
+                <div class="row q-gutter-sm q-mt-sm">
+                  <q-btn flat :label="$text('action.close')" @click="cancelSpacePasswordForm" />
+                  <q-btn
+                    color="primary"
+                    :label="$text('action.save')"
+                    :loading="spaceAccessSaving"
+                    @click="saveSpacePassword"
+                  />
+                </div>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="spaceProtected">
+              <q-item-section avatar />
+              <q-item-section>
+                <q-btn
+                  flat
+                  dense
+                  color="negative"
+                  icon="lock_open"
+                  :label="$text('space.access.remove_protection')"
+                  @click="showSpaceRemoveForm = !showSpaceRemoveForm"
+                />
+                <template v-if="showSpaceRemoveForm">
+                  <q-input
+                    v-model="spaceRemovePassword"
+                    dense
+                    outlined
+                    class="q-mt-sm"
+                    :type="showSpaceRemove ? 'text' : 'password'"
+                    :label="$text('space.access.current_password')"
+                    @keyup.enter="removeSpaceProtection"
+                  >
+                    <template #append>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        :icon="showSpaceRemove ? 'visibility_off' : 'visibility'"
+                        @click="showSpaceRemove = !showSpaceRemove"
+                      />
+                    </template>
+                  </q-input>
+                  <div class="row q-gutter-sm q-mt-sm">
+                    <q-btn flat :label="$text('action.close')" @click="showSpaceRemoveForm = false" />
+                    <q-btn
+                      color="negative"
+                      :label="$text('space.access.remove_protection')"
+                      :loading="spaceAccessSaving"
+                      @click="removeSpaceProtection"
+                    />
+                  </div>
+                </template>
+              </q-item-section>
+            </q-item>
+          </template>
+
+          </div>
 
           <q-separator spaced />
 
@@ -220,7 +391,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { $text, getCountryCode } from 'src/modules/lang';
 import { UserStoreController } from '../UserController';
 import GoogleAccountConfig from './GoogleAccountConfig.vue';
@@ -244,8 +415,22 @@ import {
   savePluginsSyncEnabled,
 } from 'src/modules/plugins/pluginSyncSettings';
 import { OPEN_METEO_FORECAST_API } from 'src/modules/time/meteoService';
+import { hashPasswordSha256 } from 'src/utils/passwordHash';
+import { appNotify } from 'src/utils/appNotify';
+import { useSpaceAuth } from 'src/composables/useSpaceAuth';
+import {
+  disableActiveSpaceAccess,
+  isSpaceAccessAvailable,
+  loadActiveSpaceAccessStatus,
+  setActiveSpaceAccessPassword,
+} from 'src/modules/space/spaceAccessService';
+import type { SpaceAccessStatus } from 'src/modules/space/spaceAccessModel';
 
-const props = defineProps<{ modelValue: boolean }>();
+const props = defineProps<{
+  modelValue: boolean;
+  focusSection?: 'space';
+  focusSectionActive?: boolean;
+}>();
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
 }>();
@@ -256,6 +441,8 @@ const dialogVisible = computed({
 });
 
 const user = UserStoreController();
+const { refreshStatus: refreshSpaceAuth, notifyUnlocked } = useSpaceAuth();
+const spaceSectionAnchor = ref<HTMLElement | null>(null);
 
 const showEmailInput = ref(false);
 const showPasswordInput = ref(false);
@@ -263,6 +450,23 @@ const showGoogleConfig = ref(false);
 const activeTab = ref<'services' | 'plugins'>('services');
 const emailDraft = ref('');
 const passwordDraft = ref('');
+
+const spaceAccessAvailable = ref(isSpaceAccessAvailable());
+const spaceAccessStatus = ref<SpaceAccessStatus | null>(null);
+const spaceProtected = computed(
+  () => !!spaceAccessStatus.value?.enabled && !!spaceAccessStatus.value?.hasPassword,
+);
+const activeSpaceName = computed(() => spaceAccessStatus.value?.spaceName ?? '');
+const showSpacePasswordForm = ref(false);
+const showSpaceRemoveForm = ref(false);
+const spaceCurrentPassword = ref('');
+const spaceNewPassword = ref('');
+const spaceConfirmPassword = ref('');
+const spaceRemovePassword = ref('');
+const showSpaceCurrent = ref(false);
+const showSpaceNew = ref(false);
+const showSpaceRemove = ref(false);
+const spaceAccessSaving = ref(false);
 const holidaySyncEnabled = ref(true);
 const holidaySyncSaving = ref(false);
 const clockSyncEnabled = ref(true);
@@ -304,12 +508,21 @@ watch(dialogVisible, async (open) => {
     clockSyncEnabled.value = await loadClockSyncEnabled();
     meteoSyncEnabled.value = await loadMeteoSyncEnabled();
     pluginsSyncEnabled.value = await loadPluginsSyncEnabled();
+    if (spaceAccessAvailable.value) {
+      spaceAccessStatus.value = await loadActiveSpaceAccessStatus();
+    }
+    if (props.focusSectionActive && props.focusSection === 'space') {
+      activeTab.value = 'services';
+      await nextTick();
+      spaceSectionAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
   if (!open) {
     showEmailInput.value = false;
     showPasswordInput.value = false;
     showGoogleConfig.value = false;
     activeTab.value = 'services';
+    resetSpaceAccessForm();
   }
 });
 
@@ -322,21 +535,87 @@ async function saveEmail() {
 
 async function savePassword() {
   if (!passwordDraft.value) return;
-  const hash = await hashPassword(passwordDraft.value);
+  const plain = passwordDraft.value;
+  const wasProtected = spaceProtected.value;
+  const hash = await hashPasswordSha256(plain);
   await user.setPassword(hash);
+  if (spaceAccessAvailable.value) {
+    try {
+      if (!wasProtected) {
+        await setActiveSpaceAccessPassword(plain);
+      }
+      spaceAccessStatus.value = await loadActiveSpaceAccessStatus();
+      await refreshSpaceAuth();
+      notifyUnlocked();
+    } catch (e) {
+      appNotify('warning', e instanceof Error ? e.message : String(e));
+    }
+  }
   passwordDraft.value = '';
   showPasswordInput.value = false;
 }
 
-async function hashPassword(plain: string): Promise<string> {
+function resetSpaceAccessForm(): void {
+  showSpacePasswordForm.value = false;
+  showSpaceRemoveForm.value = false;
+  spaceCurrentPassword.value = '';
+  spaceNewPassword.value = '';
+  spaceConfirmPassword.value = '';
+  spaceRemovePassword.value = '';
+}
+
+function openSpacePasswordForm(): void {
+  showSpaceRemoveForm.value = false;
+  showSpacePasswordForm.value = true;
+  spaceNewPassword.value = '';
+  spaceConfirmPassword.value = '';
+  spaceCurrentPassword.value = '';
+}
+
+function cancelSpacePasswordForm(): void {
+  showSpacePasswordForm.value = false;
+  spaceNewPassword.value = '';
+  spaceConfirmPassword.value = '';
+  spaceCurrentPassword.value = '';
+}
+
+async function saveSpacePassword(): Promise<void> {
+  if (!spaceNewPassword.value.trim()) {
+    appNotify('warning', $text('space.access.password_required'));
+    return;
+  }
+  if (spaceNewPassword.value !== spaceConfirmPassword.value) {
+    appNotify('warning', $text('space.access.password_mismatch'));
+    return;
+  }
+  spaceAccessSaving.value = true;
   try {
-    const encoded = new TextEncoder().encode(plain);
-    const digest = await crypto.subtle.digest('SHA-256', encoded);
-    return Array.from(new Uint8Array(digest))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-  } catch {
-    return btoa(plain);
+    spaceAccessStatus.value = await setActiveSpaceAccessPassword(
+      spaceNewPassword.value,
+      spaceProtected.value ? spaceCurrentPassword.value : undefined,
+    );
+    await refreshSpaceAuth();
+    notifyUnlocked();
+    appNotify('positive', $text('space.access.saved'));
+    cancelSpacePasswordForm();
+  } catch (e) {
+    appNotify('negative', e instanceof Error ? e.message : String(e));
+  } finally {
+    spaceAccessSaving.value = false;
+  }
+}
+
+async function removeSpaceProtection(): Promise<void> {
+  spaceAccessSaving.value = true;
+  try {
+    spaceAccessStatus.value = await disableActiveSpaceAccess(spaceRemovePassword.value);
+    await refreshSpaceAuth();
+    appNotify('positive', $text('space.access.removed'));
+    resetSpaceAccessForm();
+  } catch (e) {
+    appNotify('negative', e instanceof Error ? e.message : String(e));
+  } finally {
+    spaceAccessSaving.value = false;
   }
 }
 

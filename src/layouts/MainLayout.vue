@@ -134,8 +134,8 @@
           @run-now="onPendingRunNow" @cancel="onPendingCancel" />
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
-        <AccountsDialog v-model="showAccountsDialog" />
-        <SpaceManagementDialog v-model="showSpacesDialog" />
+        <AccountsDialog v-model="showAccountsDialog" focus-section="space" :focus-section-active="accountsFocusSpace" />
+        <SpaceManagementDialog v-model="showSpacesDialog" @open-services="openSpaceServices" />
         <InfoscreenSettingsDialog v-model="showInfoscreenDialog" />
         <InfoscreenHost />
       </q-toolbar>
@@ -183,6 +183,7 @@ import PendingActionsDialog from "src/components/settings/PendingActionsDialog.v
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
 import SpaceManagementDialog from "src/modules/space/components/SpaceManagementDialog.vue";
+import { spaceAuthBlocked, useSpaceAuth } from "src/composables/useSpaceAuth";
 import InfoscreenSettingsDialog from "src/modules/infoscreen/components/InfoscreenSettingsDialog.vue";
 import InfoscreenHost from "src/modules/infoscreen/components/InfoscreenHost.vue";
 import {
@@ -230,9 +231,92 @@ const showJoinMemberDialog = ref(false);
 const rolesSetupInitialAction = ref<"none" | "new">("none");
 const showDebugDialog = ref(false);
 const showAccountsDialog = ref(false);
+const accountsFocusSpace = ref(false);
 const showSpacesDialog = ref(false);
 const showInfoscreenDialog = ref(false);
 const showPendingActionsDialog = ref(false);
+
+const { checked: spaceAuthChecked } = useSpaceAuth();
+
+watch(spaceAuthBlocked, (blocked) => {
+  if (!blocked && spaceAuthChecked.value) {
+    startBackgroundServices();
+  }
+});
+
+let backgroundServicesStarted = false;
+
+function startBackgroundServices(): void {
+  if (backgroundServicesStarted) return;
+  backgroundServicesStarted = true;
+  startPendingActionsScheduler(async () => {
+    const local = await loadOwnDeviceMeta();
+    const loaded = await loadConnectedDevices();
+    return mergeLocalDeviceIntoList(loaded, local);
+  });
+  startLanDataSyncScheduler();
+  window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+  window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
+  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
+  const elan = (window as Window & {
+    electronLan?: { onPairingComplete?: (cb: (d: Record<string, unknown>) => void) => () => void };
+  }).electronLan;
+  if (elan?.onPairingComplete) {
+    lanPairingCompleteUnsub = elan.onPairingComplete(() => {
+      /* co21-lan-paired is dispatched from preload */
+    });
+  }
+
+  void (async () => {
+    try {
+      const local = await loadOwnDeviceMeta();
+      const loaded = await loadConnectedDevices();
+      const devices = mergeLocalDeviceIntoList(loaded, local);
+      const settings = await loadCo21Settings();
+      const ownName =
+        typeof settings.ownDeviceName === "string" ? settings.ownDeviceName : local.name;
+      await refreshLanServerForConnections(devices, ownName, { skipReconcileProbe: true });
+    } catch {
+      void 0;
+    }
+  })();
+
+  updateOnlineStatus();
+  window.addEventListener("online", updateOnlineStatus);
+  window.addEventListener("offline", () => {
+    isOnline.value = false;
+  });
+
+  try {
+    headerManageHandler = () => {
+      try {
+        if (route.path === "/") {
+          window.dispatchEvent(new Event("group:manage"));
+          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 300);
+          return;
+        }
+        router.push("/").then(() => {
+          window.dispatchEvent(new Event("group:manage"));
+          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 400);
+        });
+      } catch (e) {
+        try {
+          window.dispatchEvent(new Event("group:manage"));
+        } catch (err) {
+          void err;
+        }
+      }
+    };
+    window.addEventListener("group:manage-request", headerManageHandler as EventListener);
+    window.addEventListener("co21:open-roles-setup", openRolesSetupDialog as EventListener);
+    window.addEventListener(
+      OPEN_INFOSCREEN_SETTINGS_EVENT,
+      onOpenInfoscreenSettingsEvent as EventListener,
+    );
+  } catch (e) {
+    void e;
+  }
+}
 
 const {
   actions: pendingActionsList,
@@ -422,87 +506,9 @@ function updateOnlineStatus() {
 }
 
 onMounted(async () => {
-  startPendingActionsScheduler(async () => {
-    const local = await loadOwnDeviceMeta();
-    const loaded = await loadConnectedDevices();
-    return mergeLocalDeviceIntoList(loaded, local);
-  });
-  startLanDataSyncScheduler();
-  window.addEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
-  window.addEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
-  window.addEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
-  const elan = (window as Window & {
-    electronLan?: { onPairingComplete?: (cb: (d: Record<string, unknown>) => void) => () => void };
-  }).electronLan;
-  if (elan?.onPairingComplete) {
-    lanPairingCompleteUnsub = elan.onPairingComplete(() => {
-      /* co21-lan-paired is dispatched from preload */
-    });
+  if (!spaceAuthBlocked.value && spaceAuthChecked.value) {
+    startBackgroundServices();
   }
-
-  try {
-    const local = await loadOwnDeviceMeta();
-    const loaded = await loadConnectedDevices();
-    const devices = mergeLocalDeviceIntoList(loaded, local);
-    const settings = await loadCo21Settings();
-    const ownName =
-      typeof settings.ownDeviceName === 'string' ? settings.ownDeviceName : local.name;
-    await refreshLanServerForConnections(devices, ownName, { skipReconcileProbe: true });
-  } catch {
-    void 0;
-  }
-
-  // Initial check only
-  updateOnlineStatus();
-  // Load organiser data so we can show upcoming event
-  try {
-    // no-op: `DayOrganiserPage` is responsible for initial data load
-  } catch (e) {
-    // ignore
-  }
-  // Manual checks when browser detects network changes
-  window.addEventListener("online", updateOnlineStatus);
-  window.addEventListener("offline", () => {
-    isOnline.value = false; // Immediately mark offline
-  });
-  // Ensure 'Manage Groups' selection in header opens the dialog in DayOrganiserPage.
-  try {
-    headerManageHandler = () => {
-      try {
-        if (route.path === "/") {
-          // dispatch immediately and again after a short delay to be robust
-          window.dispatchEvent(new Event("group:manage"));
-          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 300);
-          return;
-        }
-        router.push("/").then(() => {
-          // ensure page has a chance to mount, then dispatch
-          window.dispatchEvent(new Event("group:manage"));
-          setTimeout(() => window.dispatchEvent(new Event("group:manage")), 400);
-        });
-      } catch (e) {
-        try {
-          window.dispatchEvent(new Event("group:manage"));
-        } catch (err) {
-          // ignore
-        }
-      }
-    };
-    window.addEventListener("group:manage-request", headerManageHandler as EventListener);
-    window.addEventListener(
-      "co21:open-roles-setup",
-      openRolesSetupDialog as EventListener
-    );
-    window.addEventListener(
-      OPEN_INFOSCREEN_SETTINGS_EVENT,
-      onOpenInfoscreenSettingsEvent as EventListener
-    );
-    // Pull injected app version (set by main process) if available
-    // appVersion is populated from preload; nothing else required
-  } catch (e) {
-    // ignore
-  }
-  // no-op: `testMode` derived from `presentation.mode` via computed
 });
 
 watch(
@@ -550,9 +556,20 @@ async function onLanguageChange(lang: string) {
 }
 
 function openAccounts() {
+  accountsFocusSpace.value = false;
   showAccountsDialog.value = true;
   menuOpen.value = false;
 }
+
+function openSpaceServices(): void {
+  showSpacesDialog.value = false;
+  accountsFocusSpace.value = true;
+  showAccountsDialog.value = true;
+}
+
+watch(showAccountsDialog, (open) => {
+  if (!open) accountsFocusSpace.value = false;
+});
 
 function openSettings() {
   showConfigDialog.value = true;
@@ -656,36 +673,34 @@ async function reloadWithTestData() {
 }
 
 onUnmounted(() => {
-  stopPendingActionsScheduler();
-  stopLanDataSyncScheduler();
-  window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
-  window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
-  window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
-  lanPairingCompleteUnsub?.();
-  lanPairingCompleteUnsub = null;
-  window.removeEventListener("online", updateOnlineStatus);
-  window.removeEventListener("offline", updateOnlineStatus);
-  try {
-    if (headerManageHandler)
-      window.removeEventListener(
-        "group:manage-request",
-        headerManageHandler as EventListener
-      );
-  } catch (e) {
-    // ignore
+  if (backgroundServicesStarted) {
+    stopPendingActionsScheduler();
+    stopLanDataSyncScheduler();
+    window.removeEventListener(OPEN_PENDING_ACTIONS_EVENT, onOpenPendingActionsEvent);
+    window.removeEventListener(LAN_PAIRED_EVENT, onLanPairedGlobal as EventListener);
+    window.removeEventListener(LAN_PAIRING_PENDING_EVENT, onLanPairingPendingGlobal as EventListener);
+    lanPairingCompleteUnsub?.();
+    lanPairingCompleteUnsub = null;
+    window.removeEventListener("online", updateOnlineStatus);
+    window.removeEventListener("offline", updateOnlineStatus);
+    try {
+      if (headerManageHandler)
+        window.removeEventListener("group:manage-request", headerManageHandler as EventListener);
+    } catch (e) {
+      void e;
+    }
+    window.removeEventListener("co21:open-roles-setup", openRolesSetupDialog as EventListener);
+    window.removeEventListener(
+      OPEN_INFOSCREEN_SETTINGS_EVENT,
+      onOpenInfoscreenSettingsEvent as EventListener,
+    );
   }
-  window.removeEventListener("co21:open-roles-setup", openRolesSetupDialog as EventListener);
-  window.removeEventListener(
-    OPEN_INFOSCREEN_SETTINGS_EVENT,
-    onOpenInfoscreenSettingsEvent as EventListener
-  );
 });
 
 // NextEventNotification component handles computation and display
 </script>
 
 <style scoped>
-/* Pad only the inner input/control and option text, without changing parent container background sizing */
 .lang-select .q-field__control,
 .lang-select .q-field__native {
   padding-left: 0 !important;

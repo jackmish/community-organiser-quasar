@@ -35,6 +35,12 @@ import {
   setSpaceStorageMode,
 } from './spaceRegistryMain';
 import {
+  disableActiveSpaceAccess,
+  getActiveSpaceAccessStatus,
+  setActiveSpaceAccessPassword,
+  verifyActiveSpacePassword,
+} from './spaceAccessMain';
+import {
   deleteGroupFromSqlite,
   loadAppSettingsFromSqlite,
   loadCo21SettingsFromSqlite,
@@ -282,6 +288,46 @@ ipcMain.handle('space:migrate-to-sqlite', (_evt, spaceId: unknown) => {
 ipcMain.handle('space:restart-app', () => {
   setImmediate(() => restartAppAfterSpaceSwitch());
   return { ok: true as const };
+});
+
+ipcMain.handle('space:access-get-status', () => getActiveSpaceAccessStatus());
+
+ipcMain.handle('space:access-verify', (_evt, password: unknown) => {
+  try {
+    const plain = typeof password === 'string' ? password : '';
+    const verified = verifyActiveSpacePassword(plain);
+    return { ok: true as const, verified };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle(
+  'space:access-set-password',
+  (_evt, payload: { password?: string; currentPassword?: string }) => {
+    try {
+      const password = typeof payload?.password === 'string' ? payload.password : '';
+      const currentPassword =
+        typeof payload?.currentPassword === 'string' ? payload.currentPassword : undefined;
+      const status = setActiveSpaceAccessPassword(password, currentPassword);
+      return { ok: true as const, status };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
+
+ipcMain.handle('space:access-disable', (_evt, payload: { currentPassword?: string }) => {
+  try {
+    const currentPassword = typeof payload?.currentPassword === 'string' ? payload.currentPassword : '';
+    const status = disableActiveSpaceAccess(currentPassword);
+    return { ok: true as const, status };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
 });
 
 ipcMain.handle('storage:get-context', () => resolveActiveSpaceContext());

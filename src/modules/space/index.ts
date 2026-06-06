@@ -27,3 +27,13 @@ export {
   switchSpaceAndRestart,
   type SpaceElectronAPI,
 } from './spaceService';
+
+export {
+  disableActiveSpaceAccess,
+  isSpaceAccessAvailable,
+  loadActiveSpaceAccessStatus,
+  setActiveSpaceAccessPassword,
+  verifyActiveSpacePassword,
+} from './spaceAccessService';
+
+export type { SpaceAccessStatus, SpaceAccessMethod, SpaceAccessFile } from './spaceAccessModel';

@@ -152,6 +152,16 @@
                   </div>
                   <div class="row items-center no-wrap q-gutter-xs">
                   <q-btn
+                    v-if="isActive(space.id)"
+                    flat
+                    dense
+                    color="primary"
+                    icon="manage_accounts"
+                    :label="$text('space.open_services')"
+                    :title="$text('space.open_services_hint')"
+                    @click="openActiveSpaceServices"
+                  />
+                  <q-btn
                     flat
                     dense
                     round
@@ -223,7 +233,10 @@ import {
 } from 'src/modules/space';
 
 const props = defineProps<{ modelValue: boolean }>();
-const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: boolean): void;
+  (e: 'open-services'): void;
+}>();
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
   useSettingsDialogLayout(560, 720);
@@ -252,6 +265,10 @@ const switchConfirmOpen = ref(false);
 const pendingSwitchSpace = ref<SpaceEntry | null>(null);
 const switching = ref(false);
 const migratingId = ref<string | null>(null);
+
+function openActiveSpaceServices(): void {
+  emit('open-services');
+}
 
 function storageModeOptionsFor(space: SpaceEntry) {
   return [
