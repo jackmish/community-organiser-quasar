@@ -183,7 +183,14 @@
               @toggle-status="handleToggleStatus"
               @add-task="onInlineAdd"
             />
-            <MediaFilesPanel v-if="isFilesMode" />
+            <MediaFilesPanel
+              v-if="isFilesMode"
+              :tasks="mediaTasks"
+              :active-group-id="activeGroupIdForMedia"
+              :selected-task-id="selectedTaskId"
+              @task-click="onTaskClicked"
+              @task-context="handleTaskContext"
+            />
           </q-card>
 
           <!-- Parent-level add button to sit above list without z-index hacks -->
@@ -499,7 +506,9 @@ import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
-import { MediaFilesPanel, useAppViewMode, MEDIA_VIEW_MODE_CHANGED_EVENT } from "src/modules/media";
+import { MediaFilesPanel, useAppViewMode, MEDIA_VIEW_MODE_CHANGED_EVENT, DEFAULT_MEDIA_TASK_TYPE_ID } from "src/modules/media";
+import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
+import type { AddFormDefaultTypeId } from "src/pages/dayOrganiserPanelKey";
 
 const $q = useQuasar();
 const headerSyncRunning = ref(false);
@@ -736,8 +745,13 @@ const hiddenGroupSummary = createHiddenGroupSummary(
   CC.group.active.activeGroup
 );
 
-// All tasks across days — used to render calendar events
+// Calendar tasks only — media/files tasks live in a separate flat list.
 const allTasks = computed(() => CC.task.list.items());
+const mediaTasks = computed(() => mediaFlatTasks.value);
+
+const activeGroupIdForMedia = computed(
+  () => CC.group.active.activeGroup.value?.value ?? null,
+);
 
 // `hiddenGroupSummary` moved to the day-organiser module for reuse
 
@@ -1501,8 +1515,16 @@ watch(
 );
 
 const lastAddFromCalendar = ref(false);
-const addFormDefaultTypeId = ref<'Todo' | 'TimeEvent'>('Todo');
+const addFormDefaultTypeId = ref<AddFormDefaultTypeId>("Todo");
 const lastAddAnchored = ref(false);
+
+function defaultAddTypeForView(): AddFormDefaultTypeId {
+  return isFilesMode.value ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+}
+
+watch(isFilesMode, (filesMode) => {
+  addFormDefaultTypeId.value = filesMode ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+});
 
 const isAddButtonAnchored = computed(() => {
   try {
@@ -1534,6 +1556,7 @@ async function onListAdd(evt?: Event, go?: any) {
     // Indicate this 'add' was initiated from the anchored button so the
     // mode watcher does not clear the floating placement immediately.
     lastAddAnchored.value = true;
+    addFormDefaultTypeId.value = defaultAddTypeForView();
     try {
       CC.task.active.mode.value = "add";
     } catch (e) {
@@ -1722,7 +1745,7 @@ async function onInlineAdd() {
     // ensure anchored flags are not set so mode watcher won't preserve floating
     lastAddAnchored.value = false;
     lastAddFromCalendar.value = false;
-    addFormDefaultTypeId.value = 'Todo';
+    addFormDefaultTypeId.value = defaultAddTypeForView();
 
     try {
       CC.task.active.mode.value = "add";
@@ -1757,7 +1780,7 @@ async function onFloatingAddClick() {
     // Ensure we don't preserve an anchored floating placement
     lastAddAnchored.value = false;
     lastAddFromCalendar.value = false;
-    addFormDefaultTypeId.value = 'Todo';
+    addFormDefaultTypeId.value = defaultAddTypeForView();
 
     try {
       CC.task.active.mode.value = "add";
@@ -1815,6 +1838,7 @@ provide(dayOrganiserPanelKey, {
   handleCalendarDateSelect,
   filterParentTasks,
   addFormDefaultTypeId,
+  isFilesMode,
   CC,
 } as DayOrganiserPanelContext);
 

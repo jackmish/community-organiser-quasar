@@ -2,29 +2,8 @@ import CC from 'src/CCAccess';
 import logger from 'src/utils/logger';
 import { loadGroupsFromGroupDirectory } from './backend/electron/groupFileLoader';
 import type { ElectronAppdataAPI } from './backend/electron/ElectronAppdataAPI';
-
-function daysFromGroupTasks(groups: Record<string, unknown>[]): Record<string, { date: string; tasks: unknown[]; notes: string }> {
-  const days: Record<string, { date: string; tasks: unknown[]; notes: string }> = {};
-  for (const grp of groups) {
-    const gid = typeof grp.id === 'string' ? grp.id : '';
-    if (!gid) continue;
-    const tasks = Array.isArray(grp.tasks) ? grp.tasks : [];
-    for (const t of tasks) {
-      if (!t || typeof t !== 'object') continue;
-      const row = t as Record<string, unknown>;
-      const rawDate = row.date ?? row.eventDate;
-      const dateKey = (
-        typeof rawDate === 'string' || typeof rawDate === 'number'
-          ? String(rawDate)
-          : new Date().toISOString()
-      ).slice(0, 10);
-      if (!days[dateKey]) days[dateKey] = { date: dateKey, tasks: [], notes: '' };
-      if (!row.groupId) row.groupId = gid;
-      days[dateKey].tasks.push(row);
-    }
-  }
-  return days;
-}
+import { ingestGroupsTaskData } from 'src/modules/media/mediaTaskStorage';
+import * as taskService from 'src/modules/task/managers/taskRepository';
 
 /**
  * Force-load groups from disk into the organiser (recovery when memory is empty but AppData files exist).
@@ -46,20 +25,17 @@ export async function reloadOrganiserFromDisk(): Promise<{ groups: number; days:
     CC.group.list.setGroups(groups);
   }
 
-  const days = daysFromGroupTasks(groups);
+  const { days, mediaTasks } = ingestGroupsTaskData(groups);
   if (CC.task?.time?.days) {
     CC.task.time.days.value = days;
   }
+  taskService.setMediaTasks(mediaTasks);
+  taskService.migrateMediaTasksFromDays();
   try {
-    CC.task?.refreshFlatListFromDays?.();
-  } catch {
-    void 0;
-  }
-
-  try {
-    if (CC.storage?.saveData) await CC.storage.saveData();
+    const loaded = taskService.buildFlatTasksList(days);
+    taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
   } catch (e) {
-    logger.error('[organiserDiskReload] saveData failed', e);
+    void e;
   }
 
   return { groups: groups.length, days: Object.keys(days).length };

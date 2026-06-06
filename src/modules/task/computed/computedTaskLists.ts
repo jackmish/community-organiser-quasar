@@ -12,6 +12,7 @@ import {
 } from 'src/utils/dateUtils';
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
+import { isMediaTaskTypeId } from 'src/modules/media/mediaTaskTypes';
 
 export function createTaskComputed(args: {
   currentDayData: Ref<{ tasks: Task[] }>;
@@ -146,6 +147,7 @@ export function createTaskComputed(args: {
 
       for (const t of full) {
         if (Number(t.status_id) === 0) continue;
+        if (isMediaTaskTypeId(String(t.type_id || ''))) continue;
         if (t.type_id === 'Replenish') continue;
         if (occursOnDay(t, day)) {
           const seriesKey = cyclicSeriesKey(t);
@@ -162,6 +164,7 @@ export function createTaskComputed(args: {
         }
       }
       tasksToSort = tasksToSort.filter((task) => isVisibleForActive(taskGroupId(task)));
+      tasksToSort = tasksToSort.filter((task) => !isMediaTaskTypeId(String(task.type_id || '')));
     } catch (e) {
       // ignore errors here
     }

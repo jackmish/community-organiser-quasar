@@ -15,6 +15,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "verify": "npm run lint && npm run typecheck",
     "dev": "quasar dev",
     "electron": "quasar dev -m electron",
     "android-build": "quasar build -m capacitor -T android",

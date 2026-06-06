@@ -28,6 +28,16 @@ import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
 import type { TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
+import { browseSpaceFolder } from "src/modules/space/spaceService";
+import {
+  DEFAULT_MEDIA_TASK_TYPE_ID,
+  isMediaTaskTypeId,
+  isTodoLikeTaskTypeId,
+  LAST_MEDIA_TASK_TYPE_STORAGE_KEY,
+  MEDIA_TASK_TYPE,
+  showsMediaSharedFolderPicker,
+} from "src/modules/media/mediaTaskTypes";
+import type { AddFormDefaultTypeId } from "src/pages/dayOrganiserPanelKey";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -65,8 +75,13 @@ const props = defineProps({
   },
   /** Task type preset when opening add mode (`Todo` for + buttons, `TimeEvent` for calendar). */
   defaultAddTypeId: {
-    type: String as () => "Todo" | "TimeEvent",
+    type: String as () => AddFormDefaultTypeId,
     default: "Todo",
+  },
+  /** When true, show Files/Gallery/Link types instead of calendar task types. */
+  mediaMode: {
+    type: Boolean,
+    default: false,
   },
 });
 const emit = defineEmits([
@@ -230,6 +245,7 @@ type TaskType = {
   timeMode?: "event" | "prepare" | "expiration" | "holiday";
   // number of days before the event (used for prepare/expiration modes)
   timeOffsetDays?: number | null;
+  mediaSharedFolderPath?: string;
 };
 
 const localNewTask = ref<TaskType>({
@@ -249,34 +265,54 @@ const localNewTask = ref<TaskType>({
   eventTime: "",
   timeMode: "event",
   timeOffsetDays: 7,
+  mediaSharedFolderPath: "",
 });
+
+function taskTypeStorageKey(mediaMode: boolean): string {
+  return mediaMode ? LAST_MEDIA_TASK_TYPE_STORAGE_KEY : "coq:lastTaskType";
+}
+
+function readStoredTaskTypeId(mediaMode: boolean): string {
+  const fallback = mediaMode ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+  try {
+    const s = localStorage.getItem(taskTypeStorageKey(mediaMode));
+    if (s) return s;
+  } catch (e) {
+    // ignore (e.g. SSR or blocked storage)
+  }
+  return fallback;
+}
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
 // Persist to localStorage so the selection survives form resets/remounts.
-const STORAGE_KEY = "coq:lastTaskType";
-let initialStored = "Todo";
-try {
-  const s = localStorage.getItem(STORAGE_KEY);
-  if (s) initialStored = s;
-} catch (e) {
-  // ignore (e.g. SSR or blocked storage)
-}
 const lastSelectedType = ref<string>(
-  initialStored || localNewTask.value.type_id || "Todo"
+  readStoredTaskTypeId(props.mediaMode) ||
+    localNewTask.value.type_id ||
+    (props.mediaMode ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo")
 );
 
 function resolveAddModeTypeId(): string {
+  if (props.mediaMode) {
+    if (isMediaTaskTypeId(props.defaultAddTypeId)) {
+      return props.defaultAddTypeId;
+    }
+    const stored = readStoredTaskTypeId(true);
+    return isMediaTaskTypeId(stored) ? stored : DEFAULT_MEDIA_TASK_TYPE_ID;
+  }
   return props.defaultAddTypeId === "TimeEvent" ? "TimeEvent" : "Todo";
 }
 
 watch(
-  () => [props.mode, props.defaultAddTypeId, props.initialTask] as const,
-  ([mode]) => {
-    if (mode !== "add" || props.initialTask) return;
+  () => [props.mode, props.defaultAddTypeId, props.initialTask, props.mediaMode] as const,
+  ([mode, , initialTask, mediaMode]) => {
+    if (mode !== "add" || initialTask) return;
     const typeId = resolveAddModeTypeId();
     if (localNewTask.value.type_id !== typeId) {
       localNewTask.value.type_id = typeId;
       lastSelectedType.value = typeId;
+    }
+    if (!mediaMode && isMediaTaskTypeId(localNewTask.value.type_id)) {
+      localNewTask.value.type_id = typeId;
     }
   },
 );
@@ -286,13 +322,22 @@ watch(
     if (v) {
       lastSelectedType.value = v;
       try {
-        localStorage.setItem(STORAGE_KEY, v);
+        localStorage.setItem(taskTypeStorageKey(props.mediaMode), v);
       } catch (e) {
         // ignore
       }
     }
   }
 );
+
+const showSharedFolderPicker = computed(
+  () => props.mediaMode && showsMediaSharedFolderPicker(localNewTask.value.type_id)
+);
+
+async function pickSharedFolder(): Promise<void> {
+  const folder = await browseSpaceFolder();
+  if (folder) updateTaskField("mediaSharedFolderPath", folder);
+}
 
 // Mode is controlled by parent via prop `mode` and `update:mode` emit
 const modeRef = toRef(props, "mode") as any;
@@ -351,6 +396,12 @@ const watermarkIcon = computed(() => {
           return "autorenew";
         case "NoteLater":
           return "description";
+        case "MediaFiles":
+          return "folder_shared";
+        case "MediaGallery":
+          return "photo_library";
+        case "MediaLink":
+          return "link";
         default:
           return "add_circle";
       }
@@ -365,6 +416,12 @@ const watermarkIcon = computed(() => {
           return "autorenew";
         case "NoteLater":
           return "description";
+        case "MediaFiles":
+          return "folder_shared";
+        case "MediaGallery":
+          return "photo_library";
+        case "MediaLink":
+          return "link";
         default:
           return "edit";
       }
@@ -379,6 +436,12 @@ const watermarkIcon = computed(() => {
           return "autorenew";
         case "NoteLater":
           return "description";
+        case "MediaFiles":
+          return "folder_shared";
+        case "MediaGallery":
+          return "photo_library";
+        case "MediaLink":
+          return "link";
         default:
           return "visibility";
       }
@@ -473,13 +536,39 @@ function extractGroupId(ag: any) {
   return undefined;
 }
 
-// Type options for task type selector (local only)
-const typeOptions = [
+// Type options for task type selector (calendar vs files mode)
+const calendarTypeOptions = [
   { label: "Time Event", shortLabel: "Time", value: "TimeEvent", icon: "event" },
   { label: "TODO", shortLabel: "Todo", value: "Todo", icon: "check_box" },
   { label: "Replenish", shortLabel: "Repl", value: "Replenish", icon: "autorenew" },
   { label: "Note", shortLabel: "Note", value: "NoteLater", icon: "description" },
 ];
+
+const typeOptions = computed(() => {
+  if (props.mediaMode) {
+    return [
+      {
+        label: $text("task_type.files"),
+        shortLabel: $text("task_type.files_short"),
+        value: MEDIA_TASK_TYPE.Files,
+        icon: "folder_shared",
+      },
+      {
+        label: $text("task_type.gallery"),
+        shortLabel: $text("task_type.gallery_short"),
+        value: MEDIA_TASK_TYPE.Gallery,
+        icon: "photo_library",
+      },
+      {
+        label: $text("task_type.link"),
+        shortLabel: $text("task_type.link_short"),
+        value: MEDIA_TASK_TYPE.Link,
+        icon: "link",
+      },
+    ];
+  }
+  return calendarTypeOptions;
+});
 
 // ── Date/time logic (extracted to composable) ─────────────────────────────────
 const {
@@ -597,7 +686,7 @@ watch(
           }
         }
 
-        if (val === "Todo" || val === "NoteLater") {
+        if (val === "Todo" || val === "NoteLater" || (props.mediaMode && isMediaTaskTypeId(val))) {
           // focus description textarea/input
           if (
             descriptionInput.value &&
@@ -655,6 +744,7 @@ watch(
         eventTime: val.eventTime || "",
         timeMode: val.timeMode || "event",
         timeOffsetDays: val.timeOffsetDays == null ? 7 : val.timeOffsetDays,
+        mediaSharedFolderPath: val.mediaSharedFolderPath || "",
         id: val.id,
       };
       // Load repeat state from the composable helper
@@ -734,6 +824,7 @@ watch(
         eventTime: "",
         timeMode: "event",
         timeOffsetDays: 7,
+        mediaSharedFolderPath: "",
       };
       // Reset repeat inputs when clearing the form
       resetRepeat();
@@ -777,6 +868,12 @@ const autoGeneratedName = computed(() => {
       typeLabel = "Replenish";
     } else if (typeId === "NoteLater") {
       typeLabel = "Note";
+    } else if (typeId === MEDIA_TASK_TYPE.Files) {
+      typeLabel = "Files";
+    } else if (typeId === MEDIA_TASK_TYPE.Gallery) {
+      typeLabel = "Gallery";
+    } else if (typeId === MEDIA_TASK_TYPE.Link) {
+      typeLabel = "Link";
     } else {
       // TimeEvent — include time mode
       const timeMode = (localNewTask.value as any).timeMode || "event";
@@ -826,7 +923,7 @@ function updateTaskField(field: string, value: any) {
 
 const showQuickAddSubtask = computed(() => {
   const typeId = localNewTask.value.type_id || "";
-  if (typeId !== "Todo" && typeId !== "TimeEvent") return false;
+  if (!isTodoLikeTaskTypeId(typeId) && typeId !== "TimeEvent") return false;
   if (isReplenish.value && props.mode === "add") return false;
   return true;
 });
@@ -874,11 +971,11 @@ watch(
     if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
-      if (props.mode === "add" && props.defaultAddTypeId === "TimeEvent") {
+      if (props.mode === "add" && props.defaultAddTypeId === "TimeEvent" && !props.mediaMode) {
         localNewTask.value.type_id = "TimeEvent";
         lastSelectedType.value = "TimeEvent";
         try {
-          localStorage.setItem(STORAGE_KEY, "TimeEvent");
+          localStorage.setItem(taskTypeStorageKey(false), "TimeEvent");
         } catch (e) {
           void e;
         }
@@ -953,17 +1050,23 @@ const priorityOptions = [
 
 // Colors for task types (used to color type buttons when active)
 const typeColors: Record<string, string> = {
-  TimeEvent: "#2196f3", // blue
-  Todo: "#4caf50", // green
-  NoteLater: "#9e9e9e", // grey
-  Replenish: "#c9a676", // yellow
+  TimeEvent: themeTypeColors.TimeEvent || "#2196f3",
+  Todo: themeTypeColors.Todo || "#4caf50",
+  NoteLater: themeTypeColors.NoteLater || "#9e9e9e",
+  Replenish: themeTypeColors.Replenish || "#c9a676",
+  MediaFiles: themeTypeColors.MediaFiles || "#5c6bc0",
+  MediaGallery: themeTypeColors.MediaGallery || "#8e24aa",
+  MediaLink: themeTypeColors.MediaLink || "#00897b",
 };
 
 const typeTextColors: Record<string, string> = {
-  TimeEvent: "white",
-  Todo: "white",
-  NoteLater: "white",
-  Replenish: "#212121",
+  TimeEvent: themeTypeTextColors.TimeEvent || "white",
+  Todo: themeTypeTextColors.Todo || "white",
+  NoteLater: themeTypeTextColors.NoteLater || "white",
+  Replenish: themeTypeTextColors.Replenish || "#212121",
+  MediaFiles: themeTypeTextColors.MediaFiles || "white",
+  MediaGallery: themeTypeTextColors.MediaGallery || "white",
+  MediaLink: themeTypeTextColors.MediaLink || "white",
 };
 
 // Map checkbox to numeric status_id (0 = done, 1 = just created)
@@ -1222,6 +1325,30 @@ function onSubmit(event: Event) {
         </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
+        <div
+          v-if="showSharedFolderPicker"
+          class="row q-col-gutter-sm items-center"
+        >
+          <div class="col">
+            <q-input
+              :model-value="localNewTask.mediaSharedFolderPath || ''"
+              :label="$text('files.shared_folder')"
+              outlined
+              dense
+              readonly
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              outline
+              color="primary"
+              icon="folder_open"
+              :label="$text('files.choose_folder')"
+              @click="pickSharedFolder"
+            />
+          </div>
+        </div>
+
         <!-- Type selector moved into Priority card below; header removed -->
 
         <!-- Date/time panels relocated into the description column below -->

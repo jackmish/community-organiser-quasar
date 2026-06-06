@@ -1,8 +1,15 @@
 import { getCycleType, occursOnDay } from '../utils/occursOnDay';
+import { isMediaTaskTypeId } from 'src/modules/media/mediaTaskTypes';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineRepository from './subtaskLine/subtaskLineRepository';
 import { Task } from '../models/TaskModel';
+
+function taskTypeId(task: Pick<Task, 'type_id' | 'type'> | null | undefined): string {
+  const raw = task?.type_id ?? task?.type;
+  if (typeof raw === 'string') return raw;
+  return '';
+}
 
 /** Minimal shape that TaskRepository needs from the task store/API. */
 export interface TaskTimeProvider {
@@ -29,8 +36,10 @@ export class TaskRepository {
   managers: { subtaskLine: ReturnType<typeof SubtaskLineRepository.construct> };
 
   // â”€â”€ Per-instance state (was module-level globals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  /** Reactive flat list of all tasks â€” mirrors `days` in sorted order. */
+  /** Reactive flat list of calendar tasks — mirrors `days` in sorted order. */
   readonly flatTasksRef = ref<Task[]>([]);
+  /** Reactive flat list of media/files tasks — not tied to day buckets. */
+  readonly mediaTasksRef = ref<Task[]>([]);
 
   private _daysMap: Record<string, any> = {};
   private _daysRef: Ref<any> | undefined = undefined;
@@ -75,6 +84,10 @@ export class TaskRepository {
 
   // â”€â”€ Task mutations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   addTask(date: string, taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Task {
+    const typeId = String((taskData as any)?.type_id || (taskData as any)?.type || '');
+    if (isMediaTaskTypeId(typeId)) {
+      return this.addMediaTask(taskData);
+    }
     const now = new Date().toISOString();
     const payload: Partial<Task> = { ...taskData, createdAt: now, updatedAt: now };
     const task: Task = new Task({ ...(payload as any), id: this.generateId() });
@@ -100,6 +113,99 @@ export class TaskRepository {
     return task;
   }
 
+  addMediaTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Task {
+    const now = new Date().toISOString();
+    const payload: Partial<Task> = { ...taskData, createdAt: now, updatedAt: now };
+    const task: Task = new Task({ ...(payload as any), id: this.generateId() });
+    try {
+      if (!task.groupId && (taskData as any).groupId) task.groupId = (taskData as any).groupId;
+      if (!task.type_id && (taskData as any).type_id) task.type_id = (taskData as any).type_id;
+    } catch (e) {
+      // ignore
+    }
+    this.mediaTasksRef.value.push(task);
+    return task;
+  }
+
+  setMediaTasks(tasks: Task[]): void {
+    this.mediaTasksRef.value.splice(0, this.mediaTasksRef.value.length, ...tasks);
+  }
+
+  getMediaFlatList(): Task[] {
+    return this.mediaTasksRef.value.slice();
+  }
+
+  /** Pull legacy media tasks out of day buckets into the media list. */
+  migrateMediaTasksFromDays(): void {
+    const moved: Task[] = [];
+    try {
+      for (const key of Object.keys(this.getDays())) {
+        const d = this.getDays()[key];
+        if (!d || !Array.isArray(d.tasks)) continue;
+        const keep: Task[] = [];
+        for (const t of d.tasks as Task[]) {
+          if (isMediaTaskTypeId(taskTypeId(t))) {
+            moved.push(t);
+          } else {
+            keep.push(t);
+          }
+        }
+        d.tasks = keep;
+      }
+    } catch (e) {
+      // ignore
+    }
+    if (!moved.length) return;
+    const seen = new Set(this.mediaTasksRef.value.map((t) => String(t.id)));
+    for (const t of moved) {
+      const id = String(t.id || '');
+      if (id && seen.has(id)) continue;
+      if (id) seen.add(id);
+      this.mediaTasksRef.value.push(t);
+    }
+    try {
+      const newList = this.listFromDays(this.getDays());
+      this.flatTasksRef.value.splice(0, this.flatTasksRef.value.length, ...newList);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  private findMediaTaskById(taskId: string): Task | null {
+    return (
+      this.mediaTasksRef.value.find((t) => String(t.id) === String(taskId)) || null
+    );
+  }
+
+  updateMediaTask(taskOrId: Task | string, maybeUpdates?: any): Task {
+    let taskObj: Task;
+    if (typeof taskOrId === 'string') {
+      const existing = this.findMediaTaskById(taskOrId);
+      if (!existing) throw new Error('Media task not found');
+      taskObj = { ...existing, ...(maybeUpdates || {}), updatedAt: new Date().toISOString() } as Task;
+    } else {
+      taskObj = { ...taskOrId, updatedAt: new Date().toISOString() } as Task;
+    }
+    const idx = this.mediaTasksRef.value.findIndex(
+      (t) => String(t.id) === String(taskObj.id),
+    );
+    if (idx === -1) throw new Error('Media task not found');
+    const target = this.mediaTasksRef.value[idx];
+    if (!target) throw new Error('Media task not found');
+    Object.assign(target, taskObj, {
+      updatedAt: new Date().toISOString(),
+    });
+    return target;
+  }
+
+  deleteMediaTask(taskId: string): boolean {
+    const before = this.mediaTasksRef.value.length;
+    this.mediaTasksRef.value = this.mediaTasksRef.value.filter(
+      (t) => String(t.id) !== String(taskId),
+    );
+    return this.mediaTasksRef.value.length < before;
+  }
+
   updateTask(
     date: string,
     taskOrId: Task | string,
@@ -111,11 +217,21 @@ export class TaskRepository {
     if (typeof taskOrId === 'string') {
       const id = taskOrId;
       const updates = maybeUpdates || {};
+      const mediaExisting = this.findMediaTaskById(id);
+      if (mediaExisting) {
+        this.updateMediaTask(id, updates);
+        return;
+      }
       const existing = this.getFlatList().find((t) => String(t.id) === String(id));
       if (!existing) throw new Error('Task not found');
       taskObj = { ...existing, ...updates, updatedAt: new Date().toISOString() } as Task;
     } else {
       taskObj = taskOrId;
+    }
+
+    if (isMediaTaskTypeId(String(taskObj?.type_id || (taskObj as any)?.type || ''))) {
+      this.updateMediaTask(taskObj);
+      return;
     }
 
     try {
@@ -189,6 +305,8 @@ export class TaskRepository {
   }
 
   deleteTask(date: string, taskId: string): boolean {
+    if (this.deleteMediaTask(taskId)) return true;
+
     let removed = false;
     try {
       const dayData = this.getDays()[date];
@@ -227,6 +345,18 @@ export class TaskRepository {
   }
 
   toggleTaskComplete(date: string, taskId: string): void {
+    const mediaTask = this.findMediaTaskById(taskId);
+    if (mediaTask) {
+      try {
+        const cur = Number(mediaTask.status_id);
+        mediaTask.status_id = cur === 0 ? 1 : 0;
+      } catch (e) {
+        mediaTask.status_id = 1;
+      }
+      mediaTask.updatedAt = new Date().toISOString();
+      return;
+    }
+
     const dayData = this.getDays()[date];
     let task = dayData?.tasks?.find((t: any) => t.id === taskId);
 
@@ -316,6 +446,7 @@ export class TaskRepository {
           for (const t of d.tasks as Task[]) {
             const id = t?.id != null ? String(t.id) : '';
             if (id && seenIds.has(id)) continue;
+            if (isMediaTaskTypeId(taskTypeId(t))) continue;
             if (id) seenIds.add(id);
             if (!t.date) t.date = t.eventDate || key;
             if (!t.priority) t.priority = 'medium';
@@ -374,7 +505,12 @@ export class TaskRepository {
       const current = new Date(date);
       if (current >= start && current <= end) {
         const dayTasks = this.getDays()[date]?.tasks;
-        if (dayTasks) tasks.push(...dayTasks);
+        if (dayTasks) {
+          for (const t of dayTasks) {
+            if (isMediaTaskTypeId(taskTypeId(t))) continue;
+            tasks.push(t);
+          }
+        }
       }
     });
     return tasks.sort((a, b) => {
@@ -396,6 +532,7 @@ export class TaskRepository {
       const result: Task[] = [...dayTasks];
       for (const t of all) {
         try {
+          if (isMediaTaskTypeId(taskTypeId(t))) continue;
           if (Number(t.status_id) === 0) continue;
           if (t.type_id === 'Replenish') continue;
           if (occursOnDay(t, day)) {
@@ -472,6 +609,14 @@ export class TaskRepository {
 
         if (!found) {
           try {
+            found = this.mediaTasksRef.value.find((t) => String(t.id) === id) || null;
+          } catch (e) {
+            found = null;
+          }
+        }
+
+        if (!found) {
+          try {
             found = (this.getFlatList(this._time) || []).find((t) => String(t.id) === id) || null;
           } catch (e) {
             found = null;
@@ -542,6 +687,7 @@ const _singleton = new TaskRepository();
  * StorageController and tests import this directly as `flatTasks`.
  */
 export const flatTasks = _singleton.flatTasksRef;
+export const mediaFlatTasks = _singleton.mediaTasksRef;
 
 // â”€â”€ Backward-compat free function re-exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const setTime = (t: any): void => _singleton.setTime(t);
@@ -567,6 +713,9 @@ export const getAllTasks = (): Task[] => _singleton.getAllTasks();
 export const listFromDays = (daysArg?: Record<string, any>): Task[] =>
   _singleton.listFromDays(daysArg);
 export const getFlatList = (time?: any): Task[] => _singleton.getFlatList(time);
+export const getMediaFlatList = (): Task[] => _singleton.getMediaFlatList();
+export const setMediaTasks = (tasks: Task[]): void => _singleton.setMediaTasks(tasks);
+export const migrateMediaTasksFromDays = (): void => _singleton.migrateMediaTasksFromDays();
 export const getTasksByCategory = (c: Task['category']): Task[] => _singleton.getTasksByCategory(c);
 export const getTasksByPriority = (p: Task['priority']): Task[] => _singleton.getTasksByPriority(p);
 export const getIncompleteTasks = (): Task[] => _singleton.getIncompleteTasks();

@@ -55,7 +55,8 @@ export function normalizeGroupFromDisk(
     (typeof raw.label === 'string' && raw.label.trim()) ||
     id;
   const tasks = Array.isArray(raw.tasks) ? raw.tasks : [];
-  return { ...raw, id, name, tasks };
+  const mediaTasks = Array.isArray(raw.mediaTasks) ? raw.mediaTasks : [];
+  return { ...raw, id, name, tasks, mediaTasks };
 }
 
 async function readGroupFile(

@@ -31,6 +31,10 @@ export class TaskList extends Collection<Task> {
     return this.taskRepo.getTasksForDay(String(d || ''));
   }
 
+  mediaItems(): Task[] {
+    return this.taskRepo.getMediaFlatList();
+  }
+
   /** Sort with an optional comparator; defaults to date → priority. */
   override sort(compare?: (a: Task, b: Task) => number): Task[] {
     return this.items()

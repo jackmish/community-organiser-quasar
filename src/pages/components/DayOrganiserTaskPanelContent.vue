@@ -53,6 +53,7 @@
         :initial-task="ctx.CC.task.active.task.value"
         :mode="ctx.CC.task.active.mode.value"
         :default-add-type-id="ctx.addFormDefaultTypeId.value"
+        :media-mode="ctx.isFilesMode.value"
         @update:mode="(v) => ctx.CC.task.active.setMode(v)"
         @add-task="ctx.handleAddTaskFromForm"
         @update-task="ctx.handleUpdateTask"

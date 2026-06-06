@@ -270,8 +270,16 @@ function prepareGroupForDisk(group: Record<string, unknown>): Record<string, unk
         return t;
       })
     : undefined;
+  const safeMediaTasks = Array.isArray(group.mediaTasks)
+    ? group.mediaTasks.map((task: Record<string, unknown>) => {
+        const t = { ...task, groupId: group.id };
+        if ('_group' in t) delete t._group;
+        return t;
+      })
+    : undefined;
   const groupToWrite = { ...group };
   if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
+  if (safeMediaTasks !== undefined) groupToWrite.mediaTasks = safeMediaTasks;
   return groupToWrite;
 }
 

@@ -62,6 +62,9 @@ export const typeIcons: Record<string, string> = {
   Todo: 'check_box',
   Replenish: 'autorenew',
   NoteLater: 'description',
+  MediaFiles: 'folder_shared',
+  MediaGallery: 'photo_library',
+  MediaLink: 'link',
 };
 
 export const priorityIcons: Record<string, string> = {
@@ -120,6 +123,9 @@ export const typeColors: Record<string, string> = {
   Todo: '#4caf50',
   NoteLater: '#9e9e9e',
   Replenish: '#c9a676',
+  MediaFiles: '#5c6bc0',
+  MediaGallery: '#8e24aa',
+  MediaLink: '#00897b',
 };
 
 export const typeTextColors: Record<string, string> = {
@@ -127,6 +133,9 @@ export const typeTextColors: Record<string, string> = {
   Todo: 'white',
   NoteLater: 'white',
   Replenish: '#212121',
+  MediaFiles: 'white',
+  MediaGallery: 'white',
+  MediaLink: 'white',
 };
 
 // Month color tokens (hex only). Keys are zero-padded month numbers e.g. '01'..'12'.

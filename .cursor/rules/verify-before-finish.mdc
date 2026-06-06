@@ -1,0 +1,54 @@
+---
+description: Run ESLint and vue-tsc after JS/TS/Vue changes before finishing
+alwaysApply: true
+---
+
+# Verify before finishing (lint + typecheck)
+
+After you change code under `app-quasar/src` (`.ts`, `.js`, `.vue`, or related config), **before** telling the user the task is done:
+
+1. **Run ESLint** on the files you touched (preferred when the diff is small):
+
+```bash
+cd app-quasar
+npx eslint -c ./eslint.config.js path/to/changed-file.ts path/to/changed-file.vue
+```
+
+If many files changed, or you are unsure of the diff:
+
+```bash
+cd app-quasar
+npm run lint
+```
+
+2. **Run TypeScript check** (templates + cross-file types — ESLint alone is not enough):
+
+```bash
+cd app-quasar
+npm run typecheck
+```
+
+3. **Fix every reported error** and re-run the failed command(s) until both pass.
+
+4. **Do not skip this** because the user did not ask — run it as part of finishing the job.
+
+5. **Do not claim “lint/typecheck passed”** unless you actually ran the commands in this session.
+
+## When to skip
+
+- Documentation-only edits (markdown, translations JSON with no script changes).
+- User explicitly asked for a read-only answer with no code changes.
+
+## Quick combined check (optional)
+
+```bash
+cd app-quasar
+npm run verify
+```
+
+(`verify` runs lint then typecheck — use when the change set is broad.)
+
+## Common fixes in this repo
+
+- `@typescript-eslint/no-base-to-string`: never `String(unknown)` — narrow to `string` / finite `number` first.
+- `@typescript-eslint/no-unnecessary-type-assertion`: remove redundant `as` casts; fix the type instead.

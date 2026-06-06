@@ -44,6 +44,8 @@ class TaskController implements Controllable {
   readonly delete = async (date: string, id: string) => {
     let groupId: string | undefined;
     try {
+      const media = this.taskRepo.getMediaFlatList().find((t) => String(t.id) === String(id));
+      if (media?.groupId) groupId = String(media.groupId);
       const day = this.time.days?.value?.[date];
       const task = day?.tasks?.find((t: { id?: string }) => String(t?.id) === String(id));
       if (task?.groupId) groupId = String(task.groupId);
@@ -64,6 +66,7 @@ class TaskController implements Controllable {
   /** Rebuild flat task list from `time.days` (e.g. after LAN sync wrote days directly). */
   readonly refreshFlatListFromDays = (): void => {
     try {
+      this.taskRepo.migrateMediaTasksFromDays();
       const days = this.time?.days?.value ?? {};
       const newList = this.taskRepo.listFromDays(days);
       this.taskRepo.flatTasksRef.value.splice(0, this.taskRepo.flatTasksRef.value.length, ...newList);

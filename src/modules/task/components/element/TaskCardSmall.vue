@@ -114,6 +114,7 @@ import {
 } from "src/components/theme";
 import { hexToRgba, getContrastColor } from "src/utils/colorUtils";
 import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
+import { isMediaTaskTypeId, isTodoLikeTaskTypeId } from "src/modules/media/mediaTaskTypes";
 import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { $text } from "src/modules/lang";
@@ -142,6 +143,9 @@ const typeColors: Record<string, string> = {
   Todo: "#4caf50",
   NoteLater: "#9e9e9e",
   Replenish: "#c9a676",
+  MediaFiles: "#5c6bc0",
+  MediaGallery: "#8e24aa",
+  MediaLink: "#00897b",
 };
 
 const item = toRef(props, "item") as any;
@@ -160,8 +164,9 @@ const getDisplayName = (task: any) => {
 };
 
 const isTodoType = (task: any) => {
-  const t = String(task?.type || task?.type_id || "").toLowerCase();
-  return t.includes("todo");
+  const typeId = String(task?.type_id || task?.type || "");
+  if (isMediaTaskTypeId(typeId)) return true;
+  return isTodoLikeTaskTypeId(typeId) || typeId.toLowerCase().includes("todo");
 };
 
 const hasDate = (task: any) => {

@@ -1,5 +1,8 @@
 import type { CSSProperties, InjectionKey, Ref } from "vue";
 import type CCAccess from "src/CCAccess";
+import type { MediaTaskTypeId } from "src/modules/media/mediaTaskTypes";
+
+export type AddFormDefaultTypeId = "Todo" | "TimeEvent" | MediaTaskTypeId;
 
 export type DayOrganiserPanelContext = {
   panelHidden: Ref<boolean>;
@@ -24,8 +27,10 @@ export type DayOrganiserPanelContext = {
   handleToggleStatus: (payload: unknown) => void | Promise<void>;
   handleCalendarDateSelect: (date: string) => void;
   filterParentTasks: (val: string, update: (fn: () => void) => void) => void;
-  /** Default task type when opening the add form (`Todo` vs `TimeEvent`). */
-  addFormDefaultTypeId: Ref<'Todo' | 'TimeEvent'>;
+  /** Default task type when opening the add form. */
+  addFormDefaultTypeId: Ref<AddFormDefaultTypeId>;
+  /** When true, add form shows Files/Gallery/Link types instead of calendar types. */
+  isFilesMode: Ref<boolean>;
   CC: typeof CCAccess;
 };
 

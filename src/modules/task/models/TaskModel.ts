@@ -31,6 +31,8 @@ export class TaskModel extends BaseModel {
   timeOffsetDays?: number | null;
   // Optional per-task chosen color set id (e.g. 'set-1'..'set-12')
   color_set?: string | null;
+  /** Shared folder path for media/files task types (Files, Gallery). */
+  mediaSharedFolderPath?: string;
 
   constructor(init?: Partial<TaskModel>) {
     super(init);

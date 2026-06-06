@@ -8,6 +8,10 @@ import {
 import { isPresentationModeActive } from 'src/composables/usePresentationGuard';
 import { sampleData } from 'src/modules/presentation/sampleData';
 import * as taskService from 'src/modules/task/managers/taskRepository';
+import {
+  attachTasksToGroupsForSave,
+  ingestGroupsTaskData,
+} from 'src/modules/media/mediaTaskStorage';
 
 /** Minimal shape StorageController needs from the group Pinia store. */
 type ActiveGroupOption = { label: string; value: string | null } | null;
@@ -66,33 +70,14 @@ export class StorageController {
             return typeof id === 'string' && id.trim().length > 0;
           })
         : [];
-      const daysFromGroups: Record<string, any> = {};
-      const groupsHaveTasks = rawGroups.some(
-        (g: any) => Array.isArray(g.tasks) && g.tasks.length > 0,
-      );
-      if (groupsHaveTasks) {
-        for (const grp of rawGroups) {
-          const tasks = Array.isArray(grp.tasks) ? grp.tasks : [];
-          for (const t of tasks) {
-            try {
-              const dateKey = t?.date || t?.eventDate || new Date().toISOString().split('T')[0];
-              if (!daysFromGroups[dateKey])
-                daysFromGroups[dateKey] = { date: dateKey, tasks: [], notes: '' };
-              if (!t.groupId) t.groupId = grp.id;
-              daysFromGroups[dateKey].tasks.push(t);
-            } catch (e) {
-              void e;
-            }
-          }
-        }
-      }
+      const ingested = ingestGroupsTaskData(rawGroups);
 
       try {
         const finalDays =
           data.days && Object.keys(data.days).length > 0
             ? data.days
-            : Object.keys(daysFromGroups).length
-              ? daysFromGroups
+            : Object.keys(ingested.days).length
+              ? ingested.days
               : {};
 
         try {
@@ -144,7 +129,9 @@ export class StorageController {
             if (this.time.lastModified)
               this.time.lastModified.value = data.lastModified || new Date().toISOString();
             try {
-              const loaded = taskService.buildFlatTasksList(finalDays || {});
+              taskService.setMediaTasks(ingested.mediaTasks);
+              taskService.migrateMediaTasksFromDays();
+              const loaded = taskService.buildFlatTasksList(this.time.days?.value || finalDays || {});
               taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
               try {
                 logger.debug(
@@ -222,49 +209,12 @@ export class StorageController {
 
         const existingGroups =
           this.group && this.group.list && this.group.list.all ? this.group.list.all.value : [];
-        const groupsMap: Record<string, any> = {};
-        for (const g of existingGroups || []) {
-          try {
-            const meta = { ...g };
-            if (meta && Object.prototype.hasOwnProperty.call(meta, 'tasks')) delete meta.tasks;
-            groupsMap[String(g.id)] = { ...meta, tasks: [] };
-          } catch (e) {
-            void e;
-          }
-        }
-        try {
-          for (const dKey of Object.keys(days || {})) {
-            const day = days[dKey];
-            if (!day || !Array.isArray(day.tasks)) continue;
-            for (const t of day.tasks) {
-              try {
-                const gid = t && t.groupId ? String(t.groupId) : null;
-                if (!gid) continue;
-                if (!groupsMap[gid]) {
-                  groupsMap[gid] = { id: gid, name: String(gid), tasks: [] };
-                }
-                try {
-                  const exists = groupsMap[gid].tasks.find(
-                    (x: any) => String(x.id) === String(t.id),
-                  );
-                  if (!exists) groupsMap[gid].tasks.push(t);
-                } catch (e) {
-                  try {
-                    groupsMap[gid].tasks.push(t);
-                  } catch (err) {
-                    void err;
-                  }
-                }
-              } catch (e) {
-                void e;
-              }
-            }
-          }
-        } catch (e) {
-          void e;
-        }
-
-        const groups = Object.keys(groupsMap).map((k) => groupsMap[k]);
+        taskService.migrateMediaTasksFromDays();
+        const groups = attachTasksToGroupsForSave(
+          existingGroups || [],
+          days || {},
+          taskService.getMediaFlatList(),
+        );
         payload = { days, groups, lastModified };
       }
       await backendStorage.saveData(payload);
