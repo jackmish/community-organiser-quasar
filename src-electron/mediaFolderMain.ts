@@ -26,7 +26,7 @@ type ListErr = { ok: false; error: string };
 
 export type ListMediaFolderPayload = ListOk | ListErr;
 
-function resolveInsideRoot(rootPath: string, candidatePath?: string): string | null {
+export function resolveInsideRoot(rootPath: string, candidatePath?: string): string | null {
   const root = path.resolve(String(rootPath || ''));
   if (!root) return null;
   const target = path.resolve(candidatePath ? String(candidatePath) : root);

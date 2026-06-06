@@ -52,6 +52,7 @@ import {
   saveGroupsToSqlite,
 } from './spaceSqliteMain';
 import { registerMediaFolderIpc } from './mediaFolderMain';
+import { registerMediaThumbIpc } from './mediaThumbMain';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -518,6 +519,7 @@ ipcMain.handle('dialog:select-folder', async (event) => {
 });
 
 registerMediaFolderIpc(ipcMain);
+registerMediaThumbIpc(ipcMain);
 
 // Create a .zip archive containing a single JSON file named 'connections.json'
 ipcMain.handle(

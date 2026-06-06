@@ -63,7 +63,19 @@
           @click="onEntryClick(entry)"
         >
           <span class="media-folder-browser__entry-main">
+            <template v-if="showEntryThumb(entry)">
+              <span class="media-folder-browser__entry-visual">
+                <img
+                  v-if="entryThumb(entry)"
+                  :src="entryThumb(entry)"
+                  class="media-folder-browser__entry-thumb"
+                  alt=""
+                />
+                <q-spinner v-else color="grey-6" size="24px" />
+              </span>
+            </template>
             <q-icon
+              v-else
               :name="entryIcon(entry)"
               :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
               size="20px"
@@ -97,7 +109,9 @@
 import { computed, ref, watch } from 'vue';
 import { $text, getLocale } from 'src/modules/lang';
 import {
+  getMediaThumbnail,
   isImageFileName,
+  isThumbableFileName,
   listMediaFolder,
   openMediaPath,
   revealMediaPath,
@@ -118,6 +132,8 @@ const currentPath = ref('');
 const parentPath = ref<string | null>(null);
 const canGoUp = ref(false);
 const entries = ref<MediaFolderEntry[]>([]);
+const thumbUrls = ref<Record<string, string>>({});
+let thumbRequestGen = 0;
 
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
 
@@ -150,6 +166,8 @@ async function refresh(): Promise<void> {
     parentPath.value = result.parentPath;
     canGoUp.value = result.canGoUp;
     entries.value = result.entries;
+    thumbUrls.value = {};
+    void loadThumbs(result.entries);
   } finally {
     loading.value = false;
   }
@@ -185,8 +203,32 @@ async function openInExplorer(): Promise<void> {
 
 function entryIcon(entry: MediaFolderEntry): string {
   if (entry.isDirectory) return 'folder';
-  if (props.imagesOnly && isImageFileName(entry.name)) return 'image';
+  if (isImageFileName(entry.name)) return 'image';
   return 'insert_drive_file';
+}
+
+function entryThumb(entry: MediaFolderEntry): string | undefined {
+  if (!showEntryThumb(entry)) return undefined;
+  return thumbUrls.value[entry.path];
+}
+
+function showEntryThumb(entry: MediaFolderEntry): boolean {
+  return !entry.isDirectory && isThumbableFileName(entry.name);
+}
+
+async function loadThumbs(list: MediaFolderEntry[]): Promise<void> {
+  const root = String(props.rootPath || '').trim();
+  if (!root) return;
+
+  const gen = ++thumbRequestGen;
+  const targets = list.filter((e) => !e.isDirectory && isThumbableFileName(e.name));
+  await Promise.all(
+    targets.map(async (entry) => {
+      const result = await getMediaThumbnail(root, entry.path, entry.modifiedMs);
+      if (gen !== thumbRequestGen || !result.ok || !result.dataUrl) return;
+      thumbUrls.value = { ...thumbUrls.value, [entry.path]: result.dataUrl };
+    }),
+  );
 }
 
 function formatSize(bytes: number | null | undefined): string {
@@ -286,6 +328,26 @@ watch(
   align-items: center;
   gap: 6px;
   max-width: 100%;
+}
+
+.media-folder-browser__entry-visual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+}
+
+.media-folder-browser__entry-thumb {
+  display: block;
+  max-width: 96px;
+  max-height: 96px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .media-folder-browser__entry-name {

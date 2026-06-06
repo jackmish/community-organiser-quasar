@@ -18,11 +18,20 @@ export type ListMediaFolderResult =
     }
   | { ok: false; error: string };
 
+export type GetMediaThumbnailResult =
+  | { ok: true; dataUrl: string }
+  | { ok: false; error?: string; noThumb?: boolean };
+
 type MediaFolderElectronAPI = {
   listMediaFolder?: (payload: {
     rootPath: string;
     currentPath?: string | null;
   }) => Promise<ListMediaFolderResult>;
+  getMediaThumbnail?: (payload: {
+    rootPath: string;
+    filePath: string;
+    modifiedMs?: number | null;
+  }) => Promise<GetMediaThumbnailResult>;
   openMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
   revealMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
 };
@@ -63,6 +72,22 @@ export async function revealMediaPath(targetPath: string): Promise<{ ok: boolean
   return api.revealMediaPath(targetPath);
 }
 
+export async function getMediaThumbnail(
+  rootPath: string,
+  filePath: string,
+  modifiedMs?: number | null,
+): Promise<GetMediaThumbnailResult> {
+  const api = mediaFolderApi();
+  if (!api?.getMediaThumbnail) {
+    return { ok: false, error: 'Thumbnails are only available in the desktop app' };
+  }
+  return api.getMediaThumbnail({
+    rootPath,
+    filePath,
+    ...(modifiedMs !== undefined ? { modifiedMs } : {}),
+  });
+}
+
 export const IMAGE_FILE_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
@@ -80,4 +105,22 @@ export function isImageFileName(name: string): boolean {
   const dot = lower.lastIndexOf('.');
   if (dot <= 0) return false;
   return IMAGE_FILE_EXTENSIONS.has(lower.slice(dot));
+}
+
+/** Raster formats supported for cached thumbnails (excludes svg/heic). */
+export const THUMBABLE_FILE_EXTENSIONS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.avif',
+]);
+
+export function isThumbableFileName(name: string): boolean {
+  const lower = String(name || '').toLowerCase();
+  const dot = lower.lastIndexOf('.');
+  if (dot <= 0) return false;
+  return THUMBABLE_FILE_EXTENSIONS.has(lower.slice(dot));
 }
