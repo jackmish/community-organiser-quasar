@@ -46,69 +46,50 @@
       {{ error }}
     </q-banner>
 
-    <q-list v-else bordered separator class="media-folder-browser__list">
-      <q-item v-if="loading" dense>
-        <q-item-section avatar>
-          <q-spinner size="20px" />
-        </q-item-section>
-        <q-item-section class="text-grey-7">{{ $text('files.folder_loading') }}</q-item-section>
-      </q-item>
-      <q-item v-else-if="!visibleEntries.length" dense>
-        <q-item-section class="text-grey-7">{{ $text('files.folder_empty') }}</q-item-section>
-      </q-item>
+    <div v-else class="media-folder-browser__list">
+      <div v-if="loading" class="media-folder-browser__status text-grey-7">
+        <q-spinner size="20px" class="q-mr-sm" />
+        {{ $text('files.folder_loading') }}
+      </div>
+      <div v-else-if="!visibleEntries.length" class="media-folder-browser__status text-grey-7">
+        {{ $text('files.folder_empty') }}
+      </div>
       <template v-else>
-        <q-item dense class="media-folder-browser__header text-caption text-grey-7">
-          <q-item-section avatar />
-          <q-item-section>{{ $text('files.col_name') }}</q-item-section>
-          <q-item-section side class="media-folder-browser__date-col">
-            {{ $text('files.col_created') }}
-          </q-item-section>
-          <q-item-section side class="media-folder-browser__size-col">
-            {{ $text('files.col_size') }}
-          </q-item-section>
-          <q-item-section side class="media-folder-browser__actions-col" />
-        </q-item>
-        <q-item
+        <button
           v-for="entry in visibleEntries"
           :key="entry.path"
-          clickable
-          v-ripple
-          dense
+          type="button"
+          class="media-folder-browser__entry"
           @click="onEntryClick(entry)"
         >
-          <q-item-section avatar>
+          <span class="media-folder-browser__entry-main">
             <q-icon
               :name="entryIcon(entry)"
               :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
+              size="20px"
             />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label class="ellipsis">{{ entry.name }}</q-item-label>
-          </q-item-section>
-          <q-item-section side class="media-folder-browser__date-col">
-            <q-item-label caption class="media-folder-browser__date">
-              {{ formatCreated(entry.createdMs) }}
-            </q-item-label>
-          </q-item-section>
-          <q-item-section side class="media-folder-browser__size-col">
-            <q-item-label caption>
-              {{ entry.isDirectory ? '—' : formatSize(entry.size) }}
-            </q-item-label>
-          </q-item-section>
-          <q-item-section v-if="!entry.isDirectory" side class="media-folder-browser__actions-col">
+            <span class="media-folder-browser__entry-name">{{ entry.name }}</span>
             <q-btn
+              v-if="!entry.isDirectory"
               dense
               flat
               round
+              size="sm"
               icon="open_in_new"
+              class="media-folder-browser__entry-open"
               :title="$text('files.open_file')"
               @click.stop="openFile(entry.path)"
             />
-          </q-item-section>
-          <q-item-section v-else side class="media-folder-browser__actions-col" />
-        </q-item>
+          </span>
+          <span class="media-folder-browser__entry-meta text-caption text-grey-7">
+            <span>{{ formatCreated(entry.createdMs) }}</span>
+            <span v-if="!entry.isDirectory" class="media-folder-browser__entry-size">
+              {{ formatSize(entry.size) }}
+            </span>
+          </span>
+        </button>
       </template>
-    </q-list>
+    </div>
   </div>
 </template>
 
@@ -223,6 +204,8 @@ function formatCreated(ms: number | null | undefined): string {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(d);
 }
 
@@ -254,33 +237,80 @@ watch(
 }
 
 .media-folder-browser__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 8px 10px;
   max-height: 280px;
   overflow-y: auto;
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 8px;
+  box-sizing: border-box;
 }
 
-.media-folder-browser__header {
-  min-height: 32px;
-  pointer-events: none;
-  user-select: none;
+.media-folder-browser__status {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 4px;
 }
 
-.media-folder-browser__date-col {
-  min-width: 108px;
-  text-align: right;
+.media-folder-browser__entry {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 120ms ease, border-color 120ms ease;
 }
 
-.media-folder-browser__size-col {
-  min-width: 72px;
-  text-align: right;
+.media-folder-browser__entry:hover {
+  border-color: rgba(25, 118, 210, 0.45);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.12);
 }
 
-.media-folder-browser__actions-col {
-  min-width: 40px;
+.media-folder-browser__entry-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
 }
 
-.media-folder-browser__date {
+.media-folder-browser__entry-name {
   white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.media-folder-browser__entry-open {
+  flex-shrink: 0;
+}
+
+.media-folder-browser__entry-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.media-folder-browser__entry-size::before {
+  content: '·';
+  margin-right: 10px;
+  opacity: 0.55;
 }
 
 .ellipsis {
