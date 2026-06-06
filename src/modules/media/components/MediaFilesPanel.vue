@@ -68,7 +68,6 @@ const listSizeVariant = computed(() =>
 
 <style scoped>
 .media-files-panel {
-  min-height: 240px;
   padding: 0;
 }
 
