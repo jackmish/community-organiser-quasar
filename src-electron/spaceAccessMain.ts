@@ -8,14 +8,12 @@ import {
   loadSpaceRegistrySnapshot,
   resolveActiveDataPath,
   resolveActiveSpaceContext,
-  resolveActiveStorageMode,
+  resolveDataPathForSpace,
 } from './spaceRegistryMain';
-import { loadAppSettingsFromSqlite, sqliteDbExists } from './spaceSqliteMain';
 
 const ACCESS_FILE = 'space-access.json';
 const DEVICE_ACCESS_FILE = 'device-space-access.json';
 const LEGACY_ACCESS_FILE = path.join('co21', ACCESS_FILE);
-const PROFILE_SETTINGS_KEY = 'co21_user_profile';
 
 function hashPassword(plain: string): string {
   return createHash('sha256').update(plain, 'utf8').digest('hex');
@@ -38,55 +36,19 @@ function legacyAccessFilePath(dataPath: string): string {
   return path.join(dataPath, LEGACY_ACCESS_FILE);
 }
 
-function readJsonObject(filePath: string): Record<string, unknown> | null {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    const raw = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
-    if (!raw.trim()) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
-
-function loadAppSettingsFromFiles(dataPath: string): Record<string, unknown> {
-  return readJsonObject(path.join(dataPath, 'storage', 'settings.json')) ?? {};
-}
-
-function loadAppSettingsForSpace(dataPath: string): Record<string, unknown> {
-  const storageMode = resolveActiveStorageMode();
-  if (storageMode === 'sqlite' && sqliteDbExists(dataPath)) {
-    try {
-      return loadAppSettingsFromSqlite(dataPath);
-    } catch {
-      return loadAppSettingsFromFiles(dataPath);
-    }
-  }
-  return loadAppSettingsFromFiles(dataPath);
-}
-
-/** CO21 account password from Services → stored in active space app settings. */
-function readCo21ProfilePasswordHash(dataPath: string): string | null {
-  const settings = loadAppSettingsForSpace(dataPath);
-  const profile = settings[PROFILE_SETTINGS_KEY];
-  if (!profile || typeof profile !== 'object') return null;
-  const co21 = (profile as { co21?: { passwordHash?: unknown } }).co21;
-  const hash = typeof co21?.passwordHash === 'string' ? co21.passwordHash.trim() : '';
-  return hash || null;
-}
-
 function parseAccessFile(raw: string): SpaceAccessFile | null {
   try {
     if (!raw.trim()) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     const obj = parsed as Partial<SpaceAccessFile>;
-    if (typeof obj.enabled !== 'boolean') return null;
+    const passwordHash = typeof obj.passwordHash === 'string' ? obj.passwordHash : null;
+    const enabled =
+      typeof obj.enabled === 'boolean' ? obj.enabled : !!passwordHash;
     return {
-      enabled: obj.enabled,
+      enabled,
       method: 'password',
-      passwordHash: typeof obj.passwordHash === 'string' ? obj.passwordHash : null,
+      passwordHash,
       updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : new Date().toISOString(),
     };
   } catch {
@@ -127,26 +89,14 @@ function listAccessCandidatePaths(dataPath: string): string[] {
   return [...new Set(paths)];
 }
 
-function findAccessFile(dataPath: string): { file: SpaceAccessFile; path: string } | null {
+/** Simple local password auth only — not CO21 account or future auth methods. */
+function readSimpleAccessRecord(dataPath: string): { file: SpaceAccessFile; path: string } | null {
   for (const candidate of listAccessCandidatePaths(dataPath)) {
     const file = readAccessFileAt(candidate);
-    if (file?.enabled && file.passwordHash) {
+    if (!file) continue;
+    if (file.passwordHash || file.enabled) {
       return { file, path: candidate };
     }
-  }
-  return null;
-}
-
-function resolveAccessCredentials(
-  dataPath: string,
-): { passwordHash: string; source: 'space-access-file' | 'co21-profile' } | null {
-  const fileAccess = findAccessFile(dataPath);
-  if (fileAccess?.file.passwordHash) {
-    return { passwordHash: fileAccess.file.passwordHash, source: 'space-access-file' };
-  }
-  const profileHash = readCo21ProfilePasswordHash(dataPath);
-  if (profileHash) {
-    return { passwordHash: profileHash, source: 'co21-profile' };
   }
   return null;
 }
@@ -177,39 +127,52 @@ function deleteAccessFile(dataPath: string): void {
   }
 }
 
+function statusFromDataPath(dataPath: string, spaceName: string): SpaceAccessStatus {
+  const record = readSimpleAccessRecord(dataPath);
+  const hasPassword = !!record?.file.passwordHash;
+  const enabled = !!record?.file.enabled && hasPassword;
+  return {
+    enabled,
+    hasPassword,
+    method: hasPassword ? 'password' : null,
+    spaceName,
+  };
+}
+
 export function getActiveSpaceAccessStatus(): SpaceAccessStatus {
   const snapshot = loadSpaceRegistrySnapshot();
   const active = snapshot.registry.spaces.find((s) => s.id === snapshot.registry.activeSpaceId);
   const spaceName = active?.name?.trim() || 'Space';
   const ctx = resolveActiveSpaceContext();
-  const creds = resolveAccessCredentials(ctx.dataPath);
+  return statusFromDataPath(ctx.dataPath, spaceName);
+}
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.error('[spaceAccess] status', {
-      spaceId: snapshot.registry.activeSpaceId,
-      dataPath: ctx.dataPath,
-      source: creds?.source ?? null,
-      protected: !!creds,
-    });
+export function getSpaceAccessStatusById(spaceId: string): SpaceAccessStatus {
+  const snapshot = loadSpaceRegistrySnapshot();
+  const space = snapshot.registry.spaces.find((s) => s.id === spaceId);
+  if (!space) {
+    return { enabled: false, hasPassword: false, method: null, spaceName: '' };
   }
+  const spaceName = space.name?.trim() || 'Space';
+  return statusFromDataPath(resolveDataPathForSpace(space), spaceName);
+}
 
-  if (!creds) {
-    return { enabled: false, hasPassword: false, method: null, spaceName };
+export function getAllSpacesAccessStatus(): Record<string, SpaceAccessStatus> {
+  const snapshot = loadSpaceRegistrySnapshot();
+  const result: Record<string, SpaceAccessStatus> = {};
+  for (const space of snapshot.registry.spaces) {
+    const spaceName = space.name?.trim() || 'Space';
+    result[space.id] = statusFromDataPath(resolveDataPathForSpace(space), spaceName);
   }
-  return {
-    enabled: true,
-    hasPassword: true,
-    method: 'password',
-    spaceName,
-  };
+  return result;
 }
 
 export function verifyActiveSpacePassword(plain: string): boolean {
   const dataPath = resolveActiveDataPath();
-  const creds = resolveAccessCredentials(dataPath);
-  if (!creds) return true;
+  const record = readSimpleAccessRecord(dataPath);
+  if (!record?.file.enabled || !record.file.passwordHash) return true;
   if (!plain) return false;
-  return hashPassword(plain) === creds.passwordHash;
+  return hashPassword(plain) === record.file.passwordHash;
 }
 
 export function setActiveSpaceAccessPassword(
@@ -217,35 +180,60 @@ export function setActiveSpaceAccessPassword(
   currentPassword?: string,
 ): SpaceAccessStatus {
   const dataPath = resolveActiveDataPath();
-  const existing = resolveAccessCredentials(dataPath);
-  if (existing?.passwordHash) {
+  const record = readSimpleAccessRecord(dataPath);
+  if (record?.file.passwordHash) {
     const current = currentPassword ?? '';
-    if (hashPassword(current) !== existing.passwordHash) {
+    if (hashPassword(current) !== record.file.passwordHash) {
       throw new Error('Current password is incorrect');
     }
   }
   const trimmed = newPassword.trim();
   if (!trimmed) throw new Error('Password is required');
-  const written = writeAccessFile(dataPath, {
+  writeAccessFile(dataPath, {
     enabled: true,
     method: 'password',
     passwordHash: hashPassword(trimmed),
     updatedAt: new Date().toISOString(),
   });
-  if (process.env.NODE_ENV !== 'production') {
-    console.error('[spaceAccess] password saved', { dataPath, written });
-  }
   return getActiveSpaceAccessStatus();
 }
 
-export function disableActiveSpaceAccess(currentPassword: string): SpaceAccessStatus {
+/** Toggle simple password auth on/off without affecting other auth methods. */
+export function setSimpleSpaceAccessEnabled(enabled: boolean): SpaceAccessStatus {
   const dataPath = resolveActiveDataPath();
-  const existing = resolveAccessCredentials(dataPath);
-  if (existing?.passwordHash) {
-    if (!verifyActiveSpacePassword(currentPassword)) {
-      throw new Error('Current password is incorrect');
+  const snapshot = loadSpaceRegistrySnapshot();
+  const active = snapshot.registry.spaces.find((s) => s.id === snapshot.registry.activeSpaceId);
+  const spaceName = active?.name?.trim() || 'Space';
+
+  if (!enabled) {
+    const record = readSimpleAccessRecord(dataPath);
+    if (!record?.file.passwordHash) {
+      deleteAccessFile(dataPath);
+      return statusFromDataPath(dataPath, spaceName);
     }
+    writeAccessFile(dataPath, {
+      enabled: false,
+      method: 'password',
+      passwordHash: record.file.passwordHash,
+      updatedAt: new Date().toISOString(),
+    });
+    return statusFromDataPath(dataPath, spaceName);
   }
-  deleteAccessFile(dataPath);
-  return getActiveSpaceAccessStatus();
+
+  const record = readSimpleAccessRecord(dataPath);
+  if (!record?.file.passwordHash) {
+    throw new Error('Set a password first');
+  }
+  writeAccessFile(dataPath, {
+    enabled: true,
+    method: 'password',
+    passwordHash: record.file.passwordHash,
+    updatedAt: new Date().toISOString(),
+  });
+  return statusFromDataPath(dataPath, spaceName);
+}
+
+/** @deprecated Use setSimpleSpaceAccessEnabled(false) — kept for IPC compatibility. */
+export function disableActiveSpaceAccess(_currentPassword?: string): SpaceAccessStatus {
+  return setSimpleSpaceAccessEnabled(false);
 }

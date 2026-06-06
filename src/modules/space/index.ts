@@ -32,7 +32,9 @@ export {
   disableActiveSpaceAccess,
   isSpaceAccessAvailable,
   loadActiveSpaceAccessStatus,
+  loadAllSpacesAccessStatus,
   setActiveSpaceAccessPassword,
+  setSimpleSpaceAccessEnabled,
   verifyActiveSpacePassword,
 } from './spaceAccessService';
 

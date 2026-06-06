@@ -357,6 +357,8 @@
   "space.access.incorrect_password": "Incorrect password",
   "space.access.method_password": "Password protection",
   "space.access.enabled": "Enabled",
+  "space.access.paused": "Off (password kept)",
+  "space.access.disabled_ok": "Workspace password login turned off",
   "space.access.disabled": "Not set",
   "space.access.device_local_hint": "Stored under this space folder in a device-specific subfolder. Other devices and LAN sync do not use your password file.",
   "space.access.set_password": "Set password",

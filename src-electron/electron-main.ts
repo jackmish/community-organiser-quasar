@@ -37,7 +37,9 @@ import {
 import {
   disableActiveSpaceAccess,
   getActiveSpaceAccessStatus,
+  getAllSpacesAccessStatus,
   setActiveSpaceAccessPassword,
+  setSimpleSpaceAccessEnabled,
   verifyActiveSpacePassword,
 } from './spaceAccessMain';
 import {
@@ -292,6 +294,8 @@ ipcMain.handle('space:restart-app', () => {
 
 ipcMain.handle('space:access-get-status', () => getActiveSpaceAccessStatus());
 
+ipcMain.handle('space:access-get-all-statuses', () => getAllSpacesAccessStatus());
+
 ipcMain.handle('space:access-verify', (_evt, password: unknown) => {
   try {
     const plain = typeof password === 'string' ? password : '';
@@ -319,10 +323,19 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle('space:access-disable', (_evt, payload: { currentPassword?: string }) => {
+ipcMain.handle('space:access-disable', (_evt, _payload: { currentPassword?: string }) => {
   try {
-    const currentPassword = typeof payload?.currentPassword === 'string' ? payload.currentPassword : '';
-    const status = disableActiveSpaceAccess(currentPassword);
+    const status = setSimpleSpaceAccessEnabled(false);
+    return { ok: true as const, status };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle('space:access-set-enabled', (_evt, enabled: unknown) => {
+  try {
+    const status = setSimpleSpaceAccessEnabled(enabled === true);
     return { ok: true as const, status };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

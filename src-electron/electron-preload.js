@@ -203,9 +203,11 @@ contextBridge.exposeInMainWorld('electronSpace', {
 
 contextBridge.exposeInMainWorld('electronSpaceAccess', {
   getStatus: () => ipcRenderer.invoke('space:access-get-status'),
+  getAllStatuses: () => ipcRenderer.invoke('space:access-get-all-statuses'),
   verify: (password) => ipcRenderer.invoke('space:access-verify', password),
   setPassword: (payload) => ipcRenderer.invoke('space:access-set-password', payload),
   disable: (payload) => ipcRenderer.invoke('space:access-disable', payload),
+  setEnabled: (enabled) => ipcRenderer.invoke('space:access-set-enabled', enabled),
 });
 
 // ── Google Auth bridge ──────────────────────────────────────────────────────

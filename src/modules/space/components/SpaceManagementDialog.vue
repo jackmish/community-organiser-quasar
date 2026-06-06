@@ -98,10 +98,10 @@
                     {{ $text('space.default_on_start') }}
                   </q-badge>
                 </q-item-label>
-                <q-item-label caption>
+                <q-item-label v-if="canShowSpaceSensitiveDetails(space)" caption>
                   {{ spaceCaption(space) }}
                 </q-item-label>
-                <div class="space-storage-mode q-mt-sm">
+                <div v-if="canShowSpaceSensitiveDetails(space)" class="space-storage-mode q-mt-sm">
                   <div class="text-caption text-weight-medium q-mb-xs">
                     {{ $text('space.storage_mode') }}
                   </div>
@@ -162,6 +162,7 @@
                     @click="openActiveSpaceServices"
                   />
                   <q-btn
+                    v-if="canShowSpaceSensitiveDetails(space)"
                     flat
                     dense
                     round
@@ -214,13 +215,16 @@
 import { ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+import { useSpaceAuth } from 'src/composables/useSpaceAuth';
 import { appNotify } from 'src/utils/appNotify';
 import {
   SYSTEM_SPACE_ID,
   browseSpaceFolder,
   createCustomSpace,
+  isSpaceAccessAvailable,
   isSpaceManagementAvailable,
   isSystemSpace,
+  loadAllSpacesAccessStatus,
   loadSpaceRegistrySnapshot,
   migrateSpaceToSqlite,
   openSpaceFolder,
@@ -231,6 +235,7 @@ import {
   type SpaceEntry,
   type SpaceStorageMode,
 } from 'src/modules/space';
+import type { SpaceAccessStatus } from 'src/modules/space/spaceAccessModel';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -240,6 +245,8 @@ const emit = defineEmits<{
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
   useSettingsDialogLayout(560, 720);
+
+const { unlocked: spaceUnlocked } = useSpaceAuth();
 
 const dialogVisible = ref(!!props.modelValue);
 watch(
@@ -265,6 +272,18 @@ const switchConfirmOpen = ref(false);
 const pendingSwitchSpace = ref<SpaceEntry | null>(null);
 const switching = ref(false);
 const migratingId = ref<string | null>(null);
+const spaceAccessById = ref<Record<string, SpaceAccessStatus>>({});
+
+function isSpacePasswordProtected(spaceId: string): boolean {
+  const access = spaceAccessById.value[spaceId];
+  return !!access?.enabled && !!access?.hasPassword;
+}
+
+function canShowSpaceSensitiveDetails(space: SpaceEntry): boolean {
+  if (!isActive(space.id)) return false;
+  if (isSpacePasswordProtected(space.id) && !spaceUnlocked.value) return false;
+  return true;
+}
 
 function openActiveSpaceServices(): void {
   emit('open-services');
@@ -356,6 +375,11 @@ async function refresh(): Promise<void> {
   activeSpaceId.value = snapshot.registry.activeSpaceId;
   defaultSpaceId.value = snapshot.defaultSpaceId ?? snapshot.registry.defaultSpaceId ?? null;
   defaultUserDataPath.value = snapshot.defaultUserDataPath;
+  if (isSpaceAccessAvailable()) {
+    spaceAccessById.value = await loadAllSpacesAccessStatus();
+  } else {
+    spaceAccessById.value = {};
+  }
 }
 
 function openCreateForm(): void {

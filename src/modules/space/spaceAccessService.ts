@@ -5,11 +5,13 @@ type Err = { ok: false; error: string };
 
 export interface SpaceAccessElectronAPI {
   getStatus: () => Promise<SpaceAccessStatus>;
+  getAllStatuses: () => Promise<Record<string, SpaceAccessStatus>>;
   verify: (password: string) => Promise<Ok<{ verified: boolean }> | Err>;
   setPassword: (payload: { password: string; currentPassword?: string }) => Promise<
     Ok<{ status: SpaceAccessStatus }> | Err
   >;
   disable: (payload: { currentPassword: string }) => Promise<Ok<{ status: SpaceAccessStatus }> | Err>;
+  setEnabled: (enabled: boolean) => Promise<Ok<{ status: SpaceAccessStatus }> | Err>;
 }
 
 function accessApi(): SpaceAccessElectronAPI | null {
@@ -36,6 +38,12 @@ export async function loadActiveSpaceAccessStatus(): Promise<SpaceAccessStatus |
   return api.getStatus();
 }
 
+export async function loadAllSpacesAccessStatus(): Promise<Record<string, SpaceAccessStatus>> {
+  const api = accessApi();
+  if (!api?.getAllStatuses) return {};
+  return api.getAllStatuses();
+}
+
 export async function verifyActiveSpacePassword(password: string): Promise<boolean> {
   const api = accessApi();
   if (!api) return true;
@@ -57,10 +65,14 @@ export async function setActiveSpaceAccessPassword(
   return result.status;
 }
 
-export async function disableActiveSpaceAccess(currentPassword: string): Promise<SpaceAccessStatus> {
+export async function setSimpleSpaceAccessEnabled(enabled: boolean): Promise<SpaceAccessStatus> {
   const api = accessApi();
   if (!api) throw new Error('Space access is only available in the desktop app');
-  const result = await api.disable({ currentPassword });
+  const result = await api.setEnabled(enabled);
   if (!result.ok) throw new Error(result.error);
   return result.status;
+}
+
+export async function disableActiveSpaceAccess(_currentPassword?: string): Promise<SpaceAccessStatus> {
+  return setSimpleSpaceAccessEnabled(false);
 }
