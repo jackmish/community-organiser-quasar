@@ -108,8 +108,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { $text, getLocale } from 'src/modules/lang';
+import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
 import {
-  getMediaThumbnails,
   isImageFileName,
   isThumbableFileName,
   listMediaFolder,
@@ -132,8 +132,7 @@ const currentPath = ref('');
 const parentPath = ref<string | null>(null);
 const canGoUp = ref(false);
 const entries = ref<MediaFolderEntry[]>([]);
-const thumbUrls = ref<Record<string, string>>({});
-let thumbRequestGen = 0;
+const { thumbUrls, loadThumbs, reset: resetThumbs } = useProgressiveMediaThumbs();
 
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
 
@@ -166,8 +165,8 @@ async function refresh(): Promise<void> {
     parentPath.value = result.parentPath;
     canGoUp.value = result.canGoUp;
     entries.value = result.entries;
-    thumbUrls.value = {};
-    void loadThumbs(result.entries);
+    resetThumbs();
+    void loadThumbs(root, result.entries);
   } finally {
     loading.value = false;
   }
@@ -214,33 +213,6 @@ function entryThumb(entry: MediaFolderEntry): string | undefined {
 
 function showEntryThumb(entry: MediaFolderEntry): boolean {
   return !entry.isDirectory && isThumbableFileName(entry.name);
-}
-
-async function loadThumbs(list: MediaFolderEntry[]): Promise<void> {
-  const root = String(props.rootPath || '').trim();
-  if (!root) return;
-
-  const gen = ++thumbRequestGen;
-  const targets = list.filter((e) => !e.isDirectory && isThumbableFileName(e.name));
-  if (!targets.length) return;
-
-  const result = await getMediaThumbnails(
-    root,
-    targets.map((entry) => ({
-      filePath: entry.path,
-      modifiedMs: entry.modifiedMs,
-    })),
-  );
-  if (gen !== thumbRequestGen || !result.ok) return;
-
-  const next: Record<string, string> = { ...thumbUrls.value };
-  for (const entry of targets) {
-    const thumb = result.thumbs[entry.path];
-    if (thumb?.ok && thumb.url) {
-      next[entry.path] = thumb.url;
-    }
-  }
-  thumbUrls.value = next;
 }
 
 function formatSize(bytes: number | null | undefined): string {
