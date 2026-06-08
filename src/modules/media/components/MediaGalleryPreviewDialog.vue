@@ -1,52 +1,56 @@
 <template>
-  <q-dialog
-    :model-value="open"
-    maximized
-    transition-show="fade"
-    transition-hide="fade"
-    @update:model-value="onDialogToggle"
-  >
-    <div class="media-gallery-preview" @click="close">
-      <div class="media-gallery-preview__header">
-        <div class="media-gallery-preview__title ellipsis">{{ entry?.name }}</div>
-        <q-btn
-          flat
-          round
-          dense
-          icon="close"
-          color="white"
-          :aria-label="$text('action.close')"
-          @click.stop="close"
+  <Teleport to="body">
+    <q-dialog
+      :model-value="open"
+      maximized
+      seamless
+      class="media-gallery-preview-dialog"
+      transition-show="fade"
+      transition-hide="fade"
+      @update:model-value="onDialogToggle"
+    >
+      <div class="media-gallery-preview" @click="close">
+        <div class="media-gallery-preview__stage" @click.stop="close">
+          <img
+            v-if="imageUrl"
+            :src="imageUrl"
+            class="media-gallery-preview__image"
+            :class="{ 'media-gallery-preview__image--loading': loading }"
+            :alt="entry?.name || ''"
+            @error="onImageError"
+            @click.stop
+          />
+          <q-spinner v-else color="white" size="48px" />
+          <q-spinner
+            v-if="loading && imageUrl"
+            color="white"
+            size="32px"
+            class="media-gallery-preview__loading"
+          />
+        </div>
+        <div class="media-gallery-preview__header">
+          <div class="media-gallery-preview__title ellipsis">{{ entry?.name }}</div>
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            color="white"
+            :aria-label="$text('action.close')"
+            @click.stop="close"
+          />
+        </div>
+        <MediaGalleryTagActions
+          v-if="entry && rootPath"
+          :root-path="rootPath"
+          :file-path="entry.path"
+          class="media-gallery-preview__tags"
+          @moved="onTagged"
+          @error="onTagError"
         />
       </div>
-      <div class="media-gallery-preview__stage" @click.stop="close">
-        <img
-          v-if="imageUrl"
-          :src="imageUrl"
-          class="media-gallery-preview__image"
-          :class="{ 'media-gallery-preview__image--loading': loading }"
-          :alt="entry?.name || ''"
-          @error="onImageError"
-          @click.stop
-        />
-        <q-spinner v-else color="white" size="48px" />
-        <q-spinner
-          v-if="loading && imageUrl"
-          color="white"
-          size="32px"
-          class="media-gallery-preview__loading"
-        />
-      </div>
-      <MediaGalleryTagActions
-        v-if="entry && rootPath"
-        :root-path="rootPath"
-        :file-path="entry.path"
-        class="media-gallery-preview__tags"
-        @moved="onTagged"
-        @error="onTagError"
-      />
-    </div>
-  </q-dialog>
+    </q-dialog>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -133,37 +137,31 @@ function onTagError(message: string): void {
 <style scoped>
 .media-gallery-preview {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.92);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
   color: #fff;
 }
 
-.media-gallery-preview__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-shrink: 0;
-  padding: 8px 8px 8px 16px;
-}
-
-.media-gallery-preview__title {
-  font-weight: 600;
-  min-width: 0;
-}
-
 .media-gallery-preview__stage {
-  position: relative;
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
-  padding: 8px 16px 24px;
   cursor: zoom-out;
+}
+
+.media-gallery-preview__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+  cursor: default;
+  user-select: none;
 }
 
 .media-gallery-preview__image--loading {
@@ -177,18 +175,51 @@ function onTagError(message: string): void {
   transform: translateX(-50%);
 }
 
-.media-gallery-preview__image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  cursor: default;
-  user-select: none;
+.media-gallery-preview__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 28px 16px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.media-gallery-preview__header :deep(.q-btn) {
+  pointer-events: auto;
+}
+
+.media-gallery-preview__title {
+  font-weight: 600;
+  min-width: 0;
+  pointer-events: auto;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .media-gallery-preview__tags {
   position: absolute;
-  top: 56px;
-  right: 16px;
-  z-index: 2;
+  top: 12px;
+  right: 52px;
+  z-index: 4;
+}
+</style>
+
+<style>
+.media-gallery-preview-dialog .q-dialog__inner {
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
+
+.media-gallery-preview-dialog .q-dialog__inner > div {
+  width: 100%;
+  height: 100%;
 }
 </style>
