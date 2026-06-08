@@ -30,24 +30,26 @@
         </div>
 
         <button
-          v-if="canGoPrev"
+          v-if="hasMultiple"
           type="button"
           class="media-gallery-preview__nav media-gallery-preview__nav--prev"
-          :title="$text('files.gallery_preview_prev')"
-          :aria-label="$text('files.gallery_preview_prev')"
+          :title="prevLoopHint ? $text('files.gallery_preview_loop') : $text('files.gallery_preview_prev')"
+          :aria-label="prevLoopHint ? $text('files.gallery_preview_loop') : $text('files.gallery_preview_prev')"
           @click.stop="goPrev"
         >
+          <span v-if="prevLoopHint" class="media-gallery-preview__nav-loop">{{ $text('files.gallery_preview_loop') }}</span>
           <q-icon name="chevron_left" size="56px" />
         </button>
         <button
-          v-if="canGoNext"
+          v-if="hasMultiple"
           type="button"
           class="media-gallery-preview__nav media-gallery-preview__nav--next"
-          :title="$text('files.gallery_preview_next')"
-          :aria-label="$text('files.gallery_preview_next')"
+          :title="nextLoopHint ? $text('files.gallery_preview_loop') : $text('files.gallery_preview_next')"
+          :aria-label="nextLoopHint ? $text('files.gallery_preview_loop') : $text('files.gallery_preview_next')"
           @click.stop="goNext"
         >
           <q-icon name="chevron_right" size="56px" />
+          <span v-if="nextLoopHint" class="media-gallery-preview__nav-loop">{{ $text('files.gallery_preview_loop') }}</span>
         </button>
 
         <div class="media-gallery-preview__header">
@@ -109,12 +111,15 @@ const currentIndex = computed(() => {
   return props.entries?.findIndex((item) => item.path === entry.path) ?? -1;
 });
 
-const canGoPrev = computed(() => currentIndex.value > 0);
-const canGoNext = computed(() => {
-  const idx = currentIndex.value;
-  const total = props.entries?.length ?? 0;
-  return idx >= 0 && idx < total - 1;
-});
+const totalCount = computed(() => props.entries?.length ?? 0);
+
+const hasMultiple = computed(() => totalCount.value > 1);
+
+const prevLoopHint = computed(() => hasMultiple.value && currentIndex.value === 0);
+
+const nextLoopHint = computed(
+  () => hasMultiple.value && currentIndex.value === totalCount.value - 1,
+);
 
 const positionLabel = computed(() => {
   const idx = currentIndex.value;
@@ -156,14 +161,24 @@ function onImageError(): void {
 }
 
 function goPrev(): void {
-  if (!canGoPrev.value || !props.entries) return;
-  const next = props.entries[currentIndex.value - 1];
+  const list = props.entries;
+  const total = list?.length ?? 0;
+  if (!list || total <= 1) return;
+  const idx = currentIndex.value;
+  if (idx < 0) return;
+  const nextIdx = idx === 0 ? total - 1 : idx - 1;
+  const next = list[nextIdx];
   if (next) emit('update:entry', next);
 }
 
 function goNext(): void {
-  if (!canGoNext.value || !props.entries) return;
-  const next = props.entries[currentIndex.value + 1];
+  const list = props.entries;
+  const total = list?.length ?? 0;
+  if (!list || total <= 1) return;
+  const idx = currentIndex.value;
+  if (idx < 0) return;
+  const nextIdx = idx === total - 1 ? 0 : idx + 1;
+  const next = list[nextIdx];
   if (next) emit('update:entry', next);
 }
 
@@ -214,7 +229,6 @@ function onDialogToggle(value: boolean): void {
 
 function onTagged(): void {
   emit('moved');
-  close();
 }
 
 function onTagError(message: string): void {
@@ -268,12 +282,14 @@ function onTagError(message: string): void {
   top: 50%;
   z-index: 4;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   width: 80px;
-  height: 140px;
+  min-height: 140px;
   margin: 0;
-  padding: 0;
+  padding: 8px 4px;
   border: 0;
   border-radius: 0;
   background: rgba(0, 0, 0, 0.45);
@@ -283,6 +299,17 @@ function onTagError(message: string): void {
   visibility: hidden;
   transform: translateY(-50%);
   transition: opacity 140ms ease, visibility 140ms ease, background 120ms ease;
+}
+
+.media-gallery-preview__nav-loop {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-align: center;
+  opacity: 0.92;
+  max-width: 72px;
 }
 
 .media-gallery-preview__nav--prev {

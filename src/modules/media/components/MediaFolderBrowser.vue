@@ -289,11 +289,33 @@ function openGalleryPreview(entry: MediaFolderEntry): void {
   previewOpen.value = true;
 }
 
-function onGalleryFileTagged(): void {
+async function onGalleryFileTagged(): Promise<void> {
   tagError.value = '';
+  const wasPreviewOpen = previewOpen.value;
+  const oldIdx =
+    previewEntry.value != null
+      ? previewImageEntries.value.findIndex((e) => e.path === previewEntry.value!.path)
+      : -1;
+
+  if (wasPreviewOpen && oldIdx >= 0) {
+    await refresh();
+    const images = previewImageEntries.value;
+    if (!images.length) {
+      previewOpen.value = false;
+      previewEntry.value = null;
+      return;
+    }
+    const nextIdx = oldIdx >= images.length ? 0 : oldIdx;
+    previewEntry.value = images[nextIdx] ?? null;
+    if (!previewEntry.value) {
+      previewOpen.value = false;
+    }
+    return;
+  }
+
   previewOpen.value = false;
   previewEntry.value = null;
-  void refresh();
+  await refresh();
 }
 
 function onGalleryTagError(message: string): void {

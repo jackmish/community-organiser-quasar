@@ -90,6 +90,7 @@
   "files.gallery_preview_failed": "Nie udało się wczytać pełnego obrazu",
   "files.gallery_preview_prev": "Poprzednie zdjęcie",
   "files.gallery_preview_next": "Następne zdjęcie",
+  "files.gallery_preview_loop": "Zapętl",
   "files.col_name": "Nazwa",
   "files.col_created": "Utworzono",
   "files.col_size": "Rozmiar",

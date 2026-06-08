@@ -90,6 +90,7 @@
   "files.gallery_preview_failed": "Failed to load full image",
   "files.gallery_preview_prev": "Previous photo",
   "files.gallery_preview_next": "Next photo",
+  "files.gallery_preview_loop": "Loop",
   "files.col_name": "Name",
   "files.col_created": "Created",
   "files.col_size": "Size",
