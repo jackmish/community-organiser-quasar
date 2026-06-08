@@ -28,8 +28,33 @@
             class="media-gallery-preview__loading"
           />
         </div>
+
+        <button
+          v-if="canGoPrev"
+          type="button"
+          class="media-gallery-preview__nav media-gallery-preview__nav--prev"
+          :title="$text('files.gallery_preview_prev')"
+          :aria-label="$text('files.gallery_preview_prev')"
+          @click.stop="goPrev"
+        >
+          <q-icon name="chevron_left" size="56px" />
+        </button>
+        <button
+          v-if="canGoNext"
+          type="button"
+          class="media-gallery-preview__nav media-gallery-preview__nav--next"
+          :title="$text('files.gallery_preview_next')"
+          :aria-label="$text('files.gallery_preview_next')"
+          @click.stop="goNext"
+        >
+          <q-icon name="chevron_right" size="56px" />
+        </button>
+
         <div class="media-gallery-preview__header">
-          <div class="media-gallery-preview__title ellipsis">{{ entry?.name }}</div>
+          <div class="media-gallery-preview__title ellipsis">
+            {{ entry?.name }}
+            <span v-if="positionLabel" class="media-gallery-preview__position">{{ positionLabel }}</span>
+          </div>
           <q-btn
             flat
             round
@@ -54,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { getMediaFullImageUrl, type MediaFolderEntry } from '../mediaFolderService';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
@@ -63,11 +88,13 @@ const props = defineProps<{
   open: boolean;
   rootPath: string;
   entry: MediaFolderEntry | null;
+  entries?: MediaFolderEntry[];
   fallbackThumbUrl?: string;
 }>();
 
 const emit = defineEmits<{
   'update:open': [value: boolean];
+  'update:entry': [entry: MediaFolderEntry];
   moved: [];
   error: [message: string];
 }>();
@@ -75,6 +102,26 @@ const emit = defineEmits<{
 const imageUrl = ref('');
 const loading = ref(false);
 let loadGen = 0;
+
+const currentIndex = computed(() => {
+  const entry = props.entry;
+  if (!entry) return -1;
+  return props.entries?.findIndex((item) => item.path === entry.path) ?? -1;
+});
+
+const canGoPrev = computed(() => currentIndex.value > 0);
+const canGoNext = computed(() => {
+  const idx = currentIndex.value;
+  const total = props.entries?.length ?? 0;
+  return idx >= 0 && idx < total - 1;
+});
+
+const positionLabel = computed(() => {
+  const idx = currentIndex.value;
+  const total = props.entries?.length ?? 0;
+  if (idx < 0 || total <= 1) return '';
+  return `${idx + 1} / ${total}`;
+});
 
 async function loadFullImage(): Promise<void> {
   const entry = props.entry;
@@ -108,13 +155,54 @@ function onImageError(): void {
   emit('error', $text('files.gallery_preview_failed'));
 }
 
+function goPrev(): void {
+  if (!canGoPrev.value || !props.entries) return;
+  const next = props.entries[currentIndex.value - 1];
+  if (next) emit('update:entry', next);
+}
+
+function goNext(): void {
+  if (!canGoNext.value || !props.entries) return;
+  const next = props.entries[currentIndex.value + 1];
+  if (next) emit('update:entry', next);
+}
+
+function onPreviewKeydown(event: KeyboardEvent): void {
+  if (!props.open) return;
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    goPrev();
+    return;
+  }
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    goNext();
+  }
+}
+
 watch(
-  () => [props.open, props.entry?.path, props.rootPath] as const,
+  () => [props.open, props.entry?.path, props.rootPath, props.fallbackThumbUrl] as const,
   () => {
     void loadFullImage();
   },
   { immediate: true },
 );
+
+watch(
+  () => props.open,
+  (open) => {
+    if (open) {
+      window.addEventListener('keydown', onPreviewKeydown);
+    } else {
+      window.removeEventListener('keydown', onPreviewKeydown);
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onPreviewKeydown);
+});
 
 function close(): void {
   emit('update:open', false);
@@ -175,6 +263,46 @@ function onTagError(message: string): void {
   transform: translateX(-50%);
 }
 
+.media-gallery-preview__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 140px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%);
+  transition: opacity 140ms ease, visibility 140ms ease, background 120ms ease;
+}
+
+.media-gallery-preview__nav--prev {
+  left: 0;
+}
+
+.media-gallery-preview__nav--next {
+  right: 0;
+}
+
+.media-gallery-preview:hover .media-gallery-preview__nav,
+.media-gallery-preview:focus-within .media-gallery-preview__nav {
+  opacity: 1;
+  visibility: visible;
+}
+
+.media-gallery-preview__nav:hover {
+  background: rgba(0, 0, 0, 0.62);
+}
+
 .media-gallery-preview__header {
   position: absolute;
   top: 0;
@@ -199,6 +327,13 @@ function onTagError(message: string): void {
   min-width: 0;
   pointer-events: auto;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.media-gallery-preview__position {
+  margin-left: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  opacity: 0.78;
 }
 
 .media-gallery-preview__tags {

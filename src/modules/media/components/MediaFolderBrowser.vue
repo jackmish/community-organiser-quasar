@@ -189,8 +189,10 @@
       :open="previewOpen"
       :root-path="rootPath"
       :entry="previewEntry"
+      :entries="previewImageEntries"
       :fallback-thumb-url="previewFallbackThumbUrl || ''"
       @update:open="onPreviewOpenChange"
+      @update:entry="previewEntry = $event"
       @moved="onGalleryFileTagged"
       @error="onGalleryTagError"
     />
@@ -302,6 +304,10 @@ const visibleEntries = computed(() => {
   if (!props.imagesOnly) return entries.value;
   return entries.value.filter((e) => e.isDirectory || isImageFileName(e.name));
 });
+
+const previewImageEntries = computed(() =>
+  visibleEntries.value.filter((entry) => showGalleryTags(entry)),
+);
 
 async function refresh(): Promise<void> {
   const root = String(props.rootPath || '').trim();
