@@ -217,6 +217,7 @@
           :root-path="mediaRootFolder"
           :images-only="isMediaGalleryTask"
           :gallery-layout="isMediaGalleryTask"
+          :gallery-tag-set="galleryTagSet"
           fill-available
         />
         <q-banner
@@ -635,6 +636,7 @@ const isMediaFolderTask = computed(
 const mediaRootFolder = computed(() =>
   String(activeTask.value?.mediaSharedFolderPath || "").trim(),
 );
+const galleryTagSet = computed(() => activeTask.value?.galleryTagSet ?? null);
 const showMediaFolderBrowser = computed(
   () => (isMediaFilesTask.value || isMediaGalleryTask.value) && !!mediaRootFolder.value,
 );

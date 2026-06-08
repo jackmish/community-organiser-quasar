@@ -79,6 +79,18 @@ export type MoveMediaToTagFolderPayload =
   | { ok: true; newPath: string; folderName: string }
   | { ok: false; error: string };
 
+export type ApplyMediaGalleryTagPayload =
+  | { ok: true; newPath: string; detail?: string }
+  | { ok: false; error: string };
+
+type GalleryTagActionPayload = {
+  mode: 'single_folder' | 'multi_folder' | 'hierarchical';
+  folderName?: string;
+  folders?: string[];
+  linkMode?: 'copy' | 'symlink';
+  pathSegments?: string[];
+};
+
 export type GetMediaFullImageUrlPayload =
   | { ok: true; url: string }
   | { ok: false; error: string };
@@ -245,24 +257,50 @@ async function resolveUniqueFilePath(dir: string, fileName: string): Promise<str
   }
 }
 
-async function moveFileToRootSubfolder(
+function sanitizeFolderSegment(name: string): string | null {
+  const s = String(name || '').trim();
+  if (!s || s === '.' || s === '..') return null;
+  if (s.includes('/') || s.includes('\\')) return null;
+  return s;
+}
+
+function sanitizePathSegments(segments: string[]): string[] | null {
+  const out: string[] = [];
+  for (const seg of segments) {
+    const safe = sanitizeFolderSegment(seg);
+    if (!safe) return null;
+    out.push(safe);
+  }
+  return out.length ? out : null;
+}
+
+async function copyOrLinkFile(
+  source: string,
+  dest: string,
+  linkMode: 'copy' | 'symlink',
+): Promise<void> {
+  if (linkMode === 'symlink') {
+    try {
+      await fsPromises.symlink(source, dest);
+      return;
+    } catch {
+      await fsPromises.copyFile(source, dest);
+      return;
+    }
+  }
+  await fsPromises.copyFile(source, dest);
+}
+
+async function applyGalleryTagAction(
   rootPath: string,
   filePath: string,
-  subfolderName: string,
-): Promise<MoveMediaToTagFolderPayload> {
+  action: GalleryTagActionPayload,
+): Promise<ApplyMediaGalleryTagPayload> {
   const resolvedRoot = resolveInsideRoot(rootPath, rootPath);
   if (!resolvedRoot) return { ok: false, error: 'Invalid task folder' };
 
   const resolvedFile = resolveInsideRoot(rootPath, filePath);
   if (!resolvedFile) return { ok: false, error: 'Path outside task folder' };
-
-  if (
-    subfolderName !== '_ToRemove' &&
-    subfolderName !== '_Unsupported' &&
-    subfolderName !== '_BadQuality'
-  ) {
-    return { ok: false, error: 'Invalid tag folder' };
-  }
 
   let fileStat: Stats;
   try {
@@ -274,12 +312,68 @@ async function moveFileToRootSubfolder(
     return { ok: false, error: 'Not a file' };
   }
 
-  const destDir = path.join(resolvedRoot, subfolderName);
-  await fsPromises.mkdir(destDir, { recursive: true });
-  const destPath = await resolveUniqueFilePath(destDir, path.basename(resolvedFile));
-  await fsPromises.rename(resolvedFile, destPath);
+  const fileName = path.basename(resolvedFile);
 
-  return { ok: true, newPath: destPath, folderName: subfolderName };
+  if (action.mode === 'single_folder') {
+    const folder = sanitizeFolderSegment(String(action.folderName || ''));
+    if (!folder) return { ok: false, error: 'Invalid folder name' };
+    const destDir = path.join(resolvedRoot, folder);
+    await fsPromises.mkdir(destDir, { recursive: true });
+    const destPath = await resolveUniqueFilePath(destDir, fileName);
+    await fsPromises.rename(resolvedFile, destPath);
+    return { ok: true, newPath: destPath, detail: folder };
+  }
+
+  if (action.mode === 'multi_folder') {
+    const folders = (action.folders ?? [])
+      .map((f) => sanitizeFolderSegment(f))
+      .filter((f): f is string => Boolean(f));
+    if (!folders.length) return { ok: false, error: 'No target folders' };
+    const linkMode = action.linkMode === 'symlink' ? 'symlink' : 'copy';
+    let lastPath = resolvedFile;
+    for (const folder of folders) {
+      const destDir = path.join(resolvedRoot, folder);
+      await fsPromises.mkdir(destDir, { recursive: true });
+      const destPath = await resolveUniqueFilePath(destDir, fileName);
+      await copyOrLinkFile(resolvedFile, destPath, linkMode);
+      lastPath = destPath;
+    }
+    await fsPromises.unlink(resolvedFile);
+    return { ok: true, newPath: lastPath, detail: folders.join(', ') };
+  }
+
+  if (action.mode === 'hierarchical') {
+    const segments = sanitizePathSegments(action.pathSegments ?? []);
+    if (!segments) return { ok: false, error: 'Invalid folder path' };
+    const destDir = path.join(resolvedRoot, ...segments);
+    const rel = path.relative(resolvedRoot, destDir);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      return { ok: false, error: 'Invalid folder path' };
+    }
+    await fsPromises.mkdir(destDir, { recursive: true });
+    const destPath = await resolveUniqueFilePath(destDir, fileName);
+    await fsPromises.rename(resolvedFile, destPath);
+    return { ok: true, newPath: destPath, detail: segments.join('/') };
+  }
+
+  return { ok: false, error: 'Unknown tag mode' };
+}
+
+async function moveFileToRootSubfolder(
+  rootPath: string,
+  filePath: string,
+  subfolderName: string,
+): Promise<MoveMediaToTagFolderPayload> {
+  const result = await applyGalleryTagAction(rootPath, filePath, {
+    mode: 'single_folder',
+    folderName: subfolderName,
+  });
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    newPath: result.newPath,
+    folderName: result.detail || subfolderName,
+  };
 }
 
 export function registerMediaFolderIpc(ipcMain: IpcMain): void {
@@ -381,6 +475,31 @@ export function registerMediaFolderIpc(ipcMain: IpcMain): void {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { ok: false, error: msg || 'Failed to move file' };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'media:apply-gallery-tag',
+    async (
+      _evt,
+      payload: {
+        rootPath?: string;
+        filePath?: string;
+        tag?: GalleryTagActionPayload;
+      },
+    ): Promise<ApplyMediaGalleryTagPayload> => {
+      try {
+        const rootPath = String(payload?.rootPath || '').trim();
+        const filePath = String(payload?.filePath || '').trim();
+        const tag = payload?.tag;
+        if (!rootPath || !filePath || !tag?.mode) {
+          return { ok: false, error: 'Missing path or tag' };
+        }
+        return await applyGalleryTagAction(rootPath, filePath, tag);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: msg || 'Failed to apply tag' };
       }
     },
   );

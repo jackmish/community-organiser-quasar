@@ -1,3 +1,5 @@
+import type { MediaGalleryTagAction } from './mediaGalleryTagModel';
+
 export type MediaFolderEntry = {
   name: string;
   path: string;
@@ -38,6 +40,10 @@ export type GetMediaFullImageUrlResult =
   | { ok: true; url: string }
   | { ok: false; error?: string };
 
+export type ApplyMediaGalleryTagResult =
+  | { ok: true; newPath: string; detail?: string }
+  | { ok: false; error?: string };
+
 type MediaFolderElectronAPI = {
   listMediaFolder?: (payload: {
     rootPath: string;
@@ -62,6 +68,11 @@ type MediaFolderElectronAPI = {
     filePath: string;
     folderName: string;
   }) => Promise<MoveMediaToTagFolderResult>;
+  applyMediaGalleryTag?: (payload: {
+    rootPath: string;
+    filePath: string;
+    tag: MediaGalleryTagAction;
+  }) => Promise<ApplyMediaGalleryTagResult>;
   getMediaFullImageUrl?: (payload: {
     rootPath: string;
     filePath: string;
@@ -156,6 +167,18 @@ export async function moveMediaToTagFolder(
     return { ok: false, error: 'File tagging is only available in the desktop app' };
   }
   return api.moveMediaToTagFolder({ rootPath, filePath, folderName });
+}
+
+export async function applyMediaGalleryTag(
+  rootPath: string,
+  filePath: string,
+  tag: MediaGalleryTagAction,
+): Promise<ApplyMediaGalleryTagResult> {
+  const api = mediaFolderApi();
+  if (!api?.applyMediaGalleryTag) {
+    return { ok: false, error: 'File tagging is only available in the desktop app' };
+  }
+  return api.applyMediaGalleryTag({ rootPath, filePath, tag });
 }
 
 export async function getMediaFullImageUrl(

@@ -28,6 +28,17 @@ export {
   showsMediaSharedFolderPicker,
   type MediaTaskTypeId,
 } from './mediaTaskTypes';
+export {
+  DEFAULT_GALLERY_TAG_SET,
+  normalizeGalleryTagSet,
+  resolveGalleryTagsForSet,
+  galleryTagToAction,
+  type MediaGalleryTagAction,
+  type MediaGalleryTagDefinition,
+  type MediaGalleryTagLinkMode,
+  type MediaGalleryTagMode,
+  type MediaGalleryTagSetConfig,
+} from './mediaGalleryTagModel';
 export { default as MediaFilesPanel } from './components/MediaFilesPanel.vue';
 /** @deprecated Use MediaFilesPanel */
 export { default as MediaGalleryPanel } from './components/MediaFilesPanel.vue';

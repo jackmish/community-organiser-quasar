@@ -1,4 +1,5 @@
 import { BaseModel } from 'src/types/BaseModel';
+import type { MediaGalleryTagSetConfig } from 'src/modules/media/mediaGalleryTagModel';
 
 export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -33,6 +34,8 @@ export class TaskModel extends BaseModel {
   color_set?: string | null;
   /** Shared folder path for media/files task types (Files, Gallery). */
   mediaSharedFolderPath?: string;
+  /** Per-gallery tag buttons and folder rules (MediaGallery). */
+  galleryTagSet?: MediaGalleryTagSetConfig;
 
   constructor(init?: Partial<TaskModel>) {
     super(init);

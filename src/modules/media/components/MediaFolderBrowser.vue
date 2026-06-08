@@ -102,6 +102,7 @@
                   v-if="galleryLayout && showGalleryTags(entry)"
                   :root-path="rootPath"
                   :file-path="entry.path"
+                  :tags="galleryTags"
                   class="media-folder-browser__gallery-tag-actions"
                   @moved="onGalleryFileTagged"
                   @error="onGalleryTagError"
@@ -148,6 +149,7 @@
                     v-if="galleryLayout && showGalleryTags(entry)"
                     :root-path="rootPath"
                     :file-path="entry.path"
+                    :tags="galleryTags"
                     class="media-folder-browser__entry-tag-actions"
                     @moved="onGalleryFileTagged"
                     @error="onGalleryTagError"
@@ -191,6 +193,7 @@
       :entry="previewEntry"
       :entries="previewImageEntries"
       :fallback-thumb-url="previewFallbackThumbUrl || ''"
+      :tags="galleryTags"
       @update:open="onPreviewOpenChange"
       @update:entry="previewEntry = $event"
       @moved="onGalleryFileTagged"
@@ -208,6 +211,10 @@ import {
   galleryThumbGenMaxEdge,
   galleryThumbTilePx,
 } from '../mediaGalleryThumbSize';
+import {
+  resolveGalleryTagsForSet,
+  type MediaGalleryTagSetConfig,
+} from '../mediaGalleryTagModel';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
 import MediaGalleryPreviewDialog from './MediaGalleryPreviewDialog.vue';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
@@ -226,6 +233,8 @@ const props = defineProps<{
   imagesOnly?: boolean;
   /** Gallery layout: larger thumbs and tile-oriented presentation. */
   galleryLayout?: boolean;
+  /** Per-gallery tag configuration (MediaGallery tasks). */
+  galleryTagSet?: MediaGalleryTagSetConfig | null;
   /** Fill parent height; file list scrolls inside. */
   fillAvailable?: boolean;
 }>();
@@ -241,6 +250,8 @@ const canGoUp = ref(false);
 const entries = ref<MediaFolderEntry[]>([]);
 const { thumbUrls, loadThumbs, reset: resetThumbs } = useProgressiveMediaThumbs();
 const { galleryThumbSize } = useMediaGalleryThumbSize();
+
+const galleryTags = computed(() => resolveGalleryTagsForSet(props.galleryTagSet));
 
 const useGalleryTiles = computed(
   () => props.galleryLayout === true && galleryThumbSize.value !== 'small',
@@ -565,15 +576,6 @@ watch(thumbMaxEdge, () => {
   top: 4px;
   right: 4px;
   z-index: 2;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 140ms ease, visibility 140ms ease;
-}
-
-.media-folder-browser__entry:hover .media-folder-browser__entry-tag-actions,
-.media-folder-browser__entry:focus-within .media-folder-browser__entry-tag-actions {
-  opacity: 1;
-  visibility: visible;
 }
 
 .media-folder-browser__entry-thumb {
@@ -651,15 +653,6 @@ watch(thumbMaxEdge, () => {
   top: 6px;
   right: 6px;
   z-index: 2;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 140ms ease, visibility 140ms ease;
-}
-
-.media-folder-browser__entry--gallery:hover .media-folder-browser__gallery-tag-actions,
-.media-folder-browser__entry--gallery:focus-within .media-folder-browser__gallery-tag-actions {
-  opacity: 1;
-  visibility: visible;
 }
 
 .media-folder-browser__gallery-thumb {

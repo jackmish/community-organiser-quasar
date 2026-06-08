@@ -190,6 +190,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openMediaPath: (targetPath) => ipcRenderer.invoke('media:open-path', targetPath),
   revealMediaPath: (targetPath) => ipcRenderer.invoke('media:reveal-path', targetPath),
   moveMediaToTagFolder: (payload) => ipcRenderer.invoke('media:move-to-tag-folder', payload),
+  applyMediaGalleryTag: (payload) => ipcRenderer.invoke('media:apply-gallery-tag', payload),
   getMediaFullImageUrl: (payload) => ipcRenderer.invoke('media:get-full-image-url', payload),
 
   // Join paths

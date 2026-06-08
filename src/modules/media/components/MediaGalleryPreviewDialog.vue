@@ -71,6 +71,7 @@
           v-if="entry && rootPath"
           :root-path="rootPath"
           :file-path="entry.path"
+          :tags="tags"
           class="media-gallery-preview__tags"
           @moved="onTagged"
           @error="onTagError"
@@ -85,12 +86,14 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { getMediaFullImageUrl, type MediaFolderEntry } from '../mediaFolderService';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
+import type { MediaGalleryTagDefinition } from '../mediaGalleryTagModel';
 
 const props = defineProps<{
   open: boolean;
   rootPath: string;
   entry: MediaFolderEntry | null;
   entries?: MediaFolderEntry[];
+  tags: MediaGalleryTagDefinition[];
   fallbackThumbUrl?: string;
 }>();
 
