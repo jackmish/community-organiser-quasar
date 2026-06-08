@@ -64,6 +64,8 @@
   "files.calendar_label": "Kalendarz",
   "files.switch_to_files": "Tryb plików",
   "files.switch_to_calendar": "Tryb kalendarza",
+  "files.switch_to_gallery_view": "Widok galerii",
+  "files.switch_to_files_view": "Widok plików",
   "files.panel_title": "Pliki i udostępnianie",
   "files.panel_placeholder": "Tutaj będzie można przechowywać i udostępniać pliki tej grupy.",
   "files.shared_folder": "Folder path",

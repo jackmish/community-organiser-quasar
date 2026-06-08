@@ -23,6 +23,25 @@
             style="margin-right: 6px"
           />
           <q-btn
+            v-if="isMediaFolderTask && mediaRootFolder"
+            dense
+            round
+            unelevated
+            color="primary"
+            :icon="isMediaGalleryTask ? 'folder_shared' : 'photo_library'"
+            :title="
+              isMediaGalleryTask
+                ? $text('files.switch_to_files_view')
+                : $text('files.switch_to_gallery_view')
+            "
+            :aria-label="
+              isMediaGalleryTask
+                ? $text('files.switch_to_files_view')
+                : $text('files.switch_to_gallery_view')
+            "
+            @click.stop="void toggleMediaTaskBrowseMode()"
+          />
+          <q-btn
             v-if="isTodo"
             dense
             round
@@ -197,6 +216,7 @@
           v-if="showMediaFolderBrowser"
           :root-path="mediaRootFolder"
           :images-only="isMediaGalleryTask"
+          :gallery-layout="isMediaGalleryTask"
           fill-available
         />
         <q-banner
@@ -375,6 +395,7 @@ import {
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
 import { MEDIA_TASK_TYPE } from "src/modules/media/mediaTaskTypes";
+import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
 
 const props = defineProps<{
   task: Task;
@@ -608,6 +629,9 @@ const isMediaFilesTask = computed(
 const isMediaGalleryTask = computed(
   () => (activeTask.value?.type_id || "") === MEDIA_TASK_TYPE.Gallery,
 );
+const isMediaFolderTask = computed(
+  () => isMediaFilesTask.value || isMediaGalleryTask.value,
+);
 const mediaRootFolder = computed(() =>
   String(activeTask.value?.mediaSharedFolderPath || "").trim(),
 );
@@ -620,6 +644,26 @@ const isInlineMediaFolderPreview = computed(
 const showMediaFolderMissing = computed(
   () => (isMediaFilesTask.value || isMediaGalleryTask.value) && !mediaRootFolder.value,
 );
+
+async function toggleMediaTaskBrowseMode(): Promise<void> {
+  const task = activeTask.value;
+  if (!task?.id || !isMediaFolderTask.value) return;
+  const nextType = isMediaGalleryTask.value
+    ? MEDIA_TASK_TYPE.Files
+    : MEDIA_TASK_TYPE.Gallery;
+  try {
+    const date =
+      (task.date || task.eventDate || CC.task.time.currentDate.value || "").trim() ||
+      CC.task.time.currentDate.value ||
+      "";
+    await CC.task.update(date, String(task.id), { type_id: nextType });
+    const updated =
+      mediaFlatTasks.value.find((t) => String(t.id) === String(task.id)) ?? null;
+    if (updated) activeTask.value = updated;
+  } catch (e) {
+    logger.error("Failed to toggle media browse mode", e);
+  }
+}
 
 function onScheduleTodoClick() {
   const t = activeTask.value;

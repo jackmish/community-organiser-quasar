@@ -1,5 +1,11 @@
 <template>
-  <div class="media-folder-browser" :class="{ 'media-folder-browser--fill': fillAvailable }">
+  <div
+    class="media-folder-browser"
+    :class="{
+      'media-folder-browser--fill': fillAvailable,
+      'media-folder-browser--gallery': galleryLayout,
+    }"
+  >
     <div class="media-folder-browser__toolbar row items-center q-col-gutter-xs q-mb-sm">
       <div class="col-auto">
         <q-btn
@@ -60,45 +66,95 @@
           :key="entry.path"
           type="button"
           class="media-folder-browser__entry"
+          :class="{ 'media-folder-browser__entry--gallery': galleryLayout }"
           @click="onEntryClick(entry)"
         >
-          <span class="media-folder-browser__entry-main">
-            <template v-if="showEntryThumb(entry)">
-              <span class="media-folder-browser__entry-visual">
+          <template v-if="galleryLayout">
+            <span class="media-folder-browser__gallery-tile">
+              <span class="media-folder-browser__gallery-media">
                 <img
                   v-if="entryThumb(entry)"
                   :src="entryThumb(entry)"
-                  class="media-folder-browser__entry-thumb"
+                  class="media-folder-browser__entry-thumb media-folder-browser__gallery-thumb"
                   alt=""
                 />
-                <q-spinner v-else color="grey-6" size="24px" />
+                <q-spinner
+                  v-else-if="showEntryThumb(entry)"
+                  color="grey-6"
+                  size="32px"
+                />
+                <q-icon
+                  v-else
+                  :name="entryIcon(entry)"
+                  :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
+                  size="48px"
+                />
               </span>
-            </template>
-            <q-icon
-              v-else
-              :name="entryIcon(entry)"
-              :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
-              size="20px"
-            />
-            <span class="media-folder-browser__entry-name">{{ entry.name }}</span>
-            <q-btn
-              v-if="!entry.isDirectory"
-              dense
-              flat
-              round
-              size="sm"
-              icon="open_in_new"
-              class="media-folder-browser__entry-open"
-              :title="$text('files.open_file')"
-              @click.stop="openFile(entry.path)"
-            />
-          </span>
-          <span class="media-folder-browser__entry-meta text-caption text-grey-7">
-            <span>{{ formatCreated(entry.createdMs) }}</span>
-            <span v-if="!entry.isDirectory" class="media-folder-browser__entry-size">
-              {{ formatSize(entry.size) }}
+              <span class="media-folder-browser__gallery-info">
+                <span class="media-folder-browser__gallery-info-row">
+                  <span class="media-folder-browser__gallery-name" :title="entry.name">{{
+                    entry.name
+                  }}</span>
+                  <q-btn
+                    v-if="!entry.isDirectory"
+                    dense
+                    flat
+                    round
+                    size="xs"
+                    icon="open_in_new"
+                    class="media-folder-browser__entry-open"
+                    :title="$text('files.open_file')"
+                    @click.stop="openFile(entry.path)"
+                  />
+                </span>
+                <span class="media-folder-browser__gallery-meta text-caption">
+                  <span>{{ formatCreated(entry.createdMs) }}</span>
+                  <span v-if="!entry.isDirectory" class="media-folder-browser__entry-size">
+                    {{ formatSize(entry.size) }}
+                  </span>
+                </span>
+              </span>
             </span>
-          </span>
+          </template>
+          <template v-else>
+            <span class="media-folder-browser__entry-main">
+              <template v-if="showEntryThumb(entry)">
+                <span class="media-folder-browser__entry-visual">
+                  <img
+                    v-if="entryThumb(entry)"
+                    :src="entryThumb(entry)"
+                    class="media-folder-browser__entry-thumb"
+                    alt=""
+                  />
+                  <q-spinner v-else color="grey-6" size="24px" />
+                </span>
+              </template>
+              <q-icon
+                v-else
+                :name="entryIcon(entry)"
+                :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
+                size="20px"
+              />
+              <span class="media-folder-browser__entry-name">{{ entry.name }}</span>
+              <q-btn
+                v-if="!entry.isDirectory"
+                dense
+                flat
+                round
+                size="sm"
+                icon="open_in_new"
+                class="media-folder-browser__entry-open"
+                :title="$text('files.open_file')"
+                @click.stop="openFile(entry.path)"
+              />
+            </span>
+            <span class="media-folder-browser__entry-meta text-caption text-grey-7">
+              <span>{{ formatCreated(entry.createdMs) }}</span>
+              <span v-if="!entry.isDirectory" class="media-folder-browser__entry-size">
+                {{ formatSize(entry.size) }}
+              </span>
+            </span>
+          </template>
         </button>
       </template>
     </div>
@@ -122,6 +178,8 @@ const props = defineProps<{
   rootPath: string;
   /** Gallery tasks: folders + image files only. */
   imagesOnly?: boolean;
+  /** Gallery layout: larger thumbs and tile-oriented presentation. */
+  galleryLayout?: boolean;
   /** Fill parent height; file list scrolls inside. */
   fillAvailable?: boolean;
 }>();
@@ -363,5 +421,91 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.media-folder-browser--gallery .media-folder-browser__list {
+  gap: 14px 16px;
+}
+
+.media-folder-browser__entry--gallery {
+  padding: 0;
+  overflow: hidden;
+  width: auto;
+  background: #f0f0f0;
+}
+
+.media-folder-browser__gallery-tile {
+  position: relative;
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+
+.media-folder-browser__gallery-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.media-folder-browser__gallery-thumb {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 0;
+  background: transparent;
+}
+
+.media-folder-browser__gallery-info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.media-folder-browser__gallery-info-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.media-folder-browser__gallery-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: rgba(0, 0, 0, 0.88);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+}
+
+.media-folder-browser__gallery-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: rgba(0, 0, 0, 0.72);
+  line-height: 1.2;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.media-folder-browser__entry--gallery .media-folder-browser__entry-size::before {
+  content: '·';
+  margin-right: 10px;
+  opacity: 0.55;
 }
 </style>

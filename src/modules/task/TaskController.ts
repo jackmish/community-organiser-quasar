@@ -1,6 +1,6 @@
 import { markRaw, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { TaskRepository } from './managers/taskRepository';
+import { getSharedTaskRepository } from './managers/taskRepository';
 import * as timeRepository from './managers/timeManager/timeRepository';
 import { saveData } from 'src/utils/storageUtils';
 import type { Task } from './models/TaskModel';
@@ -19,13 +19,16 @@ class TaskController implements Controllable {
 
   private readonly taskRef = ref<Task | null>(null);
 
-  readonly taskRepo = markRaw(
-    new TaskRepository({ time: this.time, state: { activeTask: this.taskRef } }),
-  );
+  readonly taskRepo = markRaw(getSharedTaskRepository());
   readonly active = markRaw(new TaskActive(this.taskRepo, this.taskRef));
   readonly list = markRaw(new TaskList(this.taskRepo));
   readonly subtaskLine = markRaw(new TaskSubtaskLine(this.taskRepo, this.active, saveData));
   readonly status = markRaw(new TaskStatus(this.taskRepo, saveData));
+
+  constructor() {
+    this.taskRepo.timeProvider = { time: this.time, state: { activeTask: this.taskRef } };
+    this.taskRepo.setTime(this.time);
+  }
 
   /** Expose the time slice to StorageController via the CC registry. */
   readonly storagePort = (): StoragePort => ({ kind: 'time', data: this.time });

@@ -682,6 +682,11 @@ export { TaskRepository as TaskService };
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _singleton = new TaskRepository();
 
+/** Shared repository used by StorageController load/save and CC.task. */
+export function getSharedTaskRepository(): TaskRepository {
+  return _singleton;
+}
+
 /**
  * The singleton's reactive flat task list.
  * StorageController and tests import this directly as `flatTasks`.
