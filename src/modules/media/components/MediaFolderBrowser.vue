@@ -626,7 +626,7 @@ watch(thumbMaxEdge, () => {
 
 .media-folder-browser__entry--gallery {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   width: auto;
   background: #f0f0f0;
 }
@@ -645,6 +645,7 @@ watch(thumbMaxEdge, () => {
   justify-content: center;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.04);
 }
 

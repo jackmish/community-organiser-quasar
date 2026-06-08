@@ -26,6 +26,9 @@ export type MediaGalleryTagDefinition = {
   /** hierarchical — path segments under task root */
   pathSegments?: string[];
   builtIn?: boolean;
+  /** Podium place 1 (gold), 2 (silver), 3 (bronze) — shows number instead of icon. */
+  podium?: 1 | 2 | 3;
+  /** @deprecated Use `podium` */
   stars?: 1 | 2 | 3;
 };
 
@@ -78,45 +81,45 @@ const BUILTIN_SYSTEM_TAGS: MediaGalleryTagDefinition[] = [
   },
 ];
 
-const BUILTIN_STAR_TAGS: MediaGalleryTagDefinition[] = [
+const BUILTIN_PODIUM_TAGS: MediaGalleryTagDefinition[] = [
   {
     id: 'rate_1',
     mode: 'single_folder',
     folderName: MEDIA_GALLERY_TAG_FOLDER_RATE_1,
-    icon: 'star',
-    color: 'amber-7',
+    icon: '',
+    color: 'podium-gold',
     textColor: 'black',
-    labelKey: 'files.gallery_tag_rate_1',
+    labelKey: 'files.gallery_tag_podium_1',
     builtIn: true,
-    stars: 1,
+    podium: 1,
   },
   {
     id: 'rate_2',
     mode: 'single_folder',
     folderName: MEDIA_GALLERY_TAG_FOLDER_RATE_2,
-    icon: 'star',
-    color: 'amber-9',
+    icon: '',
+    color: 'podium-silver',
     textColor: 'black',
-    labelKey: 'files.gallery_tag_rate_2',
+    labelKey: 'files.gallery_tag_podium_2',
     builtIn: true,
-    stars: 2,
+    podium: 2,
   },
   {
     id: 'rate_3',
     mode: 'single_folder',
     folderName: MEDIA_GALLERY_TAG_FOLDER_RATE_3,
-    icon: 'star',
-    color: 'orange-9',
-    textColor: 'black',
-    labelKey: 'files.gallery_tag_rate_3',
+    icon: '',
+    color: 'podium-bronze',
+    textColor: 'white',
+    labelKey: 'files.gallery_tag_podium_3',
     builtIn: true,
-    stars: 3,
+    podium: 3,
   },
 ];
 
 export const DEFAULT_GALLERY_TAG_SET: MediaGalleryTagSetConfig = {
   enabledModes: ['single_folder'],
-  tags: [...BUILTIN_STAR_TAGS, ...BUILTIN_SYSTEM_TAGS],
+  tags: [...BUILTIN_PODIUM_TAGS, ...BUILTIN_SYSTEM_TAGS],
 };
 
 const VALID_MODES: MediaGalleryTagMode[] = ['single_folder', 'multi_folder', 'hierarchical'];
@@ -130,12 +133,36 @@ function normalizeModes(value: unknown): MediaGalleryTagMode[] {
   return modes.length ? modes : ['single_folder'];
 }
 
+function resolvePodiumPlace(t: Partial<MediaGalleryTagDefinition>): 1 | 2 | 3 | null {
+  if (t.podium === 1 || t.podium === 2 || t.podium === 3) return t.podium;
+  if (t.stars === 1 || t.stars === 2 || t.stars === 3) return t.stars;
+  return null;
+}
+
+function mergeWithDefaultTags(custom: MediaGalleryTagDefinition[]): MediaGalleryTagDefinition[] {
+  const defaults = DEFAULT_GALLERY_TAG_SET.tags ?? [];
+  const byId = new Map<string, MediaGalleryTagDefinition>();
+  for (const tag of defaults) {
+    byId.set(tag.id, tag);
+  }
+  for (const tag of custom) {
+    byId.set(tag.id, tag);
+  }
+  const defaultOrder = defaults.map((t) => t.id);
+  const extraIds = custom.filter((t) => !defaultOrder.includes(t.id)).map((t) => t.id);
+  return [...defaultOrder, ...extraIds]
+    .map((id) => byId.get(id))
+    .filter((t): t is MediaGalleryTagDefinition => t != null);
+}
+
 function normalizeTag(raw: unknown): MediaGalleryTagDefinition | null {
   if (!raw || typeof raw !== 'object') return null;
   const t = raw as Partial<MediaGalleryTagDefinition>;
   if (typeof t.id !== 'string' || !t.id.trim()) return null;
   if (typeof t.labelKey !== 'string' || !t.labelKey.trim()) return null;
-  if (typeof t.icon !== 'string' || !t.icon.trim()) return null;
+  const place = resolvePodiumPlace(t);
+  if (typeof t.icon !== 'string') return null;
+  if (!place && !t.icon.trim()) return null;
   if (typeof t.color !== 'string' || !t.color.trim()) return null;
   const mode = (VALID_MODES as string[]).includes(String(t.mode))
     ? (t.mode as MediaGalleryTagMode)
@@ -166,8 +193,26 @@ function normalizeTag(raw: unknown): MediaGalleryTagDefinition | null {
         }
       : {}),
     ...(t.builtIn === true ? { builtIn: true } : {}),
-    ...(t.stars === 1 || t.stars === 2 || t.stars === 3 ? { stars: t.stars } : {}),
+    ...(place ? { podium: place } : {}),
   };
+}
+
+export function podiumPlace(tag: MediaGalleryTagDefinition): 1 | 2 | 3 | null {
+  if (tag.podium === 1 || tag.podium === 2 || tag.podium === 3) return tag.podium;
+  if (tag.stars === 1 || tag.stars === 2 || tag.stars === 3) return tag.stars;
+  return null;
+}
+
+/** Podium tags first (1→2→3), then everything else in original order. */
+function sortGalleryTags(tags: MediaGalleryTagDefinition[]): MediaGalleryTagDefinition[] {
+  const podium: MediaGalleryTagDefinition[] = [];
+  const rest: MediaGalleryTagDefinition[] = [];
+  for (const tag of tags) {
+    if (podiumPlace(tag) != null) podium.push(tag);
+    else rest.push(tag);
+  }
+  podium.sort((a, b) => podiumPlace(a)! - podiumPlace(b)!);
+  return [...podium, ...rest];
 }
 
 export function normalizeGalleryTagSet(value: unknown): MediaGalleryTagSetConfig {
@@ -180,7 +225,7 @@ export function normalizeGalleryTagSet(value: unknown): MediaGalleryTagSetConfig
     ? raw.tags.map(normalizeTag).filter((t): t is MediaGalleryTagDefinition => t != null)
     : [];
   const tags = customTags.length
-    ? customTags
+    ? mergeWithDefaultTags(customTags)
     : [...(DEFAULT_GALLERY_TAG_SET.tags ?? [])];
   return { enabledModes, tags };
 }
@@ -190,7 +235,9 @@ export function resolveGalleryTagsForSet(
 ): MediaGalleryTagDefinition[] {
   const normalized = normalizeGalleryTagSet(tagSet ?? DEFAULT_GALLERY_TAG_SET);
   const enabled = new Set(normalizeModes(normalized.enabledModes));
-  return (normalized.tags ?? []).filter((tag) => enabled.has(tag.mode));
+  return sortGalleryTags(
+    (normalized.tags ?? []).filter((tag) => enabled.has(tag.mode)),
+  );
 }
 
 export function galleryTagToAction(tag: MediaGalleryTagDefinition): MediaGalleryTagAction {

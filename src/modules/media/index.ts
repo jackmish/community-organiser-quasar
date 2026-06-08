@@ -33,6 +33,7 @@ export {
   normalizeGalleryTagSet,
   resolveGalleryTagsForSet,
   galleryTagToAction,
+  podiumPlace,
   type MediaGalleryTagAction,
   type MediaGalleryTagDefinition,
   type MediaGalleryTagLinkMode,

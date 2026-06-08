@@ -7,7 +7,9 @@
       flat
       square
       unelevated
-      :icon="tag.icon"
+      :icon="podiumPlace(tag) ? undefined : tag.icon || undefined"
+      :label="podiumPlace(tag) ? String(podiumPlace(tag)) : undefined"
+      no-caps
       :loading="busyTagId === tag.id"
       :disable="busyTagId != null && busyTagId !== tag.id"
       :title="tagTitle(tag)"
@@ -15,14 +17,10 @@
       :class="[
         'media-gallery-tag-actions__btn',
         `media-gallery-tag-actions__btn--${tag.id}`,
-        { 'media-gallery-tag-actions__btn--star': tag.stars != null },
+        { 'media-gallery-tag-actions__btn--podium': podiumPlace(tag) != null },
       ]"
       @click.stop="void applyTag(tag)"
-    >
-      <span v-if="tag.stars != null" class="media-gallery-tag-actions__star-label">{{
-        tag.stars
-      }}</span>
-    </q-btn>
+    />
   </span>
 </template>
 
@@ -32,6 +30,7 @@ import { $text } from 'src/modules/lang';
 import { applyMediaGalleryTag } from '../mediaFolderService';
 import {
   galleryTagToAction,
+  podiumPlace,
   type MediaGalleryTagDefinition,
 } from '../mediaGalleryTagModel';
 
@@ -92,18 +91,8 @@ async function applyTag(tag: MediaGalleryTagDefinition): Promise<void> {
   border-radius: 0;
 }
 
-.media-gallery-tag-actions__btn--star {
-  position: relative;
-}
-
-.media-gallery-tag-actions__star-label {
-  position: absolute;
-  bottom: 2px;
-  right: 3px;
-  font-size: 0.55rem;
+.media-gallery-tag-actions__btn--podium {
   font-weight: 800;
-  line-height: 1;
-  pointer-events: none;
 }
 
 .media-gallery-tag-actions__btn--unsupported {
@@ -133,18 +122,36 @@ async function applyTag(tag: MediaGalleryTagDefinition): Promise<void> {
   background: rgba(211, 47, 47, 0.92) !important;
 }
 
+/* 1st — gold */
 .media-gallery-tag-actions__btn--rate_1 {
-  background: rgba(255, 202, 40, 0.88) !important;
+  background: linear-gradient(180deg, #f5d565 0%, #d4af37 55%, #b8962e 100%) !important;
   color: rgba(0, 0, 0, 0.88) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+.media-gallery-tag-actions__btn--rate_1:hover {
+  background: linear-gradient(180deg, #ffe082 0%, #e0c040 55%, #c9a227 100%) !important;
+}
+
+/* 2nd — silver */
 .media-gallery-tag-actions__btn--rate_2 {
-  background: rgba(255, 160, 0, 0.88) !important;
+  background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 55%, #9e9e9e 100%) !important;
   color: rgba(0, 0, 0, 0.88) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
+.media-gallery-tag-actions__btn--rate_2:hover {
+  background: linear-gradient(180deg, #f5f5f5 0%, #d0d0d0 55%, #b0b0b0 100%) !important;
+}
+
+/* 3rd — bronze */
 .media-gallery-tag-actions__btn--rate_3 {
-  background: rgba(239, 108, 0, 0.9) !important;
+  background: linear-gradient(180deg, #e8a86b 0%, #cd7f32 55%, #a86428 100%) !important;
   color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.media-gallery-tag-actions__btn--rate_3:hover {
+  background: linear-gradient(180deg, #f0b87d 0%, #d98940 55%, #b56f2e 100%) !important;
 }
 </style>
