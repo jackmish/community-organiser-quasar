@@ -3,27 +3,33 @@
     class="media-folder-browser"
     :class="{
       'media-folder-browser--fill': fillAvailable,
-      'media-folder-browser--gallery': galleryLayout,
+      'media-folder-browser--gallery': useGalleryTiles,
     }"
+    :style="galleryBrowserStyle"
   >
-    <div class="media-folder-browser__toolbar row items-center q-col-gutter-xs q-mb-sm">
-      <div class="col-auto">
-        <q-btn
-          dense
-          flat
-          round
-          icon="arrow_upward"
-          :disable="!canGoUp || loading"
-          :title="$text('files.folder_up')"
-          @click="goUp"
-        />
+    <div class="media-folder-browser__toolbar">
+      <q-btn
+        dense
+        flat
+        round
+        icon="arrow_upward"
+        :disable="!canGoUp || loading"
+        :title="$text('files.folder_up')"
+        @click="goUp"
+      />
+      <div class="media-folder-browser__path text-caption text-grey-7 ellipsis" :title="currentPath">
+        {{ displayPath }}
       </div>
-      <div class="col">
-        <div class="text-caption text-grey-7 ellipsis" :title="currentPath">
-          {{ displayPath }}
-        </div>
-      </div>
-      <div class="col-auto row no-wrap" style="gap: 4px">
+      <q-option-group
+        v-if="galleryLayout"
+        v-model="galleryThumbSize"
+        :options="galleryThumbSizeOptions"
+        type="radio"
+        inline
+        dense
+        class="media-folder-browser__thumb-size"
+      />
+      <div class="media-folder-browser__toolbar-actions">
         <q-btn
           dense
           flat
@@ -44,10 +50,6 @@
       </div>
     </div>
 
-    <div v-if="imagesOnly" class="text-caption text-grey-7 q-mb-sm">
-      {{ $text('files.gallery_browser_hint') }}
-    </div>
-
     <q-banner v-if="error" dense class="bg-negative text-white q-mb-sm" rounded>
       {{ error }}
     </q-banner>
@@ -66,10 +68,10 @@
           :key="entry.path"
           type="button"
           class="media-folder-browser__entry"
-          :class="{ 'media-folder-browser__entry--gallery': galleryLayout }"
+          :class="{ 'media-folder-browser__entry--gallery': useGalleryTiles }"
           @click="onEntryClick(entry)"
         >
-          <template v-if="galleryLayout">
+          <template v-if="useGalleryTiles">
             <span class="media-folder-browser__gallery-tile">
               <span class="media-folder-browser__gallery-media">
                 <img
@@ -164,6 +166,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { $text, getLocale } from 'src/modules/lang';
+import { useMediaGalleryThumbSize } from '../composables/useMediaGalleryThumbSize';
+import { galleryThumbTilePx } from '../mediaGalleryThumbSize';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
 import {
   isImageFileName,
@@ -191,6 +195,24 @@ const parentPath = ref<string | null>(null);
 const canGoUp = ref(false);
 const entries = ref<MediaFolderEntry[]>([]);
 const { thumbUrls, loadThumbs, reset: resetThumbs } = useProgressiveMediaThumbs();
+const { galleryThumbSize } = useMediaGalleryThumbSize();
+
+const useGalleryTiles = computed(
+  () => props.galleryLayout === true && galleryThumbSize.value !== 'small',
+);
+
+const galleryBrowserStyle = computed(() => {
+  if (!useGalleryTiles.value) return undefined;
+  const px = galleryThumbTilePx(galleryThumbSize.value);
+  return { '--gallery-tile-size': `${px}px` };
+});
+
+const galleryThumbSizeOptions = computed(() => [
+  { label: $text('files.gallery_thumb_small'), value: 'small' },
+  { label: $text('files.gallery_thumb_medium'), value: 'medium' },
+  { label: $text('files.gallery_thumb_large'), value: 'large' },
+  { label: $text('files.gallery_thumb_xl'), value: 'xl' },
+]);
 
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
 
@@ -320,6 +342,28 @@ watch(
   overflow-y: auto;
 }
 
+.media-folder-browser__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.media-folder-browser__path {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(220px, 36vw);
+}
+
+.media-folder-browser__toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .media-folder-browser__list {
   display: flex;
   flex-wrap: wrap;
@@ -339,6 +383,18 @@ watch(
   align-items: center;
   width: 100%;
   padding: 8px 4px;
+}
+
+.media-folder-browser__thumb-size {
+  flex: 0 0 auto;
+}
+
+.media-folder-browser__thumb-size :deep(.q-radio) {
+  margin-right: 6px;
+}
+
+.media-folder-browser__thumb-size :deep(.q-radio:last-child) {
+  margin-right: 0;
 }
 
 .media-folder-browser__entry {
@@ -437,8 +493,8 @@ watch(
 .media-folder-browser__gallery-tile {
   position: relative;
   display: block;
-  width: 220px;
-  height: 220px;
+  width: var(--gallery-tile-size, 220px);
+  height: var(--gallery-tile-size, 220px);
 }
 
 .media-folder-browser__gallery-media {
