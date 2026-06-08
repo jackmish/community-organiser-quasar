@@ -75,6 +75,63 @@ async function listDirectory(currentPath: string): Promise<MediaFolderEntryPaylo
   return entries;
 }
 
+export type MoveMediaToTagFolderPayload =
+  | { ok: true; newPath: string; folderName: string }
+  | { ok: false; error: string };
+
+async function resolveUniqueFilePath(dir: string, fileName: string): Promise<string> {
+  const ext = path.extname(fileName);
+  const stem = path.basename(fileName, ext);
+  let candidate = path.join(dir, fileName);
+  let suffix = 1;
+  while (true) {
+    try {
+      await fsPromises.access(candidate);
+      candidate = path.join(dir, `${stem} (${suffix})${ext}`);
+      suffix += 1;
+    } catch {
+      return candidate;
+    }
+  }
+}
+
+async function moveFileToRootSubfolder(
+  rootPath: string,
+  filePath: string,
+  subfolderName: string,
+): Promise<MoveMediaToTagFolderPayload> {
+  const resolvedRoot = resolveInsideRoot(rootPath, rootPath);
+  if (!resolvedRoot) return { ok: false, error: 'Invalid task folder' };
+
+  const resolvedFile = resolveInsideRoot(rootPath, filePath);
+  if (!resolvedFile) return { ok: false, error: 'Path outside task folder' };
+
+  if (
+    subfolderName !== '_ToRemove' &&
+    subfolderName !== '_Unsupported' &&
+    subfolderName !== '_BadQuality'
+  ) {
+    return { ok: false, error: 'Invalid tag folder' };
+  }
+
+  let fileStat: Stats;
+  try {
+    fileStat = await fsPromises.stat(resolvedFile);
+  } catch {
+    return { ok: false, error: 'File not found' };
+  }
+  if (!fileStat.isFile()) {
+    return { ok: false, error: 'Not a file' };
+  }
+
+  const destDir = path.join(resolvedRoot, subfolderName);
+  await fsPromises.mkdir(destDir, { recursive: true });
+  const destPath = await resolveUniqueFilePath(destDir, path.basename(resolvedFile));
+  await fsPromises.rename(resolvedFile, destPath);
+
+  return { ok: true, newPath: destPath, folderName: subfolderName };
+}
+
 export function registerMediaFolderIpc(ipcMain: IpcMain): void {
   ipcMain.handle(
     'media:list-folder',
@@ -156,4 +213,25 @@ export function registerMediaFolderIpc(ipcMain: IpcMain): void {
       return { ok: false, error: msg };
     }
   });
+
+  ipcMain.handle(
+    'media:move-to-tag-folder',
+    async (
+      _evt,
+      payload: { rootPath?: string; filePath?: string; folderName?: string },
+    ): Promise<MoveMediaToTagFolderPayload> => {
+      try {
+        const rootPath = String(payload?.rootPath || '').trim();
+        const filePath = String(payload?.filePath || '').trim();
+        const folderName = String(payload?.folderName || '').trim();
+        if (!rootPath || !filePath || !folderName) {
+          return { ok: false, error: 'Missing path' };
+        }
+        return await moveFileToRootSubfolder(rootPath, filePath, folderName);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: msg || 'Failed to move file' };
+      }
+    },
+  );
 }

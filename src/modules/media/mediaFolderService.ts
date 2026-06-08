@@ -30,6 +30,10 @@ export type ClearMediaThumbnailCacheResult =
   | { ok: true; fileCount: number }
   | { ok: false; error?: string };
 
+export type MoveMediaToTagFolderResult =
+  | { ok: true; newPath: string; folderName: string }
+  | { ok: false; error?: string };
+
 type MediaFolderElectronAPI = {
   listMediaFolder?: (payload: {
     rootPath: string;
@@ -49,6 +53,11 @@ type MediaFolderElectronAPI = {
   clearMediaThumbnailCache?: () => Promise<ClearMediaThumbnailCacheResult>;
   openMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
   revealMediaPath?: (targetPath: string) => Promise<{ ok: boolean; error?: string }>;
+  moveMediaToTagFolder?: (payload: {
+    rootPath: string;
+    filePath: string;
+    folderName: string;
+  }) => Promise<MoveMediaToTagFolderResult>;
 };
 
 function mediaFolderApi(): MediaFolderElectronAPI | null {
@@ -127,6 +136,18 @@ export async function clearMediaThumbnailCache(): Promise<ClearMediaThumbnailCac
     return { ok: false, error: 'Thumbnails are only available in the desktop app' };
   }
   return api.clearMediaThumbnailCache();
+}
+
+export async function moveMediaToTagFolder(
+  rootPath: string,
+  filePath: string,
+  folderName: string,
+): Promise<MoveMediaToTagFolderResult> {
+  const api = mediaFolderApi();
+  if (!api?.moveMediaToTagFolder) {
+    return { ok: false, error: 'File tagging is only available in the desktop app' };
+  }
+  return api.moveMediaToTagFolder({ rootPath, filePath, folderName });
 }
 
 export const IMAGE_FILE_EXTENSIONS = new Set([

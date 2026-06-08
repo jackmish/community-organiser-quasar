@@ -50,6 +50,13 @@
       </div>
     </div>
 
+    <q-banner v-if="tagError" dense class="bg-negative text-white q-mb-sm" rounded>
+      {{ tagError }}
+      <template #action>
+        <q-btn flat dense color="white" :label="$text('action.close')" @click="tagError = ''" />
+      </template>
+    </q-banner>
+
     <q-banner v-if="error" dense class="bg-negative text-white q-mb-sm" rounded>
       {{ error }}
     </q-banner>
@@ -91,6 +98,14 @@
                   :color="entry.isDirectory ? 'amber-9' : 'grey-7'"
                   size="48px"
                 />
+                <MediaGalleryTagActions
+                  v-if="galleryLayout && showGalleryTags(entry)"
+                  :root-path="rootPath"
+                  :file-path="entry.path"
+                  class="media-folder-browser__gallery-tag-actions"
+                  @moved="onGalleryFileTagged"
+                  @error="onGalleryTagError"
+                />
               </span>
               <span class="media-folder-browser__gallery-info">
                 <span class="media-folder-browser__gallery-info-row">
@@ -129,6 +144,14 @@
                     alt=""
                   />
                   <q-spinner v-else color="grey-6" size="24px" />
+                  <MediaGalleryTagActions
+                    v-if="galleryLayout && showGalleryTags(entry)"
+                    :root-path="rootPath"
+                    :file-path="entry.path"
+                    class="media-folder-browser__entry-tag-actions"
+                    @moved="onGalleryFileTagged"
+                    @error="onGalleryTagError"
+                  />
                 </span>
               </template>
               <q-icon
@@ -160,6 +183,17 @@
         </button>
       </template>
     </div>
+
+    <MediaGalleryPreviewDialog
+      v-if="galleryLayout"
+      :open="previewOpen"
+      :root-path="rootPath"
+      :entry="previewEntry"
+      :image-url="previewImageUrl ?? ''"
+      @update:open="onPreviewOpenChange"
+      @moved="onGalleryFileTagged"
+      @error="onGalleryTagError"
+    />
   </div>
 </template>
 
@@ -173,6 +207,8 @@ import {
   galleryThumbTilePx,
 } from '../mediaGalleryThumbSize';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
+import MediaGalleryPreviewDialog from './MediaGalleryPreviewDialog.vue';
+import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
 import {
   isImageFileName,
   isThumbableFileName,
@@ -194,6 +230,9 @@ const props = defineProps<{
 
 const loading = ref(false);
 const error = ref('');
+const tagError = ref('');
+const previewOpen = ref(false);
+const previewEntry = ref<MediaFolderEntry | null>(null);
 const currentPath = ref('');
 const parentPath = ref<string | null>(null);
 const canGoUp = ref(false);
@@ -226,6 +265,38 @@ const thumbMaxEdge = computed(() => {
 });
 
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
+
+const previewImageUrl = computed(() => {
+  const entry = previewEntry.value;
+  if (!entry) return undefined;
+  return entryThumb(entry);
+});
+
+function showGalleryTags(entry: MediaFolderEntry): boolean {
+  return !entry.isDirectory && isImageFileName(entry.name);
+}
+
+function onPreviewOpenChange(open: boolean): void {
+  previewOpen.value = open;
+  if (!open) previewEntry.value = null;
+}
+
+function openGalleryPreview(entry: MediaFolderEntry): void {
+  if (!props.galleryLayout || !showGalleryTags(entry)) return;
+  previewEntry.value = entry;
+  previewOpen.value = true;
+}
+
+function onGalleryFileTagged(): void {
+  tagError.value = '';
+  previewOpen.value = false;
+  previewEntry.value = null;
+  void refresh();
+}
+
+function onGalleryTagError(message: string): void {
+  tagError.value = message;
+}
 
 const visibleEntries = computed(() => {
   if (!props.imagesOnly) return entries.value;
@@ -273,6 +344,10 @@ function onEntryClick(entry: MediaFolderEntry): void {
   if (entry.isDirectory) {
     currentPath.value = entry.path;
     void refresh();
+    return;
+  }
+  if (props.galleryLayout && showGalleryTags(entry)) {
+    openGalleryPreview(entry);
     return;
   }
   void openFile(entry.path);
@@ -448,12 +523,29 @@ watch(thumbMaxEdge, () => {
 }
 
 .media-folder-browser__entry-visual {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 96px;
   height: 96px;
+}
+
+.media-folder-browser__entry-tag-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 140ms ease, visibility 140ms ease;
+}
+
+.media-folder-browser__entry:hover .media-folder-browser__entry-tag-actions,
+.media-folder-browser__entry:focus-within .media-folder-browser__entry-tag-actions {
+  opacity: 1;
+  visibility: visible;
 }
 
 .media-folder-browser__entry-thumb {
@@ -517,12 +609,29 @@ watch(thumbMaxEdge, () => {
 }
 
 .media-folder-browser__gallery-media {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.04);
+}
+
+.media-folder-browser__gallery-tag-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 140ms ease, visibility 140ms ease;
+}
+
+.media-folder-browser__entry--gallery:hover .media-folder-browser__gallery-tag-actions,
+.media-folder-browser__entry--gallery:focus-within .media-folder-browser__gallery-tag-actions {
+  opacity: 1;
+  visibility: visible;
 }
 
 .media-folder-browser__gallery-thumb {

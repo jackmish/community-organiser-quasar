@@ -189,6 +189,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearMediaThumbnailCache: () => ipcRenderer.invoke('media:clear-thumb-cache'),
   openMediaPath: (targetPath) => ipcRenderer.invoke('media:open-path', targetPath),
   revealMediaPath: (targetPath) => ipcRenderer.invoke('media:reveal-path', targetPath),
+  moveMediaToTagFolder: (payload) => ipcRenderer.invoke('media:move-to-tag-folder', payload),
 
   // Join paths
   joinPath: (...paths) => path.join(...paths),
