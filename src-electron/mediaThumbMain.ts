@@ -10,7 +10,10 @@ import { resolveActiveDataPath } from './spaceRegistryMain';
 
 /** Bump folder name when thumb spec / algorithm changes (old cache left for TTL sweep). */
 export const MEDIA_THUMB_CACHE_VERSION = 'v1';
+/** Default max edge when IPC payload omits `maxEdge` (legacy = 1× gen base). */
 export const MEDIA_THUMB_MAX_EDGE = 160;
+export const MEDIA_THUMB_MIN_EDGE = 48;
+export const MEDIA_THUMB_MAX_EDGE_LIMIT = 800;
 const MEDIA_THUMB_JPEG_QUALITY = 78;
 const MEDIA_THUMB_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MEDIA_THUMB_MAX_BYTES = 250 * 1024 * 1024;
@@ -52,8 +55,24 @@ export type ClearMediaThumbCachePayload =
   | { ok: true; fileCount: number }
   | { ok: false; error: string };
 
-function thumbSpecLabel(): string {
-  return `s${MEDIA_THUMB_MAX_EDGE}`;
+function normalizeThumbMaxEdge(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return MEDIA_THUMB_MAX_EDGE;
+  return Math.min(
+    MEDIA_THUMB_MAX_EDGE_LIMIT,
+    Math.max(MEDIA_THUMB_MIN_EDGE, Math.round(n)),
+  );
+}
+
+function thumbSpecLabel(maxEdge: number): string {
+  return `s${maxEdge}`;
+}
+
+function thumbJpegQuality(maxEdge: number): number {
+  const base = MEDIA_THUMB_MAX_EDGE;
+  if (maxEdge >= base * 4) return 82;
+  if (maxEdge >= base * 2) return 80;
+  return MEDIA_THUMB_JPEG_QUALITY;
 }
 
 function isThumbableFileName(name: string): boolean {
@@ -63,8 +82,8 @@ function isThumbableFileName(name: string): boolean {
   return THUMBABLE_EXTENSIONS.has(lower.slice(dot));
 }
 
-function thumbCacheKey(sourcePath: string, mtimeMs: number): string {
-  const input = `${path.resolve(sourcePath)}\0${mtimeMs}\0${thumbSpecLabel()}`;
+function thumbCacheKey(sourcePath: string, mtimeMs: number, maxEdge: number): string {
+  const input = `${path.resolve(sourcePath)}\0${mtimeMs}\0${thumbSpecLabel(maxEdge)}`;
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
@@ -164,7 +183,7 @@ async function readThumbMeta(metaPath: string): Promise<ThumbMeta | null> {
     return {
       sourcePath: parsed.sourcePath,
       mtimeMs: parsed.mtimeMs,
-      spec: typeof parsed.spec === 'string' ? parsed.spec : thumbSpecLabel(),
+      spec: typeof parsed.spec === 'string' ? parsed.spec : thumbSpecLabel(MEDIA_THUMB_MAX_EDGE),
       lastUsedMs: parsed.lastUsedMs,
       sizeBytes: parsed.sizeBytes,
     };
@@ -228,17 +247,17 @@ function runWithGenerationSlot<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
-async function generateThumbBuffer(sourcePath: string): Promise<Buffer | null> {
+async function generateThumbBuffer(sourcePath: string, maxEdge: number): Promise<Buffer | null> {
   return runWithGenerationSlot(async () => {
     try {
       const buffer = await sharp(sourcePath, { failOn: 'none', sequentialRead: true })
         .rotate()
-        .resize(MEDIA_THUMB_MAX_EDGE, MEDIA_THUMB_MAX_EDGE, {
+        .resize(maxEdge, maxEdge, {
           fit: 'inside',
           withoutEnlargement: true,
           fastShrinkOnLoad: true,
         })
-        .jpeg({ quality: MEDIA_THUMB_JPEG_QUALITY, mozjpeg: false })
+        .jpeg({ quality: thumbJpegQuality(maxEdge), mozjpeg: false })
         .toBuffer();
       return buffer.length > 0 ? buffer : null;
     } catch {
@@ -331,7 +350,7 @@ async function sweepThumbCache(appDataPath: string, force = false): Promise<void
     }
 
     let remove = false;
-    if (meta.spec !== thumbSpecLabel()) {
+    if (!/^s[1-9]\d*$/.test(meta.spec)) {
       remove = true;
     } else if (now - meta.lastUsedMs > MEDIA_THUMB_TTL_MS) {
       remove = true;
@@ -382,15 +401,20 @@ async function getOrCreateThumb(
   appDataPath: string,
   sourcePath: string,
   mtimeMs: number,
+  maxEdge: number,
 ): Promise<GetMediaThumbPayload> {
-  const hash = thumbCacheKey(sourcePath, mtimeMs);
+  const hash = thumbCacheKey(sourcePath, mtimeMs, maxEdge);
   const { imageRel } = thumbRelPaths(hash);
   const { imagePath, metaPath } = thumbAbsPaths(appDataPath, hash);
 
   try {
     await fsPromises.access(imagePath);
     const meta = await readThumbMeta(metaPath);
-    if (meta && Math.round(meta.mtimeMs) === Math.round(mtimeMs)) {
+    if (
+      meta &&
+      Math.round(meta.mtimeMs) === Math.round(mtimeMs) &&
+      meta.spec === thumbSpecLabel(maxEdge)
+    ) {
       scheduleMetaTouch(metaPath, meta);
       return { ok: true, url: thumbCacheUrl(imageRel) };
     }
@@ -399,7 +423,7 @@ async function getOrCreateThumb(
     // cache miss — generate below
   }
 
-  const buffer = await generateThumbBuffer(sourcePath);
+  const buffer = await generateThumbBuffer(sourcePath, maxEdge);
   if (!buffer || buffer.length === 0) {
     return { ok: false, noThumb: true };
   }
@@ -409,7 +433,7 @@ async function getOrCreateThumb(
   const meta: ThumbMeta = {
     sourcePath,
     mtimeMs,
-    spec: thumbSpecLabel(),
+    spec: thumbSpecLabel(maxEdge),
     lastUsedMs: Date.now(),
     sizeBytes: buffer.length,
   };
@@ -423,6 +447,7 @@ async function resolveThumbRequest(
   filePath: string,
   modifiedMs: number | null | undefined,
   appDataPath: string,
+  maxEdge: number,
 ): Promise<GetMediaThumbPayload> {
   const resolvedFile = resolveInsideRoot(rootPath, filePath);
   if (!resolvedFile) {
@@ -446,7 +471,7 @@ async function resolveThumbRequest(
     }
   }
 
-  return getOrCreateThumb(appDataPath, resolvedFile, mtimeMs);
+  return getOrCreateThumb(appDataPath, resolvedFile, mtimeMs, maxEdge);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -477,18 +502,25 @@ export function registerMediaThumbIpc(ipcMain: IpcMain): void {
     'media:get-thumb',
     async (
       _evt,
-      payload: { rootPath?: string; filePath?: string; modifiedMs?: number | null },
+      payload: { rootPath?: string; filePath?: string; modifiedMs?: number | null; maxEdge?: number },
     ): Promise<GetMediaThumbPayload> => {
       try {
         const rootPath = String(payload?.rootPath || '').trim();
         const filePath = String(payload?.filePath || '').trim();
+        const maxEdge = normalizeThumbMaxEdge(payload?.maxEdge);
         if (!rootPath || !filePath) {
           return { ok: false, error: 'Missing path' };
         }
 
         const appDataPath = resolveActiveDataPath();
         scheduleThumbSweep(appDataPath);
-        return await resolveThumbRequest(rootPath, filePath, payload?.modifiedMs, appDataPath);
+        return await resolveThumbRequest(
+          rootPath,
+          filePath,
+          payload?.modifiedMs,
+          appDataPath,
+          maxEdge,
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { ok: false, error: msg || 'Failed to load thumbnail' };
@@ -502,12 +534,14 @@ export function registerMediaThumbIpc(ipcMain: IpcMain): void {
       _evt,
       payload: {
         rootPath?: string;
+        maxEdge?: number;
         items?: Array<{ filePath?: string; modifiedMs?: number | null }>;
       },
     ): Promise<GetMediaThumbsBatchPayload> => {
       try {
         const rootPath = String(payload?.rootPath || '').trim();
         const items = Array.isArray(payload?.items) ? payload.items : [];
+        const maxEdge = normalizeThumbMaxEdge(payload?.maxEdge);
         if (!rootPath) {
           return { ok: false, error: 'Missing root path' };
         }
@@ -524,6 +558,7 @@ export function registerMediaThumbIpc(ipcMain: IpcMain): void {
             filePath,
             item?.modifiedMs,
             appDataPath,
+            maxEdge,
           );
         });
 

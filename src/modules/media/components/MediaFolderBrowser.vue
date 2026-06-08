@@ -167,7 +167,11 @@
 import { computed, ref, watch } from 'vue';
 import { $text, getLocale } from 'src/modules/lang';
 import { useMediaGalleryThumbSize } from '../composables/useMediaGalleryThumbSize';
-import { galleryThumbTilePx } from '../mediaGalleryThumbSize';
+import {
+  fileModeThumbGenMaxEdge,
+  galleryThumbGenMaxEdge,
+  galleryThumbTilePx,
+} from '../mediaGalleryThumbSize';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
 import {
   isImageFileName,
@@ -214,6 +218,13 @@ const galleryThumbSizeOptions = computed(() => [
   { label: $text('files.gallery_thumb_xl'), value: 'xl' },
 ]);
 
+const thumbMaxEdge = computed(() => {
+  if (props.galleryLayout) {
+    return galleryThumbGenMaxEdge(galleryThumbSize.value);
+  }
+  return fileModeThumbGenMaxEdge();
+});
+
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
 
 const visibleEntries = computed(() => {
@@ -246,7 +257,7 @@ async function refresh(): Promise<void> {
     canGoUp.value = result.canGoUp;
     entries.value = result.entries;
     resetThumbs();
-    void loadThumbs(root, result.entries);
+    void loadThumbs(root, result.entries, thumbMaxEdge.value);
   } finally {
     loading.value = false;
   }
@@ -324,6 +335,14 @@ watch(
   },
   { immediate: true },
 );
+
+watch(thumbMaxEdge, () => {
+  if (loading.value || !entries.value.length) return;
+  resetThumbs();
+  const root = String(props.rootPath || '').trim();
+  if (!root) return;
+  void loadThumbs(root, entries.value, thumbMaxEdge.value);
+});
 </script>
 
 <style scoped>

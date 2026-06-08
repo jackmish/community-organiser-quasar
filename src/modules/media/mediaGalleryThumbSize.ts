@@ -2,7 +2,14 @@ export type MediaGalleryThumbSize = 'small' | 'medium' | 'large' | 'xl';
 
 export const MEDIA_GALLERY_THUMB_SIZE_STORAGE_KEY = 'co21.mediaGalleryThumbSize';
 
+/** CSS tile size for medium gallery thumbs (large/xl multiply this). */
 export const MEDIA_GALLERY_THUMB_BASE_PX = 220;
+
+/** Matches `.media-folder-browser__entry-visual` / file-mode list layout. */
+export const MEDIA_FILE_THUMB_DISPLAY_PX = 96;
+
+/** Base edge for Sharp JPEG cache; tiers below multiply this (not screen pixels). */
+export const MEDIA_THUMB_GEN_BASE = 160;
 
 const VALID_SIZES: MediaGalleryThumbSize[] = ['small', 'medium', 'large', 'xl'];
 
@@ -11,6 +18,22 @@ const LEGACY_SIZE_MAP: Record<string, MediaGalleryThumbSize> = {
   '1x': 'medium',
   '2x': 'large',
   '3x': 'xl',
+};
+
+/** Display tile multiplier (medium = 1× base, large = 2×, xl = 3×). */
+const GALLERY_DISPLAY_MULTIPLIER: Record<MediaGalleryThumbSize, number> = {
+  small: 1,
+  medium: 1,
+  large: 2,
+  xl: 3,
+};
+
+/** Cache generation multiplier (small/file = 1× gen base, then +1 per step). */
+const GALLERY_GEN_MULTIPLIER: Record<MediaGalleryThumbSize, number> = {
+  small: 1,
+  medium: 2,
+  large: 3,
+  xl: 4,
 };
 
 export function normalizeMediaGalleryThumbSize(value: unknown): MediaGalleryThumbSize {
@@ -24,17 +47,19 @@ export function normalizeMediaGalleryThumbSize(value: unknown): MediaGalleryThum
   return 'medium';
 }
 
+/** On-screen gallery tile edge in px (CSS only; may upscale cached JPEGs). */
 export function galleryThumbTilePx(size: MediaGalleryThumbSize): number {
-  switch (size) {
-    case 'large':
-      return MEDIA_GALLERY_THUMB_BASE_PX * 2;
-    case 'xl':
-      return MEDIA_GALLERY_THUMB_BASE_PX * 3;
-    case 'medium':
-      return MEDIA_GALLERY_THUMB_BASE_PX;
-    default:
-      return MEDIA_GALLERY_THUMB_BASE_PX;
-  }
+  if (size === 'small') return MEDIA_FILE_THUMB_DISPLAY_PX;
+  return MEDIA_GALLERY_THUMB_BASE_PX * GALLERY_DISPLAY_MULTIPLIER[size];
+}
+
+/** Sharp max edge = gen base × tier multiplier (fixed steps, not tied to tile px). */
+export function galleryThumbGenMaxEdge(size: MediaGalleryThumbSize): number {
+  return MEDIA_THUMB_GEN_BASE * GALLERY_GEN_MULTIPLIER[size];
+}
+
+export function fileModeThumbGenMaxEdge(): number {
+  return MEDIA_THUMB_GEN_BASE;
 }
 
 export function loadMediaGalleryThumbSize(): MediaGalleryThumbSize {

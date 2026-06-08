@@ -44,7 +44,11 @@ export function useProgressiveMediaThumbs(concurrency = DEFAULT_THUMB_CONCURRENC
     thumbUrls.value = {};
   }
 
-  async function loadThumbs(rootPath: string, entries: MediaFolderEntry[]): Promise<void> {
+  async function loadThumbs(
+    rootPath: string,
+    entries: MediaFolderEntry[],
+    maxEdge?: number,
+  ): Promise<void> {
     const root = String(rootPath || '').trim();
     if (!root) return;
 
@@ -54,7 +58,7 @@ export function useProgressiveMediaThumbs(concurrency = DEFAULT_THUMB_CONCURRENC
 
     await runWithConcurrency(targets, concurrency, async (entry) => {
       if (gen !== loadGen) return;
-      const result = await getMediaThumbnail(root, entry.path, entry.modifiedMs);
+      const result = await getMediaThumbnail(root, entry.path, entry.modifiedMs, maxEdge);
       if (gen !== loadGen || !result.ok || !result.url) return;
       thumbUrls.value = { ...thumbUrls.value, [entry.path]: result.url };
     });

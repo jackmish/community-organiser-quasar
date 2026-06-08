@@ -39,9 +39,11 @@ type MediaFolderElectronAPI = {
     rootPath: string;
     filePath: string;
     modifiedMs?: number | null;
+    maxEdge?: number;
   }) => Promise<GetMediaThumbnailResult>;
   getMediaThumbnails?: (payload: {
     rootPath: string;
+    maxEdge?: number;
     items: Array<{ filePath: string; modifiedMs?: number | null }>;
   }) => Promise<GetMediaThumbnailsBatchResult>;
   clearMediaThumbnailCache?: () => Promise<ClearMediaThumbnailCacheResult>;
@@ -89,6 +91,7 @@ export async function getMediaThumbnail(
   rootPath: string,
   filePath: string,
   modifiedMs?: number | null,
+  maxEdge?: number,
 ): Promise<GetMediaThumbnailResult> {
   const api = mediaFolderApi();
   if (!api?.getMediaThumbnail) {
@@ -98,18 +101,24 @@ export async function getMediaThumbnail(
     rootPath,
     filePath,
     ...(modifiedMs !== undefined ? { modifiedMs } : {}),
+    ...(maxEdge !== undefined ? { maxEdge } : {}),
   });
 }
 
 export async function getMediaThumbnails(
   rootPath: string,
   items: Array<{ filePath: string; modifiedMs?: number | null }>,
+  maxEdge?: number,
 ): Promise<GetMediaThumbnailsBatchResult> {
   const api = mediaFolderApi();
   if (!api?.getMediaThumbnails) {
     return { ok: false, error: 'Thumbnails are only available in the desktop app' };
   }
-  return api.getMediaThumbnails({ rootPath, items });
+  return api.getMediaThumbnails({
+    rootPath,
+    items,
+    ...(maxEdge !== undefined ? { maxEdge } : {}),
+  });
 }
 
 export async function clearMediaThumbnailCache(): Promise<ClearMediaThumbnailCacheResult> {
