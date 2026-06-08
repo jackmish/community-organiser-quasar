@@ -51,7 +51,7 @@ import {
   saveCo21SettingsToSqlite,
   saveGroupsToSqlite,
 } from './spaceSqliteMain';
-import { registerMediaFolderIpc } from './mediaFolderMain';
+import { registerMediaFolderIpc, registerMediaFileProtocol, registerMediaFileProtocolSchemes } from './mediaFolderMain';
 import { registerMediaThumbIpc, registerMediaThumbProtocol, registerMediaThumbProtocolSchemes, flushMediaThumbMetaTouches } from './mediaThumbMain';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +59,7 @@ const __dirname = path.dirname(__filename);
 
 app.setName('CO21 - Community Organiser');
 registerMediaThumbProtocolSchemes();
+registerMediaFileProtocolSchemes();
 // Read package.json version (best-effort). Keep this simple and cast where needed.
 let packageAppVersion: string | undefined;
 try {
@@ -686,6 +687,7 @@ ipcMain.handle(
 app.whenReady().then(() => {
   applyColdBootSpaceSelection();
   registerMediaThumbProtocol();
+  registerMediaFileProtocol();
   createWindow();
 });
 

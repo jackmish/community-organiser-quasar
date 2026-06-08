@@ -189,7 +189,7 @@
       :open="previewOpen"
       :root-path="rootPath"
       :entry="previewEntry"
-      :image-url="previewImageUrl ?? ''"
+      :fallback-thumb-url="previewFallbackThumbUrl || ''"
       @update:open="onPreviewOpenChange"
       @moved="onGalleryFileTagged"
       @error="onGalleryTagError"
@@ -266,7 +266,7 @@ const thumbMaxEdge = computed(() => {
 
 const displayPath = computed(() => currentPath.value || props.rootPath || '');
 
-const previewImageUrl = computed(() => {
+const previewFallbackThumbUrl = computed(() => {
   const entry = previewEntry.value;
   if (!entry) return undefined;
   return entryThumb(entry);

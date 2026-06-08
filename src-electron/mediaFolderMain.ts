@@ -1,5 +1,5 @@
 import type { IpcMain } from 'electron';
-import { shell } from 'electron';
+import { protocol, shell } from 'electron';
 import type { Stats } from 'fs';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
@@ -78,6 +78,156 @@ async function listDirectory(currentPath: string): Promise<MediaFolderEntryPaylo
 export type MoveMediaToTagFolderPayload =
   | { ok: true; newPath: string; folderName: string }
   | { ok: false; error: string };
+
+export type GetMediaFullImageUrlPayload =
+  | { ok: true; url: string }
+  | { ok: false; error: string };
+
+type MediaFileProtocolPayload = {
+  rootPath: string;
+  filePath: string;
+};
+
+const PREVIEW_IMAGE_EXTENSIONS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.avif',
+  '.heic',
+  '.heif',
+  '.svg',
+]);
+
+const MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.avif': 'image/avif',
+  '.heic': 'image/heic',
+  '.heif': 'image/heif',
+  '.svg': 'image/svg+xml',
+};
+
+function isPreviewImageFileName(name: string): boolean {
+  const lower = String(name || '').toLowerCase();
+  const dot = lower.lastIndexOf('.');
+  if (dot <= 0) return false;
+  return PREVIEW_IMAGE_EXTENSIONS.has(lower.slice(dot));
+}
+
+function mimeTypeForPath(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  return MIME_BY_EXT[ext] || 'application/octet-stream';
+}
+
+function encodeMediaFileProtocolPayload(payload: MediaFileProtocolPayload): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function decodeMediaFileProtocolPayload(token: string): MediaFileProtocolPayload | null {
+  try {
+    const raw = String(token || '').replace(/^\/+/, '');
+    if (!raw) return null;
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<MediaFileProtocolPayload>;
+    if (typeof parsed.rootPath !== 'string' || typeof parsed.filePath !== 'string') return null;
+    return { rootPath: parsed.rootPath, filePath: parsed.filePath };
+  } catch {
+    return null;
+  }
+}
+
+function buildMediaFileUrl(rootPath: string, filePath: string): string {
+  const token = encodeMediaFileProtocolPayload({ rootPath, filePath });
+  return `media-file://preview/${encodeURIComponent(token)}`;
+}
+
+export function registerMediaFileProtocolSchemes(): void {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'media-file',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true,
+        bypassCSP: true,
+      },
+    },
+  ]);
+}
+
+export function registerMediaFileProtocol(): void {
+  protocol.handle('media-file', async (request) => {
+    try {
+      const url = new URL(request.url);
+      if (url.hostname !== 'preview') {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const token = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+      const decoded = decodeMediaFileProtocolPayload(token);
+      if (!decoded) {
+        return new Response('Bad request', { status: 400 });
+      }
+
+      const resolved = resolveInsideRoot(decoded.rootPath, decoded.filePath);
+      if (!resolved || !isPreviewImageFileName(path.basename(resolved))) {
+        return new Response('Forbidden', { status: 403 });
+      }
+
+      const stat = await fsPromises.stat(resolved);
+      if (!stat.isFile()) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      const data = await fsPromises.readFile(resolved);
+      return new Response(data, {
+        headers: {
+          'Content-Type': mimeTypeForPath(resolved),
+          'Content-Length': String(data.length),
+          'Cache-Control': 'private, no-cache',
+        },
+      });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
+
+async function resolvePreviewImageFile(
+  rootPath: string,
+  filePath: string,
+): Promise<GetMediaFullImageUrlPayload> {
+  const resolvedRoot = resolveInsideRoot(rootPath, rootPath);
+  if (!resolvedRoot) return { ok: false, error: 'Invalid task folder' };
+
+  const resolvedFile = resolveInsideRoot(rootPath, filePath);
+  if (!resolvedFile) return { ok: false, error: 'Path outside task folder' };
+
+  if (!isPreviewImageFileName(path.basename(resolvedFile))) {
+    return { ok: false, error: 'Not an image file' };
+  }
+
+  try {
+    const stat = await fsPromises.stat(resolvedFile);
+    if (!stat.isFile()) return { ok: false, error: 'Not a file' };
+    const buffer = await fsPromises.readFile(resolvedFile);
+    if (!buffer.length) return { ok: false, error: 'Empty file' };
+    const mime = mimeTypeForPath(resolvedFile);
+    return {
+      ok: true,
+      url: `data:${mime};base64,${buffer.toString('base64')}`,
+    };
+  } catch {
+    return { ok: false, error: 'File not found' };
+  }
+}
 
 async function resolveUniqueFilePath(dir: string, fileName: string): Promise<string> {
   const ext = path.extname(fileName);
@@ -231,6 +381,26 @@ export function registerMediaFolderIpc(ipcMain: IpcMain): void {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { ok: false, error: msg || 'Failed to move file' };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'media:get-full-image-url',
+    async (
+      _evt,
+      payload: { rootPath?: string; filePath?: string },
+    ): Promise<GetMediaFullImageUrlPayload> => {
+      try {
+        const rootPath = String(payload?.rootPath || '').trim();
+        const filePath = String(payload?.filePath || '').trim();
+        if (!rootPath || !filePath) {
+          return { ok: false, error: 'Missing path' };
+        }
+        return await resolvePreviewImageFile(rootPath, filePath);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: msg || 'Failed to open image' };
       }
     },
   );

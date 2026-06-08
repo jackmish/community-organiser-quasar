@@ -87,6 +87,7 @@
   "files.gallery_tag_unsupported": "Przenieś do _Unsupported",
   "files.gallery_tag_bad_quality": "Przenieś do _BadQuality",
   "files.gallery_tag_move_failed": "Nie udało się przenieść pliku",
+  "files.gallery_preview_failed": "Nie udało się wczytać pełnego obrazu",
   "files.col_name": "Nazwa",
   "files.col_created": "Utworzono",
   "files.col_size": "Rozmiar",

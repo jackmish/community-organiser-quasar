@@ -34,6 +34,10 @@ export type MoveMediaToTagFolderResult =
   | { ok: true; newPath: string; folderName: string }
   | { ok: false; error?: string };
 
+export type GetMediaFullImageUrlResult =
+  | { ok: true; url: string }
+  | { ok: false; error?: string };
+
 type MediaFolderElectronAPI = {
   listMediaFolder?: (payload: {
     rootPath: string;
@@ -58,6 +62,10 @@ type MediaFolderElectronAPI = {
     filePath: string;
     folderName: string;
   }) => Promise<MoveMediaToTagFolderResult>;
+  getMediaFullImageUrl?: (payload: {
+    rootPath: string;
+    filePath: string;
+  }) => Promise<GetMediaFullImageUrlResult>;
 };
 
 function mediaFolderApi(): MediaFolderElectronAPI | null {
@@ -148,6 +156,17 @@ export async function moveMediaToTagFolder(
     return { ok: false, error: 'File tagging is only available in the desktop app' };
   }
   return api.moveMediaToTagFolder({ rootPath, filePath, folderName });
+}
+
+export async function getMediaFullImageUrl(
+  rootPath: string,
+  filePath: string,
+): Promise<GetMediaFullImageUrlResult> {
+  const api = mediaFolderApi();
+  if (!api?.getMediaFullImageUrl) {
+    return { ok: false, error: 'Full image preview is only available in the desktop app' };
+  }
+  return api.getMediaFullImageUrl({ rootPath, filePath });
 }
 
 export const IMAGE_FILE_EXTENSIONS = new Set([
