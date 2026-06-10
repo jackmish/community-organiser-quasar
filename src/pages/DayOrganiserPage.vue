@@ -587,6 +587,9 @@ const {
   onExternalChange: onAppViewModeExternalChange,
 } = useAppViewMode(mergeSourceGroup);
 
+/** After persisted view mode is loaded; avoids clearing selection on first hydrate. */
+const appViewModeReady = ref(false);
+
 async function onToggleAppViewMode(): Promise<void> {
   const group = mergeSourceGroup.value;
   if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
@@ -1605,6 +1608,13 @@ function defaultAddTypeForCalendarDate(date: string): AddFormDefaultTypeId {
 
 watch(isFilesMode, (filesMode) => {
   addFormDefaultTypeId.value = filesMode ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+  if (!appViewModeReady.value) return;
+  clearTaskToEdit();
+  try {
+    setPreviewFloating(null);
+  } catch (e) {
+    void e;
+  }
 });
 
 const isAddButtonAnchored = computed(() => {
@@ -1983,7 +1993,8 @@ useDayRollover({
 onMounted(async () => {
   window.addEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   window.addEventListener(MEDIA_VIEW_MODE_CHANGED_EVENT, onAppViewModeExternalChange);
-  void refreshAppViewModes();
+  await refreshAppViewModes();
+  appViewModeReady.value = true;
   try {
     await CC.storage.loadData();
     if ((CC.group.list.all.value || []).length === 0) {
