@@ -43,6 +43,16 @@
             <q-card v-if="activeFormMode === 'create'" flat bordered class="q-mb-md space-create-card">
               <q-card-section>
                 <div class="text-subtitle2 q-mb-sm">{{ $text('space.create_new') }}</div>
+                <q-option-group
+                  v-model="createMode"
+                  :options="createModeOptions"
+                  type="radio"
+                  inline
+                  class="space-create-mode-options q-mb-sm"
+                />
+                <p class="space-create-mode-hint text-body2 q-mb-md">
+                  {{ createModeHint }}
+                </p>
                 <q-input
                   v-model="createName"
                   dense
@@ -58,8 +68,8 @@
                       dense
                       outlined
                       readonly
-                      :label="$text('space.path_label')"
-                      :hint="$text('space.path_hint')"
+                      :label="createPathLabel"
+                      :hint="createPathHint"
                     />
                   </div>
                   <div class="col-auto">
@@ -73,6 +83,16 @@
                     />
                   </div>
                 </div>
+                <q-input
+                  v-if="createMode !== 'blank' && workspacePathPreview"
+                  :model-value="workspacePathPreview"
+                  dense
+                  outlined
+                  readonly
+                  class="q-mt-sm"
+                  :label="$text('space.workspace_path_label')"
+                  :hint="$text('space.workspace_path_hint')"
+                />
               </q-card-section>
               <q-card-actions align="right">
                 <q-btn flat :label="$text('action.close')" @click="cancelForm" />
@@ -448,7 +468,9 @@ import { appNotify } from 'src/utils/appNotify';
 import {
   SYSTEM_SPACE_ID,
   browseSpaceFolder,
+  CO21_WORKSPACE_DIR_NAME,
   createCustomSpace,
+  createWorkspaceWithSetup,
   isSpaceAccessAvailable,
   isSpaceManagementAvailable,
   isSystemSpace,
@@ -467,6 +489,7 @@ import {
   type SpaceEntry,
   type SpacePathIssue,
   type SpaceStorageMode,
+  type WorkspaceCreateMode,
 } from 'src/modules/space';
 import type { OpenSpacesDialogMode } from 'src/modules/space/spaceUi';
 import type { SpaceAccessStatus } from 'src/modules/space/spaceAccessModel';
@@ -508,7 +531,38 @@ type FormMode = 'create' | 'locate' | 'relocate' | 'move';
 const activeFormMode = ref<FormMode | null>(null);
 const createName = ref('');
 const createPath = ref('');
+const createMode = ref<WorkspaceCreateMode>('blank');
+const workspacePathPreview = ref('');
 const creating = ref(false);
+
+const createModeOptions = computed(() => [
+  { label: $text('space.create_mode_blank'), value: 'blank' as const },
+  { label: $text('space.create_mode_folder_manager'), value: 'folder_manager' as const },
+  { label: $text('space.create_mode_many_containers'), value: 'many_containers' as const },
+]);
+
+const createModeHint = computed(() => {
+  switch (createMode.value) {
+    case 'folder_manager':
+      return $text('space.create_mode_folder_manager_hint');
+    case 'many_containers':
+      return $text('space.create_mode_many_containers_hint');
+    default:
+      return $text('space.create_mode_blank_hint');
+  }
+});
+
+const createPathLabel = computed(() =>
+  createMode.value === 'blank'
+    ? $text('space.path_label')
+    : $text('space.content_root_label'),
+);
+
+const createPathHint = computed(() =>
+  createMode.value === 'blank'
+    ? $text('space.path_hint')
+    : $text('space.content_root_hint'),
+);
 const locateName = ref('');
 const locatePath = ref('');
 const locating = ref(false);
@@ -672,10 +726,33 @@ async function refresh(): Promise<void> {
   }
 }
 
+async function refreshWorkspacePathPreview(): Promise<void> {
+  if (createMode.value === 'blank') {
+    workspacePathPreview.value = '';
+    return;
+  }
+  const root = createPath.value.trim();
+  if (!root) {
+    workspacePathPreview.value = '';
+    return;
+  }
+  const api = (window as unknown as { electronAPI?: { joinPath?: (...parts: string[]) => string } })
+    .electronAPI;
+  workspacePathPreview.value = api?.joinPath
+    ? api.joinPath(root, CO21_WORKSPACE_DIR_NAME)
+    : `${root}\\${CO21_WORKSPACE_DIR_NAME}`;
+}
+
+watch([createMode, createPath], () => {
+  void refreshWorkspacePathPreview();
+});
+
 function cancelForm(): void {
   activeFormMode.value = null;
   createName.value = '';
   createPath.value = '';
+  createMode.value = 'blank';
+  workspacePathPreview.value = '';
   locateName.value = '';
   locatePath.value = '';
   relocatePath.value = '';
@@ -690,6 +767,8 @@ function openCreateForm(): void {
   activeFormMode.value = 'create';
   createName.value = '';
   createPath.value = '';
+  createMode.value = 'blank';
+  workspacePathPreview.value = '';
 }
 
 function openLocateForm(): void {
@@ -752,10 +831,22 @@ async function submitCreate(): Promise<void> {
   if (!createName.value.trim() || !createPath.value.trim()) return;
   creating.value = true;
   try {
-    await createCustomSpace(createName.value.trim(), createPath.value.trim());
-    appNotify('positive', $text('space.created_ok'));
+    const trimmedName = createName.value.trim();
+    const trimmedPath = createPath.value.trim();
+    if (createMode.value === 'blank') {
+      await createCustomSpace(trimmedName, trimmedPath);
+      appNotify('positive', $text('space.created_ok'));
+      cancelForm();
+      await refresh();
+      return;
+    }
+    const entry = await createWorkspaceWithSetup(trimmedName, {
+      mode: createMode.value,
+      folderPath: trimmedPath,
+    });
+    appNotify('positive', $text('space.created_with_tasks_ok'));
     cancelForm();
-    await refresh();
+    await switchSpaceAndRestart(entry.id);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     appNotify('negative', msg || $text('space.create_failed'));
@@ -939,6 +1030,21 @@ watch(
 <style scoped>
 .space-create-card {
   background: rgba(0, 0, 0, 0.02);
+}
+
+.space-create-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+
+.space-create-mode-options :deep(.q-radio__label) {
+  font-weight: 600;
+}
+
+.space-create-mode-hint {
+  line-height: 1.45;
+  opacity: 0.92;
 }
 
 .space-list-item {

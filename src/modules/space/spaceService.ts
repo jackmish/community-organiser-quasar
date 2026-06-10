@@ -5,6 +5,7 @@ import type {
   SpaceRegistrySnapshot,
   SpaceStorageMode,
 } from './models/SpaceModel';
+import type { WorkspaceCreateMode } from './models/workspaceSetupModel';
 
 type SpaceOkResult<T> = { ok: true } & T;
 type SpaceErrResult = { ok: false; error: string };
@@ -23,6 +24,11 @@ type SpaceMigrateResultPayload = SpaceOkResult<{
 export interface SpaceElectronAPI {
   getRegistry: () => Promise<SpaceRegistrySnapshot>;
   createSpace: (payload: { name: string; dataPath: string }) => Promise<SpaceCreateResult>;
+  createWithSetup: (payload: {
+    name: string;
+    mode: WorkspaceCreateMode;
+    folderPath: string;
+  }) => Promise<SpaceCreateResult>;
   registerExistingSpace: (payload: {
     name: string;
     dataPath: string;
@@ -77,6 +83,19 @@ export async function createCustomSpace(name: string, dataPath: string): Promise
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.createSpace({ name, dataPath });
+  if (!result.ok) throw new Error(result.error);
+  return result.entry;
+}
+
+export async function createWorkspaceWithSetup(
+  name: string,
+  payload: { mode: WorkspaceCreateMode; folderPath: string },
+): Promise<SpaceEntry> {
+  const api = spaceApi();
+  if (!api?.createWithSetup) {
+    throw new Error('Space management is only available in the desktop app');
+  }
+  const result = await api.createWithSetup({ name, ...payload });
   if (!result.ok) throw new Error(result.error);
   return result.entry;
 }

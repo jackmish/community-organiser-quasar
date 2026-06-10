@@ -203,6 +203,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('electronSpace', {
   getRegistry: () => ipcRenderer.invoke('space:get-registry'),
   createSpace: (payload) => ipcRenderer.invoke('space:create', payload),
+  createWithSetup: (payload) => ipcRenderer.invoke('space:create-with-setup', payload),
   registerExistingSpace: (payload) => ipcRenderer.invoke('space:register-existing', payload),
   relocateSpacePath: (payload) => ipcRenderer.invoke('space:relocate-path', payload),
   moveSpaceFolder: (payload) => ipcRenderer.invoke('space:move-folder', payload),

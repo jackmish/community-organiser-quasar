@@ -17,8 +17,16 @@ export {
 } from './models/SpaceModel';
 
 export {
+  CO21_WORKSPACE_DIR_NAME,
+  isWorkspaceCreateMode,
+  type WorkspaceBrowseKind,
+  type WorkspaceCreateMode,
+} from './models/workspaceSetupModel';
+
+export {
   browseSpaceFolder,
   createCustomSpace,
+  createWorkspaceWithSetup,
   isSpaceManagementAvailable,
   loadSpaceRegistrySnapshot,
   migrateSpaceToSqlite,

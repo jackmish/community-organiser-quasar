@@ -40,6 +40,8 @@ import {
   setSpaceStorageMode,
   switchAwayFromBrokenWorkspace,
 } from './spaceRegistryMain';
+import { createCustomSpaceWithSetup } from './workspaceSetupMain';
+import { isWorkspaceCreateMode } from '../src/modules/space/models/workspaceSetupModel';
 import {
   disableActiveSpaceAccess,
   getActiveSpaceAccessStatus,
@@ -229,6 +231,23 @@ ipcMain.handle('space:create', (_evt, payload: { name?: string; dataPath?: strin
     return { ok: false as const, error: msg };
   }
 });
+
+ipcMain.handle(
+  'space:create-with-setup',
+  (_evt, payload: { name?: string; mode?: string; folderPath?: string }) => {
+    try {
+      const name = typeof payload?.name === 'string' ? payload.name : '';
+      const folderPath = typeof payload?.folderPath === 'string' ? payload.folderPath : '';
+      const mode = payload?.mode;
+      if (!isWorkspaceCreateMode(mode)) throw new Error('Invalid workspace setup mode');
+      const entry = createCustomSpaceWithSetup(name, { mode, folderPath });
+      return { ok: true as const, entry };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
 
 ipcMain.handle('space:register-existing', (_evt, payload: { name?: string; dataPath?: string }) => {
   try {
