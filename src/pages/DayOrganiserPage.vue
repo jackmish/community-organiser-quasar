@@ -1079,6 +1079,7 @@ watch(
   (newDate, oldDate) => {
     try {
       if (newDate !== oldDate && !isFilesMode.value) {
+        addFormDefaultTypeId.value = defaultAddTypeForCalendarDate(newDate);
         // Defer check so other date-change handlers (e.g. calendar day-click) run first.
         setTimeout(() => {
           try {
@@ -1093,7 +1094,7 @@ watch(
             });
 
             const activeTask = CC.task.active.task.value;
-            const addTypeId = defaultAddTypeForCalendarDate(newDate);
+            const addTypeId = addFormDefaultTypeId.value;
 
             // If there are no tasks on the new date, or the currently active task doesn't belong
             // to the new date, clear selection and switch to creation mode.
@@ -1595,7 +1596,8 @@ const addFormDefaultTypeId = ref<AddFormDefaultTypeId>("Todo");
 const lastAddAnchored = ref(false);
 
 function defaultAddTypeForView(): AddFormDefaultTypeId {
-  return isFilesMode.value ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+  if (isFilesMode.value) return DEFAULT_MEDIA_TASK_TYPE_ID;
+  return defaultAddTypeForCalendarDate(CC.task.time.currentDate.value);
 }
 
 /** Calendar / date-driven add: today → Todo, other days → TimeEvent; files mode keeps media type. */
@@ -1607,7 +1609,9 @@ function defaultAddTypeForCalendarDate(date: string): AddFormDefaultTypeId {
 }
 
 watch(isFilesMode, (filesMode) => {
-  addFormDefaultTypeId.value = filesMode ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+  addFormDefaultTypeId.value = filesMode
+    ? DEFAULT_MEDIA_TASK_TYPE_ID
+    : defaultAddTypeForCalendarDate(CC.task.time.currentDate.value);
   if (!appViewModeReady.value) return;
   clearTaskToEdit();
   try {

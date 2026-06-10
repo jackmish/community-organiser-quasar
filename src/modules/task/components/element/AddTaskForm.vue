@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
-import { $text } from "src/modules/lang";
+import { $text, getLanguage, hasText } from "src/modules/lang";
 import { formatAppMonthLong } from "src/modules/lang/dateFormat";
 import type { Group } from "src/modules/group/models/GroupModel";
 import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
 import { parseYmdLocal, todayString } from "src/utils/dateUtils";
+import { formatSchedulePhraseWithMeta } from "src/composables/useTimeDiff";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "../list/ReplenishmentList.vue";
@@ -299,20 +300,42 @@ function resolveAddModeTypeId(): string {
     const stored = readStoredTaskTypeId(true);
     return isMediaTaskTypeId(stored) ? stored : DEFAULT_MEDIA_TASK_TYPE_ID;
   }
+  const date =
+    props.selectedDate || localNewTask.value.eventDate || todayString();
+  if (date && date !== todayString()) return "TimeEvent";
   return props.defaultAddTypeId === "TimeEvent" ? "TimeEvent" : "Todo";
 }
 
+function applyAddModeTaskTypeFromDate(dateStr?: string | null) {
+  if (props.mode !== "add" || props.initialTask || props.mediaMode) return;
+  const date = dateStr || props.selectedDate || localNewTask.value.eventDate;
+  if (!date) return;
+  const typeId = date === todayString() ? "Todo" : "TimeEvent";
+  if (localNewTask.value.type_id === typeId) return;
+  localNewTask.value.type_id = typeId;
+  lastSelectedType.value = typeId;
+  try {
+    localStorage.setItem(taskTypeStorageKey(false), typeId);
+  } catch (e) {
+    void e;
+  }
+}
+
 watch(
-  () => [props.mode, props.defaultAddTypeId, props.initialTask, props.mediaMode] as const,
-  ([mode, , initialTask, mediaMode]) => {
+  () =>
+    [props.mode, props.defaultAddTypeId, props.initialTask, props.mediaMode, props.selectedDate] as const,
+  ([mode, , initialTask, mediaMode, selectedDate]) => {
     if (mode !== "add" || initialTask) return;
     const typeId = resolveAddModeTypeId();
     if (localNewTask.value.type_id !== typeId) {
       localNewTask.value.type_id = typeId;
       lastSelectedType.value = typeId;
     }
-    if (!mediaMode && isMediaTaskTypeId(localNewTask.value.type_id)) {
-      localNewTask.value.type_id = typeId;
+    if (!mediaMode) {
+      applyAddModeTaskTypeFromDate(selectedDate);
+      if (isMediaTaskTypeId(localNewTask.value.type_id)) {
+        localNewTask.value.type_id = typeId;
+      }
     }
   },
 );
@@ -544,6 +567,49 @@ const calendarTypeOptions = [
   { label: "Note", shortLabel: "Note", value: "NoteLater", icon: "description" },
 ];
 
+function fillTextTemplate(
+  template: string,
+  vars: Record<string, string | number>,
+): string {
+  let result = template;
+  for (const [key, val] of Object.entries(vars)) {
+    result = result.split(`{${key}}`).join(String(val));
+  }
+  return result;
+}
+
+function formatPlaceholderEventDate(dateStr: string): string {
+  const d = parseYmdLocal(dateStr);
+  if (!d) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  if (getLanguage() === "pl") return `${dd}.${mm}.${yyyy}r.`;
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+const descriptionLabel = computed(() => {
+  const typeId = localNewTask.value.type_id;
+  if (typeId === "TimeEvent") {
+    const schedule = formatSchedulePhraseWithMeta(localNewTask.value.eventDate);
+    const time = localNewTask.value.eventTime ? ` ${localNewTask.value.eventTime}` : "";
+    const suffix = schedule.daysSuffix ? ` ${schedule.daysSuffix}` : "";
+    const prefix = $text("task.form.description_label_event_prefix");
+    if (schedule.embedsDate) {
+      return `${prefix} ${schedule.lead}${time}${suffix}`;
+    }
+    const date = formatPlaceholderEventDate(localNewTask.value.eventDate);
+    return `${prefix} ${schedule.lead}, ${date}${time}${suffix}`;
+  }
+  if (typeId === "Todo") return $text("task.form.description_label_todo");
+  return $text("label.description");
+});
+
+const taskTypeHint = computed(() => {
+  const key = `task.type.hint.${localNewTask.value.type_id}`;
+  return hasText(key) ? $text(key) : "";
+});
+
 const typeOptions = computed(() => {
   if (props.mediaMode) {
     return [
@@ -580,7 +646,6 @@ const {
   eventTimeMinute,
   eventDateTimeHoursDiff,
   eventTimeHoursDisplay,
-  getTimeDifferenceDisplay,
   cachedTime,
   eventTimeMode,
   eventTimeOffsetDays,
@@ -971,17 +1036,8 @@ watch(
     if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
-      if (props.mode === "add" && !props.mediaMode) {
-        const typeId = val === todayString() ? "Todo" : "TimeEvent";
-        localNewTask.value.type_id = typeId;
-        lastSelectedType.value = typeId;
-        try {
-          localStorage.setItem(taskTypeStorageKey(false), typeId);
-        } catch (e) {
-          void e;
-        }
-      }
     }
+    applyAddModeTaskTypeFromDate(val);
   }
 );
 
@@ -1010,6 +1066,7 @@ watch(
     try {
       if (m === "add") {
         localNewTask.value.groupId = extractGroupId((props as any).activeGroup);
+        applyAddModeTaskTypeFromDate(props.selectedDate);
       }
     } catch (e) {
       // ignore
@@ -1383,12 +1440,6 @@ function onSubmit(event: Event) {
                             class="time-toggle"
                           />
                         </div>
-                        <div
-                          v-if="repeatMode !== 'cyclic'"
-                          class="text-h7 text-primary text-weight-bold"
-                        >
-                          {{ getTimeDifferenceDisplay(localNewTask.eventDate) }}
-                        </div>
                         <div class="col-auto" v-if="repeatMode !== 'cyclic'">
                           <q-checkbox
                             v-model="autoIncrementYear"
@@ -1758,7 +1809,7 @@ function onSubmit(event: Event) {
                         v-if="!(isReplenish && mode === 'add')"
                         ref="descriptionInput"
                         :model-value="localNewTask.description"
-                        :label="$text('label.description')"
+                        :label="descriptionLabel"
                         outlined
                         type="textarea"
                         rows="1"
@@ -2053,6 +2104,12 @@ function onSubmit(event: Event) {
                               : undefined,
                         }"
                       />
+                    </div>
+                    <div
+                      v-if="taskTypeHint"
+                      class="text-caption text-grey-7 q-mt-sm"
+                    >
+                      {{ taskTypeHint }}
                     </div>
                   </q-card>
                 </div>
