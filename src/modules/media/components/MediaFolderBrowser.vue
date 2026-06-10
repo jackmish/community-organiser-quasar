@@ -86,7 +86,7 @@
           :class="entryClasses(entry)"
           @click="onEntryClick(entry)"
         >
-          <template v-if="useGalleryTiles">
+          <template v-if="useGalleryTilesForEntry(entry)">
             <span class="media-folder-browser__gallery-tile">
               <span class="media-folder-browser__gallery-media">
                 <img
@@ -268,6 +268,10 @@ const useGalleryTiles = computed(
   () => props.galleryLayout === true && galleryThumbSize.value !== 'small',
 );
 
+function useGalleryTilesForEntry(entry: MediaFolderEntry): boolean {
+  return useGalleryTiles.value && !entry.isDirectory;
+}
+
 const galleryBrowserStyle = computed(() => {
   if (!useGalleryTiles.value) return undefined;
   const px = galleryThumbTilePx(galleryThumbSize.value);
@@ -309,7 +313,7 @@ function entryClasses(entry: MediaFolderEntry): Record<string, boolean> {
   const tagId = entryTagFolderId(entry);
   const activeTagId = activeTagFolderId.value;
   return {
-    'media-folder-browser__entry--gallery': useGalleryTiles.value,
+    'media-folder-browser__entry--gallery': useGalleryTilesForEntry(entry),
     'media-folder-browser__entry--tag-folder': tagId != null,
     [`media-folder-browser__entry--tag-folder--${tagId}`]: tagId != null,
     'media-folder-browser__entry--tag-folder-active':
