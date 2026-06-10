@@ -206,6 +206,26 @@ describe('useFloatingPreview', () => {
     }
   });
 
+  it('[BUG FIX] calendar day long-press release click does not dismiss an open floating preview', async () => {
+    const calendarDayBtn = document.createElement('button');
+    calendarDayBtn.className = 'calendar-day-btn';
+    document.body.appendChild(calendarDayBtn);
+
+    const { result, unmount } = withSetup(() => useFloatingPreview());
+    try {
+      result.setFloating(makeRect(100, 100, 200, 40));
+      expect(result.previewFloating.value).toBe(true);
+
+      simulateClick(calendarDayBtn);
+      await nextTick();
+
+      expect(result.previewFloating.value).toBe(true);
+    } finally {
+      calendarDayBtn.remove();
+      unmount();
+    }
+  });
+
   it('[BUG FIX] clicking a task element when a preview IS already open keeps setFloating unblocked', async () => {
     const { result, unmount } = withSetup(() => useFloatingPreview());
     try {

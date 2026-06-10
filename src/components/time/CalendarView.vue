@@ -375,6 +375,8 @@ const {
   longPressTriggered: longPressTriggeredDay,
 } = useLongPress();
 
+const dayLongPressedRecently = ref(false);
+
 // Long-press should open edit mode for events; short press shows preview.
 setLongPressHandler((task: any) => {
   // Wrap async work in an IIFE and intentionally do not return the Promise
@@ -419,6 +421,7 @@ setLongPressHandlerDay((payload: any) => {
     } else {
       date = typeof payload === "string" ? payload : String(payload);
     }
+    dayLongPressedRecently.value = true;
     // Emit day-click with rect so parent can position the add form like a right-click
     emit("day-click", { date, rect });
     // Also update selectedDate/time via api like right-click handler does
@@ -504,8 +507,6 @@ function onDayPointerUp(ev: PointerEvent) {
     cancelLongPressDay();
   }
 }
-
-const dayLongPressedRecently = ref(false);
 
 function onDayClick(ev: Event, day: string) {
   // Ignore clicks that immediately follow a long-press

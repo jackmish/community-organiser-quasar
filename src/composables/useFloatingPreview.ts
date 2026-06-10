@@ -299,7 +299,9 @@ export function useFloatingPreview(opts?: {
       try {
         const lm = lastMouseDownTarget.value;
         if (lm && lm instanceof Element) {
-          const opener = lm.closest('.list-add-btn, .add-task-btn, .floating-add-btn');
+          const opener = lm.closest(
+            '.list-add-btn, .add-task-btn, .floating-add-btn, .calendar-day-btn',
+          );
           if (opener) {
             lastMouseDownTarget.value = null;
             return;
@@ -314,6 +316,7 @@ export function useFloatingPreview(opts?: {
         const tgt = e.target;
         if (tgt instanceof Element) {
           if (tgt.closest?.('[data-task-id]')) return;
+          if (tgt.closest?.('.calendar-day-btn, td[data-day]')) return;
         }
       } catch (err) {
         // ignore

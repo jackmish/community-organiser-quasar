@@ -1075,8 +1075,8 @@ watch(
   () => CC.task.time.currentDate.value,
   (newDate, oldDate) => {
     try {
-      if (newDate !== oldDate) {
-        // Defer check so other date-change handlers (e.g. calendar preview) run first.
+      if (newDate !== oldDate && !isFilesMode.value) {
+        // Defer check so other date-change handlers (e.g. calendar day-click) run first.
         setTimeout(() => {
           try {
             // Determine if the selected date has any tasks
@@ -1090,6 +1090,7 @@ watch(
             });
 
             const activeTask = CC.task.active.task.value;
+            const addTypeId = defaultAddTypeForCalendarDate(newDate);
 
             // If there are no tasks on the new date, or the currently active task doesn't belong
             // to the new date, clear selection and switch to creation mode.
@@ -1104,11 +1105,11 @@ watch(
                   CC.task.active.setTask(null);
                 else if (CC.task && CC.task.active) CC.task.active.task.value = null;
 
-                // Ensure the newTask helper defaults to a TimeEvent type so the form
-                // shows the TimeEvent chooser when creating a new task.
+                addFormDefaultTypeId.value = addTypeId;
                 try {
-                  if (typeof newTask !== "undefined" && newTask && "value" in newTask)
-                    (newTask as any).value.type_id = "TimeEvent";
+                  if (typeof newTask !== "undefined" && newTask && "value" in newTask) {
+                    (newTask as any).value.type_id = addTypeId;
+                  }
                 } catch (e) {
                   // ignore if newTask isn't available
                 }
@@ -1542,6 +1543,11 @@ const {
         ) {
           return true;
         }
+        // Long-press / right-click on a calendar day opens the add form; the release
+        // click must not dismiss the floating panel (capture-phase outside handler).
+        if ((target as Element).closest(".calendar-day-btn, td[data-day]")) {
+          return true;
+        }
       }
     } catch (e) {
       void e;
@@ -1587,6 +1593,14 @@ const lastAddAnchored = ref(false);
 
 function defaultAddTypeForView(): AddFormDefaultTypeId {
   return isFilesMode.value ? DEFAULT_MEDIA_TASK_TYPE_ID : "Todo";
+}
+
+/** Calendar / date-driven add: today → Todo, other days → TimeEvent; files mode keeps media type. */
+function defaultAddTypeForCalendarDate(date: string): AddFormDefaultTypeId {
+  if (isFilesMode.value) return DEFAULT_MEDIA_TASK_TYPE_ID;
+  const d = String(date || "").trim();
+  if (!d || d === todayString()) return "Todo";
+  return "TimeEvent";
 }
 
 watch(isFilesMode, (filesMode) => {
@@ -1737,7 +1751,9 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
       return;
     }
     lastAddFromCalendar.value = true;
-    addFormDefaultTypeId.value = 'TimeEvent';
+    const clickedDate = payload?.date || CC.task.time.currentDate.value;
+    const addTypeId = defaultAddTypeForCalendarDate(clickedDate);
+    addFormDefaultTypeId.value = addTypeId;
     // Clear any active task so AddTaskForm enters add mode
     try {
       CC.task.active.setTask(null);
@@ -1755,12 +1771,11 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
       }
     }
 
-    // Ensure the newTask helper is initialized to the clicked date and TimeEvent type
+    // Ensure the newTask helper is initialized to the clicked date and task type
     try {
       if (typeof newTask !== "undefined" && newTask && "value" in newTask) {
-        (newTask as any).value.eventDate =
-          payload?.date || CC.task.time.currentDate.value;
-        (newTask as any).value.type_id = "TimeEvent";
+        (newTask as any).value.eventDate = clickedDate;
+        (newTask as any).value.type_id = addTypeId;
       }
     } catch (e) {
       void e;

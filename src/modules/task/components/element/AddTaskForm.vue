@@ -5,7 +5,7 @@ import { formatAppMonthLong } from "src/modules/lang/dateFormat";
 import type { Group } from "src/modules/group/models/GroupModel";
 import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
-import { parseYmdLocal } from "src/utils/dateUtils";
+import { parseYmdLocal, todayString } from "src/utils/dateUtils";
 import logger from "src/utils/logger";
 import CalendarView from "src/components/time/CalendarView.vue";
 import ReplenishmentList from "../list/ReplenishmentList.vue";
@@ -971,11 +971,12 @@ watch(
     if (props.mode === "edit") return;
     if (val && val !== localNewTask.value.eventDate) {
       localNewTask.value.eventDate = val;
-      if (props.mode === "add" && props.defaultAddTypeId === "TimeEvent" && !props.mediaMode) {
-        localNewTask.value.type_id = "TimeEvent";
-        lastSelectedType.value = "TimeEvent";
+      if (props.mode === "add" && !props.mediaMode) {
+        const typeId = val === todayString() ? "Todo" : "TimeEvent";
+        localNewTask.value.type_id = typeId;
+        lastSelectedType.value = typeId;
         try {
-          localStorage.setItem(taskTypeStorageKey(false), "TimeEvent");
+          localStorage.setItem(taskTypeStorageKey(false), typeId);
         } catch (e) {
           void e;
         }
