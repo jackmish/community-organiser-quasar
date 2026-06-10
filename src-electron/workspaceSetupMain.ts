@@ -5,6 +5,7 @@ import { DEFAULT_GALLERY_TAG_SET } from '../src/modules/media/mediaGalleryTagMod
 import { MEDIA_TASK_TYPE } from '../src/modules/media/mediaTaskTypes';
 import {
   CO21_WORKSPACE_DIR_NAME,
+  CO21_WORKSPACE_DIR_NAMES,
   type WorkspaceBrowseKind,
   type WorkspaceCreateMode,
 } from '../src/modules/space/models/workspaceSetupModel';
@@ -190,7 +191,7 @@ function buildManagedFolders(
   }
 
   if (mode === 'many_containers') {
-    const exclude = new Set([CO21_WORKSPACE_DIR_NAME, 'co21-workspace']);
+    const exclude = new Set(CO21_WORKSPACE_DIR_NAMES);
     const subdirs = listImmediateSubdirectories(contentRoot, exclude);
     if (!subdirs.length) {
       throw new Error('No subfolders found in the selected folder');

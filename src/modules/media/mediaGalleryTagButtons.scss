@@ -102,3 +102,40 @@
 .media-gallery-tag-folder-nav__chip.media-gallery-tag-actions__btn--rate_3:hover {
   background: linear-gradient(180deg, #f0b87d 0%, #d98940 55%, #b56f2e 100%) !important;
 }
+
+.media-gallery-tag-actions__btn--back_to_root,
+.media-gallery-tag-folder-nav__chip.media-gallery-tag-actions__btn--back_to_root {
+  background: rgba(25, 118, 210, 0.88) !important;
+  color: #fff !important;
+}
+
+.media-gallery-tag-actions__btn--back_to_root:hover,
+.media-gallery-tag-folder-nav__chip.media-gallery-tag-actions__btn--back_to_root:hover {
+  background: rgba(21, 101, 192, 0.95) !important;
+}
+
+.media-gallery-tag-icon--unsupported {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.media-gallery-tag-icon--unsupported-q {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}

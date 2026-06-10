@@ -4,6 +4,7 @@
     :class="{
       'media-folder-browser--fill': fillAvailable,
       'media-folder-browser--gallery': useGalleryTiles,
+      'media-folder-browser--in-project-folder': browsingProjectFolder,
     }"
     :style="galleryBrowserStyle"
   >
@@ -20,18 +21,18 @@
       <div class="media-folder-browser__path text-caption text-grey-7 ellipsis" :title="currentPath">
         {{ displayPath }}
       </div>
-      <q-option-group
-        v-if="galleryLayout"
-        v-model="galleryThumbSize"
-        :options="galleryThumbSizeOptions"
-        type="radio"
-        inline
-        dense
-        class="media-folder-browser__thumb-size"
-      />
-      <div class="media-folder-browser__toolbar-actions">
+      <div class="media-folder-browser__toolbar-main">
+        <q-option-group
+          v-if="galleryLayout"
+          v-model="galleryThumbSize"
+          :options="galleryThumbSizeOptions"
+          type="radio"
+          inline
+          dense
+          class="media-folder-browser__thumb-size"
+        />
         <MediaGalleryTagFolderNav
-          v-if="galleryLayout && galleryTags.length"
+          v-if="galleryLayout"
           :root-path="rootPath"
           :tags="galleryTags"
           :current-path="currentPath || rootPath"
@@ -110,7 +111,7 @@
                   v-if="galleryLayout && showGalleryTags(entry)"
                   :root-path="rootPath"
                   :file-path="entry.path"
-                  :tags="galleryTags"
+                  :tags="galleryFileTags"
                   class="media-folder-browser__gallery-tag-actions"
                   @moved="onGalleryFileTagged"
                   @error="onGalleryTagError"
@@ -157,7 +158,7 @@
                     v-if="galleryLayout && showGalleryTags(entry)"
                     :root-path="rootPath"
                     :file-path="entry.path"
-                    :tags="galleryTags"
+                    :tags="galleryFileTags"
                     class="media-folder-browser__entry-tag-actions"
                     @moved="onGalleryFileTagged"
                     @error="onGalleryTagError"
@@ -201,7 +202,7 @@
       :entry="previewEntry"
       :entries="previewImageEntries"
       :fallback-thumb-url="previewFallbackThumbUrl || ''"
-      :tags="galleryTags"
+      :tags="galleryFileTags"
       @update:open="onPreviewOpenChange"
       @update:entry="previewEntry = $event"
       @moved="onGalleryFileTagged"
@@ -220,8 +221,14 @@ import {
   galleryThumbTilePx,
 } from '../mediaGalleryThumbSize';
 import {
+  CO21_WORKSPACE_DIR_NAMES,
+  isCo21WorkspaceDirName,
+} from 'src/modules/space/models/workspaceSetupModel';
+import {
   findGalleryTagForFolderName,
+  galleryFileActionTags,
   isGalleryTagFolderPath,
+  normalizeMediaPath,
   resolveGalleryTagsForSet,
   type MediaGalleryTagSetConfig,
 } from '../mediaGalleryTagModel';
@@ -263,6 +270,7 @@ const { thumbUrls, loadThumbs, reset: resetThumbs } = useProgressiveMediaThumbs(
 const { galleryThumbSize } = useMediaGalleryThumbSize();
 
 const galleryTags = computed(() => resolveGalleryTagsForSet(props.galleryTagSet));
+const galleryFileTags = computed(() => galleryFileActionTags(galleryTags.value));
 
 const useGalleryTiles = computed(
   () => props.galleryLayout === true && galleryThumbSize.value !== 'small',
@@ -304,6 +312,20 @@ function showGalleryTags(entry: MediaFolderEntry): boolean {
   return !entry.isDirectory && isImageFileName(entry.name);
 }
 
+function isProjectFolderEntry(entry: MediaFolderEntry): boolean {
+  return entry.isDirectory && isCo21WorkspaceDirName(entry.name);
+}
+
+const browsingProjectFolder = computed(() => {
+  const rootN = normalizeMediaPath(props.rootPath);
+  const cur = normalizeMediaPath(currentPath.value || props.rootPath);
+  if (!rootN || !cur) return false;
+  return CO21_WORKSPACE_DIR_NAMES.some((dirName) => {
+    const project = normalizeMediaPath(`${rootN}/${dirName}`);
+    return cur === project || cur.startsWith(`${project}/`);
+  });
+});
+
 function entryTagFolderId(entry: MediaFolderEntry): string | null {
   if (!props.galleryLayout || !entry.isDirectory) return null;
   return findGalleryTagForFolderName(entry.name, galleryTags.value)?.id ?? null;
@@ -318,6 +340,7 @@ function entryClasses(entry: MediaFolderEntry): Record<string, boolean> {
     [`media-folder-browser__entry--tag-folder--${tagId}`]: tagId != null,
     'media-folder-browser__entry--tag-folder-active':
       tagId != null && activeTagId != null && tagId === activeTagId,
+    'media-folder-browser__entry--project-folder': isProjectFolderEntry(entry),
   };
 }
 
@@ -527,24 +550,27 @@ watch(thumbMaxEdge, () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
   margin-bottom: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .media-folder-browser__path {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: min(220px, 36vw);
+  flex: 1 1 auto;
+  min-width: 48px;
+  max-width: min(160px, 28vw);
 }
 
-.media-folder-browser__toolbar-actions {
+.media-folder-browser__toolbar-main {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 4px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .media-folder-browser__list {
@@ -570,6 +596,7 @@ watch(thumbMaxEdge, () => {
 
 .media-folder-browser__thumb-size {
   flex: 0 0 auto;
+  margin-right: 10px;
 }
 
 .media-folder-browser__thumb-size :deep(.q-radio) {
@@ -642,6 +669,43 @@ watch(thumbMaxEdge, () => {
 .media-folder-browser__entry--tag-folder--to_remove {
   border-color: #d32f2f;
   background: linear-gradient(180deg, rgba(211, 47, 47, 0.14) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--project-folder {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(25, 118, 210, 0.45);
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.08) 0%, rgba(255, 255, 255, 1) 55%);
+}
+
+.media-folder-browser__entry--project-folder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('icons/co21-logo.png') no-repeat right 8px center;
+  background-size: 52px auto;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.media-folder-browser--in-project-folder .media-folder-browser__list {
+  position: relative;
+  background: linear-gradient(180deg, rgba(25, 118, 210, 0.05) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.media-folder-browser--in-project-folder .media-folder-browser__list::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('icons/co21-logo.png') no-repeat center center;
+  background-size: min(200px, 45%) auto;
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.media-folder-browser__entry--project-folder .media-folder-browser__entry-main {
+  position: relative;
+  z-index: 1;
 }
 
 .media-folder-browser__entry-main {

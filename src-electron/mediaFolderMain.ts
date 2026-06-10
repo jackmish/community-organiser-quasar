@@ -84,7 +84,7 @@ export type ApplyMediaGalleryTagPayload =
   | { ok: false; error: string };
 
 type GalleryTagActionPayload = {
-  mode: 'single_folder' | 'multi_folder' | 'hierarchical';
+  mode: 'single_folder' | 'multi_folder' | 'hierarchical' | 'root';
   folderName?: string;
   folders?: string[];
   linkMode?: 'copy' | 'symlink';
@@ -313,6 +313,12 @@ async function applyGalleryTagAction(
   }
 
   const fileName = path.basename(resolvedFile);
+
+  if (action.mode === 'root') {
+    const destPath = await resolveUniqueFilePath(resolvedRoot, fileName);
+    await fsPromises.rename(resolvedFile, destPath);
+    return { ok: true, newPath: destPath, detail: '' };
+  }
 
   if (action.mode === 'single_folder') {
     const folder = sanitizeFolderSegment(String(action.folderName || ''));

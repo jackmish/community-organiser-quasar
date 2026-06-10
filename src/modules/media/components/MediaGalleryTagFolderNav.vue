@@ -1,5 +1,16 @@
 <template>
-  <div v-if="navTags.length" class="media-gallery-tag-folder-nav" @click.stop>
+  <div v-if="showNav" class="media-gallery-tag-folder-nav" @click.stop>
+    <button
+      type="button"
+      class="media-gallery-tag-folder-nav__chip media-gallery-tag-folder-nav__chip--root"
+      :class="{ 'media-gallery-tag-actions__btn--active': isAtGalleryRoot }"
+      :title="$text('files.gallery_nav_root')"
+      :aria-label="$text('files.gallery_nav_root')"
+      :disabled="loading"
+      @click="onNavigateRoot"
+    >
+      <q-icon name="home" size="16px" />
+    </button>
     <button
       v-for="tag in navTags"
       :key="tag.id"
@@ -21,6 +32,10 @@
       <span v-if="chipLabel(tag)" class="media-gallery-tag-folder-nav__label">{{
         chipLabel(tag)
       }}</span>
+      <span v-else-if="tag.id === 'unsupported'" class="media-gallery-tag-icon--unsupported">
+        <q-icon name="insert_drive_file" size="13px" />
+        <span class="media-gallery-tag-icon--unsupported-q">?</span>
+      </span>
       <q-icon v-else-if="tag.icon" :name="tag.icon" size="14px" />
     </button>
   </div>
@@ -33,6 +48,7 @@ import {
   galleryTagFolderPath,
   isGalleryTagFolderPath,
   navigableGalleryTags,
+  normalizeMediaPath,
   podiumPlace,
   type MediaGalleryTagDefinition,
 } from '../mediaGalleryTagModel';
@@ -50,6 +66,14 @@ const emit = defineEmits<{
 
 const navTags = computed(() => navigableGalleryTags(props.tags));
 
+const showNav = computed(() => Boolean(String(props.rootPath || '').trim()));
+
+const isAtGalleryRoot = computed(() => {
+  const root = normalizeMediaPath(props.rootPath);
+  const cur = normalizeMediaPath(props.currentPath || props.rootPath);
+  return Boolean(root && cur === root);
+});
+
 function isActive(tag: MediaGalleryTagDefinition): boolean {
   return isGalleryTagFolderPath(props.currentPath, props.rootPath, tag);
 }
@@ -65,6 +89,12 @@ function navTitle(tag: MediaGalleryTagDefinition): string {
   return `${$text('files.gallery_tag_open_folder')} ${folder}`;
 }
 
+function onNavigateRoot(): void {
+  const root = String(props.rootPath || '').trim();
+  if (!root) return;
+  emit('navigate', root);
+}
+
 function onNavigate(tag: MediaGalleryTagDefinition): void {
   const folderPath = galleryTagFolderPath(props.rootPath, tag);
   if (!folderPath) return;
@@ -78,15 +108,24 @@ function onNavigate(tag: MediaGalleryTagDefinition): void {
 .media-gallery-tag-folder-nav {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 4px;
-  max-width: min(280px, 48vw);
+  flex-shrink: 0;
 }
 
 .media-gallery-tag-folder-nav__chip:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.media-gallery-tag-folder-nav__chip--root {
+  background: rgba(25, 118, 210, 0.12) !important;
+  color: rgba(25, 118, 210, 0.95) !important;
+}
+
+.media-gallery-tag-folder-nav__chip--root:hover {
+  background: rgba(25, 118, 210, 0.2) !important;
 }
 
 .media-gallery-tag-folder-nav__folder-icon {

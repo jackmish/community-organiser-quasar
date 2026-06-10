@@ -7,8 +7,6 @@
       flat
       square
       unelevated
-      :icon="podiumPlace(tag) ? undefined : tag.icon || undefined"
-      :label="podiumPlace(tag) ? String(podiumPlace(tag)) : undefined"
       no-caps
       :loading="busyTagId === tag.id"
       :disable="busyTagId != null && busyTagId !== tag.id"
@@ -20,7 +18,14 @@
         { 'media-gallery-tag-actions__btn--podium': podiumPlace(tag) != null },
       ]"
       @click.stop="void applyTag(tag)"
-    />
+    >
+      <span v-if="tag.id === 'unsupported'" class="media-gallery-tag-icon--unsupported">
+        <q-icon name="insert_drive_file" size="15px" />
+        <span class="media-gallery-tag-icon--unsupported-q">?</span>
+      </span>
+      <template v-else-if="podiumPlace(tag)">{{ podiumPlace(tag) }}</template>
+      <q-icon v-else-if="tag.icon" :name="tag.icon" size="18px" />
+    </q-btn>
   </span>
 </template>
 
@@ -77,10 +82,9 @@ async function applyTag(tag: MediaGalleryTagDefinition): Promise<void> {
 .media-gallery-tag-actions {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 4px;
-  max-width: min(220px, 42vw);
   pointer-events: auto;
 }
 </style>

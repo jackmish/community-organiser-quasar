@@ -7,7 +7,7 @@
  * - hierarchical: move into nested folders under task root (segments joined)
  */
 
-export type MediaGalleryTagMode = 'single_folder' | 'multi_folder' | 'hierarchical';
+export type MediaGalleryTagMode = 'single_folder' | 'multi_folder' | 'hierarchical' | 'root';
 
 export type MediaGalleryTagLinkMode = 'copy' | 'symlink';
 
@@ -122,7 +122,19 @@ export const DEFAULT_GALLERY_TAG_SET: MediaGalleryTagSetConfig = {
   tags: [...BUILTIN_PODIUM_TAGS, ...BUILTIN_SYSTEM_TAGS],
 };
 
-const VALID_MODES: MediaGalleryTagMode[] = ['single_folder', 'multi_folder', 'hierarchical'];
+export const GALLERY_BACK_TO_ROOT_TAG_ID = 'back_to_root';
+
+export const GALLERY_BACK_TO_ROOT_TAG: MediaGalleryTagDefinition = {
+  id: GALLERY_BACK_TO_ROOT_TAG_ID,
+  mode: 'root',
+  icon: 'home',
+  color: 'primary',
+  textColor: 'white',
+  labelKey: 'files.gallery_tag_back_to_root',
+  builtIn: true,
+};
+
+const VALID_MODES: MediaGalleryTagMode[] = ['single_folder', 'multi_folder', 'hierarchical', 'root'];
 
 function normalizeModes(value: unknown): MediaGalleryTagMode[] {
   if (!Array.isArray(value) || !value.length) return ['single_folder'];
@@ -238,6 +250,14 @@ export function resolveGalleryTagsForSet(
   return sortGalleryTags(
     (normalized.tags ?? []).filter((tag) => enabled.has(tag.mode)),
   );
+}
+
+/** File tagging buttons: gallery tags plus built-in “back to root”. */
+export function galleryFileActionTags(
+  tags: MediaGalleryTagDefinition[],
+): MediaGalleryTagDefinition[] {
+  if (tags.some((tag) => tag.mode === 'root')) return tags;
+  return [...tags, GALLERY_BACK_TO_ROOT_TAG];
 }
 
 export function normalizeMediaPath(value: string): string {
