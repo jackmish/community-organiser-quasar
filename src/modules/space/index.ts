@@ -8,6 +8,8 @@ export {
   normalizeSpaceStorageMode,
   type SpaceEntry,
   type SpaceMigrateResult,
+  type SpacePathIssue,
+  type SpacePathIssueKind,
   type SpaceRegistry,
   type SpaceRegistrySnapshot,
   type SpaceStorageMode,
@@ -21,12 +23,27 @@ export {
   loadSpaceRegistrySnapshot,
   migrateSpaceToSqlite,
   openSpaceFolder,
+  registerExistingCustomSpace,
+  relocateCustomSpaceFolder,
+  moveCustomSpaceFolder,
+  removeWorkspaceFromRegistry,
+  skipBrokenActiveWorkspace,
   restartAppForSpaceChanges,
   setDefaultSpace,
   setSpaceStorageMode,
+  switchAwayFromBrokenWorkspaceAndRestart,
   switchSpaceAndRestart,
   type SpaceElectronAPI,
 } from './spaceService';
+
+export {
+  dispatchOpenConnectionsDialog,
+  dispatchOpenSpacesDialog,
+  OPEN_CONNECTIONS_DIALOG_EVENT,
+  OPEN_SPACES_DIALOG_EVENT,
+  type OpenSpacesDialogDetail,
+  type OpenSpacesDialogMode,
+} from './spaceUi';
 
 export {
   disableActiveSpaceAccess,

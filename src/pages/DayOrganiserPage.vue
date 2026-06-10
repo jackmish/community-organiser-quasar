@@ -329,7 +329,11 @@
     <!-- First Run Dialog -->
     <FirstRunDialog
       v-model="showFirstRunDialog"
-      @create="handleFirstGroupCreation"
+      :spaces-available="spacesManagementAvailable"
+      @create-group="onWelcomeCreateGroup"
+      @create-space="onWelcomeCreateSpace"
+      @locate-space="onWelcomeLocateSpace"
+      @open-connections="onWelcomeOpenConnections"
       @import="handleImportFile"
     />
 
@@ -524,6 +528,15 @@ import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
 import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
+import {
+  missingWorkspaceChecked,
+  missingWorkspaceIssue,
+} from "src/composables/useMissingWorkspaceGate";
+import {
+  dispatchOpenConnectionsDialog,
+  dispatchOpenSpacesDialog,
+} from "src/modules/space/spaceUi";
+import { isSpaceManagementAvailable } from "src/modules/space";
 import { MediaFilesPanel, useAppViewMode, MEDIA_VIEW_MODE_CHANGED_EVENT, DEFAULT_MEDIA_TASK_TYPE_ID } from "src/modules/media";
 import { useMediaFilesPreviewLayout } from "src/modules/media/composables/useMediaFilesPreviewLayout";
 import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
@@ -849,6 +862,7 @@ function openRolesSetupFromJoin(): void {
 
 // Inline edit-group dialog removed (unused)
 const showFirstRunDialog = ref(false);
+const spacesManagementAvailable = isSpaceManagementAvailable();
 
 const defaultGroupId = ref<string | undefined>(undefined);
 const openDeleteMenu = ref<string | null>(null);
@@ -1897,16 +1911,53 @@ provide(dayOrganiserPanelKey, {
 
 // `toggleStatus` delegates to the task API; child components call the API directly now.
 
-const handleFirstGroupCreation = async (data: { name: string; color: string }) => {
-  const group = await CC.group.add({
-    name: data.name,
-    color: data.color,
-    hideTasksFromParent: false,
-  });
-  defaultGroupId.value = group.id;
-  CC.group.active.set(group);
-  showFirstRunDialog.value = false;
-};
+function onWelcomeCreateGroup(): void {
+  openGroupEditDialog(null);
+}
+
+function onWelcomeCreateSpace(): void {
+  dispatchOpenSpacesDialog({ mode: 'create' });
+}
+
+function onWelcomeLocateSpace(): void {
+  dispatchOpenSpacesDialog({ mode: 'locate', switchAfter: true });
+}
+
+function onWelcomeOpenConnections(): void {
+  dispatchOpenConnectionsDialog();
+}
+
+function updateFirstRunVisibility(): void {
+  if (!missingWorkspaceChecked.value || missingWorkspaceIssue.value) {
+    showFirstRunDialog.value = false;
+    return;
+  }
+  showFirstRunDialog.value = (CC.group.list.all.value || []).length === 0;
+}
+
+watch(
+  [missingWorkspaceChecked, missingWorkspaceIssue, () => CC.group.list.all.value.length],
+  () => {
+    updateFirstRunVisibility();
+  },
+);
+
+watch(
+  () => CC.group.list.all.value.length,
+  (count, prev) => {
+    if (prev === 0 && count === 1) {
+      const first = CC.group.list.all.value[0];
+      if (first && !CC.group.active.activeGroup.value) {
+        CC.group.active.set(first);
+        defaultGroupId.value = first.id;
+      }
+    }
+  },
+);
+
+watch(showGroupEditDialog, (open, wasOpen) => {
+  if (wasOpen && !open) updateFirstRunVisibility();
+});
 
 // Advance to today if behind the clock; also starts a periodic 60-second check
 useDayRollover({
@@ -2056,13 +2107,10 @@ onMounted(async () => {
     infoscreenResetCalendarHandler,
   );
 
-  // Show first run dialog if no groups exist
-  if (CC.group.list.all.value.length === 0) {
-    showFirstRunDialog.value = true;
-  } else {
-    // Auto-select first group as active if groups exist
+  updateFirstRunVisibility();
+  if ((CC.group.list.all.value || []).length > 0 && !CC.group.active.activeGroup.value) {
     const firstGroup = CC.group.list.all.value[0];
-    if (firstGroup && !CC.group.active.activeGroup.value) {
+    if (firstGroup) {
       CC.group.active.set(firstGroup);
       defaultGroupId.value = firstGroup.id;
     }

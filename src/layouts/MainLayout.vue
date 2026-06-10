@@ -135,7 +135,13 @@
         <AboutDialog v-model="showAboutDialog" />
         <DebugToolsDialog v-model="showDebugDialog" />
         <AccountsDialog v-model="showAccountsDialog" focus-section="space" :focus-section-active="accountsFocusSpace" />
-        <SpaceManagementDialog v-model="showSpacesDialog" @open-services="openSpaceServices" />
+        <SpaceManagementDialog
+          v-model="showSpacesDialog"
+          :initial-mode="spacesInitialMode"
+          :relocate-space-id="spacesRelocateId"
+          :switch-after-register="spacesSwitchAfterRegister"
+          @open-services="openSpaceServices"
+        />
         <InfoscreenSettingsDialog v-model="showInfoscreenDialog" />
         <InfoscreenHost />
       </q-toolbar>
@@ -145,6 +151,7 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
   </q-layout>
 </template>
 
@@ -183,6 +190,12 @@ import PendingActionsDialog from "src/components/settings/PendingActionsDialog.v
 import DebugToolsDialog from "src/components/settings/DebugToolsDialog.vue";
 import AccountsDialog from "src/modules/user/components/AccountsDialog.vue";
 import SpaceManagementDialog from "src/modules/space/components/SpaceManagementDialog.vue";
+import {
+  OPEN_CONNECTIONS_DIALOG_EVENT,
+  OPEN_SPACES_DIALOG_EVENT,
+  type OpenSpacesDialogDetail,
+  type OpenSpacesDialogMode,
+} from "src/modules/space/spaceUi";
 import { spaceAuthBlocked, useSpaceAuth } from "src/composables/useSpaceAuth";
 import InfoscreenSettingsDialog from "src/modules/infoscreen/components/InfoscreenSettingsDialog.vue";
 import InfoscreenHost from "src/modules/infoscreen/components/InfoscreenHost.vue";
@@ -233,6 +246,9 @@ const showDebugDialog = ref(false);
 const showAccountsDialog = ref(false);
 const accountsFocusSpace = ref(false);
 const showSpacesDialog = ref(false);
+const spacesInitialMode = ref<OpenSpacesDialogMode | null>(null);
+const spacesRelocateId = ref<string | null>(null);
+const spacesSwitchAfterRegister = ref(false);
 const showInfoscreenDialog = ref(false);
 const showPendingActionsDialog = ref(false);
 
@@ -421,6 +437,26 @@ function onJoinMemberOpenRolesSetup(): void {
   showJoinMemberDialog.value = false;
   dispatchOpenRolesSetup();
 }
+
+function onOpenSpacesDialogEvent(ev: Event): void {
+  const detail = (ev as CustomEvent<OpenSpacesDialogDetail>).detail ?? {};
+  spacesInitialMode.value = detail.mode ?? null;
+  spacesRelocateId.value = detail.spaceId ?? null;
+  spacesSwitchAfterRegister.value = !!detail.switchAfter;
+  showSpacesDialog.value = true;
+}
+
+function onOpenConnectionsDialogEvent(): void {
+  showConnectionsDialog.value = true;
+}
+
+watch(showSpacesDialog, (open) => {
+  if (!open) {
+    spacesInitialMode.value = null;
+    spacesRelocateId.value = null;
+    spacesSwitchAfterRegister.value = false;
+  }
+});
 const { visibleSlot, layer0, layer1 } = useGroupPageBackground(
   CC.group.list.all as Ref<unknown[]>,
   CC.group.active.activeGroup as Ref<unknown>,
@@ -474,9 +510,19 @@ onMounted(() => {
   clockTimer = setInterval(() => {
     now.value = new Date();
   }, 1000);
+  window.addEventListener(OPEN_SPACES_DIALOG_EVENT, onOpenSpacesDialogEvent as EventListener);
+  window.addEventListener(
+    OPEN_CONNECTIONS_DIALOG_EVENT,
+    onOpenConnectionsDialogEvent as EventListener,
+  );
 });
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer);
+  window.removeEventListener(OPEN_SPACES_DIALOG_EVENT, onOpenSpacesDialogEvent as EventListener);
+  window.removeEventListener(
+    OPEN_CONNECTIONS_DIALOG_EVENT,
+    onOpenConnectionsDialogEvent as EventListener,
+  );
 });
 
 async function checkInternetConnection(): Promise<boolean> {

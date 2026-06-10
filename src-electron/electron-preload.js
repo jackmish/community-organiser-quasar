@@ -203,7 +203,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('electronSpace', {
   getRegistry: () => ipcRenderer.invoke('space:get-registry'),
   createSpace: (payload) => ipcRenderer.invoke('space:create', payload),
+  registerExistingSpace: (payload) => ipcRenderer.invoke('space:register-existing', payload),
+  relocateSpacePath: (payload) => ipcRenderer.invoke('space:relocate-path', payload),
+  moveSpaceFolder: (payload) => ipcRenderer.invoke('space:move-folder', payload),
+  skipBrokenActiveSpace: () => ipcRenderer.invoke('space:skip-broken-active'),
   switchAndRestart: (spaceId) => ipcRenderer.invoke('space:switch-and-restart', spaceId),
+  switchFromBroken: (payload) => ipcRenderer.invoke('space:switch-from-broken', payload),
+  removeFromRegistry: (payload) => ipcRenderer.invoke('space:remove-from-registry', payload),
   openFolder: (folderPath) => ipcRenderer.invoke('space:open-folder', folderPath),
   setStorageMode: (payload) => ipcRenderer.invoke('space:set-storage-mode', payload),
   migrateToSqlite: (spaceId) => ipcRenderer.invoke('space:migrate-to-sqlite', spaceId),

@@ -28,11 +28,17 @@ import {
   createCustomSpace,
   loadSpaceRegistrySnapshot,
   migrateSpaceStorageToSqlite,
+  registerExistingSpace,
+  relocateCustomSpacePath,
+  moveCustomSpaceFolder,
+  skipBrokenActiveSpace,
+  removeCustomSpaceFromRegistry,
   resolveActiveDataPath,
   resolveActiveSpaceContext,
   setActiveSpaceId,
   setDefaultSpaceId,
   setSpaceStorageMode,
+  switchAwayFromBrokenWorkspace,
 } from './spaceRegistryMain';
 import {
   disableActiveSpaceAccess,
@@ -224,6 +230,61 @@ ipcMain.handle('space:create', (_evt, payload: { name?: string; dataPath?: strin
   }
 });
 
+ipcMain.handle('space:register-existing', (_evt, payload: { name?: string; dataPath?: string }) => {
+  try {
+    const name = typeof payload?.name === 'string' ? payload.name : '';
+    const dataPath = typeof payload?.dataPath === 'string' ? payload.dataPath : '';
+    const entry = registerExistingSpace(name, dataPath);
+    return { ok: true as const, entry };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
+ipcMain.handle(
+  'space:relocate-path',
+  (_evt, payload: { spaceId?: string; dataPath?: string }) => {
+    try {
+      const spaceId = typeof payload?.spaceId === 'string' ? payload.spaceId : '';
+      const dataPath = typeof payload?.dataPath === 'string' ? payload.dataPath : '';
+      if (!spaceId) throw new Error('Invalid space');
+      const space = relocateCustomSpacePath(spaceId, dataPath);
+      return { ok: true as const, space };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
+
+ipcMain.handle(
+  'space:move-folder',
+  (_evt, payload: { spaceId?: string; dataPath?: string }) => {
+    try {
+      const spaceId = typeof payload?.spaceId === 'string' ? payload.spaceId : '';
+      const dataPath = typeof payload?.dataPath === 'string' ? payload.dataPath : '';
+      if (!spaceId) throw new Error('Invalid space');
+      const space = moveCustomSpaceFolder(spaceId, dataPath);
+      return { ok: true as const, space };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
+
+ipcMain.handle('space:skip-broken-active', () => {
+  try {
+    skipBrokenActiveSpace();
+    setImmediate(() => restartAppAfterSpaceSwitch());
+    return { ok: true as const };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false as const, error: msg };
+  }
+});
+
 ipcMain.handle('space:switch-and-restart', (_evt, spaceId: unknown) => {
   try {
     if (typeof spaceId !== 'string' || !spaceId) throw new Error('Invalid space');
@@ -235,6 +296,43 @@ ipcMain.handle('space:switch-and-restart', (_evt, spaceId: unknown) => {
     return { ok: false as const, error: msg };
   }
 });
+
+ipcMain.handle(
+  'space:switch-from-broken',
+  (_evt, payload: { targetSpaceId?: string; brokenSpaceId?: string }) => {
+    try {
+      const targetSpaceId =
+        typeof payload?.targetSpaceId === 'string' ? payload.targetSpaceId : '';
+      const brokenSpaceId =
+        typeof payload?.brokenSpaceId === 'string' ? payload.brokenSpaceId : '';
+      if (!targetSpaceId || !brokenSpaceId) throw new Error('Invalid space');
+      switchAwayFromBrokenWorkspace(targetSpaceId, brokenSpaceId);
+      setImmediate(() => restartAppAfterSpaceSwitch());
+      return { ok: true as const };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
+
+ipcMain.handle(
+  'space:remove-from-registry',
+  (_evt, payload: { spaceId?: string; deleteProjectFolder?: boolean }) => {
+    try {
+      const spaceId = typeof payload?.spaceId === 'string' ? payload.spaceId : '';
+      if (!spaceId) throw new Error('Invalid space');
+      removeCustomSpaceFromRegistry(spaceId, {
+        deleteProjectFolder: payload?.deleteProjectFolder === true,
+      });
+      setImmediate(() => restartAppAfterSpaceSwitch());
+      return { ok: true as const };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg };
+    }
+  },
+);
 
 ipcMain.handle('space:open-folder', async (_evt, folderPath: unknown) => {
   try {

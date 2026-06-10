@@ -35,6 +35,19 @@ export interface SpaceRegistrySnapshot {
   activeDataPath: string;
   activeStorageMode: SpaceStorageMode;
   defaultSpaceId: string | null;
+  /** Active custom space folder is missing on disk (moved/deleted). */
+  activeSpacePathMissing?: SpacePathIssue | null;
+  /** All custom spaces whose folder path is missing. */
+  spacePathIssues?: SpacePathIssue[];
+}
+
+export type SpacePathIssueKind = 'missing' | 'no_data';
+
+export interface SpacePathIssue {
+  spaceId: string;
+  name: string;
+  expectedPath: string;
+  kind: SpacePathIssueKind;
 }
 
 export interface SpaceMigrateResult {

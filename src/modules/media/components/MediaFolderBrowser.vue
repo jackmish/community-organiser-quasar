@@ -30,6 +30,14 @@
         class="media-folder-browser__thumb-size"
       />
       <div class="media-folder-browser__toolbar-actions">
+        <MediaGalleryTagFolderNav
+          v-if="galleryLayout && galleryTags.length"
+          :root-path="rootPath"
+          :tags="galleryTags"
+          :current-path="currentPath || rootPath"
+          :loading="loading"
+          @navigate="navigateToFolder"
+        />
         <q-btn
           dense
           flat
@@ -75,7 +83,7 @@
           :key="entry.path"
           type="button"
           class="media-folder-browser__entry"
-          :class="{ 'media-folder-browser__entry--gallery': useGalleryTiles }"
+          :class="entryClasses(entry)"
           @click="onEntryClick(entry)"
         >
           <template v-if="useGalleryTiles">
@@ -212,12 +220,15 @@ import {
   galleryThumbTilePx,
 } from '../mediaGalleryThumbSize';
 import {
+  findGalleryTagForFolderName,
+  isGalleryTagFolderPath,
   resolveGalleryTagsForSet,
   type MediaGalleryTagSetConfig,
 } from '../mediaGalleryTagModel';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
 import MediaGalleryPreviewDialog from './MediaGalleryPreviewDialog.vue';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
+import MediaGalleryTagFolderNav from './MediaGalleryTagFolderNav.vue';
 import {
   isImageFileName,
   isThumbableFileName,
@@ -287,6 +298,39 @@ const previewFallbackThumbUrl = computed(() => {
 
 function showGalleryTags(entry: MediaFolderEntry): boolean {
   return !entry.isDirectory && isImageFileName(entry.name);
+}
+
+function entryTagFolderId(entry: MediaFolderEntry): string | null {
+  if (!props.galleryLayout || !entry.isDirectory) return null;
+  return findGalleryTagForFolderName(entry.name, galleryTags.value)?.id ?? null;
+}
+
+function entryClasses(entry: MediaFolderEntry): Record<string, boolean> {
+  const tagId = entryTagFolderId(entry);
+  const activeTagId = activeTagFolderId.value;
+  return {
+    'media-folder-browser__entry--gallery': useGalleryTiles.value,
+    'media-folder-browser__entry--tag-folder': tagId != null,
+    [`media-folder-browser__entry--tag-folder--${tagId}`]: tagId != null,
+    'media-folder-browser__entry--tag-folder-active':
+      tagId != null && activeTagId != null && tagId === activeTagId,
+  };
+}
+
+const activeTagFolderId = computed(() => {
+  if (!props.galleryLayout) return null;
+  const path = currentPath.value || props.rootPath;
+  const match = galleryTags.value.find((tag) =>
+    isGalleryTagFolderPath(path, props.rootPath, tag),
+  );
+  return match?.id ?? null;
+});
+
+function navigateToFolder(folderPath: string): void {
+  const target = String(folderPath || '').trim();
+  if (!target || loading.value) return;
+  currentPath.value = target;
+  void refresh();
 }
 
 function onPreviewOpenChange(open: boolean): void {
@@ -493,6 +537,8 @@ watch(thumbMaxEdge, () => {
 .media-folder-browser__toolbar-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
 }
@@ -552,6 +598,46 @@ watch(thumbMaxEdge, () => {
 .media-folder-browser__entry:hover {
   border-color: rgba(25, 118, 210, 0.45);
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.12);
+}
+
+.media-folder-browser__entry--tag-folder {
+  border-width: 2px;
+}
+
+.media-folder-browser__entry--tag-folder-active {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px rgba(25, 118, 210, 0.75);
+}
+
+.media-folder-browser__entry--tag-folder--rate_1 {
+  border-color: #c9a227;
+  background: linear-gradient(180deg, rgba(245, 213, 101, 0.22) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--tag-folder--rate_2 {
+  border-color: #9e9e9e;
+  background: linear-gradient(180deg, rgba(224, 224, 224, 0.35) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--tag-folder--rate_3 {
+  border-color: #a86428;
+  background: linear-gradient(180deg, rgba(232, 168, 107, 0.28) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--tag-folder--bad_quality {
+  border-color: #616161;
+  background: linear-gradient(180deg, rgba(97, 97, 97, 0.14) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--tag-folder--unsupported {
+  border-color: #ffc107;
+  background: linear-gradient(180deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 255, 255, 1) 70%);
+}
+
+.media-folder-browser__entry--tag-folder--to_remove {
+  border-color: #d32f2f;
+  background: linear-gradient(180deg, rgba(211, 47, 47, 0.14) 0%, rgba(255, 255, 255, 1) 70%);
 }
 
 .media-folder-browser__entry-main {

@@ -17,18 +17,30 @@
         </q-banner>
 
         <template v-else>
-          <div class="row q-mb-md">
-            <q-btn
-              color="primary"
-              icon="add"
-              :label="$text('space.create_new')"
-              :disable="showCreateForm"
-              @click="openCreateForm"
-            />
+          <div class="row q-col-gutter-sm q-mb-md">
+            <div class="col-12 col-sm-auto">
+              <q-btn
+                color="primary"
+                icon="add"
+                :label="$text('space.create_new')"
+                :disable="!!activeFormMode"
+                @click="openCreateForm"
+              />
+            </div>
+            <div class="col-12 col-sm-auto">
+              <q-btn
+                outline
+                color="primary"
+                icon="folder_shared"
+                :label="$text('space.locate_existing')"
+                :disable="!!activeFormMode"
+                @click="openLocateForm"
+              />
+            </div>
           </div>
 
           <q-slide-transition>
-            <q-card v-if="showCreateForm" flat bordered class="q-mb-md space-create-card">
+            <q-card v-if="activeFormMode === 'create'" flat bordered class="q-mb-md space-create-card">
               <q-card-section>
                 <div class="text-subtitle2 q-mb-sm">{{ $text('space.create_new') }}</div>
                 <q-input
@@ -63,13 +75,152 @@
                 </div>
               </q-card-section>
               <q-card-actions align="right">
-                <q-btn flat :label="$text('action.close')" @click="cancelCreate" />
+                <q-btn flat :label="$text('action.close')" @click="cancelForm" />
                 <q-btn
                   color="primary"
                   :label="$text('action.create')"
                   :loading="creating"
                   :disable="!createName.trim() || !createPath.trim()"
                   @click="submitCreate"
+                />
+              </q-card-actions>
+            </q-card>
+          </q-slide-transition>
+
+          <q-slide-transition>
+            <q-card v-if="activeFormMode === 'locate'" flat bordered class="q-mb-md space-create-card">
+              <q-card-section>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('space.locate_existing') }}</div>
+                <div class="text-caption text-grey-7 q-mb-sm">{{ $text('space.locate_existing_hint') }}</div>
+                <q-input
+                  v-model="locateName"
+                  dense
+                  outlined
+                  :label="$text('space.name_label')"
+                  class="q-mb-sm"
+                  @keyup.enter="submitLocate"
+                />
+                <div class="row q-col-gutter-sm items-start">
+                  <div class="col">
+                    <q-input
+                      v-model="locatePath"
+                      dense
+                      outlined
+                      readonly
+                      :label="$text('space.path_label')"
+                      :hint="$text('space.locate_path_hint')"
+                    />
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      outline
+                      color="primary"
+                      icon="folder_open"
+                      :label="$text('space.browse')"
+                      class="q-mt-xs"
+                      @click="pickLocateFolder"
+                    />
+                  </div>
+                </div>
+              </q-card-section>
+              <q-card-actions align="right">
+                <q-btn flat :label="$text('action.close')" @click="cancelForm" />
+                <q-btn
+                  color="primary"
+                  :label="$text('space.locate_add')"
+                  :loading="locating"
+                  :disable="!locateName.trim() || !locatePath.trim()"
+                  @click="submitLocate"
+                />
+              </q-card-actions>
+            </q-card>
+          </q-slide-transition>
+
+          <q-slide-transition>
+            <q-card v-if="activeFormMode === 'relocate'" flat bordered class="q-mb-md space-create-card">
+              <q-card-section>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('space.locate_workspace') }}</div>
+                <div class="text-caption text-grey-7 q-mb-sm">{{ $text('space.missing_locate_hint') }}</div>
+                <div class="row q-col-gutter-sm items-start">
+                  <div class="col">
+                    <q-input
+                      v-model="relocatePath"
+                      dense
+                      outlined
+                      readonly
+                      :label="$text('space.path_label')"
+                      :hint="$text('space.locate_path_hint')"
+                    />
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      outline
+                      color="primary"
+                      icon="folder_open"
+                      :label="$text('space.browse')"
+                      class="q-mt-xs"
+                      @click="pickRelocateFolder"
+                    />
+                  </div>
+                </div>
+              </q-card-section>
+              <q-card-actions align="right">
+                <q-btn flat :label="$text('action.close')" @click="cancelForm" />
+                <q-btn
+                  color="primary"
+                  :label="$text('space.relocate_save')"
+                  :loading="relocating"
+                  :disable="!relocatePath.trim() || !relocateTargetId"
+                  @click="submitRelocate"
+                />
+              </q-card-actions>
+            </q-card>
+          </q-slide-transition>
+
+          <q-slide-transition>
+            <q-card v-if="activeFormMode === 'move'" flat bordered class="q-mb-md space-create-card">
+              <q-card-section>
+                <div class="text-subtitle2 q-mb-sm">{{ $text('space.move_workspace') }}</div>
+                <div class="text-caption text-grey-7 q-mb-sm">{{ $text('space.move_hint') }}</div>
+                <q-input
+                  v-if="moveSourcePath"
+                  :model-value="moveSourcePath"
+                  dense
+                  outlined
+                  readonly
+                  :label="$text('space.move_from_label')"
+                  class="q-mb-sm"
+                />
+                <div class="row q-col-gutter-sm items-start">
+                  <div class="col">
+                    <q-input
+                      v-model="moveDestPath"
+                      dense
+                      outlined
+                      readonly
+                      :label="$text('space.move_to_label')"
+                      :hint="$text('space.move_dest_hint')"
+                    />
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      outline
+                      color="primary"
+                      icon="folder_open"
+                      :label="$text('space.browse')"
+                      class="q-mt-xs"
+                      @click="pickMoveFolder"
+                    />
+                  </div>
+                </div>
+              </q-card-section>
+              <q-card-actions align="right">
+                <q-btn flat :label="$text('action.close')" @click="cancelForm" />
+                <q-btn
+                  color="primary"
+                  :label="$text('space.move_review')"
+                  :disable="!moveDestPath.trim() || !moveTargetId"
+                  @click="openMoveConfirm"
                 />
               </q-card-actions>
             </q-card>
@@ -94,12 +245,32 @@
                   <q-badge v-if="isActive(space.id)" color="primary" class="q-ml-sm">
                     {{ $text('space.active') }}
                   </q-badge>
-                  <q-badge v-if="isDefaultSpace(space.id)" color="secondary" class="q-ml-sm">
+                  <q-badge
+                    v-if="isDefaultSpace(space.id) && !hasSpaceIssue(space.id)"
+                    color="secondary"
+                    class="q-ml-sm"
+                  >
                     {{ $text('space.default_on_start') }}
+                  </q-badge>
+                  <q-badge
+                    v-if="isDefaultSpace(space.id) && hasSpaceIssue(space.id)"
+                    color="negative"
+                    class="q-ml-sm"
+                  >
+                    {{ $text('space.default_unavailable') }}
+                  </q-badge>
+                  <q-badge v-if="hasSpaceIssue(space.id)" color="warning" text-color="dark" class="q-ml-sm">
+                    {{ issueBadgeLabel(space.id) }}
                   </q-badge>
                 </q-item-label>
                 <q-item-label v-if="canShowSpaceSensitiveDetails(space)" caption>
                   {{ spaceCaption(space) }}
+                </q-item-label>
+                <q-item-label v-else-if="hasSpaceIssue(space.id)" caption class="text-negative">
+                  {{ missingPathCaption(space.id) }}
+                </q-item-label>
+                <q-item-label v-else-if="!isSystemSpace(space)" caption>
+                  {{ space.dataPath || '—' }}
                 </q-item-label>
                 <div v-if="canShowSpaceSensitiveDetails(space)" class="space-storage-mode q-mt-sm">
                   <div class="text-caption text-weight-medium q-mb-xs">
@@ -150,7 +321,34 @@
                       @click.stop="toggleDefaultSpace(space.id)"
                     />
                   </div>
-                  <div class="row items-center no-wrap q-gutter-xs">
+                  <div class="row items-center no-wrap q-gutter-xs flex-wrap justify-end">
+                  <q-btn
+                    v-if="!isSystemSpace(space) && hasSpaceIssue(space.id)"
+                    flat
+                    dense
+                    color="warning"
+                    icon="folder_shared"
+                    :label="$text('space.locate_workspace')"
+                    @click="openRelocateForm(space.id)"
+                  />
+                  <q-btn
+                    v-if="!isSystemSpace(space)"
+                    flat
+                    dense
+                    color="negative"
+                    icon="playlist_remove"
+                    :label="$text('space.remove_from_list')"
+                    @click="openRemoveConfirm(space)"
+                  />
+                  <q-btn
+                    v-if="canMoveSpace(space)"
+                    flat
+                    dense
+                    color="primary"
+                    icon="drive_file_move"
+                    :label="$text('space.move_workspace')"
+                    @click="openMoveForm(space.id)"
+                  />
                   <q-btn
                     v-if="isActive(space.id)"
                     flat
@@ -194,6 +392,29 @@
     </q-card>
   </q-dialog>
 
+  <q-dialog v-model="moveConfirmOpen" persistent>
+    <q-card style="min-width: 360px; max-width: 480px">
+      <q-card-section>
+        <div class="text-h6">{{ $text('space.move_confirm_title') }}</div>
+        <p class="q-mt-sm q-mb-sm">{{ $text('space.move_confirm_body') }}</p>
+        <div class="text-caption text-grey-8 q-mb-xs">{{ $text('space.move_from_label') }}</div>
+        <div class="text-body2 q-mb-sm text-weight-medium">{{ moveSourcePath }}</div>
+        <div class="text-caption text-grey-8 q-mb-xs">{{ $text('space.move_to_label') }}</div>
+        <div class="text-body2 text-weight-medium">{{ moveDestPath }}</div>
+        <p class="text-caption text-negative q-mt-md q-mb-none">{{ $text('space.move_confirm_warning') }}</p>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat :label="$text('action.cancel')" @click="moveConfirmOpen = false" />
+        <q-btn
+          color="primary"
+          :label="$text('space.move_confirm_action')"
+          :loading="moving"
+          @click="submitMove"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
   <q-dialog v-model="switchConfirmOpen" persistent>
     <q-card style="min-width: 320px; max-width: 420px">
       <q-card-section>
@@ -209,10 +430,17 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
+
+  <RemoveWorkspaceConfirmDialog
+    v-model="removeConfirmOpen"
+    :space-name="removeTargetSpace ? displayName(removeTargetSpace) : ''"
+    :loading="removing"
+    @confirm="applyRemove"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 import { useSpaceAuth } from 'src/composables/useSpaceAuth';
@@ -228,16 +456,28 @@ import {
   loadSpaceRegistrySnapshot,
   migrateSpaceToSqlite,
   openSpaceFolder,
+  registerExistingCustomSpace,
+  relocateCustomSpaceFolder,
+  moveCustomSpaceFolder,
+  removeWorkspaceFromRegistry,
   restartAppForSpaceChanges,
   setDefaultSpace,
   setSpaceStorageMode,
   switchSpaceAndRestart,
   type SpaceEntry,
+  type SpacePathIssue,
   type SpaceStorageMode,
 } from 'src/modules/space';
+import type { OpenSpacesDialogMode } from 'src/modules/space/spaceUi';
 import type { SpaceAccessStatus } from 'src/modules/space/spaceAccessModel';
+import RemoveWorkspaceConfirmDialog from 'src/modules/space/components/RemoveWorkspaceConfirmDialog.vue';
 
-const props = defineProps<{ modelValue: boolean }>();
+const props = defineProps<{
+  modelValue: boolean;
+  initialMode?: OpenSpacesDialogMode | null;
+  relocateSpaceId?: string | null;
+  switchAfterRegister?: boolean;
+}>();
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'open-services'): void;
@@ -262,15 +502,32 @@ const spaces = ref<SpaceEntry[]>([]);
 const activeSpaceId = ref(SYSTEM_SPACE_ID);
 const defaultSpaceId = ref<string | null>(null);
 const defaultUserDataPath = ref('');
+const spacePathIssues = ref<SpacePathIssue[]>([]);
 
-const showCreateForm = ref(false);
+type FormMode = 'create' | 'locate' | 'relocate' | 'move';
+const activeFormMode = ref<FormMode | null>(null);
 const createName = ref('');
 const createPath = ref('');
 const creating = ref(false);
+const locateName = ref('');
+const locatePath = ref('');
+const locating = ref(false);
+const relocatePath = ref('');
+const relocateTargetId = ref<string | null>(null);
+const relocating = ref(false);
+const locateThenSwitch = ref(false);
+const moveTargetId = ref<string | null>(null);
+const moveDestPath = ref('');
+const moveSourcePath = ref('');
+const moving = ref(false);
+const moveConfirmOpen = ref(false);
 
 const switchConfirmOpen = ref(false);
 const pendingSwitchSpace = ref<SpaceEntry | null>(null);
 const switching = ref(false);
+const removeConfirmOpen = ref(false);
+const removeTargetSpace = ref<SpaceEntry | null>(null);
+const removing = ref(false);
 const migratingId = ref<string | null>(null);
 const spaceAccessById = ref<Record<string, SpaceAccessStatus>>({});
 
@@ -280,9 +537,37 @@ function isSpacePasswordProtected(spaceId: string): boolean {
 }
 
 function canShowSpaceSensitiveDetails(space: SpaceEntry): boolean {
+  if (hasSpaceIssue(space.id)) return false;
   if (!isActive(space.id)) return false;
   if (isSpacePasswordProtected(space.id) && !spaceUnlocked.value) return false;
   return true;
+}
+
+function hasSpaceIssue(spaceId: string): boolean {
+  return spacePathIssues.value.some((i) => i.spaceId === spaceId);
+}
+
+function getSpaceIssue(spaceId: string): SpacePathIssue | undefined {
+  return spacePathIssues.value.find((i) => i.spaceId === spaceId);
+}
+
+function canMoveSpace(space: SpaceEntry): boolean {
+  return !isSystemSpace(space) && !hasSpaceIssue(space.id);
+}
+
+function issueBadgeLabel(spaceId: string): string {
+  const issue = getSpaceIssue(spaceId);
+  if (issue?.kind === 'no_data') return $text('space.issue_no_data');
+  return $text('space.issue_missing');
+}
+
+function missingPathCaption(spaceId: string): string {
+  const issue = getSpaceIssue(spaceId);
+  if (!issue) return $text('space.path_missing_short');
+  if (issue.kind === 'no_data') {
+    return $text('space.path_no_data_caption').replace('{path}', issue.expectedPath);
+  }
+  return $text('space.path_missing_caption').replace('{path}', issue.expectedPath);
 }
 
 function openActiveSpaceServices(): void {
@@ -317,6 +602,10 @@ function isDefaultSpace(spaceId: string): boolean {
 }
 
 async function toggleDefaultSpace(spaceId: string): Promise<void> {
+  if (defaultSpaceId.value !== spaceId && hasSpaceIssue(spaceId)) {
+    appNotify('warning', $text('space.default_broken_blocked'));
+    return;
+  }
   const next = defaultSpaceId.value === spaceId ? null : spaceId;
   await applyDefaultSpace(next);
 }
@@ -375,6 +664,7 @@ async function refresh(): Promise<void> {
   activeSpaceId.value = snapshot.registry.activeSpaceId;
   defaultSpaceId.value = snapshot.defaultSpaceId ?? snapshot.registry.defaultSpaceId ?? null;
   defaultUserDataPath.value = snapshot.defaultUserDataPath;
+  spacePathIssues.value = snapshot.spacePathIssues ?? [];
   if (isSpaceAccessAvailable()) {
     spaceAccessById.value = await loadAllSpacesAccessStatus();
   } else {
@@ -382,21 +672,80 @@ async function refresh(): Promise<void> {
   }
 }
 
+function cancelForm(): void {
+  activeFormMode.value = null;
+  createName.value = '';
+  createPath.value = '';
+  locateName.value = '';
+  locatePath.value = '';
+  relocatePath.value = '';
+  relocateTargetId.value = null;
+  moveTargetId.value = null;
+  moveDestPath.value = '';
+  moveSourcePath.value = '';
+  moveConfirmOpen.value = false;
+}
+
 function openCreateForm(): void {
-  showCreateForm.value = true;
+  activeFormMode.value = 'create';
   createName.value = '';
   createPath.value = '';
 }
 
-function cancelCreate(): void {
-  showCreateForm.value = false;
-  createName.value = '';
-  createPath.value = '';
+function openLocateForm(): void {
+  activeFormMode.value = 'locate';
+  locateName.value = '';
+  locatePath.value = '';
+}
+
+function openRelocateForm(spaceId: string): void {
+  activeFormMode.value = 'relocate';
+  relocateTargetId.value = spaceId;
+  relocatePath.value = '';
+}
+
+function openMoveForm(spaceId: string): void {
+  const space = spaces.value.find((s) => s.id === spaceId);
+  activeFormMode.value = 'move';
+  moveTargetId.value = spaceId;
+  moveDestPath.value = '';
+  moveSourcePath.value = space?.dataPath?.trim() || '';
+}
+
+function openMoveConfirm(): void {
+  if (!moveTargetId.value || !moveDestPath.value.trim()) return;
+  moveConfirmOpen.value = true;
+}
+
+function applyInitialMode(): void {
+  cancelForm();
+  locateThenSwitch.value = !!props.switchAfterRegister;
+  const mode = props.initialMode ?? null;
+  if (mode === 'create') openCreateForm();
+  else if (mode === 'locate') openLocateForm();
+  else if (mode === 'relocate' && props.relocateSpaceId) {
+    openRelocateForm(props.relocateSpaceId);
+  }
 }
 
 async function pickFolder(): Promise<void> {
   const folder = await browseSpaceFolder();
   if (folder) createPath.value = folder;
+}
+
+async function pickLocateFolder(): Promise<void> {
+  const folder = await browseSpaceFolder();
+  if (folder) locatePath.value = folder;
+}
+
+async function pickRelocateFolder(): Promise<void> {
+  const folder = await browseSpaceFolder();
+  if (folder) relocatePath.value = folder;
+}
+
+async function pickMoveFolder(): Promise<void> {
+  const folder = await browseSpaceFolder();
+  if (folder) moveDestPath.value = folder;
 }
 
 async function submitCreate(): Promise<void> {
@@ -405,13 +754,79 @@ async function submitCreate(): Promise<void> {
   try {
     await createCustomSpace(createName.value.trim(), createPath.value.trim());
     appNotify('positive', $text('space.created_ok'));
-    cancelCreate();
+    cancelForm();
     await refresh();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     appNotify('negative', msg || $text('space.create_failed'));
   } finally {
     creating.value = false;
+  }
+}
+
+async function submitLocate(): Promise<void> {
+  if (!locateName.value.trim() || !locatePath.value.trim()) return;
+  locating.value = true;
+  try {
+    const entry = await registerExistingCustomSpace(
+      locateName.value.trim(),
+      locatePath.value.trim(),
+    );
+    appNotify('positive', $text('space.located_ok'));
+    cancelForm();
+    if (locateThenSwitch.value) {
+      await switchSpaceAndRestart(entry.id);
+      return;
+    }
+    await refresh();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.locate_failed'));
+  } finally {
+    locating.value = false;
+  }
+}
+
+async function submitRelocate(): Promise<void> {
+  const spaceId = relocateTargetId.value;
+  if (!spaceId || !relocatePath.value.trim()) return;
+  relocating.value = true;
+  try {
+    await relocateCustomSpaceFolder(spaceId, relocatePath.value.trim());
+    appNotify('positive', $text('space.located_ok'));
+    cancelForm();
+    if (isActive(spaceId)) {
+      await restartAppForSpaceChanges();
+    } else {
+      await refresh();
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.locate_failed'));
+  } finally {
+    relocating.value = false;
+  }
+}
+
+async function submitMove(): Promise<void> {
+  const spaceId = moveTargetId.value;
+  if (!spaceId || !moveDestPath.value.trim()) return;
+  moving.value = true;
+  try {
+    await moveCustomSpaceFolder(spaceId, moveDestPath.value.trim());
+    appNotify('positive', $text('space.move_ok'));
+    moveConfirmOpen.value = false;
+    cancelForm();
+    if (isActive(spaceId)) {
+      await restartAppForSpaceChanges();
+    } else {
+      await refresh();
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.move_failed'));
+  } finally {
+    moving.value = false;
   }
 }
 
@@ -458,6 +873,10 @@ async function onStorageModeChange(space: SpaceEntry, mode: SpaceStorageMode): P
 }
 
 function confirmSwitch(space: SpaceEntry): void {
+  if (hasSpaceIssue(space.id)) {
+    appNotify('warning', $text('space.switch_broken_blocked'));
+    return;
+  }
   pendingSwitchSpace.value = space;
   switchConfirmOpen.value = true;
 }
@@ -475,10 +894,44 @@ async function doSwitch(): Promise<void> {
   }
 }
 
+function openRemoveConfirm(space: SpaceEntry): void {
+  removeTargetSpace.value = space;
+  removeConfirmOpen.value = true;
+}
+
+async function applyRemove(deleteProjectFolder: boolean): Promise<void> {
+  if (!removeTargetSpace.value) return;
+  removing.value = true;
+  try {
+    await removeWorkspaceFromRegistry(removeTargetSpace.value.id, {
+      deleteProjectFolder,
+    });
+    appNotify('positive', $text('space.remove_ok'));
+    removeConfirmOpen.value = false;
+    removeTargetSpace.value = null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    appNotify('negative', msg || $text('space.remove_failed'));
+  } finally {
+    removing.value = false;
+  }
+}
+
 watch(
   () => props.modelValue,
   (open) => {
-    if (open) void refresh();
+    if (open) {
+      void refresh().then(() => applyInitialMode());
+    } else {
+      cancelForm();
+    }
+  },
+);
+
+watch(
+  () => [props.initialMode, props.relocateSpaceId] as const,
+  () => {
+    if (dialogVisible.value) applyInitialMode();
   },
 );
 </script>

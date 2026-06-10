@@ -240,6 +240,64 @@ export function resolveGalleryTagsForSet(
   );
 }
 
+export function normalizeMediaPath(value: string): string {
+  return String(value || '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/\/$/, '')
+    .toLowerCase();
+}
+
+/** Absolute folder path for a navigable tag (single_folder / hierarchical). */
+export function galleryTagFolderPath(
+  rootPath: string,
+  tag: MediaGalleryTagDefinition,
+): string | null {
+  const root = String(rootPath || '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\/$/, '');
+  if (!root) return null;
+  if (tag.mode === 'single_folder' && tag.folderName?.trim()) {
+    return `${root}/${tag.folderName.trim()}`;
+  }
+  if (tag.mode === 'hierarchical' && tag.pathSegments?.length) {
+    const segments = tag.pathSegments.map((s) => String(s || '').trim()).filter(Boolean);
+    if (!segments.length) return null;
+    return `${root}/${segments.join('/')}`;
+  }
+  return null;
+}
+
+export function isGalleryTagFolderPath(
+  currentPath: string,
+  rootPath: string,
+  tag: MediaGalleryTagDefinition,
+): boolean {
+  const folderPath = galleryTagFolderPath(rootPath, tag);
+  if (!folderPath) return false;
+  const cur = normalizeMediaPath(currentPath);
+  const folder = normalizeMediaPath(folderPath);
+  if (!cur || !folder) return false;
+  return cur === folder || cur.startsWith(`${folder}/`);
+}
+
+export function findGalleryTagForFolderName(
+  folderName: string,
+  tags: MediaGalleryTagDefinition[],
+): MediaGalleryTagDefinition | null {
+  const name = String(folderName || '').trim();
+  if (!name) return null;
+  return tags.find((tag) => tag.folderName === name) ?? null;
+}
+
+export function navigableGalleryTags(
+  tags: MediaGalleryTagDefinition[],
+): MediaGalleryTagDefinition[] {
+  return tags.filter((tag) => galleryTagFolderPath('x', tag) != null);
+}
+
 export function galleryTagToAction(tag: MediaGalleryTagDefinition): MediaGalleryTagAction {
   const action: MediaGalleryTagAction = { mode: tag.mode };
   if (tag.folderName) action.folderName = tag.folderName;
