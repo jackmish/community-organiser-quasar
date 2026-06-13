@@ -1073,16 +1073,35 @@ watch(
   () => { triggerCalendarSync(); },
 );
 
-// When the current date changes (via calendar or prev/next arrows), switch to creation mode
+// When the current date changes via header prev/next, switch to creation mode.
+// Short calendar day taps only update the date (long-press opens add via day-click).
 watch(
   () => CC.task.time.currentDate.value,
   (newDate, oldDate) => {
     try {
       if (newDate !== oldDate && !isFilesMode.value) {
         addFormDefaultTypeId.value = defaultAddTypeForCalendarDate(newDate);
-        // Defer check so other date-change handlers (e.g. calendar day-click) run first.
+        // Defer check so long-press day-click handlers run first.
         setTimeout(() => {
           try {
+            if (calendarSelectOnlyRef.value) {
+              calendarSelectOnlyRef.value = false;
+              const activeTask = CC.task.active.task.value;
+              if (
+                activeTask &&
+                String(activeTask?.date || activeTask?.eventDate) !== String(newDate)
+              ) {
+                try {
+                  if (CC.task?.active?.setTask) CC.task.active.setTask(null);
+                  else if (CC.task?.active) CC.task.active.task.value = null;
+                  CC.task.active.mode.value = "preview";
+                } catch {
+                  void 0;
+                }
+              }
+              return;
+            }
+
             // Determine if the selected date has any tasks
             const all =
               CC.task.list && typeof CC.task.list.items === "function"
@@ -1592,6 +1611,8 @@ watch(
 );
 
 const lastAddFromCalendar = ref(false);
+/** Short calendar day tap (not long-press): change date only, do not open add form. */
+const calendarSelectOnlyRef = ref(false);
 const addFormDefaultTypeId = ref<AddFormDefaultTypeId>("Todo");
 const lastAddAnchored = ref(false);
 
@@ -1691,6 +1712,7 @@ async function onListAdd(evt?: Event, go?: any) {
 }
 
 function onCalendarSelectedDate(d: string) {
+  calendarSelectOnlyRef.value = true;
   try {
     CC.task.time.setCurrentDate(d);
   } catch {

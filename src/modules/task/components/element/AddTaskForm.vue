@@ -286,6 +286,9 @@ function readStoredTaskTypeId(mediaMode: boolean): string {
 
 // Remember the last selected task type so resetting the form doesn't revert the chooser.
 // Persist to localStorage so the selection survives form resets/remounts.
+/** Skip auto-focus when type_id changes from calendar date sync, not user type pick. */
+const suppressNextTypeAutoFocus = ref(false);
+
 const lastSelectedType = ref<string>(
   readStoredTaskTypeId(props.mediaMode) ||
     localNewTask.value.type_id ||
@@ -312,6 +315,7 @@ function applyAddModeTaskTypeFromDate(dateStr?: string | null) {
   if (!date) return;
   const typeId = date === todayString() ? "Todo" : "TimeEvent";
   if (localNewTask.value.type_id === typeId) return;
+  suppressNextTypeAutoFocus.value = true;
   localNewTask.value.type_id = typeId;
   lastSelectedType.value = typeId;
   try {
@@ -328,6 +332,7 @@ watch(
     if (mode !== "add" || initialTask) return;
     const typeId = resolveAddModeTypeId();
     if (localNewTask.value.type_id !== typeId) {
+      suppressNextTypeAutoFocus.value = true;
       localNewTask.value.type_id = typeId;
       lastSelectedType.value = typeId;
     }
@@ -734,6 +739,10 @@ watch(
   () => localNewTask.value.type_id,
   (val) => {
     if (props.mode !== "add") return;
+    if (suppressNextTypeAutoFocus.value) {
+      suppressNextTypeAutoFocus.value = false;
+      return;
+    }
 
     nextTick(() => {
       try {
