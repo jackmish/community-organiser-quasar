@@ -8,32 +8,32 @@
       <q-card-section class="q-pt-sm" :class="bodyClass" :style="bodyStyle">
         <div class="q-gutter-md">
           <q-toggle
-            v-model="enabled"
-            :label="$text('infoscreen.enabled')"
+            v-model="presentationEnabled"
+            :label="$text('infoscreen.presentation_enabled')"
             dense
             :disable="saving"
-            @update:model-value="onEnabledChange"
+            @update:model-value="onPresentationChange"
           />
+
+          <div class="text-caption text-grey-7 q-mt-none">
+            {{ $text('infoscreen.variant_hint_layout_drift') }}
+          </div>
 
           <q-separator />
 
-          <q-select
-            v-model="selectedVariant"
-            :options="variantOptions"
-            :label="$text('infoscreen.variant_label')"
-            emit-value
-            map-options
+          <q-toggle
+            v-model="screensaverEnabled"
+            :label="$text('infoscreen.screensaver_enabled')"
             dense
-            outlined
             :disable="saving"
-            @update:model-value="onVariantChange"
+            @update:model-value="onScreensaverChange"
           />
 
-          <div class="text-caption text-grey-7">
-            {{ variantHint }}
+          <div class="text-caption text-grey-7 q-mt-none">
+            {{ $text('infoscreen.variant_hint_wall_clock') }}
           </div>
 
-          <template v-if="selectedVariant === 'wall-clock'">
+          <template v-if="screensaverEnabled">
             <q-separator />
 
             <q-toggle
@@ -116,14 +116,12 @@ import { $text } from 'src/modules/lang';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
 import {
   INFOSCREEN_CLOCK_INTERVAL_PRESETS,
-  INFOSCREEN_VARIANTS,
   loadInfoscreenSettings,
   saveInfoscreenSettings,
   dispatchInfoscreenTestClock,
   MIN_CLOCK_DISPLAY_SECONDS,
   MAX_CLOCK_DISPLAY_SECONDS,
   type InfoscreenClockIntervalPreset,
-  type InfoscreenVariantId,
 } from '../index';
 
 const { dialogBind, cardClass, cardStyle, headerClass, bodyClass, bodyStyle } =
@@ -137,8 +135,8 @@ const dialogVisible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-const enabled = ref(false);
-const selectedVariant = ref<InfoscreenVariantId>('wall-clock');
+const presentationEnabled = ref(false);
+const screensaverEnabled = ref(false);
 const lockScreen = ref(false);
 const clockPreset = ref<InfoscreenClockIntervalPreset>('15');
 const clockCustomMinutes = ref(15);
@@ -148,13 +146,6 @@ const testingClock = ref(false);
 
 const minClockDisplaySeconds = MIN_CLOCK_DISPLAY_SECONDS;
 const maxClockDisplaySeconds = MAX_CLOCK_DISPLAY_SECONDS;
-
-const variantOptions = computed(() =>
-  INFOSCREEN_VARIANTS.map((variant) => ({
-    label: $text(variant.labelKey),
-    value: variant.id,
-  })),
-);
 
 const clockPresetOptions = computed(() =>
   INFOSCREEN_CLOCK_INTERVAL_PRESETS.map((id) => ({
@@ -166,17 +157,10 @@ const clockPresetOptions = computed(() =>
   })),
 );
 
-const variantHint = computed(() => {
-  if (selectedVariant.value === 'wall-clock') {
-    return $text('infoscreen.variant_hint_wall_clock');
-  }
-  return $text('infoscreen.variant_hint_layout_drift');
-});
-
 async function loadIntoForm(): Promise<void> {
   const s = await loadInfoscreenSettings();
-  enabled.value = s.enabled;
-  selectedVariant.value = s.variant;
+  presentationEnabled.value = s.presentationEnabled;
+  screensaverEnabled.value = s.screensaverEnabled;
   lockScreen.value = s.lockScreen;
   clockPreset.value = s.clockIntervalPreset;
   clockCustomMinutes.value = s.clockIntervalCustomMinutes;
@@ -200,12 +184,12 @@ async function persist(patch: Parameters<typeof saveInfoscreenSettings>[0]): Pro
   }
 }
 
-async function onEnabledChange(value: boolean): Promise<void> {
-  await persist({ enabled: value });
+async function onPresentationChange(value: boolean): Promise<void> {
+  await persist({ presentationEnabled: value });
 }
 
-async function onVariantChange(value: InfoscreenVariantId): Promise<void> {
-  await persist({ variant: value });
+async function onScreensaverChange(value: boolean): Promise<void> {
+  await persist({ screensaverEnabled: value });
 }
 
 async function onLockChange(value: boolean): Promise<void> {
@@ -235,12 +219,12 @@ async function onTestClockNow(): Promise<void> {
   testingClock.value = true;
   try {
     await persist({
-      variant: 'wall-clock',
+      screensaverEnabled: true,
       clockDisplaySeconds: clockDisplaySeconds.value,
       clockIntervalPreset: clockPreset.value,
       clockIntervalCustomMinutes: clockCustomMinutes.value,
     });
-    selectedVariant.value = 'wall-clock';
+    screensaverEnabled.value = true;
     dispatchInfoscreenTestClock();
     close();
   } finally {

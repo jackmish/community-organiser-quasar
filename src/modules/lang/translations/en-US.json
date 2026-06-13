@@ -566,6 +566,8 @@
   "menu.about": "About",
   "menu.infoscreen": "Screensaver, presentation, screen lock",
   "infoscreen.title": "Screensaver, presentation, screen lock",
+  "infoscreen.presentation_enabled": "Enable presentation mode",
+  "infoscreen.screensaver_enabled": "Enable screensaver (wall clock)",
   "infoscreen.enabled": "Enable screensaver / presentation",
   "infoscreen.variant_label": "Display mode",
   "infoscreen.variant_hint_layout_drift": "Keeps the normal layout locked. The view drifts by a few pixels on a slow timer to reduce static burn-in.",

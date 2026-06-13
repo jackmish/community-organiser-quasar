@@ -120,13 +120,14 @@ export function useInfoscreenDrift(args: { active: Ref<boolean> }): void {
 }
 
 export function setInfoscreenModeClasses(args: {
-  enabled: boolean;
-  variant: string;
+  presentationEnabled: boolean;
+  screensaverEnabled: boolean;
   locked: boolean;
 }): void {
   const root = document.documentElement;
-  root.classList.toggle('co21-infoscreen-mode', args.enabled);
-  root.classList.toggle('co21-infoscreen-mode--layout-drift', args.enabled && args.variant === 'layout-drift');
-  root.classList.toggle('co21-infoscreen-mode--wall-clock', args.enabled && args.variant === 'wall-clock');
-  root.classList.toggle('co21-infoscreen-mode--locked', args.enabled && args.locked);
+  const anyEnabled = args.presentationEnabled || args.screensaverEnabled;
+  root.classList.toggle('co21-infoscreen-mode', anyEnabled);
+  root.classList.toggle('co21-infoscreen-mode--layout-drift', args.presentationEnabled);
+  root.classList.toggle('co21-infoscreen-mode--wall-clock', args.screensaverEnabled);
+  root.classList.toggle('co21-infoscreen-mode--locked', args.screensaverEnabled && args.locked);
 }

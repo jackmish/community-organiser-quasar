@@ -576,6 +576,8 @@
   "menu.about": "O aplikacji",
   "menu.infoscreen": "Wygaszacz, prezentacja, blokada ekranu",
   "infoscreen.title": "Wygaszacz, prezentacja, blokada ekranu",
+  "infoscreen.presentation_enabled": "Włącz tryb prezentacji",
+  "infoscreen.screensaver_enabled": "Włącz wygaszacz (zegar ścienny)",
   "infoscreen.enabled": "Włącz wygaszacz / prezentację",
   "infoscreen.variant_label": "Tryb wyświetlania",
   "infoscreen.variant_hint_layout_drift": "Zachowuje normalny układ z blokadą. Widok powoli przesuwa się o kilka pikseli, aby ograniczyć wypalenie ekranu.",

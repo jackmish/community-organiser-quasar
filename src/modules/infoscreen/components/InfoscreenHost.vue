@@ -1,8 +1,7 @@
 <template>
   <span class="infoscreen-host-anchor" aria-hidden="true" hidden />
   <InfoscreenOverlay
-    v-if="settings.variant === 'wall-clock'"
-    :visible="enabled"
+    :visible="screensaverActive"
     :show-clock-splash="showClockSplash"
     :progress="progress"
   />
@@ -20,29 +19,27 @@ import { setInfoscreenModeClasses, useInfoscreenDrift } from '../composables/use
 import { useInfoscreenWallClock } from '../composables/useInfoscreenWallClock';
 import InfoscreenOverlay from './InfoscreenOverlay.vue';
 
-const enabled = ref(false);
 const settings = ref<InfoscreenSettings>(defaultInfoscreenSettings());
 
-const driftActive = computed(
-  () => enabled.value && settings.value.variant === 'layout-drift',
-);
+const presentationActive = computed(() => settings.value.presentationEnabled);
+const screensaverActive = computed(() => settings.value.screensaverEnabled);
 
-useInfoscreenDrift({ active: driftActive });
+useInfoscreenDrift({ active: presentationActive });
 
 const { progress, showClockSplash, locked } = useInfoscreenWallClock({
-  active: enabled,
+  active: screensaverActive,
   settings,
 });
 
 function applyModeClasses(): void {
   setInfoscreenModeClasses({
-    enabled: enabled.value,
-    variant: settings.value.variant,
+    presentationEnabled: settings.value.presentationEnabled,
+    screensaverEnabled: settings.value.screensaverEnabled,
     locked: locked.value,
   });
 }
 
-watch([enabled, settings, locked], () => applyModeClasses(), { deep: true, immediate: true });
+watch([settings, locked], () => applyModeClasses(), { deep: true, immediate: true });
 
 function applySettings(next: InfoscreenSettings): void {
   settings.value = { ...next };
@@ -52,9 +49,17 @@ async function refreshSettings(): Promise<void> {
   applySettings(await loadInfoscreenSettings());
 }
 
+function isInfoscreenSettingsDetail(detail: unknown): detail is InfoscreenSettings {
+  if (!detail || typeof detail !== 'object') return false;
+  const d = detail as Partial<InfoscreenSettings>;
+  return (
+    typeof d.presentationEnabled === 'boolean' && typeof d.screensaverEnabled === 'boolean'
+  );
+}
+
 function onInfoscreenChanged(ev: Event): void {
   const detail = (ev as CustomEvent<InfoscreenSettings>).detail;
-  if (detail && typeof detail.enabled === 'boolean') {
+  if (isInfoscreenSettingsDetail(detail)) {
     applySettings(detail);
     return;
   }
@@ -68,6 +73,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener(INFOSCREEN_CHANGED_EVENT, onInfoscreenChanged as EventListener);
-  setInfoscreenModeClasses({ enabled: false, variant: '', locked: false });
+  setInfoscreenModeClasses({
+    presentationEnabled: false,
+    screensaverEnabled: false,
+    locked: false,
+  });
 });
 </script>

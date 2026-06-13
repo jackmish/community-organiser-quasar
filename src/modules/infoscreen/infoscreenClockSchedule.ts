@@ -45,6 +45,20 @@ export function msUntilNextClockTick(from: Date, intervalMinutes: number): numbe
   return Math.max(0, next.getTime() - from.getTime());
 }
 
+/** True when `date` sits on an aligned interval boundary (e.g. :00, :15, :30 for 15 min). */
+export function isAlignedClockMinute(date: Date, intervalMinutes: number): boolean {
+  const interval = Math.max(1, Math.floor(intervalMinutes));
+  return date.getMinutes() % interval === 0;
+}
+
+/** Stable key for the aligned slot containing `date` (dedupes splash triggers). */
+export function alignedClockSlotKey(date: Date, intervalMinutes: number): string {
+  const interval = Math.max(1, Math.floor(intervalMinutes));
+  const day = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  const slot = Math.floor((date.getHours() * 60 + date.getMinutes()) / interval);
+  return `${day}:${slot}`;
+}
+
 export function clockSplashDurationMs(intervalMinutes: number): number {
   const intervalMs = intervalMinutes * 60 * 1000;
   return Math.min(12_000, Math.max(5_000, Math.floor(intervalMs * 0.2)));

@@ -4,11 +4,7 @@ import {
   isInfoscreenClockIntervalPreset,
   type InfoscreenClockIntervalPreset,
 } from './infoscreenClockSchedule';
-import {
-  defaultInfoscreenVariantId,
-  normalizeInfoscreenVariantId,
-  type InfoscreenVariantId,
-} from './infoscreenVariants';
+import { normalizeInfoscreenVariantId } from './infoscreenVariants';
 
 export const INFOSCREEN_CHANGED_EVENT = 'co21:infoscreen-changed';
 
@@ -20,9 +16,11 @@ export const MAX_CLOCK_DISPLAY_SECONDS = 300;
 export const DEFAULT_CLOCK_DISPLAY_SECONDS = 10;
 
 export type InfoscreenSettings = {
-  enabled: boolean;
-  variant: InfoscreenVariantId;
-  /** When idle (wall-clock), block page interaction. */
+  /** Gentle layout drift for presentation / burn-in protection. */
+  presentationEnabled: boolean;
+  /** Wall-clock splash on aligned intervals. */
+  screensaverEnabled: boolean;
+  /** When idle (screensaver), block page interaction. */
   lockScreen: boolean;
   clockIntervalPreset: InfoscreenClockIntervalPreset;
   clockIntervalCustomMinutes: number;
@@ -42,8 +40,8 @@ export function clockDisplayDurationMs(seconds: number): number {
 
 export function defaultInfoscreenSettings(): InfoscreenSettings {
   return {
-    enabled: false,
-    variant: defaultInfoscreenVariantId(),
+    presentationEnabled: false,
+    screensaverEnabled: false,
     lockScreen: false,
     clockIntervalPreset: defaultClockIntervalPreset(),
     clockIntervalCustomMinutes: 15,
@@ -55,11 +53,38 @@ function dispatchInfoscreenChanged(detail: InfoscreenSettings): void {
   window.dispatchEvent(new CustomEvent(INFOSCREEN_CHANGED_EVENT, { detail }));
 }
 
+function readBoolean(data: Record<string, unknown>, key: string): boolean | undefined {
+  const value = data[key];
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function migrateLegacyModeFlags(data: Record<string, unknown>, defaults: InfoscreenSettings): {
+  presentationEnabled: boolean;
+  screensaverEnabled: boolean;
+} {
+  const legacyEnabled = readBoolean(data, 'infoscreenEnabled');
+  const legacyVariant = normalizeInfoscreenVariantId(data.infoscreenVariant);
+  const wasEnabled = legacyEnabled ?? false;
+
+  return {
+    presentationEnabled:
+      readBoolean(data, 'infoscreenPresentationEnabled') ??
+      (wasEnabled && legacyVariant === 'layout-drift') ??
+      defaults.presentationEnabled,
+    screensaverEnabled:
+      readBoolean(data, 'infoscreenScreensaverEnabled') ??
+      (wasEnabled && legacyVariant === 'wall-clock') ??
+      defaults.screensaverEnabled,
+  };
+}
+
 function parseSettings(data: Record<string, unknown>): InfoscreenSettings {
   const defaults = defaultInfoscreenSettings();
+  const { presentationEnabled, screensaverEnabled } = migrateLegacyModeFlags(data, defaults);
+
   return {
-    enabled: typeof data.infoscreenEnabled === 'boolean' ? data.infoscreenEnabled : defaults.enabled,
-    variant: normalizeInfoscreenVariantId(data.infoscreenVariant),
+    presentationEnabled,
+    screensaverEnabled,
     lockScreen:
       typeof data.infoscreenLockScreen === 'boolean' ? data.infoscreenLockScreen : defaults.lockScreen,
     clockIntervalPreset: isInfoscreenClockIntervalPreset(data.infoscreenClockIntervalPreset)
@@ -90,12 +115,12 @@ async function patchInfoscreen(partial: Record<string, unknown>): Promise<boolea
   return ok;
 }
 
-export async function saveInfoscreenEnabled(enabled: boolean): Promise<boolean> {
-  return patchInfoscreen({ infoscreenEnabled: enabled });
+export async function saveInfoscreenPresentationEnabled(enabled: boolean): Promise<boolean> {
+  return patchInfoscreen({ infoscreenPresentationEnabled: enabled });
 }
 
-export async function saveInfoscreenVariant(variant: InfoscreenVariantId): Promise<boolean> {
-  return patchInfoscreen({ infoscreenVariant: variant });
+export async function saveInfoscreenScreensaverEnabled(enabled: boolean): Promise<boolean> {
+  return patchInfoscreen({ infoscreenScreensaverEnabled: enabled });
 }
 
 export async function saveInfoscreenLockScreen(lockScreen: boolean): Promise<boolean> {
@@ -114,8 +139,12 @@ export async function saveInfoscreenClockInterval(
 
 export async function saveInfoscreenSettings(patch: Partial<InfoscreenSettings>): Promise<boolean> {
   const payload: Record<string, unknown> = {};
-  if (patch.enabled !== undefined) payload.infoscreenEnabled = patch.enabled;
-  if (patch.variant !== undefined) payload.infoscreenVariant = patch.variant;
+  if (patch.presentationEnabled !== undefined) {
+    payload.infoscreenPresentationEnabled = patch.presentationEnabled;
+  }
+  if (patch.screensaverEnabled !== undefined) {
+    payload.infoscreenScreensaverEnabled = patch.screensaverEnabled;
+  }
   if (patch.lockScreen !== undefined) payload.infoscreenLockScreen = patch.lockScreen;
   if (patch.clockIntervalPreset !== undefined) {
     payload.infoscreenClockIntervalPreset = patch.clockIntervalPreset;

@@ -1,5 +1,10 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, type Ref } from 'vue';
-import { msUntilNextClockTick, resolveClockIntervalMinutes } from '../infoscreenClockSchedule';
+import {
+  alignedClockSlotKey,
+  isAlignedClockMinute,
+  msUntilNextClockTick,
+  resolveClockIntervalMinutes,
+} from '../infoscreenClockSchedule';
 import {
   clockDisplayDurationMs,
   INFOSCREEN_INTERACTION_IDLE_MS,
@@ -12,6 +17,9 @@ import {
 } from '../infoscreenUi';
 
 export type InfoscreenWallPhase = 'idle' | 'interacting' | 'clock-splash';
+
+/** First ~1.5s of an aligned minute — wide enough for 1s polling jitter. */
+const ALIGNED_MINUTE_TRIGGER_MS = 1500;
 
 export function useInfoscreenWallClock(args: {
   active: Ref<boolean>;
@@ -27,6 +35,7 @@ export function useInfoscreenWallClock(args: {
   const showClockSplash = ref(false);
   const splashEndsAt = ref(0);
   const interactionEndsAt = ref(0);
+  let lastSplashSlotKey = '';
 
   const intervalMinutes = computed(() =>
     resolveClockIntervalMinutes(
@@ -38,7 +47,6 @@ export function useInfoscreenWallClock(args: {
   const locked = computed(
     () =>
       args.active.value &&
-      args.settings.value.variant === 'wall-clock' &&
       phase.value === 'idle' &&
       args.settings.value.lockScreen &&
       !showClockSplash.value,
@@ -92,7 +100,6 @@ export function useInfoscreenWallClock(args: {
   }
 
   function startClockSplash(opts?: { force?: boolean }): void {
-    if (args.settings.value.variant !== 'wall-clock') return;
     if (!opts?.force && !args.active.value) return;
     showClockSplash.value = true;
     phase.value = 'clock-splash';
@@ -103,7 +110,6 @@ export function useInfoscreenWallClock(args: {
   }
 
   function onTestClockEvent(): void {
-    if (args.settings.value.variant !== 'wall-clock') return;
     startClockSplash({ force: true });
   }
 
@@ -120,13 +126,11 @@ export function useInfoscreenWallClock(args: {
   }
 
   function dismissSplashFromTap(): void {
-    if (args.settings.value.variant !== 'wall-clock' || !showClockSplash.value) return;
+    if (!showClockSplash.value) return;
     endClockSplash();
   }
 
   function onUserActivity(): void {
-    if (args.settings.value.variant !== 'wall-clock') return;
-
     if (showClockSplash.value) {
       dismissSplashFromTap();
       if (!args.active.value) return;
@@ -150,8 +154,18 @@ export function useInfoscreenWallClock(args: {
     }
   }
 
+  function shouldTriggerAlignedSplash(now: Date): boolean {
+    if (!isAlignedClockMinute(now, intervalMinutes.value)) return false;
+    const msIntoMinute = now.getSeconds() * 1000 + now.getMilliseconds();
+    if (msIntoMinute > ALIGNED_MINUTE_TRIGGER_MS) return false;
+    const slotKey = alignedClockSlotKey(now, intervalMinutes.value);
+    if (slotKey === lastSplashSlotKey) return false;
+    lastSplashSlotKey = slotKey;
+    return true;
+  }
+
   function checkClockTick(): void {
-    if (!args.active.value || args.settings.value.variant !== 'wall-clock') return;
+    if (!args.active.value) return;
     if (phase.value === 'interacting') {
       updateProgress();
       return;
@@ -161,9 +175,8 @@ export function useInfoscreenWallClock(args: {
       return;
     }
 
-    const now = Date.now();
-    const remaining = msUntilNextClockTick(new Date(now), intervalMinutes.value);
-    if (remaining <= 1000) {
+    const now = new Date();
+    if (shouldTriggerAlignedSplash(now)) {
       startClockSplash();
     }
     updateProgress();
@@ -174,6 +187,7 @@ export function useInfoscreenWallClock(args: {
     phase.value = 'idle';
     interactionEndsAt.value = 0;
     showClockSplash.value = false;
+    lastSplashSlotKey = '';
     updateProgress();
     tickTimer = setInterval(checkClockTick, 1000);
     checkClockTick();
@@ -186,12 +200,13 @@ export function useInfoscreenWallClock(args: {
     showClockSplash.value = false;
     phase.value = 'idle';
     progress.value = 0;
+    lastSplashSlotKey = '';
   }
 
   watch(
-    () => [args.active.value, args.settings.value.variant] as const,
-    ([active, variant]) => {
-      if (active && variant === 'wall-clock') {
+    () => args.active.value,
+    (active) => {
+      if (active) {
         startWallClock();
       } else {
         stopWallClock();
@@ -201,7 +216,8 @@ export function useInfoscreenWallClock(args: {
   );
 
   watch(intervalMinutes, () => {
-    if (args.active.value && args.settings.value.variant === 'wall-clock') {
+    if (args.active.value) {
+      lastSplashSlotKey = '';
       updateProgress();
     }
   });

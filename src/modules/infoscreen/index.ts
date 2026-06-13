@@ -17,6 +17,8 @@ export {
   resolveClockIntervalMinutes,
   nextAlignedClockTime,
   msUntilNextClockTick,
+  isAlignedClockMinute,
+  alignedClockSlotKey,
   type InfoscreenClockIntervalPreset,
 } from './infoscreenClockSchedule';
 export {
@@ -29,8 +31,8 @@ export {
   clockDisplayDurationMs,
   defaultInfoscreenSettings,
   loadInfoscreenSettings,
-  saveInfoscreenEnabled,
-  saveInfoscreenVariant,
+  saveInfoscreenPresentationEnabled,
+  saveInfoscreenScreensaverEnabled,
   saveInfoscreenLockScreen,
   saveInfoscreenClockInterval,
   saveInfoscreenSettings,
