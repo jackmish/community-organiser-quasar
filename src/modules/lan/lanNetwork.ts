@@ -23,15 +23,6 @@ export function sortLanIPv4Addresses(ips: string[]): string[] {
   return uniq.sort((a, b) => score(a) - score(b) || a.localeCompare(b));
 }
 
-export function lanConnectionTroubleshootHint(port: number): string {
-  return (
-    `Check: (1) Phone uses Wi‑Fi — not mobile data — on the same network as the PC. ` +
-    `(2) On the PC, “Accept pairing requests from the LAN” is ON. ` +
-    `(3) Use the PC’s Wi‑Fi LAN IP (e.g. 192.168.x.x), not a VPN address. ` +
-    `(4) Windows Firewall may block port ${port} — allow CO21 or that port for private networks.`
-  );
-}
-
 /** Best-effort local IPv4 discovery in the renderer (Capacitor / browser). */
 export function probeLocalLanIPv4Addresses(timeoutMs = 2800): Promise<string[]> {
   return new Promise((resolve) => {

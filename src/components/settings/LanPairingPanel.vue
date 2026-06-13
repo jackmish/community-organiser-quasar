@@ -92,6 +92,18 @@
                   <span class="lan-pairing-emphasis break-all">{{ pcConnectPreview }}</span>
                 </div>
                 <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
+                <div v-if="pairHintClass === 'text-negative'" class="q-mt-xs">
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    color="primary"
+                    icon="help_outline"
+                    :label="$text('lan.help.button')"
+                    class="q-px-none"
+                    @click="connectionHelpOpen = true"
+                  />
+                </div>
               </div>
             </template>
 
@@ -127,7 +139,19 @@
                 :loading="qrCameraBusy"
                 @click="scanQrWithCamera"
               />
+              <q-btn
+                outline
+                color="grey-7"
+                icon="help_outline"
+                class="settings-dialog-surface-btn lan-pairing-tool-btn"
+                :label="$text('lan.help.button')"
+                @click="connectionHelpOpen = true"
+              />
             </div>
+            <LanConnectionHelpDialog
+              v-model="connectionHelpOpen"
+              :sample-host="helpSampleHost"
+            />
             <input ref="qrFileInput" type="file" accept="image/*" class="lan-qr-file-input" @change="onQrFileChange" />
 
             <template v-if="showHostPanel">
@@ -210,6 +234,18 @@
                 <span class="lan-pairing-emphasis break-all">{{ pcConnectPreview }}</span>
               </div>
               <div v-if="pairHint" class="text-caption q-mt-sm" :class="pairHintClass">{{ pairHint }}</div>
+              <div v-if="pairHintClass === 'text-negative'" class="q-mt-xs">
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  color="primary"
+                  icon="help_outline"
+                  :label="$text('lan.help.button')"
+                  class="q-px-none"
+                  @click="connectionHelpOpen = true"
+                />
+              </div>
             </template>
           </section>
 
@@ -267,10 +303,8 @@ import jsQR from 'jsqr';
 import { deviceId } from 'src/modules/storage/sync/deviceId';
 import { CO21_LAN_PAIRING_PORT, co21LanBaseUrl } from 'src/modules/lan/lanPairingConstants';
 import { buildLanPairingQrPayload, parseHostFromLanQrContent } from 'src/modules/lan/lanQrPayload';
-import {
-  lanConnectionTroubleshootHint,
-  probeLocalLanIPv4Addresses,
-} from 'src/modules/lan/lanNetwork';
+import { probeLocalLanIPv4Addresses } from 'src/modules/lan/lanNetwork';
+import { lanConnectionTroubleshootHint } from 'src/modules/lan/lanConnectionHelp';
 import { canUseLanQrCamera, scanLanQrWithCamera } from 'src/modules/lan/lanQrScan';
 import {
   lanFetchInfoWithRetry,
@@ -298,6 +332,7 @@ import { saveLanAutoListen } from 'src/modules/lan/lanServerManager';
 import { getCo21LanApi, hasCo21LanServer } from 'src/modules/lan/co21LanRuntime';
 import logger from 'src/utils/logger';
 import { useSettingsDialogLayout } from 'src/composables/useSettingsDialogLayout';
+import LanConnectionHelpDialog from './LanConnectionHelpDialog.vue';
 
 const { bodyClass, bodyStyle, isMobile: isMobileViewport } = useSettingsDialogLayout(720);
 
@@ -367,6 +402,14 @@ const qrHost = ref('');
 const qrDataUrl = ref('');
 const qrFileInput = ref<HTMLInputElement | null>(null);
 const qrCameraBusy = ref(false);
+const connectionHelpOpen = ref(false);
+
+const helpSampleHost = computed(() => {
+  const fromServer = serverAddrs.value[0] || qrHost.value;
+  if (fromServer) return fromServer;
+  const manual = pcHost.value.trim().split(':')[0] ?? '';
+  return manual;
+});
 
 const qrPayloadPreview = computed(() => {
   if (!listenOn.value || !qrHost.value) return '';
