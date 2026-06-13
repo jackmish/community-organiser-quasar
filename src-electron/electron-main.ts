@@ -117,13 +117,12 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     icon: iconPath,
-    // ...
+    width: 1280,
+    height: 800,
+    minWidth: 960,
+    minHeight: 640,
+    show: false,
     webPreferences: {
-      // HERE IS THE MAGIC:
-      // icon: path.resolve(__dirname, 'icons/icon.png'), // tray icon
-      // width: 1000,
-      // height: 600,
-      // useContentSize: true,
       preload: process.env.QUASAR_ELECTRON_PRELOAD_FOLDER
         ? path.resolve(
             currentDir,
@@ -137,24 +136,14 @@ function createWindow() {
     },
   });
 
-  // Maximize window on Windows
-  if (process.platform === 'win32') {
+  // Maximize on Windows/Linux — avoids tiny default frame on some WMs (especially Linux).
+  if (process.platform === 'win32' || process.platform === 'linux') {
     mainWindow.maximize();
   }
 
-  // mainWindow = new BrowserWindow({
-  //     webPreferences: {
-  //     // HERE IS THE MAGIC:
-  //     preload: path.resolve(
-  //       currentDir,
-  //       path.join(process.env.QUASAR_ELECTRON_PRELOAD_FOLDER, 'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION)
-  //     )
-  //   },
-  //   icon: path.resolve(__dirname, 'icons/icon.png'), // tray icon
-  //   width: 1000,
-  //   height: 600,
-  //   useContentSize: true,
-  // });
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
 
   mainWindow.loadURL(process.env.APP_URL || '');
 

@@ -5,27 +5,13 @@
     :class="{ 'clock-panel--colorize': panelTheme.colorize }"
     :style="panelStyle"
   >
-    <div class="row items-center no-wrap justify-between clock-panel__row">
-      <div class="row items-center no-wrap clock-panel__main">
-        <div class="clock-panel__time-col">
-          <div class="clock-panel__time">{{ timeText }}</div>
-        </div>
-        <div class="clock-panel__date-col">
-          <div class="clock-panel__date-weekday">{{ dateWeekday }}</div>
-          <div class="clock-panel__date-line">{{ dateLine }}</div>
-        </div>
+    <div class="row items-center no-wrap clock-panel__row">
+      <div class="clock-panel__time-col">
+        <div class="clock-panel__time">{{ timeText }}</div>
       </div>
-      <div class="col-auto clock-panel__timer-col">
-        <q-btn
-          unelevated
-          class="co21-field-btn clock-panel__timer-btn"
-          :style="timerBtnStyle"
-          :aria-label="$text('clock.timer')"
-          disable
-        >
-          <q-icon name="timer" size="44px" />
-          <q-tooltip>{{ $text('clock.timer') }}</q-tooltip>
-        </q-btn>
+      <div class="clock-panel__date-col">
+        <div class="clock-panel__date-weekday">{{ dateWeekday }}</div>
+        <div class="clock-panel__date-line">{{ dateLine }}</div>
       </div>
     </div>
   </div>
@@ -33,14 +19,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { $text, getLocale } from 'src/modules/lang';
+import { getLocale } from 'src/modules/lang';
 import { formatAppMonthLong, formatAppWeekday } from 'src/modules/lang/dateFormat';
 import CC from 'src/CCAccess';
 import {
   buildCo21SurfaceThemeInputFromGroup,
-  getCo21FieldCssVariables,
   getCo21SurfaceBackgroundStyle,
-  resolveCo21FieldTheme,
 } from 'src/components/theme';
 import {
   readGroupBackgroundFields,
@@ -118,17 +102,6 @@ const panelStyle = computed(() => {
   };
 });
 
-const timerBtnStyle = computed(() => {
-  const { fieldBg, fieldFg } = resolveCo21FieldTheme(surfaceThemeInput.value);
-  return {
-    ...getCo21FieldCssVariables(surfaceThemeInput.value),
-    backgroundColor: fieldBg,
-    color: fieldFg,
-    '--co21-field-fg': fieldFg,
-    '--co21-field-bg': fieldBg,
-  };
-});
-
 const timeText = computed(() =>
   new Intl.DateTimeFormat(getLocale(), {
     hour: '2-digit',
@@ -201,12 +174,7 @@ onBeforeUnmount(() => {
 }
 
 .clock-panel__row {
-  gap: 16px;
-}
-
-.clock-panel__main {
   gap: 14px;
-  min-width: 0;
 }
 
 .clock-panel__time-col {
@@ -239,32 +207,5 @@ onBeforeUnmount(() => {
   font-weight: 500;
   line-height: 1.2;
   opacity: 0.92;
-}
-
-.clock-panel__timer-col {
-  flex-shrink: 0;
-}
-
-.clock-panel__timer-btn {
-  width: 72px;
-  height: 72px;
-  min-width: 72px;
-  min-height: 72px;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
-  opacity: 1 !important;
-}
-
-.clock-panel__timer-btn :deep(.q-btn__content) {
-  padding: 0;
-}
-
-.clock-panel__timer-btn :deep(.q-icon) {
-  font-size: 44px;
-}
-
-.clock-panel__timer-btn.q-btn--disabled {
-  opacity: 1 !important;
 }
 </style>

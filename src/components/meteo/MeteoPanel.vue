@@ -613,6 +613,21 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+/* Tablet / medium (below lg): hide bulky “now” — city picker + hourly forecast are enough */
+@media (max-width: 1439px) {
+  .meteo-panel__now {
+    display: none;
+  }
+
+  .meteo-panel {
+    --meteo-panel-inset: 12px;
+  }
+
+  .meteo-panel__location-col {
+    max-width: none;
+  }
+}
+
 .meteo-panel__location-col {
   min-width: 0;
   width: 100%;
