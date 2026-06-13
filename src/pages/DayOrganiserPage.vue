@@ -400,11 +400,13 @@
     </div>
 
     <q-btn
-      v-if="$q.screen.lt.lg"
+      v-if="showScrollToggle && !isFilesMode"
       unelevated
-      color="primary"
-      text-color="white"
       class="mobile-section-toggle-btn"
+      :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
+      :color="addTaskBtnColorize ? undefined : 'primary'"
+      :text-color="addTaskBtnColorize ? undefined : 'white'"
+      :style="addTaskBtnStyle"
       :icon="scrollToggleIcon"
       :label="$text(scrollToggleLabelKey)"
       @click="onScrollToggleClick"
@@ -600,8 +602,9 @@ const {
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
 
+/** Task list + calendar stack vertically below lg (1439px); incl. tablet landscape (1024px+). */
 const isStackedOrganiserLayout = computed(() => $q.screen.lt.lg);
-const { scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
+const { showScrollToggle, scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
     enabled: isStackedOrganiserLayout,
     daySectionRef: dayViewSectionRef,
@@ -2281,12 +2284,14 @@ onMounted(async () => {
 }
 
 .add-task-btn--colorize.list-add-btn,
-.add-task-btn--colorize.floating-add-btn {
+.add-task-btn--colorize.floating-add-btn,
+.add-task-btn--colorize.mobile-section-toggle-btn {
   background-color: var(--add-task-btn-bg, inherit) !important;
 }
 
 .add-task-btn--colorize.list-add-btn .q-icon,
-.add-task-btn--colorize.floating-add-btn .q-icon {
+.add-task-btn--colorize.floating-add-btn .q-icon,
+.add-task-btn--colorize.mobile-section-toggle-btn :deep(.q-icon) {
   color: var(--add-task-btn-icon) !important;
 }
 
