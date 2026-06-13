@@ -531,3 +531,56 @@ html body .q-dialog:not(.day-organiser-task-panel-dialog) .q-card textarea::plac
 .group-select--header.q-btn--outline::before {
   border-color: transparent !important;
 }
+
+/* LAN QR camera scan (@capacitor-mlkit/barcode-scanning startScan fallback) */
+body.barcode-scanner-active {
+  visibility: hidden;
+}
+
+body.barcode-scanner-active .lan-qr-scan-overlay {
+  visibility: visible;
+}
+
+.lan-qr-scan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px 16px 48px;
+  pointer-events: auto;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 45%);
+}
+
+.lan-qr-scan-overlay__panel {
+  width: min(420px, 100%);
+  padding: 16px 20px;
+  border-radius: 12px;
+  text-align: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.lan-qr-scan-overlay__title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.lan-qr-scan-overlay__hint {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.lan-qr-scan-overlay__cancel {
+  min-width: 120px;
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  background: transparent;
+  cursor: pointer;
+}

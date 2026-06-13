@@ -79,13 +79,30 @@ describe('calendar theme', () => {
   });
 
   it('legacy palette when colorize is off', () => {
-    const [bg] = getOverlayColorForMonth(new Date(), {
+    const [bg, fg] = getOverlayColorForMonth(new Date(), {
       colorize: false,
       groupColor: '#f00',
       groupTextColor: '#000',
       colorizeTones: null,
     });
     expect(bg).toBe('#ffffff');
+    expect(fg).toBe('#000');
+  });
+
+  it('legacy month label foreground contrasts with band background', () => {
+    const theme = {
+      colorize: false,
+      groupColor: '#f00',
+      groupTextColor: '#000',
+      colorizeTones: null,
+    };
+    for (let offset = 0; offset < 7; offset += 1) {
+      const month = ((new Date().getMonth() + 1 + offset - 1) % 12) + 1;
+      const day = new Date(new Date().getFullYear(), month - 1, 1);
+      const [bg, fg] = getOverlayColorForMonth(day, theme);
+      expect(fg).toBe(bg.toLowerCase() === '#ffffff' ? '#000' : fg);
+      expect(['#000', '#fff']).toContain(fg);
+    }
   });
 
   it('monthOffsetFromToday wraps year', () => {

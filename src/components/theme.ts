@@ -198,14 +198,15 @@ export const CALENDAR_CHROME_BG_DEFAULT = 'rgba(50, 200, 255, 0.5)';
 
 const CALENDAR_PRIMARY = '#1976d2';
 
-const LEGACY_MONTH_OVERLAY_STOPS: ReadonlyArray<readonly [string, string]> = [
-  ['#ffffff', '#fff'],
-  ['#4cafe0', '#000'],
-  ['#9ff800', '#000'],
-  ['#ff9800', '#fff'],
-  ['#9c27b0', '#fff'],
-  ['#009688', '#fff'],
-  ['#3f51b5', '#fff'],
+/** Month band backgrounds when calendar colorize is off (offset 0 = this month). */
+const LEGACY_MONTH_OVERLAY_BGS: readonly string[] = [
+  '#ffffff',
+  '#4cafe0',
+  '#9ff800',
+  '#ff9800',
+  '#9c27b0',
+  '#009688',
+  '#3f51b5',
 ];
 
 /** Bright + alternate band colors from the group background color. */
@@ -264,9 +265,9 @@ export function getOverlayColorForMonth(
   const offset = monthOffsetFromToday(monthLike);
 
   if (!theme?.colorize) {
-    if (offset >= 0 && offset < LEGACY_MONTH_OVERLAY_STOPS.length) {
-      const entry = LEGACY_MONTH_OVERLAY_STOPS[offset] ?? LEGACY_MONTH_OVERLAY_STOPS[0]!;
-      return [entry[0], entry[1]];
+    if (offset >= 0 && offset < LEGACY_MONTH_OVERLAY_BGS.length) {
+      const bg = LEGACY_MONTH_OVERLAY_BGS[offset] ?? LEGACY_MONTH_OVERLAY_BGS[0]!;
+      return [bg, getContrastColor(bg)];
     }
     const key = String(monthNum).padStart(2, '0');
     const bg = monthColors[key] ?? CALENDAR_PRIMARY;
