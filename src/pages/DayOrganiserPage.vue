@@ -206,6 +206,21 @@
           >
             <q-icon name="add" />
           </q-btn>
+
+          <q-btn
+            v-if="!isFilesMode"
+            class="list-done-btn"
+            unelevated
+            no-caps
+            color="blue-grey-8"
+            :aria-label="$text('ui.tasks_done')"
+            @click="showDoneTasksDialog = true"
+          >
+            <q-icon name="task_alt" size="22px" class="list-done-btn__icon" />
+            <span v-if="!$q.screen.lt.lg" class="list-done-btn__label">{{
+              $text("ui.tasks_done")
+            }}</span>
+          </q-btn>
         </div>
       </div>
 
@@ -226,7 +241,7 @@
         </div>
       </div>
 
-      <div v-if="!isFilesMode" class="row q-col-gutter-md q-mt-md">
+      <div v-if="!isFilesMode" class="row q-col-gutter-md day-organiser-calendar-row">
         <div
           ref="calendarSectionRef"
           class="col-12 col-md-8 day-organiser-calendar-section day-organiser-scroll-anchor"
@@ -258,7 +273,6 @@
         </div>
         <div class="col-12 col-md-4">
           <div class="q-mb-md">
-            <DoneTasksList :done-tasks="doneTasks" />
             <ClockPanel />
             <MeteoPanel />
             <PluginSlot name="below-done-list" />
@@ -351,8 +365,35 @@
       </div>
     </q-dialog>
 
+    <q-dialog v-model="showDoneTasksDialog" maximized class="done-tasks-dialog-root co21-light-dialog">
+      <q-card class="done-tasks-dialog column full-height">
+        <q-card-section class="row items-center q-pb-sm done-tasks-dialog__head">
+          <q-icon name="task_alt" size="28px" class="q-mr-sm done-tasks-dialog__icon" />
+          <div class="text-h6 text-weight-medium done-tasks-dialog__title">
+            {{ $text("ui.tasks_done") }}
+            <span class="done-tasks-dialog__count">({{ doneTasks.length }})</span>
+          </div>
+          <q-space />
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            color="blue-grey-8"
+            class="done-tasks-dialog__close"
+            :aria-label="$text('action.close')"
+            v-close-popup
+          />
+        </q-card-section>
+        <q-separator />
+        <q-card-section class="col scroll done-tasks-dialog__body">
+          <DoneTasksList list-only dialog-layout :done-tasks="doneTasks" />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <div
-      v-else
+      v-if="!$q.screen.lt.md"
       :class="['fixed-right-panel', { 'panel-hidden': panelHidden }]"
     >
       <DayOrganiserTaskPanelContent />
@@ -1613,6 +1654,7 @@ watch(
 const lastAddFromCalendar = ref(false);
 /** Short calendar day tap (not long-press): change date only, do not open add form. */
 const calendarSelectOnlyRef = ref(false);
+const showDoneTasksDialog = ref(false);
 const addFormDefaultTypeId = ref<AddFormDefaultTypeId>("Todo");
 const lastAddAnchored = ref(false);
 
@@ -2184,6 +2226,76 @@ onMounted(async () => {
   border-radius: 30px 0 0 0;
   border-bottom-right-radius: 8px;
   z-index: 2400;
+}
+
+.list-done-btn {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 2400;
+  min-height: 56px;
+  max-width: min(100%, 220px);
+  padding: 8px 14px 8px 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-radius: 0 30px 0 0;
+  border-bottom-left-radius: 8px;
+}
+
+.list-done-btn__icon {
+  margin-right: 4px;
+}
+
+.list-done-btn__label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1439px) {
+  .list-done-btn {
+    min-height: 40px;
+    width: 40px;
+    max-width: 40px;
+    padding: 0;
+    border-radius: 0 20px 0 0;
+  }
+
+  .list-done-btn__icon {
+    margin-right: 0;
+    font-size: 20px !important;
+  }
+
+  .list-done-btn :deep(.q-btn__content) {
+    padding: 0;
+  }
+}
+
+.done-tasks-dialog {
+  background: #fafafa !important;
+  color: #263238 !important;
+}
+
+.done-tasks-dialog__head {
+  background: #fff !important;
+  color: #263238 !important;
+}
+
+.done-tasks-dialog__title,
+.done-tasks-dialog__icon,
+.done-tasks-dialog__close :deep(.q-icon) {
+  color: #37474f !important;
+}
+
+.done-tasks-dialog__count {
+  color: #607d8b !important;
+}
+
+.done-tasks-dialog__body {
+  padding: 12px 16px 24px;
+  color: #263238 !important;
 }
 .list-add-btn .q-icon {
   color: #fff !important;

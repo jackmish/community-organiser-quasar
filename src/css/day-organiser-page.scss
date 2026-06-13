@@ -230,6 +230,17 @@ $hidden-bg: #f2f2f2;
   align-items: flex-start;
 }
 
+/* Space between task list block and calendar (default ≈ q-mt-md) */
+.day-organiser-calendar-row {
+  margin-top: 16px;
+}
+
+@media (max-width: 1439px) {
+  .day-organiser-calendar-row {
+    margin-top: 4px;
+  }
+}
+
 .tasks-column {
   flex: 1 1 0;
 }
@@ -432,6 +443,13 @@ $hidden-bg: #f2f2f2;
     height: 40px !important;
     min-width: 40px !important;
     min-height: 40px !important;
+  }
+}
+
+/* Tablet / medium and below: group shortcut row — use header group select */
+@media (max-width: 1439px) {
+  .hidden-children-list__list {
+    display: none !important;
   }
 }
 

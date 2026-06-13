@@ -111,6 +111,14 @@ $calendar-nav-col-width: 122px;
   white-space: nowrap;
 }
 
+/* Tablet / medium (below lg): hide prev/next month side columns — use top jump buttons */
+@media (max-width: 1439px) {
+  .calendar-nav-col,
+  .calendar-nav-col-head {
+    display: none;
+  }
+}
+
 .calendar-table {
   width: 100%;
   border-collapse: collapse;
@@ -374,7 +382,7 @@ $calendar-nav-col-width: 122px;
     touch-action: auto;
   }
   .calendar-scroll-flip .calendar-table-wrapper {
-    min-width: 804px; /* 7 day cols + 2× nav col (122px) vs former 624px */
+    min-width: 624px; /* 7 day cols — side nav columns hidden below lg */
     display: block;
   }
   .calendar-cell {
@@ -441,19 +449,21 @@ $calendar-nav-col-width: 122px;
   margin-top: 20px;
   margin-bottom: 20px;
   position: relative;
-  // &::before {
-  //   content: '';
-  //   position: absolute;
-  //   inset: 0;
-  //   // background: rgba(111, 200, 111, 0.6);
-  //   // background: rgba(111, 200, 55, 0.6);
-  //   background: rgba(55, 111, 122, 0.6);
-  //   // background-color: $opposite-color;
-  //   z-index: 1;
-  //   border-radius: 8px;
-  //   mix-blend-mode: hard-light;
-  //   z-index: 0;
-  // }
+}
+
+/* Tablet / medium: tighten chrome above month jump buttons */
+@media (max-width: 1439px) {
+  .top-row {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+  }
+
+  .bottom-row {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+  }
 }
 
 .pagination-range-options {

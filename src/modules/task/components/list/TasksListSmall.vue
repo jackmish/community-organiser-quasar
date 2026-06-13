@@ -106,12 +106,12 @@
       </template>
     </div>
     <div
-      v-if="shortcutGroups.length > 0 || (childGroupsNoTasks.length > 0 && !$q.screen.lt.md)"
+      v-if="!$q.screen.lt.lg && (shortcutGroups.length > 0 || childGroupsNoTasks.length > 0)"
       class="hidden-children-list__list q-pa-sm"
       aria-hidden="false"
     >
       <div class="shortcuts-scroll">
-        <!-- Shortcuts section -->
+        <!-- Shortcuts + subgroups: large desktop only (hidden tablet/medium and below) -->
         <template v-if="shortcutGroups.length > 0">
           <span class="bottom-section-label">Shortcuts:</span>
           <div
@@ -124,8 +124,8 @@
           </div>
         </template>
 
-        <!-- Subgroups section (right) - hidden on mobile -->
-        <template v-if="childGroupsNoTasks.length > 0 && !$q.screen.lt.md">
+        <!-- Subgroups (large desktop only — same row as shortcuts) -->
+        <template v-if="childGroupsNoTasks.length > 0">
           <span class="bottom-section-label">{{ activeGroupName }} subgroups:</span>
           <div
             v-for="g in childGroupsNoTasks"

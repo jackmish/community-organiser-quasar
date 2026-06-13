@@ -71,6 +71,8 @@
   "ui.calendar_view": "Kalendarz",
   "ui.day_view": "Widok dnia",
   "ui.no_tasks_for_day": "Brak zadań na ten dzień",
+  "ui.tasks_done": "Wykonane",
+  "ui.no_done_tasks": "Brak wykonanych zadań na ten dzień",
   "ui.all_groups": "Wszystkie grupy",
   "ui.shortcut": "Skrót",
   "ui.manage_groups": "Zarządzaj grupami...",
