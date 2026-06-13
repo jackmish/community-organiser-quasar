@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, watch, toRef, onMounted } from "vue";
+import { computed, ref, nextTick, watch, toRef, onMounted, onUnmounted } from "vue";
 import { $text, getLanguage, hasText } from "src/modules/lang";
 import { formatAppMonthLong } from "src/modules/lang/dateFormat";
 import type { Group } from "src/modules/group/models/GroupModel";
@@ -39,6 +39,7 @@ import {
   showsMediaSharedFolderPicker,
 } from "src/modules/media/mediaTaskTypes";
 import type { AddFormDefaultTypeId } from "src/pages/dayOrganiserPanelKey";
+import type { TaskAttachment } from "src/modules/task/models/TaskModel";
 
 const props = defineProps({
   filteredParentOptions: {
@@ -226,6 +227,27 @@ const {
 // Local newTask state, default to today
 const today = new Date();
 const pad = (n: number) => String(n).padStart(2, "0");
+type NoteMode = "note" | "contact" | "accounting";
+
+function resolveTaskPhoto(task: Record<string, unknown> | null | undefined): string {
+  if (!task) return "";
+  const photo = task.photo ?? task.notePhoto;
+  return typeof photo === "string" ? photo : "";
+}
+
+function resolveTaskAttachments(task: Record<string, unknown> | null | undefined): TaskAttachment[] {
+  if (!task) return [];
+  const raw = task.attachments ?? task.noteAttachments;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (item): item is TaskAttachment =>
+      item != null &&
+      typeof item === "object" &&
+      typeof (item as TaskAttachment).name === "string" &&
+      typeof (item as TaskAttachment).dataUrl === "string",
+  );
+}
+
 type TaskType = {
   name: string;
   description: string;
@@ -247,6 +269,11 @@ type TaskType = {
   // number of days before the event (used for prepare/expiration modes)
   timeOffsetDays?: number | null;
   mediaSharedFolderPath?: string;
+  noteMode?: NoteMode;
+  noteIcon?: string;
+  noteColor?: string;
+  photo?: string;
+  attachments?: TaskAttachment[];
 };
 
 const localNewTask = ref<TaskType>({
@@ -267,6 +294,11 @@ const localNewTask = ref<TaskType>({
   timeMode: "event",
   timeOffsetDays: 7,
   mediaSharedFolderPath: "",
+  noteMode: "note",
+  noteIcon: "description",
+  noteColor: "#9e9e9e",
+  photo: "",
+  attachments: [],
 });
 
 function taskTypeStorageKey(mediaMode: boolean): string {
@@ -486,22 +518,186 @@ const watermarkIcon = computed(() => {
 const $q = useQuasar();
 const btnSize = computed(() => ($q.screen.gt.sm ? "md" : "sm"));
 const isReplenish = computed(() => (localNewTask.value.type_id || "") === "Replenish");
+const isNoteLater = computed(() => (localNewTask.value.type_id || "") === "NoteLater");
 /** Type when edit session started — keeps calendar btn if user switches Todo → TimeEvent. */
 const scheduleOriginTypeId = ref("");
 const showTodoCalendarBtn = computed(() => {
-  if (props.mode !== "edit") return false;
   const cur = localNewTask.value.type_id || "";
-  return cur === "TimeEvent" || scheduleOriginTypeId.value === "Todo";
+  if (props.mode === "edit") {
+    return cur === "TimeEvent" || scheduleOriginTypeId.value === "Todo";
+  }
+  if (props.mode === "add" && !props.mediaMode) {
+    return cur === "Todo" || cur === "TimeEvent";
+  }
+  return false;
 });
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
 
 function openTodoCalendarSchedule() {
-  if (!localNewTask.value.id) return;
-  todoCalendarSchedule.start({
-    ...localNewTask.value,
-    id: String(localNewTask.value.id),
-  } as TodoScheduleTask);
+  if (props.mode === "add") {
+    todoCalendarSchedule.startDraft({
+      name: localNewTask.value.name,
+      description: localNewTask.value.description,
+      eventTime: localNewTask.value.eventTime,
+      eventDate: localNewTask.value.eventDate,
+      type_id: localNewTask.value.type_id,
+    });
+  } else {
+    if (!localNewTask.value.id) return;
+    todoCalendarSchedule.start({
+      ...localNewTask.value,
+      id: String(localNewTask.value.id),
+    } as TodoScheduleTask);
+  }
   window.dispatchEvent(new Event("co21:todo-schedule-open"));
+}
+
+function applyDraftSchedule(detail: {
+  date: string;
+  eventTime: string;
+  goToEdit?: boolean;
+}) {
+  localNewTask.value.eventDate = detail.date;
+  localNewTask.value.eventTime = detail.eventTime || "";
+  localNewTask.value.type_id = "TimeEvent";
+  localNewTask.value.timeMode = "event";
+  emit("calendar-date-select", detail.date);
+  try {
+    if (detail.eventTime) {
+      timeType.value = "exactHour";
+    }
+  } catch {
+    void 0;
+  }
+}
+
+function onDraftScheduleApplied(ev: Event) {
+  const detail = (ev as CustomEvent).detail;
+  if (!detail?.date) return;
+  applyDraftSchedule(detail);
+}
+
+onMounted(() => {
+  window.addEventListener("co21:todo-schedule-draft-applied", onDraftScheduleApplied);
+  adjustDescriptionHeight();
+});
+
+const noteModeOptions = computed(() => [
+  { label: $text("task.note.mode.note"), value: "note" as NoteMode },
+  { label: $text("task.note.mode.contact"), value: "contact" as NoteMode },
+  { label: $text("task.note.mode.accounting"), value: "accounting" as NoteMode },
+]);
+
+const noteIconOptions = [
+  "description",
+  "note",
+  "sticky_note_2",
+  "bookmark",
+  "lightbulb",
+  "favorite",
+  "star",
+  "flag",
+  "label",
+  "chat",
+  "mail",
+  "phone",
+  "person",
+  "home",
+  "work",
+  "shopping_cart",
+  "attach_money",
+  "camera_alt",
+  "photo",
+  "place",
+];
+
+const noteColorOptions = [
+  "#9e9e9e",
+  "#2196f3",
+  "#4caf50",
+  "#ff9800",
+  "#e91e63",
+  "#9c27b0",
+  "#00bcd4",
+  "#795548",
+  "#607d8b",
+  "#ffc107",
+];
+
+onUnmounted(() => {
+  window.removeEventListener("co21:todo-schedule-draft-applied", onDraftScheduleApplied);
+});
+
+const noteIconMenu = ref(false);
+const photoInput = ref<HTMLInputElement | null>(null);
+const attachmentInput = ref<HTMLInputElement | null>(null);
+
+function triggerPhotoCapture() {
+  photoInput.value?.click();
+}
+
+function triggerAttachFiles() {
+  attachmentInput.value?.click();
+}
+
+function onPhotoSelected(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = reader.result;
+    if (typeof result === "string") {
+      localNewTask.value.photo = result;
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value = "";
+}
+
+function readFileAsDataUrl(file: File): Promise<TaskAttachment | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve({ name: file.name, dataUrl: result });
+      } else {
+        resolve(null);
+      }
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onAttachmentsSelected(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const files = input.files;
+  if (!files?.length) return;
+  const added = await Promise.all(Array.from(files).map(readFileAsDataUrl));
+  const valid = added.filter((x): x is TaskAttachment => x != null);
+  if (valid.length) {
+    localNewTask.value.attachments = [
+      ...(localNewTask.value.attachments || []),
+      ...valid,
+    ];
+  }
+  input.value = "";
+}
+
+function clearPhoto() {
+  localNewTask.value.photo = "";
+}
+
+function removeAttachment(index: number) {
+  const list = [...(localNewTask.value.attachments || [])];
+  list.splice(index, 1);
+  localNewTask.value.attachments = list;
+}
+
+function isImageAttachment(dataUrl: string): boolean {
+  return dataUrl.startsWith("data:image/");
 }
 const showFullTypeLabel = computed(() => $q.screen.gt.md);
 
@@ -607,6 +803,7 @@ const descriptionLabel = computed(() => {
     return `${prefix} ${schedule.lead}, ${date}${time}${suffix}`;
   }
   if (typeId === "Todo") return $text("task.form.description_label_todo");
+  if (typeId === "NoteLater") return $text("task.form.description_label_note");
   return $text("label.description");
 });
 
@@ -734,6 +931,17 @@ const {
   updateTask,
 });
 
+watch(
+  () => localNewTask.value.type_id,
+  (val) => {
+    if (val === "NoteLater") {
+      if (!localNewTask.value.noteMode) localNewTask.value.noteMode = "note";
+      if (!localNewTask.value.noteIcon) localNewTask.value.noteIcon = "description";
+      if (!localNewTask.value.noteColor) localNewTask.value.noteColor = "#9e9e9e";
+    }
+  },
+);
+
 // When user switches type to Replenish while in add mode, focus the search input
 watch(
   () => localNewTask.value.type_id,
@@ -819,6 +1027,11 @@ watch(
         timeMode: val.timeMode || "event",
         timeOffsetDays: val.timeOffsetDays == null ? 7 : val.timeOffsetDays,
         mediaSharedFolderPath: val.mediaSharedFolderPath || "",
+        noteMode: (val.noteMode as NoteMode) || "note",
+        noteIcon: val.noteIcon || "description",
+        noteColor: val.noteColor || "#9e9e9e",
+        photo: resolveTaskPhoto(val),
+        attachments: resolveTaskAttachments(val),
         id: val.id,
       };
       // Load repeat state from the composable helper
@@ -899,6 +1112,11 @@ watch(
         timeMode: "event",
         timeOffsetDays: 7,
         mediaSharedFolderPath: "",
+        noteMode: "note",
+        noteIcon: "description",
+        noteColor: "#9e9e9e",
+        photo: "",
+        attachments: [],
       };
       // Reset repeat inputs when clearing the form
       resetRepeat();
@@ -1202,24 +1420,12 @@ watch(repeatCycleType, (val) => {
   }
 });
 
-onMounted(() => {
-  adjustDescriptionHeight();
+onUnmounted(() => {
+  window.removeEventListener("co21:todo-schedule-draft-applied", onDraftScheduleApplied);
 });
 
 function onSubmit(event: Event) {
   event.preventDefault();
-  // Prevent creating Notes — show message instead
-  if (localNewTask.value.type_id === "NoteLater") {
-    try {
-      $q.notify({
-        type: "info",
-        message: "Notes needs to be redesigned and coded in some future",
-      });
-    } catch (e) {
-      // ignore notify failures
-    }
-    return;
-  }
   // If this is a Replenish task and the user typed a query, use it as the name
   if (
     localNewTask.value.type_id === "Replenish" &&
@@ -1795,21 +2001,170 @@ function onSubmit(event: Event) {
                   </div>
                   <br />
                   <div>
-                    <div v-if="localNewTask.type_id === 'NoteLater'" class="q-pa-sm col">
-                      <q-card flat bordered class="notes-disabled-card q-pa-md">
-                        <div class="row items-center" style="gap: 12px">
-                          <q-icon name="construction" size="36px" />
-                          <div>
-                            <div class="text-subtitle1" style="font-weight: 700">
-                              Notes disabled
-                            </div>
-                            <div class="text-body2" style="font-weight: 600">
-                              Notes needs to be redesigned and coded in some future
-                            </div>
-                            <div class="text-caption" style="margin-top: 6px">
-                              Under construction — coming later
+                    <div v-if="isNoteLater" class="q-pa-sm col">
+                      <div class="text-caption text-grey-7 q-mb-xs">
+                        {{ $text("task.note.mode_label") }}
+                      </div>
+                      <q-option-group
+                        v-model="localNewTask.noteMode"
+                        :options="noteModeOptions"
+                        type="radio"
+                        inline
+                        dense
+                        class="q-mb-md"
+                      />
+
+                      <template v-if="localNewTask.noteMode === 'note'">
+                        <q-input
+                          ref="descriptionInput"
+                          :model-value="localNewTask.description"
+                          :label="descriptionLabel"
+                          outlined
+                          type="textarea"
+                          rows="1"
+                          class="col"
+                          @update:model-value="(val) => updateTaskField('description', val)"
+                        />
+
+                        <div class="q-mt-md">
+                          <div class="text-caption text-grey-7 q-mb-xs">
+                            {{ $text("task.note.photo") }}
+                          </div>
+                          <input
+                            ref="photoInput"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style="display: none"
+                            @change="onPhotoSelected"
+                          />
+                          <input
+                            ref="attachmentInput"
+                            type="file"
+                            multiple
+                            style="display: none"
+                            @change="onAttachmentsSelected"
+                          />
+                          <div class="row items-center" style="gap: 8px; flex-wrap: wrap">
+                            <q-btn
+                              outline
+                              color="primary"
+                              icon="photo_camera"
+                              :label="$text('task.note.take_photo')"
+                              @click="triggerPhotoCapture"
+                            />
+                            <q-btn
+                              outline
+                              color="primary"
+                              icon="attach_file"
+                              :label="$text('task.note.attach_files')"
+                              @click="triggerAttachFiles"
+                            />
+                            <q-btn
+                              v-if="localNewTask.photo"
+                              flat
+                              color="negative"
+                              icon="close"
+                              :label="$text('action.clear')"
+                              @click="clearPhoto"
+                            />
+                          </div>
+                          <q-img
+                            v-if="localNewTask.photo"
+                            :src="localNewTask.photo"
+                            class="q-mt-sm note-photo-preview"
+                            ratio="16/9"
+                            fit="contain"
+                          />
+                          <q-list
+                            v-if="localNewTask.attachments?.length"
+                            dense
+                            bordered
+                            class="q-mt-sm note-attachments-list"
+                          >
+                            <q-item
+                              v-for="(att, idx) in localNewTask.attachments"
+                              :key="`${att.name}-${idx}`"
+                            >
+                              <q-item-section avatar>
+                                <q-avatar v-if="isImageAttachment(att.dataUrl)" square size="40px">
+                                  <img :src="att.dataUrl" :alt="att.name" />
+                                </q-avatar>
+                                <q-icon v-else name="attach_file" size="28px" />
+                              </q-item-section>
+                              <q-item-section>{{ att.name }}</q-item-section>
+                              <q-item-section side>
+                                <q-btn
+                                  flat
+                                  dense
+                                  round
+                                  icon="close"
+                                  :aria-label="$text('action.remove')"
+                                  @click="removeAttachment(idx)"
+                                />
+                              </q-item-section>
+                            </q-item>
+                          </q-list>
+                        </div>
+
+                        <div class="q-mt-md">
+                          <div class="text-caption text-grey-7 q-mb-xs">
+                            {{ $text("task.note.icon_and_color") }}
+                          </div>
+                          <div class="row items-center" style="gap: 12px; flex-wrap: wrap">
+                            <q-btn
+                              round
+                              unelevated
+                              :style="{
+                                backgroundColor: localNewTask.noteColor || '#9e9e9e',
+                                color: getContrastColor(localNewTask.noteColor || '#9e9e9e'),
+                              }"
+                              :icon="localNewTask.noteIcon || 'description'"
+                              @click="noteIconMenu = true"
+                            />
+                            <q-menu v-model="noteIconMenu">
+                              <q-list dense style="min-width: 220px; max-height: 280px; overflow-y: auto">
+                                <q-item
+                                  v-for="icon in noteIconOptions"
+                                  :key="icon"
+                                  clickable
+                                  v-close-popup
+                                  @click="localNewTask.noteIcon = icon"
+                                >
+                                  <q-item-section avatar>
+                                    <q-icon :name="icon" />
+                                  </q-item-section>
+                                  <q-item-section>{{ icon }}</q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+                            <div class="row items-center" style="gap: 6px; flex-wrap: wrap">
+                              <div
+                                v-for="color in noteColorOptions"
+                                :key="color"
+                                class="color-swatch note-color-swatch"
+                                :style="{
+                                  background: color,
+                                  border:
+                                    color === localNewTask.noteColor
+                                      ? '2px solid #000'
+                                      : '1px solid rgba(0,0,0,0.12)',
+                                }"
+                                @click="localNewTask.noteColor = color"
+                              />
                             </div>
                           </div>
+                        </div>
+                      </template>
+
+                      <q-card
+                        v-else
+                        flat
+                        bordered
+                        class="q-pa-md q-mt-sm text-grey-7"
+                      >
+                        <div class="text-body2">
+                          {{ $text("task.note.mode_coming_soon") }}
                         </div>
                       </q-card>
                     </div>
@@ -2316,22 +2671,16 @@ function onSubmit(event: Event) {
   transform: none !important;
 }
 
-/* Notes disabled card styling (orange + black, under construction) */
-.notes-disabled-card {
-  background: linear-gradient(180deg, #ffb74d 0%, #ff9800 100%);
-  color: #000000;
-  border: 2px dashed rgba(0, 0, 0, 0.6) !important;
+.note-photo-preview {
+  max-width: 320px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
-.notes-disabled-card .q-icon {
-  color: #000000;
+.note-attachments-list {
+  max-width: 420px;
 }
-.notes-disabled-card .text-subtitle1,
-.notes-disabled-card .text-body2,
-.notes-disabled-card .text-caption {
-  color: #000000 !important;
-}
-.notes-disabled-card {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+.note-color-swatch {
+  cursor: pointer;
 }
 
 /* Stack icon above label for priority buttons on md+ and center them */

@@ -3,6 +3,11 @@ import type { MediaGalleryTagSetConfig } from 'src/modules/media/mediaGalleryTag
 
 export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+export type TaskAttachment = {
+  name: string;
+  dataUrl: string;
+};
+
 export class TaskModel extends BaseModel {
   name!: string;
   description!: string;
@@ -36,6 +41,16 @@ export class TaskModel extends BaseModel {
   mediaSharedFolderPath?: string;
   /** Per-gallery tag buttons and folder rules (MediaGallery). */
   galleryTagSet?: MediaGalleryTagSetConfig;
+  /** Note sub-mode: general note, contact, or accounting (NoteLater). */
+  noteMode?: 'note' | 'contact' | 'accounting';
+  /** Material icon name for NoteLater tasks. */
+  noteIcon?: string;
+  /** Accent color hex for NoteLater tasks. */
+  noteColor?: string;
+  /** Base64 data URL or path for a task photo. */
+  photo?: string;
+  /** Files attached to a task. */
+  attachments?: TaskAttachment[];
 
   constructor(init?: Partial<TaskModel>) {
     super(init);

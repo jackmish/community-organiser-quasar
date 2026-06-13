@@ -474,18 +474,28 @@
         />
       </div>
       <div class="todo-schedule-footer__actions">
-        <q-btn
-          unelevated
-          color="primary"
-          :label="$text('task.todo.save_scheduled')"
-          @click="confirmTodoSchedule(false)"
-        />
-        <q-btn
-          unelevated
-          color="orange"
-          :label="$text('task.todo.save_and_edit')"
-          @click="confirmTodoSchedule(true)"
-        />
+        <template v-if="todoScheduleIsDraft">
+          <q-btn
+            unelevated
+            color="primary"
+            :label="$text('task.todo.apply_schedule')"
+            @click="confirmTodoSchedule(false)"
+          />
+        </template>
+        <template v-else>
+          <q-btn
+            unelevated
+            color="primary"
+            :label="$text('task.todo.save_scheduled')"
+            @click="confirmTodoSchedule(false)"
+          />
+          <q-btn
+            unelevated
+            color="orange"
+            :label="$text('task.todo.save_and_edit')"
+            @click="confirmTodoSchedule(true)"
+          />
+        </template>
       </div>
     </div>
   </q-page>
@@ -592,6 +602,7 @@ const mediaPreviewSectionRef = ref<HTMLElement | null>(null);
 const calendarSectionRef = ref<HTMLElement | null>(null);
 const {
   active: todoScheduleActive,
+  isDraft: todoScheduleIsDraft,
   sourceTask: todoScheduleSourceTask,
   pickedDate: todoSchedulePickedDate,
   scheduleHour: todoScheduleHour,
@@ -1774,7 +1785,33 @@ function cancelTodoSchedule() {
 async function confirmTodoSchedule(goToEdit: boolean) {
   const task = todoScheduleSourceTask.value;
   const date = todoSchedulePickedDate.value.trim();
-  if (!task?.id || !date) return;
+  if (!task || !date) return;
+
+  if (todoScheduleIsDraft.value) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("co21:todo-schedule-draft-applied", {
+          detail: {
+            date,
+            eventTime: buildTodoScheduleEventTime(),
+            goToEdit,
+          },
+        }),
+      );
+    } catch {
+      void 0;
+    }
+    cancelTodoScheduleState();
+    try {
+      CC.task.time.setCurrentDate(date);
+    } catch {
+      void 0;
+    }
+    panelHidden.value = false;
+    return;
+  }
+
+  if (!task.id) return;
   const updated = {
     ...task,
     type_id: "TimeEvent",

@@ -271,6 +271,11 @@ const TASK_SYNC_PAYLOAD_KEYS = [
   'timeMode',
   'timeOffsetDays',
   'color_set',
+  'noteMode',
+  'noteIcon',
+  'noteColor',
+  'photo',
+  'attachments',
   'createdAt',
   'updatedAt',
 ] as const;

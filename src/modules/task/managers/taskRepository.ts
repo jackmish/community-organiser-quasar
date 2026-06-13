@@ -1,5 +1,6 @@
 import { getCycleType, occursOnDay } from '../utils/occursOnDay';
 import { isMediaTaskTypeId } from 'src/modules/media/mediaTaskTypes';
+import { isExcludedFromCalendarTask } from '../utils/calendarTaskTypes';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import * as SubtaskLineRepository from './subtaskLine/subtaskLineRepository';
@@ -534,7 +535,7 @@ export class TaskRepository {
         try {
           if (isMediaTaskTypeId(taskTypeId(t))) continue;
           if (Number(t.status_id) === 0) continue;
-          if (t.type_id === 'Replenish') continue;
+          if (isExcludedFromCalendarTask(t)) continue;
           if (occursOnDay(t, day)) {
             if (!result.some((existing) => String(existing.id) === String(t.id))) {
               const clone: any = { ...t, eventDate: day };

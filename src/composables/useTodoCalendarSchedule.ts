@@ -1,5 +1,8 @@
 import { computed, ref, shallowRef } from 'vue';
 
+/** Sentinel id for scheduling a not-yet-saved task from the add form. */
+export const TODO_SCHEDULE_DRAFT_ID = '__draft__';
+
 /** Minimal task fields needed to schedule a Todo on the calendar. */
 export type TodoScheduleTask = {
   id: string;
@@ -12,6 +15,7 @@ export type TodoScheduleTask = {
 };
 
 const active = ref(false);
+const isDraft = ref(false);
 const sourceTask = shallowRef<TodoScheduleTask | null>(null);
 const pickedDate = ref('');
 const scheduleHour = ref<number | null>(null);
@@ -23,7 +27,18 @@ export function useTodoCalendarSchedule() {
 
   function start(task: TodoScheduleTask) {
     if (!task?.id) return;
+    isDraft.value = false;
     sourceTask.value = task;
+    pickedDate.value = '';
+    scheduleHour.value = null;
+    scheduleMinute.value = null;
+    active.value = true;
+  }
+
+  /** Start calendar pick for a task that has not been saved yet (add form). */
+  function startDraft(task: Omit<TodoScheduleTask, 'id'>) {
+    isDraft.value = true;
+    sourceTask.value = { ...task, id: TODO_SCHEDULE_DRAFT_ID };
     pickedDate.value = '';
     scheduleHour.value = null;
     scheduleMinute.value = null;
@@ -32,6 +47,7 @@ export function useTodoCalendarSchedule() {
 
   function cancel() {
     active.value = false;
+    isDraft.value = false;
     sourceTask.value = null;
     pickedDate.value = '';
     scheduleHour.value = null;
@@ -55,12 +71,14 @@ export function useTodoCalendarSchedule() {
 
   return {
     active,
+    isDraft,
     sourceTask,
     pickedDate,
     scheduleHour,
     scheduleMinute,
     hasPickedDate,
     start,
+    startDraft,
     cancel,
     pickDay,
     buildEventTime,
