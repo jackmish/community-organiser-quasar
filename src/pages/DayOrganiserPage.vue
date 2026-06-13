@@ -2207,14 +2207,14 @@ onMounted(async () => {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   border-radius: 30px 0 0 0;
   border-bottom-right-radius: 8px;
-  z-index: 2400;
+  z-index: 16;
 }
 
 .list-done-btn {
   position: absolute;
   left: 0;
   bottom: 0;
-  z-index: 2400;
+  z-index: 16;
   min-height: 56px;
   max-width: min(100%, 220px);
   padding: 8px 14px 8px 10px;
