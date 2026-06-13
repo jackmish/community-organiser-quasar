@@ -169,6 +169,12 @@ onBeforeUnmount(() => {
   color: var(--clock-panel-fg, #ffffff);
 }
 
+@media (max-width: 1439px) {
+  .clock-panel {
+    overflow: visible;
+  }
+}
+
 .clock-panel--colorize {
   border-top-color: rgba(0, 0, 0, 0.12);
 }

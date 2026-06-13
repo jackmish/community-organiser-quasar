@@ -272,7 +272,7 @@
           />
         </div>
         <div class="col-12 col-md-4">
-          <div class="q-mb-md">
+          <div class="q-mb-md sidebar-time-meteo">
             <ClockPanel />
             <MeteoPanel />
             <PluginSlot name="below-done-list" />

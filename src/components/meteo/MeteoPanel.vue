@@ -40,80 +40,83 @@
     </div>
 
     <template v-else-if="snapshot">
-      <div class="row q-col-gutter-lg meteo-panel__now-row">
-        <div class="col-12 col-sm-auto meteo-panel__now">
-          <div class="row items-center no-wrap meteo-panel__now-main" style="gap: 12px">
-            <q-icon :name="weatherIcon" size="42px" class="meteo-panel__now-icon" />
-            <div>
-              <div class="meteo-panel__now-label">{{ $text('meteo.now') }}</div>
-              <div class="meteo-panel__now-temp">{{ formatTemp(snapshot.current.temperature) }}</div>
-              <div class="text-body2 meteo-panel__muted">{{ weatherLabel }}</div>
+      <div class="meteo-panel__summary">
+        <div class="row q-col-gutter-lg meteo-panel__now-row">
+          <div class="col-12 col-sm-auto meteo-panel__now">
+            <div class="row items-center no-wrap meteo-panel__now-main" style="gap: 12px">
+              <q-icon :name="weatherIcon" size="42px" class="meteo-panel__now-icon" />
+              <div>
+                <div class="meteo-panel__now-label">{{ $text('meteo.now') }}</div>
+                <div class="meteo-panel__now-temp">{{ formatTemp(snapshot.current.temperature) }}</div>
+              </div>
+            </div>
+            <div class="row q-mt-sm meteo-panel__now-stats" style="gap: 14px">
+              <span class="meteo-panel__stat meteo-panel__stat--rain">
+                {{ $text('meteo.rain_chance').replace('{value}', String(snapshot.current.rainChance)) }}
+              </span>
             </div>
           </div>
-          <div class="row q-mt-sm meteo-panel__now-stats" style="gap: 14px">
-            <span class="meteo-panel__stat meteo-panel__stat--rain">
-              {{ $text('meteo.rain_chance').replace('{value}', String(snapshot.current.rainChance)) }}
-            </span>
+
+          <div class="col-12 col-sm-auto meteo-panel__location-col" :style="locationColThemeStyle">
+            <div class="meteo-panel__location-select-wrap">
+              <q-select
+                :key="locationSelectThemeKey"
+                v-model="selectedLocation"
+                class="use-default meteo-panel__location-select"
+                :class="{ 'meteo-panel__location-select--has-value': !!selectedLocation }"
+                :style="locationFieldStyle"
+                :options="cityOptions"
+                :option-label="locationSelectLabel"
+                use-input
+                fill-input
+                hide-selected
+                input-debounce="400"
+                outlined
+                hide-bottom-space
+                behavior="menu"
+                :label="locationSelectFieldLabel"
+                :loading="searchLoading"
+                :disable="locationSaving"
+                :input-style="locationFieldInputStyle"
+                popup-content-class="use-default co21-themed-menu"
+                :popup-content-style="locationPopupStyle"
+                :options-dark="false"
+                @filter="filterCities"
+                @update:model-value="onLocationPicked"
+                @popup-show="onLocationPopupShow"
+              >
+                <template #option="scope">
+                  <q-item v-bind="scope.itemProps" class="co21-menu-option">
+                    <q-item-section>{{ scope.opt.name }}</q-item-section>
+                  </q-item>
+                </template>
+                <template #no-option>
+                  <q-item class="co21-menu-option">
+                    <q-item-section class="co21-menu-option-hint">
+                      {{ citySearchHint }}
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
           </div>
         </div>
 
-        <div class="col-12 col-sm-auto meteo-panel__location-col" :style="locationColThemeStyle">
-          <q-select
-            :key="locationSelectThemeKey"
-            v-model="selectedLocation"
-            class="use-default meteo-panel__location-select"
-            :class="{ 'meteo-panel__location-select--has-value': !!selectedLocation }"
-            :style="locationFieldStyle"
-            :options="cityOptions"
-            :option-label="locationSelectLabel"
-            use-input
-            fill-input
-            hide-selected
-            input-debounce="400"
-            outlined
-            hide-bottom-space
-            behavior="menu"
-            :label="locationSelectFieldLabel"
-            :loading="searchLoading"
-            :disable="locationSaving"
-            :input-style="locationFieldInputStyle"
-            popup-content-class="use-default co21-themed-menu"
-            :popup-content-style="locationPopupStyle"
-            :options-dark="false"
-            @filter="filterCities"
-            @update:model-value="onLocationPicked"
-            @popup-show="onLocationPopupShow"
-          >
-            <template #option="scope">
-              <q-item v-bind="scope.itemProps" class="co21-menu-option">
-                <q-item-section>{{ scope.opt.name }}</q-item-section>
-              </q-item>
-            </template>
-            <template #no-option>
-              <q-item class="co21-menu-option">
-                <q-item-section class="co21-menu-option-hint">
-                  {{ citySearchHint }}
-                </q-item-section>
-              </q-item>
-            </template>
-          </q-select>
-
-          <div class="meteo-panel__location-actions">
-            <div class="meteo-panel__recent-scroll meteo-panel__nice-scroll">
-              <div class="meteo-panel__recent-list">
-                <q-btn
-                  v-for="loc in recentLocations"
-                  :key="locationKey(loc)"
-                  no-caps
-                  unelevated
-                  class="co21-field-btn meteo-panel__recent-btn"
-                  :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
-                  :style="locationFieldStyle"
-                  :label="locationCityName(loc.name)"
-                  :disable="locationSaving || loading"
-                  @click="void applyLocation(loc)"
-                />
-              </div>
+        <div class="meteo-panel__location-actions">
+          <div class="meteo-panel__recent-scroll meteo-panel__nice-scroll">
+            <div class="meteo-panel__recent-list">
+              <q-btn
+                v-for="loc in recentLocations"
+                :key="locationKey(loc)"
+                no-caps
+                unelevated
+                class="co21-field-btn meteo-panel__recent-btn"
+                :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
+                :style="locationFieldStyle"
+                :label="locationCityName(loc.name)"
+                :disable="locationSaving || loading"
+                @click="void applyLocation(loc)"
+              />
             </div>
           </div>
         </div>
@@ -345,9 +348,6 @@ const weatherMeta = computed(() =>
   snapshot.value ? describeWeatherCode(snapshot.value.current.weatherCode) : null,
 );
 const weatherIcon = computed(() => weatherMeta.value?.icon ?? 'cloud');
-const weatherLabel = computed(() =>
-  weatherMeta.value ? $text(weatherMeta.value.labelKey) : '',
-);
 
 function formatTemp(value: number): string {
   return `${Math.round(value)}°`;
@@ -562,6 +562,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .meteo-panel {
   position: relative;
+  --meteo-action-btn-size: 32px;
   --meteo-panel-inset: 24px;
   padding-top: var(--meteo-panel-inset);
   --meteo-scroll-thumb: rgba(255, 255, 255, 0.32);
@@ -599,6 +600,10 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+.meteo-panel__summary {
+  width: 100%;
+}
+
 .meteo-panel__now {
   display: flex;
   flex-direction: column;
@@ -613,18 +618,54 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-/* Tablet / medium (below lg): hide bulky “now” — city picker + hourly forecast are enough */
+/* Tablet / medium (below lg): select + “now” on one row; city buttons span module width */
 @media (max-width: 1439px) {
-  .meteo-panel__now {
-    display: none;
+  .meteo-panel {
+    --meteo-panel-inset: 6px;
+    overflow: visible;
   }
 
-  .meteo-panel {
-    --meteo-panel-inset: 12px;
+  .meteo-panel__refresh-btn,
+  .meteo-panel__gps-btn {
+    top: calc(-1 * var(--meteo-action-btn-size));
+    z-index: 2;
+  }
+
+  .meteo-panel__now-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    align-items: start;
+    width: 100%;
   }
 
   .meteo-panel__location-col {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
     max-width: none;
+    align-items: stretch;
+  }
+
+  .meteo-panel__now {
+    grid-column: 2;
+    grid-row: 1;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .meteo-panel__now-main {
+    justify-content: flex-end;
+  }
+
+  .meteo-panel__now-stats {
+    justify-content: flex-end;
+  }
+
+  .meteo-panel__location-actions {
+    width: 100%;
+    margin-top: 4px;
   }
 }
 
@@ -637,6 +678,10 @@ onBeforeUnmount(() => {
   align-items: center;
   /* Field/menu use resolveCo21FieldTheme — not group textColor from the panel. */
   color: unset;
+}
+
+.meteo-panel__location-select-wrap {
+  width: 100%;
 }
 
 .meteo-panel__location-select {
@@ -727,6 +772,14 @@ onBeforeUnmount(() => {
 .meteo-panel__location-actions {
   width: 100%;
   margin-top: 4px;
+}
+
+@media (min-width: 1440px) {
+  .meteo-panel__location-actions {
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .meteo-panel__recent-scroll {
@@ -822,6 +875,24 @@ onBeforeUnmount(() => {
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.2;
+}
+
+@media (max-width: 1439px) {
+  .meteo-panel__now-temp {
+    font-size: 2.1rem;
+  }
+
+  .meteo-panel__now-main :deep(.q-icon) {
+    font-size: 32px !important;
+  }
+
+  .meteo-panel__now-main {
+    gap: 8px !important;
+  }
+
+  .meteo-panel__stat--rain {
+    font-size: 1rem;
+  }
 }
 
 .meteo-panel__day {
