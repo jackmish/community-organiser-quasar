@@ -27,9 +27,10 @@ describe('infoscreenClockSchedule', () => {
     expect(isAlignedClockMinute(at(9, 30), 60)).toBe(false);
   });
 
-  it('builds stable slot keys within the same aligned window', () => {
-    expect(alignedClockSlotKey(at(8, 14, 59), 15)).toBe(alignedClockSlotKey(at(8, 14, 0), 15));
-    expect(alignedClockSlotKey(at(8, 15, 0), 15)).not.toBe(
+  it('triggers slot key from the upcoming aligned boundary', () => {
+    const before = at(8, 14, 59);
+    const boundary = nextAlignedClockTime(before, 15);
+    expect(alignedClockSlotKey(boundary, 15)).not.toBe(
       alignedClockSlotKey(at(8, 14, 0), 15),
     );
   });

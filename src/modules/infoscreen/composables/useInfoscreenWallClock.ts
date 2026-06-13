@@ -1,8 +1,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, type Ref } from 'vue';
 import {
   alignedClockSlotKey,
-  isAlignedClockMinute,
   msUntilNextClockTick,
+  nextAlignedClockTime,
   resolveClockIntervalMinutes,
 } from '../infoscreenClockSchedule';
 import {
@@ -11,15 +11,14 @@ import {
   type InfoscreenSettings,
 } from '../infoscreenSettings';
 import {
-  dispatchInfoscreenResetCalendarView,
   INFOSCREEN_DISMISS_SPLASH_EVENT,
   INFOSCREEN_TEST_CLOCK_EVENT,
 } from '../infoscreenUi';
 
 export type InfoscreenWallPhase = 'idle' | 'interacting' | 'clock-splash';
 
-/** First ~1.5s of an aligned minute — wide enough for 1s polling jitter. */
-const ALIGNED_MINUTE_TRIGGER_MS = 1500;
+/** Trigger within this window before the next aligned minute (covers 1s polling jitter). */
+const ALIGNED_BOUNDARY_TRIGGER_MS = 1500;
 
 export function useInfoscreenWallClock(args: {
   active: Ref<boolean>;
@@ -134,11 +133,10 @@ export function useInfoscreenWallClock(args: {
     if (showClockSplash.value) {
       dismissSplashFromTap();
       if (!args.active.value) return;
-    } else if (!args.active.value) {
+      scheduleIdleEnd();
       return;
     }
-
-    dispatchInfoscreenResetCalendarView();
+    if (!args.active.value) return;
     scheduleIdleEnd();
   }
 
@@ -149,16 +147,17 @@ export function useInfoscreenWallClock(args: {
   function onDismissSplashEvent(): void {
     dismissSplashFromTap();
     if (args.active.value) {
-      dispatchInfoscreenResetCalendarView();
       scheduleIdleEnd();
     }
   }
 
   function shouldTriggerAlignedSplash(now: Date): boolean {
-    if (!isAlignedClockMinute(now, intervalMinutes.value)) return false;
-    const msIntoMinute = now.getSeconds() * 1000 + now.getMilliseconds();
-    if (msIntoMinute > ALIGNED_MINUTE_TRIGGER_MS) return false;
-    const slotKey = alignedClockSlotKey(now, intervalMinutes.value);
+    const remaining = msUntilNextClockTick(now, intervalMinutes.value);
+    if (remaining > ALIGNED_BOUNDARY_TRIGGER_MS) return false;
+    const slotKey = alignedClockSlotKey(
+      nextAlignedClockTime(now, intervalMinutes.value),
+      intervalMinutes.value,
+    );
     if (slotKey === lastSplashSlotKey) return false;
     lastSplashSlotKey = slotKey;
     return true;

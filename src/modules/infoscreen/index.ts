@@ -40,11 +40,9 @@ export {
 } from './infoscreenSettings';
 export {
   OPEN_INFOSCREEN_SETTINGS_EVENT,
-  INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
   INFOSCREEN_TEST_CLOCK_EVENT,
   INFOSCREEN_DISMISS_SPLASH_EVENT,
   dispatchOpenInfoscreenSettings,
-  dispatchInfoscreenResetCalendarView,
   dispatchInfoscreenTestClock,
   dispatchInfoscreenDismissSplash,
 } from './infoscreenUi';

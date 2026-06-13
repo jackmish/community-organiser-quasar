@@ -323,7 +323,6 @@ import {
   formatAppWeekday,
 } from "src/modules/lang/dateFormat";
 import { useLongPress } from "src/composables/useLongPress";
-import { INFOSCREEN_RESET_CALENDAR_VIEW_EVENT } from "src/modules/infoscreen/infoscreenUi";
 import CC from "src/CCAccess";
 import {
   occursOnDay,
@@ -1387,43 +1386,6 @@ function getEventsForDay(day: string) {
     .map((t: any) => ({ ...t, date: day }));
 }
 
-/** Default wall-display calendar: 42 days, today selected, week-aligned base. */
-function resetToDefaultCalendarView(): void {
-  calendarViewDays.value = 42;
-  try {
-    CC.task.time.goToToday();
-  } catch {
-    void 0;
-  }
-  const today =
-    typeof CC.task.time.currentDate?.value === "string"
-      ? CC.task.time.currentDate.value
-      : format(new Date(), "yyyy-MM-dd");
-  const base = parseYmdLocal(today) || new Date();
-  calendarBaseDate.value = startOfWeek(base, { weekStartsOn: 1 });
-  displayManager.reset();
-  void nextTick(() => scrollToDay(today));
-}
-
-let infoscreenResetCalendarHandler: (() => void) | null = null;
-
-onMounted(() => {
-  infoscreenResetCalendarHandler = () => resetToDefaultCalendarView();
-  window.addEventListener(
-    INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
-    infoscreenResetCalendarHandler,
-  );
-});
-
-onBeforeUnmount(() => {
-  if (infoscreenResetCalendarHandler) {
-    window.removeEventListener(
-      INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
-      infoscreenResetCalendarHandler,
-    );
-    infoscreenResetCalendarHandler = null;
-  }
-});
 </script>
 
 <style scoped>

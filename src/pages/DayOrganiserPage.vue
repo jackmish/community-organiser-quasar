@@ -400,7 +400,7 @@
     </div>
 
     <q-btn
-      v-if="$q.screen.lt.md"
+      v-if="$q.screen.lt.lg"
       unelevated
       color="primary"
       text-color="white"
@@ -534,7 +534,6 @@ import {
   loadActiveContractForSync,
   loadSyncIntervalSeconds,
 } from "src/modules/storage/sync/syncContractSettings";
-import { INFOSCREEN_RESET_CALENDAR_VIEW_EVENT } from "src/modules/infoscreen/infoscreenUi";
 import {
   normalizeDeviceId,
   resolveEffectiveRole,
@@ -601,10 +600,10 @@ const {
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
 
-const isMobileOrganiser = computed(() => $q.screen.lt.md);
+const isStackedOrganiserLayout = computed(() => $q.screen.lt.lg);
 const { scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
-    enabled: isMobileOrganiser,
+    enabled: isStackedOrganiserLayout,
     daySectionRef: dayViewSectionRef,
     calendarSectionRef,
   });
@@ -963,7 +962,6 @@ let organiserCommunityOpenHandler: any = null;
 let organiserSyncNowHandler: any = null;
 let organiserSyncFullHandler: any = null;
 let organiserGroupMergeOpenHandler: any = null;
-let infoscreenResetCalendarHandler: (() => void) | null = null;
 let headerDevicesInterval: ReturnType<typeof setInterval> | null = null;
 let headerDeviceProbeInFlight = false;
 
@@ -1082,13 +1080,6 @@ onBeforeUnmount(() => {
   if (headerDevicesInterval) {
     clearInterval(headerDevicesInterval);
     headerDevicesInterval = null;
-  }
-  if (infoscreenResetCalendarHandler) {
-    window.removeEventListener(
-      INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
-      infoscreenResetCalendarHandler,
-    );
-    infoscreenResetCalendarHandler = null;
   }
 });
 
@@ -2188,18 +2179,6 @@ onMounted(async () => {
       void probeHeaderDeviceStrip();
     }, intervalSec * 1000);
   })();
-
-  infoscreenResetCalendarHandler = () => {
-    try {
-      calendarSectionRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch {
-      void 0;
-    }
-  };
-  window.addEventListener(
-    INFOSCREEN_RESET_CALENDAR_VIEW_EVENT,
-    infoscreenResetCalendarHandler,
-  );
 
   updateFirstRunVisibility();
   if ((CC.group.list.all.value || []).length > 0 && !CC.group.active.activeGroup.value) {
