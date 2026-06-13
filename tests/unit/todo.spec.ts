@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countTodoSubtasks, countStarredUndone } from '../../src/modules/task/utils/todo';
+import { countTodoSubtasks, countStarredUndone, parseUndoneSubtasks } from '../../src/modules/task/utils/todo';
 
 describe('todo utils', () => {
   it('counts subtasks and done flags', () => {
@@ -17,5 +17,11 @@ describe('todo utils', () => {
     };
     const count = countStarredUndone(task);
     expect(count).toBe(1);
+  });
+
+  it('parses all undone subtask lines', () => {
+    const description = `- [ ] buy milk\n- [x] done item\n1. [ ] call Sam\nplain line`;
+    expect(parseUndoneSubtasks(description).map((l) => l.text)).toEqual(['buy milk', 'call Sam']);
+    expect(parseUndoneSubtasks(description, 1).map((l) => l.text)).toEqual(['buy milk']);
   });
 });

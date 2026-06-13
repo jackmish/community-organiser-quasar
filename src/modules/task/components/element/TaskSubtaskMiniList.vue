@@ -1,66 +1,50 @@
 <template>
-  <ul v-if="undoneLines.length > 0" class="subtask-mini-list" aria-label="Pending subtasks">
+  <ul
+    v-if="undoneLines.length > 0"
+    :class="variant === 'chip' ? 'subtask-chip-list' : 'subtask-mini-list'"
+    aria-label="Pending subtasks"
+  >
     <li
       v-for="line in undoneLines"
       :key="line.raw"
-      class="subtask-mini-item"
+      :class="variant === 'chip' ? 'subtask-chip' : 'subtask-mini-item'"
       :title="line.text"
     >
-      <q-icon name="radio_button_unchecked" size="10px" class="subtask-mini-icon" />
-      <span class="subtask-mini-text">{{ line.text }}</span>
+      <q-icon
+        v-if="variant !== 'chip'"
+        name="radio_button_unchecked"
+        size="10px"
+        class="subtask-mini-icon"
+      />
+      <span :class="variant === 'chip' ? 'subtask-chip-text' : 'subtask-mini-text'">{{
+        line.text
+      }}</span>
     </li>
   </ul>
 </template>
 
 <script setup lang="ts">
-defineOptions({ name: "TaskSubtaskMiniList" });
-import { computed } from "vue";
+defineOptions({ name: 'TaskSubtaskMiniList' });
+import { computed } from 'vue';
+import { parseUndoneSubtasks } from 'src/modules/task/utils/todo';
 
-const props = defineProps<{
-  /** Raw task object – only the `description` field is read. */
-  task: any;
-  /** Maximum number of unchecked items to show (default: 5). */
-  maxItems?: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** Raw task object – only the `description` field is read. */
+    task: any;
+    /** Maximum unchecked items to show; omit to show all. */
+    maxItems?: number;
+    /** `chip` = menu-like pills in a wrapping row; `mini` = compact dashed list. */
+    variant?: 'mini' | 'chip';
+  }>(),
+  {
+    variant: 'mini',
+  },
+);
 
-const DASH_RE = /^(\s*-\s*)(\[[xX]\]\s*)?(.*)$/;
-const NUM_RE = /^(\s*\d+[.)]\s*)(\[[xX]\]\s*)?(.*)$/;
-
-/** Parse the task description and return only unchecked list-item lines. */
-const undoneLines = computed(() => {
-  const desc = props.task?.description ?? "";
-  if (!desc) return [];
-  const max = props.maxItems ?? 5;
-  const lines = (desc as string).split(/\r?\n/);
-  const result: { raw: string; text: string }[] = [];
-
-  for (const ln of lines) {
-    if (result.length >= max) break;
-
-    const dm = ln.match(DASH_RE);
-    if (dm) {
-      const marker = dm[2] ?? "";
-      const checked = /^\s*\[[xX]\]\s*/.test(marker);
-      if (!checked) {
-        const text = (dm[3] ?? "").replace(/\s*\*\s*$/, "").trim();
-        if (text) result.push({ raw: ln, text });
-      }
-      continue;
-    }
-
-    const nm = ln.match(NUM_RE);
-    if (nm) {
-      const marker = nm[2] ?? "";
-      const checked = /^\s*\[[xX]\]\s*/.test(marker);
-      if (!checked) {
-        const text = (nm[3] ?? "").replace(/\s*\*\s*$/, "").trim();
-        if (text) result.push({ raw: ln, text });
-      }
-    }
-  }
-
-  return result;
-});
+const undoneLines = computed(() =>
+  parseUndoneSubtasks(props.task?.description ?? '', props.maxItems),
+);
 </script>
 
 <style scoped>
@@ -91,6 +75,44 @@ const undoneLines = computed(() => {
 }
 
 .subtask-mini-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtask-chip-list {
+  list-style: none;
+  margin: 6px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.subtask-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(0, 0, 0, 0.88);
+  cursor: pointer;
+  pointer-events: none;
+  user-select: none;
+}
+
+.subtask-chip-text {
+  display: block;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

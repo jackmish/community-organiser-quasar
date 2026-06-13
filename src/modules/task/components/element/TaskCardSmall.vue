@@ -24,15 +24,15 @@
 
     <q-item-section class="title-row">
       <div style="flex: 1 1 auto">
-        <div class="title-main">
-          <div class="title-text">
+        <div class="title-main" :class="{ 'title-main--todo': isTodoListCard(item) }">
+          <div class="title-text" :class="{ 'title-text--todo': isTodoListCard(item) }">
             <q-item-label
               :class="[
                 {
                   'text-strike':
                     Number(item.status_id) === 0 && item.timeMode !== 'prepare',
                 },
-                'title-ellipsis',
+                isTodoListCard(item) ? 'todo-list-title' : 'title-ellipsis',
               ]"
             >
               <span
@@ -49,7 +49,7 @@
                   size="12px"
                 />
               </span>
-              <strong>
+              <strong v-if="!isTodoListCard(item)">
                 {{ getDisplayName(item) }}
                 <span class="star-count" v-if="countStarredUndone(item) > 0">
                   <q-icon
@@ -66,6 +66,18 @@
                   }})&nbsp;
                 </span>
               </strong>
+              <span v-else class="todo-list-title-text">
+                {{ getDisplayName(item) }}
+                <span class="star-count" v-if="countStarredUndone(item) > 0">
+                  <q-icon
+                    v-for="n in countStarredUndone(item)"
+                    :key="`s-${item.id}-${n}`"
+                    :name="highlightIcon"
+                    color="amber"
+                    size="12px"
+                  />
+                </span>
+              </span>
             </q-item-label>
           </div>
           <q-item-label
@@ -90,10 +102,16 @@
             <span style="white-space: pre-line">{{ getEventHoursDisplay(item) }}</span>
           </q-item-label>
         </div>
-        <!-- large mode: show pending subtasks inline (all types except Replenish) -->
         <TaskSubtaskMiniList
-          v-if="sizeVariant === 'large' && !item.__isReplenish && String(item.type || item.type_id || '').toLowerCase() !== 'replenish' && Number(item.status_id) !== 0"
+          v-if="showTodoSubtaskChips(item)"
           :task="item"
+          variant="chip"
+        />
+        <!-- large mode: show pending subtasks inline (non-todo types except Replenish) -->
+        <TaskSubtaskMiniList
+          v-else-if="sizeVariant === 'large' && !item.__isReplenish && String(item.type || item.type_id || '').toLowerCase() !== 'replenish' && Number(item.status_id) !== 0"
+          :task="item"
+          :max-items="5"
         />
       </div>
     </q-item-section>
@@ -113,7 +131,7 @@ import {
   highlightIcon,
 } from "src/components/theme";
 import { hexToRgba, getContrastColor } from "src/utils/colorUtils";
-import { countTodoSubtasks, countStarredUndone } from "src/modules/task/utils/todo";
+import { countTodoSubtasks, countStarredUndone, parseUndoneSubtasks } from "src/modules/task/utils/todo";
 import { isMediaTaskTypeId, isTodoLikeTaskTypeId } from "src/modules/media/mediaTaskTypes";
 import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
@@ -167,6 +185,18 @@ const isTodoType = (task: any) => {
   const typeId = String(task?.type_id || task?.type || "");
   if (isMediaTaskTypeId(typeId)) return true;
   return isTodoLikeTaskTypeId(typeId) || typeId.toLowerCase().includes("todo");
+};
+
+const isTodoListCard = (task: any) => {
+  const typeId = String(task?.type_id || task?.type || "").toLowerCase();
+  return typeId === "todo" || typeId.includes("todo");
+};
+
+const showTodoSubtaskChips = (task: any) => {
+  if (!isTodoListCard(task)) return false;
+  if (Number(task?.status_id) === 0) return false;
+  if (props.sizeVariant === "small") return false;
+  return parseUndoneSubtasks(task?.description ?? "").length > 0;
 };
 
 const hasDate = (task: any) => {
@@ -583,5 +613,43 @@ const getBoundingRect = (): DOMRect | null => {
   border-radius: 6px;
   padding: 6px 8px;
   margin-bottom: 6px;
+}
+
+.title-main--todo {
+  align-items: flex-start;
+}
+
+.title-text--todo .todo-list-title,
+.task-card .title-text--todo q-item-label.todo-list-title {
+  display: inline-flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  -webkit-box-orient: unset !important;
+  -webkit-line-clamp: unset !important;
+  max-height: none !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  vertical-align: middle;
+}
+
+.todo-list-title-text {
+  display: inline;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0.78;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+}
+
+.title-text--todo .priority-inline {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.task-card:has(.subtask-chip-list) strong,
+.task-card:has(.todo-list-title-text) .todo-list-title-text {
+  font-size: inherit;
 }
 </style>
