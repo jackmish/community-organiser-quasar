@@ -46,6 +46,7 @@
                   :key="t.id"
                   :item="t"
                   :selected-task-id="selectedTaskId"
+                  :highlighted-task-id="cardHighlightedTaskId"
                   :active-group-id="activeGroup?.value"
                   :size-variant="listSizeVariant"
                   @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
@@ -86,6 +87,7 @@
               <TaskCardSmall
                 :item="item"
                 :selected-task-id="selectedTaskId"
+                :highlighted-task-id="cardHighlightedTaskId"
                 :active-group-id="activeGroup?.value"
                 :size-variant="listSizeVariant"
                 @task-click="(tItem, rect) => $emit('task-click', tItem, rect)"
@@ -159,9 +161,12 @@ const props = defineProps<{
   tasksWithTime: Task[];
   tasksWithoutTime: Task[];
   selectedTaskId: string | null;
+  highlightedTaskId?: string | null;
   hiddenGroups?: any[];
   replenishTasks?: any[];
 }>();
+
+const cardHighlightedTaskId = computed(() => props.highlightedTaskId ?? null);
 
 const emit = defineEmits<{
   (e: "toggle-status", task: any): void;

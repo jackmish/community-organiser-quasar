@@ -4,6 +4,9 @@
     :class="{
       'bg-grey-2': Number(item.status_id) === 0,
       'selected-task': selectedTaskId === item.id,
+      'task-card--created-highlight':
+        props.highlightedTaskId != null &&
+        String(props.highlightedTaskId) === String(item.id),
     }"
     :data-task-id="item.id"
     :style="itemStyle(item)"
@@ -140,6 +143,7 @@ import { $text } from "src/modules/lang";
 const props = defineProps<{
   item: any;
   selectedTaskId: string | null;
+  highlightedTaskId?: string | null;
   activeGroupId?: any;
   /** Controls density / extra features of the card. 'large' shows inline pending subtasks. */
   sizeVariant?: 'large' | 'medium' | 'small';

@@ -1,0 +1,28 @@
+@keyframes task-card-created-scale-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  22% {
+    transform: scale(1.027);
+  }
+
+  44% {
+    transform: scale(1);
+  }
+
+  66% {
+    transform: scale(1.01);
+  }
+
+  88% {
+    transform: scale(1);
+  }
+}
+
+.task-card.task-card--created-highlight {
+  transform-origin: center center;
+  will-change: transform;
+  animation: task-card-created-scale-pulse 1.1s ease-in-out forwards;
+}

@@ -34,7 +34,7 @@ export function useTaskCrud(args: {
     ? (m: 'add' | 'edit' | 'preview') => active.setMode!(m)
     : undefined;
 
-  const handleAddTask = async (taskPayload: any, opts?: { preview?: boolean }) => {
+  const handleAddTask = async (taskPayload: any) => {
     const groupIdToUse = taskPayload?.groupId ?? activeGroup.value?.value ?? null;
     if (groupIdToUse === null || groupIdToUse === undefined) {
       try {
@@ -70,18 +70,18 @@ export function useTaskCrud(args: {
         // ignore notify failures
       }
       console.error('handleAddTask: api.task.add failed', err);
-      return;
+      return null;
     }
-    if (opts && opts.preview && created) {
-      if (setTask) setTask(created);
-      else taskToEdit.value = created;
-      mode.value = 'preview';
+
+    if (created) {
       try {
         setCurrentDate(created?.date || created?.eventDate || null);
       } catch (e) {
         // ignore
       }
     }
+
+    return created;
   };
 
   const handleUpdateTask = async (updatedTask: any) => {

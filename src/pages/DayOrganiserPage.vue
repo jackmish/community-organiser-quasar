@@ -177,6 +177,7 @@
               :hidden-groups="hiddenGroupSummary.groups"
               :replenish-tasks="replenishTasks"
               :selected-task-id="selectedTaskId"
+              :highlighted-task-id="highlightedTaskId"
               @task-click="onTaskClicked"
               @task-context="handleTaskContext"
               @edit-task="editTask"
@@ -531,6 +532,7 @@ import { createTaskViewHelpers } from "src/modules/task/helpers/taskViewHelpers"
 import { useCalendarHandlers } from "src/composables/useCalendarHandlers";
 import { createTaskComputed } from "src/modules/task/computed/computedTaskLists";
 import { useTaskCrud } from "src/composables/useTaskCrud";
+import { useCreatedTaskHighlight } from "src/composables/useCreatedTaskHighlight";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import {
   isGroupBackgroundColorizeActive,
@@ -1547,18 +1549,23 @@ const { handleAddTask, handleUpdateTask } = useTaskCrud({
   active: CC.task.active,
 });
 
-const handleAddTaskFromForm = async (taskPayload: any, opts?: { preview?: boolean }) => {
-  const shouldPreview = $q.screen.lt.md ? false : Boolean(opts?.preview);
-  await handleAddTask(taskPayload, { preview: shouldPreview });
+const { highlightedTaskId, highlightCreatedTask } = useCreatedTaskHighlight();
 
-  // Mobile flow: after creating task, close the creation panel instead of opening preview.
-  if ($q.screen.lt.md) {
+const handleAddTaskFromForm = async (taskPayload: any, opts?: { preview?: boolean }) => {
+  const created = await handleAddTask(taskPayload);
+  if (!created?.id) return;
+
+  await highlightCreatedTask(String(created.id));
+
+  // `preview: true` from the form means "close after save" (legacy flag name).
+  const closeFormAfterSave = opts?.preview !== false;
+  if (closeFormAfterSave || $q.screen.lt.md) {
     try {
       setPreviewFloating(null);
     } catch (e) {
       void e;
     }
-    panelHidden.value = true;
+    closeTaskPanel();
   }
 };
 
