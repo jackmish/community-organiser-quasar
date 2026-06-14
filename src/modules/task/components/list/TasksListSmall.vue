@@ -40,7 +40,7 @@
                   </div>
                 </div>
               </div>
-              <div style="margin-top: 8px; display: grid; gap: 8px">
+              <div class="group-task-stack">
                 <TaskCardSmall
                   v-for="t in item._items"
                   :key="t.id"
@@ -475,10 +475,11 @@ function logIfUnrecognized(item: any) {
 
 <style scoped>
 .task-list {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
-  gap: 8px 10px !important; /* row-gap 8px, column-gap 2px */
-  align-items: start;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px 10px !important;
   padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;
@@ -488,9 +489,14 @@ function logIfUnrecognized(item: any) {
   position: relative;
 }
 
+.task-list > .grouped-item,
+.task-list > .q-card {
+  width: fit-content;
+  max-width: 100%;
+}
+
 @media (max-width: 767px) {
   .task-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     padding-left: 8px;
     padding-right: 8px;
   }
@@ -519,6 +525,13 @@ function logIfUnrecognized(item: any) {
 /* Group label/divider styles copied from ReplenishmentList for inline grouping */
 .grouped-item {
   position: relative;
+}
+.group-task-stack {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 .group-label {
   position: absolute;

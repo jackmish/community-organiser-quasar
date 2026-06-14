@@ -90,12 +90,18 @@ const listSizeVariant = computed(() =>
 .task-list {
   width: 100%;
   min-width: 0;
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
   gap: 8px 10px !important;
-  align-items: start;
   padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;
+}
+
+.task-list .task-card {
+  width: fit-content;
+  max-width: min(100%, 420px);
 }
 </style>

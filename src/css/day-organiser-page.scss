@@ -81,7 +81,9 @@ $hidden-bg: #f2f2f2;
 }
 
 .task-card {
-  flex: 0 0 320px;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .task-list-card {

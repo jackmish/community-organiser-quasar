@@ -393,6 +393,17 @@ const getBoundingRect = (): DOMRect | null => {
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: visible;
+  width: fit-content;
+  max-width: min(100%, 420px);
+}
+
+.task-card.q-item {
+  min-width: min-content;
+}
+
+.task-card .q-item__section {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .priority-badge {

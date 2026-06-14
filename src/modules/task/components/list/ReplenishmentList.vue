@@ -122,15 +122,12 @@ const sortedReplenish = computed(() => {
 // Compute a container style so the whole ReplenishmentList card can span
 // multiple columns in the parent grid. For small mode: 1-3 items -> span 1,
 // 4-6 -> span 2, 7-9 -> span 3, etc.
-const containerStyle = computed(() => {
-  const base: any = { background: "transparent", borderRadius: "8px" };
-  if (size !== "small") return base;
-  const n = Array.isArray(props.replenishTasks) ? props.replenishTasks.length : 0;
-  const span = Math.max(1, Math.ceil(n / 3));
-  // Set gridColumn to span N so the card consumes multiple columns in the parent's grid
-  base.gridColumn = `span ${span}`;
-  return base;
-});
+const containerStyle = computed(() => ({
+  background: 'transparent',
+  borderRadius: '8px',
+  width: 'fit-content',
+  maxWidth: '100%',
+}));
 
 const emit = defineEmits<{
   (e: "toggle-status", task: any): void;
