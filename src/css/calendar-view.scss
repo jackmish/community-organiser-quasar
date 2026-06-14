@@ -8,6 +8,7 @@ $opposite-color: rgba(156, 169, 32);
 $sep-color: $primary;
 
 .calendar-root {
+  overflow: visible;
   --cal-day-bg: rgba(28, 30, 36, 0.94);
   --cal-day-fg: #eceff1;
   --cal-day-muted-fg: rgba(236, 239, 241, 0.55);
@@ -29,7 +30,60 @@ $sep-color: $primary;
   position: relative;
 }
 
-/* Before/after nav columns: range label + larger chevron */
+/* Floating prev/next — tablet landscape and up (side columns removed) */
+.calendar-grid-col {
+  overflow: visible;
+}
+
+.calendar-grid-shell {
+  position: relative;
+  overflow: visible;
+}
+
+.calendar-float-nav {
+  display: none;
+  position: absolute;
+  z-index: 6;
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.32);
+
+  :deep(.q-btn__wrapper) {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  :deep(.q-btn__content) {
+    padding: 0 !important;
+  }
+}
+
+.calendar-float-nav-icon {
+  font-size: 2rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
+@media (min-width: 1024px) {
+  .calendar-float-nav {
+    display: inline-flex;
+  }
+
+  .calendar-float-nav--prev {
+    top: -22px;
+    left: -10px;
+  }
+
+  .calendar-float-nav--next {
+    bottom: -22px;
+    right: -10px;
+  }
+}
+
+/* Legacy in-table nav (removed from template); keep styles for reference/tests */
 $calendar-nav-col-width: 122px;
 
 .calendar-nav-col-head {
@@ -122,13 +176,7 @@ $calendar-nav-col-width: 122px;
   white-space: nowrap;
 }
 
-/* Tablet / medium (below lg): hide prev/next month side columns — use top jump buttons */
-@media (max-width: 1439px) {
-  .calendar-nav-col,
-  .calendar-nav-col-head {
-    display: none;
-  }
-}
+/* Tablet / medium: side columns removed — floating overlay arrows above */
 
 .calendar-table {
   width: 100%;

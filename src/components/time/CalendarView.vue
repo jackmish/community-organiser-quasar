@@ -40,13 +40,39 @@
     </div>
   </div>
   <div class="row items-center">
-    <div class="col">
-      <div ref="scrollFlipEl" class="calendar-scroll-flip">
+    <div class="col calendar-grid-col">
+      <div class="calendar-grid-shell">
+        <q-btn
+          unelevated
+          round
+          :color="calendarTheme.colorize ? undefined : 'primary'"
+          :text-color="calendarTheme.colorize ? undefined : 'white'"
+          :style="calendarControlBtnStyle"
+          :aria-label="`${$text('ui.prev')}: ${calendarNavPrevRange.from}, ${calendarNavPrevRange.to}`"
+          :title="`${$text('ui.prev')}: ${calendarNavPrevRange.from} — ${calendarNavPrevRange.to}`"
+          class="calendar-float-nav calendar-float-nav--prev"
+          @click="previousCalendarWeeks"
+        >
+          <q-icon name="chevron_left" class="calendar-float-nav-icon" />
+        </q-btn>
+        <q-btn
+          unelevated
+          round
+          :color="calendarTheme.colorize ? undefined : 'primary'"
+          :text-color="calendarTheme.colorize ? undefined : 'white'"
+          :style="calendarControlBtnStyle"
+          :aria-label="`${$text('ui.next')}: ${calendarNavNextRange.from}, ${calendarNavNextRange.to}`"
+          :title="`${$text('ui.next')}: ${calendarNavNextRange.from} — ${calendarNavNextRange.to}`"
+          class="calendar-float-nav calendar-float-nav--next"
+          @click="nextCalendarWeeks"
+        >
+          <q-icon name="chevron_right" class="calendar-float-nav-icon" />
+        </q-btn>
+        <div ref="scrollFlipEl" class="calendar-scroll-flip">
         <div ref="tableWrapper" class="calendar-table-wrapper">
           <table class="calendar-table">
             <thead>
               <tr>
-                <th class="calendar-nav-col-head" scope="col" aria-hidden="true" />
                 <th
                   v-for="(day, dayHeaderIndex) in calendarCurrentWeek"
                   :key="'header-' + day"
@@ -59,7 +85,6 @@
                 >
                   {{ ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][parseDay(day).getDay()] }}
                 </th>
-                <th class="calendar-nav-col-head" scope="col" aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
@@ -67,28 +92,6 @@
                 v-for="(week, weekIndex) in allCalendarWeeks"
                 :key="'week-' + weekIndex"
               >
-                <td class="calendar-nav-col calendar-nav-col--before">
-                  <q-btn
-                    v-if="weekIndex === 0"
-                    unelevated
-                    dense
-                    :color="calendarTheme.colorize ? undefined : 'primary'"
-                    :text-color="calendarTheme.colorize ? undefined : 'white'"
-                    :style="calendarControlBtnStyle"
-                    :aria-label="`${$text('ui.prev')}: ${calendarNavPrevRange.from}, ${calendarNavPrevRange.to}`"
-                    :title="`${$text('ui.prev')}: ${calendarNavPrevRange.from} — ${calendarNavPrevRange.to}`"
-                    class="calendar-nav-arrow calendar-nav-arrow--prev"
-                    @click="previousCalendarWeeks"
-                  >
-                    <div class="calendar-nav-arrow-body items-center">
-                      <q-icon name="chevron_left" class="calendar-nav-arrow-icon" />
-                      <span class="calendar-nav-range">
-                        <span class="calendar-nav-range-line">{{ calendarNavPrevRange.from }}</span>
-                        <span class="calendar-nav-range-line">{{ calendarNavPrevRange.to }}</span>
-                      </span>
-                    </div>
-                  </q-btn>
-                </td>
                 <td
                   v-for="(day, index) in week"
                   :key="day"
@@ -236,31 +239,10 @@
                     </div>
                   </q-btn>
                 </td>
-                <td class="calendar-nav-col calendar-nav-col--after">
-                  <q-btn
-                    v-if="weekIndex === allCalendarWeeks.length - 1"
-                    unelevated
-                    dense
-                    :color="calendarTheme.colorize ? undefined : 'primary'"
-                    :text-color="calendarTheme.colorize ? undefined : 'white'"
-                    :style="calendarControlBtnStyle"
-                    :aria-label="`${$text('ui.next')}: ${calendarNavNextRange.from}, ${calendarNavNextRange.to}`"
-                    :title="`${$text('ui.next')}: ${calendarNavNextRange.from} — ${calendarNavNextRange.to}`"
-                    class="calendar-nav-arrow calendar-nav-arrow--next"
-                    @click="nextCalendarWeeks"
-                  >
-                    <div class="calendar-nav-arrow-body items-center">
-                      <span class="calendar-nav-range">
-                        <span class="calendar-nav-range-line">{{ calendarNavNextRange.from }}</span>
-                        <span class="calendar-nav-range-line">{{ calendarNavNextRange.to }}</span>
-                      </span>
-                      <q-icon name="chevron_right" class="calendar-nav-arrow-icon" />
-                    </div>
-                  </q-btn>
-                </td>
               </tr>
             </tbody>
           </table>
+        </div>
         </div>
       </div>
     </div>
@@ -1430,6 +1412,7 @@ function isDayDateOnly(day: string): boolean {
   }
 
   .calendar-nav-arrow.q-btn,
+  .calendar-float-nav.q-btn,
   .today-jump-btn.q-btn {
     background-color: var(--cal-nav-btn-bg) !important;
     color: var(--cal-nav-btn-fg) !important;
