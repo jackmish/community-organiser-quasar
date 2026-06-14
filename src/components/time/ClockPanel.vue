@@ -5,7 +5,9 @@
     :class="{ 'clock-panel--colorize': panelTheme.colorize }"
     :style="panelStyle"
   >
-    <div class="row items-center no-wrap clock-panel__row">
+    <ClockTimerBar class="clock-panel__timer" />
+    <div class="clock-panel__body">
+      <div class="row items-center no-wrap clock-panel__row">
       <div class="clock-panel__time-col">
         <div class="clock-panel__time">{{ timeText }}</div>
       </div>
@@ -15,6 +17,7 @@
           <span>{{ dateDay }}</span>
         </div>
         <div class="clock-panel__date-secondary">{{ dateMonthYear }}</div>
+      </div>
       </div>
     </div>
   </div>
@@ -38,6 +41,7 @@ import {
   CLOCK_SYNC_CHANGED_EVENT,
   loadClockSyncEnabled,
 } from 'src/modules/time/clockSyncSettings';
+import ClockTimerBar from './ClockTimerBar.vue';
 
 const PANEL_DEFAULT_BG = 'rgba(2, 119, 189, 0.82)';
 const PANEL_DEFAULT_HEX = '#0277bd';
@@ -95,6 +99,7 @@ const panelStyle = computed(() => {
     return {
       backgroundColor: PANEL_DEFAULT_BG,
       '--clock-panel-fg': PANEL_DEFAULT_FG,
+      '--clock-timer-thumb-bg': PANEL_DEFAULT_HEX,
     };
   }
   const { fg } = panelTheme.value;
@@ -102,6 +107,7 @@ const panelStyle = computed(() => {
   return {
     backgroundColor,
     '--clock-panel-fg': fg,
+    '--clock-timer-thumb-bg': panelTheme.value.color || PANEL_DEFAULT_HEX,
   };
 });
 
@@ -168,9 +174,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .clock-panel {
-  padding: 28px 32px;
+  padding: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--clock-panel-fg, #ffffff);
+}
+
+.clock-panel__body {
+  padding: 20px 32px 28px;
 }
 
 @media (max-width: 1439px) {
