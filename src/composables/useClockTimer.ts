@@ -39,6 +39,26 @@ export function useClockTimer() {
     return Math.max(0, Math.min(100, (remainingMs.value / totalMs.value) * 100));
   });
 
+  const timerSegmentCount = computed(() => {
+    if (!totalMs.value) return 0;
+    return Math.max(1, Math.round(totalMs.value / 60_000));
+  });
+
+  function segmentFillPercent(segmentIndex: number): number {
+    const segmentCount = timerSegmentCount.value;
+    if (!segmentCount || !totalMs.value) return 0;
+    if (phase.value === 'alarm') return 100;
+
+    const remainingRatio = Math.max(0, Math.min(1, remainingMs.value / totalMs.value));
+    const fillStart = 1 - remainingRatio;
+    const segmentStart = segmentIndex / segmentCount;
+    const segmentEnd = (segmentIndex + 1) / segmentCount;
+    const overlapStart = Math.max(segmentStart, fillStart);
+    const overlapEnd = Math.min(segmentEnd, 1);
+    const overlap = Math.max(0, overlapEnd - overlapStart);
+    return (overlap / (1 / segmentCount)) * 100;
+  }
+
   const remainingLabel = computed(() => formatRemaining(remainingMs.value));
 
   const durationLabel = computed(() => String(durationMinutes.value));
@@ -173,6 +193,8 @@ export function useClockTimer() {
     remainingMs,
     totalMs,
     progressPercent,
+    timerSegmentCount,
+    segmentFillPercent,
     remainingLabel,
     durationLabel,
     thumbPosition,

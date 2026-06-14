@@ -73,8 +73,24 @@
 
       <template v-else>
         <div class="clock-timer__progress-wrap">
-          <div class="clock-timer__progress" role="progressbar" :aria-valuenow="progressPercent">
-            <div class="clock-timer__progress-fill" :style="{ width: `${progressPercent}%` }" />
+          <div
+            class="clock-timer__progress"
+            :class="{ 'clock-timer__progress--alarm': phase === 'alarm' }"
+            role="progressbar"
+            :aria-valuenow="progressPercent"
+          >
+            <div class="clock-timer__progress-segments">
+              <div
+                v-for="segmentIndex in timerSegmentCount"
+                :key="segmentIndex"
+                class="clock-timer__progress-segment"
+              >
+                <div
+                  class="clock-timer__progress-segment-fill"
+                  :style="{ width: `${segmentFillPercent(segmentIndex - 1)}%` }"
+                />
+              </div>
+            </div>
           </div>
           <span class="clock-timer__remaining" aria-live="polite">
             {{ phase === 'alarm' ? '0:00' : remainingLabel }}
@@ -130,6 +146,8 @@ const {
   phase,
   durationMinutes,
   progressPercent,
+  timerSegmentCount,
+  segmentFillPercent,
   remainingLabel,
   durationLabel,
   thumbPosition,
@@ -189,7 +207,7 @@ function onSliderChange(): void {
   overflow: visible;
 }
 
-.clock-timer--alarm .clock-timer__progress-fill {
+.clock-timer--alarm .clock-timer__progress-segment-fill {
   animation: clock-timer-alarm-pulse 0.8s ease-in-out infinite alternate;
 }
 
@@ -267,7 +285,7 @@ function onSliderChange(): void {
   height: var(--clock-timer-thumb-size);
   transform: translateY(-50%);
   border-radius: 50%;
-  background: var(--clock-panel-fg, #ffffff);
+  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 68%, transparent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
   transition: left 0.08s linear;
   pointer-events: none;
@@ -383,17 +401,31 @@ function onSliderChange(): void {
   width: 100%;
   height: var(--clock-timer-size);
   border-radius: 0;
-  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 22%, transparent);
   overflow: hidden;
 }
 
-.clock-timer__progress-fill {
+.clock-timer__progress-segments {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 22%, transparent);
+}
+
+.clock-timer__progress-segment {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.clock-timer__progress-segment-fill {
   position: absolute;
   top: 0;
   right: 0;
   left: auto;
   height: 100%;
-  border-radius: 0;
   background: var(--clock-timer-thumb-bg, #0277bd);
   transition: width 0.25s linear;
 }
