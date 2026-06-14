@@ -154,6 +154,7 @@
                         'calendar-past':
                           day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
                       },
+                      { 'calendar-day-date-only': isDayDateOnly(day) },
                     ]"
                   >
                     <div class="calendar-day-content">
@@ -1384,6 +1385,17 @@ function getEventsForDay(day: string) {
       return occursOnDay(t, day);
     })
     .map((t: any) => ({ ...t, date: day }));
+}
+
+function isDayDateOnly(day: string): boolean {
+  if (getEventsForDay(day).length > 0) return false;
+  if (getWeekLabel(day)) return false;
+  if (getHoliday(day)) return false;
+  const today = format(new Date(), 'yyyy-MM-dd');
+  if (day === today) return false;
+  if (day === format(addDays(new Date(), -1), 'yyyy-MM-dd')) return false;
+  if (day === format(addDays(new Date(), 1), 'yyyy-MM-dd')) return false;
+  return true;
 }
 
 </script>

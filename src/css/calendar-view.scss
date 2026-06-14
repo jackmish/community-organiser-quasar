@@ -198,6 +198,33 @@ $calendar-nav-col-width: 122px;
   &.calendar-past .calendar-day-number {
     color: #444 !important;
   }
+
+  &.calendar-day-date-only {
+    overflow: hidden;
+
+    .calendar-day-content {
+      justify-content: center;
+      gap: 0;
+    }
+
+    .calendar-top,
+    .calendar-day-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calendar-day-number {
+      font-size: 3.4em;
+      line-height: 1;
+      font-weight: 400;
+    }
+
+    .calendar-events {
+      display: none;
+    }
+  }
 }
 
 .calendar-day-content {
