@@ -11,8 +11,9 @@ $sep-color: $primary;
   --cal-day-bg: rgba(28, 30, 36, 0.94);
   --cal-day-fg: #eceff1;
   --cal-day-muted-fg: rgba(236, 239, 241, 0.55);
-  --cal-past-day-bg: rgba(16, 18, 22, 0.92);
-  --cal-past-day-fg: rgba(236, 239, 241, 0.38);
+  --cal-past-day-bg: rgba(28, 30, 36, 0.48);
+  --cal-past-day-fg: rgba(236, 239, 241, 0.58);
+  --cal-past-day-content-opacity: 0.78;
   --cal-today-outline: rgba(255, 255, 255, 0.9);
   --cal-weekend-highlight: rgba(120, 170, 255, 0.22);
 }
@@ -199,13 +200,21 @@ $calendar-nav-col-width: 122px;
     z-index: 1;
   }
 
-  &.calendar-past {
+  &.calendar-past:not(.calendar-selected) {
     background-color: var(--cal-past-day-bg);
     border: none !important;
-    filter: brightness(0.78) saturate(0.55);
+
+    .calendar-day-content {
+      opacity: var(--cal-past-day-content-opacity);
+    }
   }
-  &.calendar-past .calendar-day-number {
+  &.calendar-past:not(.calendar-selected) .calendar-day-number {
     color: var(--cal-past-day-fg) !important;
+  }
+
+  &.calendar-past:not(.calendar-selected).calendar-weekend::before,
+  &.calendar-past:not(.calendar-selected).calendar-holiday::before {
+    opacity: 0.62;
   }
 
   &.calendar-day-date-only {

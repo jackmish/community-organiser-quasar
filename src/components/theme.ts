@@ -312,7 +312,7 @@ function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, s
   const groupText = theme.groupTextColor || getContrastColor(g);
   const tones = theme.colorizeTones ?? buildCalendarColorizeTones(g);
   const dayBg = hexToRgba(darkenHex(g, 0.84), 0.94);
-  const pastDayBg = hexToRgba(darkenHex(g, 0.9), 0.92);
+  const pastDayBg = hexToRgba(darkenHex(g, 0.84), 0.48);
   return {
     '--cal-weekday-bg': hexToRgba(
       blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT),
@@ -330,7 +330,8 @@ function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, s
     '--cal-day-fg': '#eceff1',
     '--cal-day-muted-fg': 'rgba(236, 239, 241, 0.55)',
     '--cal-past-day-bg': pastDayBg,
-    '--cal-past-day-fg': 'rgba(236, 239, 241, 0.38)',
+    '--cal-past-day-fg': 'rgba(236, 239, 241, 0.58)',
+    '--cal-past-day-content-opacity': '0.78',
     '--cal-today-outline': hexToRgba(lightenHex(g, 0.55), 0.92),
     '--cal-selected-bg': g,
     '--cal-selected-fg': getContrastColor(g),
