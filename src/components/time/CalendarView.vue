@@ -1393,7 +1393,6 @@ function getEventsForDay(day: string) {
 
 function isDayDateOnly(day: string): boolean {
   if (getEventsForDay(day).length > 0) return false;
-  if (getWeekLabel(day)) return false;
   if (getHoliday(day)) return false;
   const today = format(new Date(), 'yyyy-MM-dd');
   if (day === today) return false;
