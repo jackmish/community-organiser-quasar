@@ -10,8 +10,11 @@
         <div class="clock-panel__time">{{ timeText }}</div>
       </div>
       <div class="clock-panel__date-col">
-        <div class="clock-panel__date-weekday">{{ dateWeekday }}</div>
-        <div class="clock-panel__date-line">{{ dateLine }}</div>
+        <div class="clock-panel__date-primary">
+          <span>{{ dateWeekday }}</span>
+          <span>{{ dateDay }}</span>
+        </div>
+        <div class="clock-panel__date-secondary">{{ dateMonthYear }}</div>
       </div>
     </div>
   </div>
@@ -112,12 +115,13 @@ const timeText = computed(() =>
 
 const dateWeekday = computed(() => formatAppWeekday(now.value, 'long'));
 
-const dateLine = computed(() => {
+const dateDay = computed(() => String(now.value.getDate()));
+
+const dateMonthYear = computed(() => {
   const date = now.value;
-  const day = date.getDate();
   const month = formatAppMonthLong(date);
   const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
+  return `${month} ${year}`;
 });
 
 function tick(): void {
@@ -197,21 +201,28 @@ onBeforeUnmount(() => {
 
 .clock-panel__date-col {
   min-width: 0;
+  flex: 1 1 auto;
   text-align: left;
+  overflow: hidden;
 }
 
-.clock-panel__date-weekday {
+.clock-panel__date-primary {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.35em;
   font-size: 1.85rem;
-  font-weight: 600;
-  line-height: 1.15;
-  opacity: 0.96;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
-.clock-panel__date-line {
-  margin-top: 4px;
-  font-size: 1.55rem;
+.clock-panel__date-secondary {
+  margin-top: 0.15em;
+  font-size: 1.1rem;
   font-weight: 500;
   line-height: 1.2;
-  opacity: 0.92;
+  white-space: nowrap;
+  opacity: 0.88;
 }
 </style>

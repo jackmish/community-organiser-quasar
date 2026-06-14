@@ -144,6 +144,7 @@
                         'calendar-past':
                           day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
                       },
+                      { 'calendar-today': day === format(new Date(), 'yyyy-MM-dd') },
                     ]"
                   >
                   <div
@@ -153,6 +154,16 @@
                   >
                     <span class="calendar-day-badge__arc" />
                     <span class="calendar-day-badge__num">{{ parseDay(day).getDate() }}</span>
+                  </div>
+                  <div
+                    v-if="getRelativeDayLabelType(day)"
+                    class="calendar-relative-day-label calendar-today-label"
+                    :class="{
+                      'calendar-green-label': getRelativeDayLabelType(day) === 'today',
+                      'calendar-gray-label': getRelativeDayLabelType(day) === 'tomorrow',
+                    }"
+                  >
+                    {{ $text(`ui.${getRelativeDayLabelType(day)}`) }}
                   </div>
                   <q-btn
                     size="sm"
@@ -194,27 +205,7 @@
                           </div>
                         </div>
 
-                        <div
-                          v-if="day === format(new Date(), 'yyyy-MM-dd')"
-                          class="calendar-today-label calendar-green-label"
-                        >
-                          {{ $text("ui.today") }}
-                        </div>
-                        <div
-                          v-else-if="
-                            day === format(addDays(new Date(), -1), 'yyyy-MM-dd')
-                          "
-                          class="calendar-today-label calendar-gray-label"
-                        >
-                          {{ $text("ui.yesterday") }}
-                        </div>
-                        <div
-                          v-else-if="day === format(addDays(new Date(), 1), 'yyyy-MM-dd')"
-                          class="calendar-today-label calendar-gray-label"
-                        >
-                          {{ $text("ui.tomorrow") }}
-                        </div>
-                        <div v-else-if="getHoliday(day)" class="calendar-holiday-label">
+                        <div v-if="getHoliday(day)" class="calendar-holiday-label">
                           {{
                             holidayDisplayLang && holidayDisplayLang.startsWith("en")
                               ? getHoliday(day)?.name
@@ -1576,19 +1567,11 @@ function getEventsForDay(day: string) {
 function isDayDateOnly(day: string): boolean {
   if (getEventsForDay(day).length > 0) return false;
   if (getHoliday(day)) return false;
-  const today = format(new Date(), 'yyyy-MM-dd');
-  if (day === today) return false;
-  if (day === format(addDays(new Date(), -1), 'yyyy-MM-dd')) return false;
-  if (day === format(addDays(new Date(), 1), 'yyyy-MM-dd')) return false;
   return true;
 }
 
 function isDayLargeDateLayout(day: string): boolean {
   if (getHoliday(day)) return false;
-  const today = format(new Date(), 'yyyy-MM-dd');
-  if (day === today) return false;
-  if (day === format(addDays(new Date(), -1), 'yyyy-MM-dd')) return false;
-  if (day === format(addDays(new Date(), 1), 'yyyy-MM-dd')) return false;
   return getEventsForDay(day).length <= 1;
 }
 
@@ -1598,6 +1581,13 @@ function isDayHasEventsBadge(day: string): boolean {
 
 function isDayWithEvents(day: string): boolean {
   return getEventsForDay(day).length > 0;
+}
+
+function getRelativeDayLabelType(day: string): "today" | "tomorrow" | null {
+  const today = format(new Date(), "yyyy-MM-dd");
+  if (day === today) return "today";
+  if (day === format(addDays(new Date(), 1), "yyyy-MM-dd")) return "tomorrow";
+  return null;
 }
 
 </script>

@@ -253,12 +253,6 @@ $calendar-nav-col-width: 122px;
     .calendar-day-number {
       color: var(--cal-selected-day-fg, white) !important;
     }
-    .calendar-today-label {
-      background-color: rgba(255, 255, 255, 0.92) !important;
-      color: #111 !important;
-      width: max-content;
-      max-width: 100%;
-    }
   }
 
   &.calendar-weekend::before,
@@ -444,12 +438,15 @@ $calendar-nav-col-width: 122px;
 
     .calendar-top {
       gap: 2px;
-      padding-top: 2px;
     }
 
     .calendar-events {
       margin-top: 0;
     }
+  }
+
+  &.calendar-today .calendar-day-number {
+    font-weight: 700;
   }
 }
 
@@ -476,12 +473,27 @@ $calendar-nav-col-width: 122px;
   color: var(--cal-day-fg);
   font-weight: bold;
   letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+.calendar-day-slot .calendar-relative-day-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  z-index: 2;
+  pointer-events: none;
+  margin: 0;
   display: inline-block;
   width: max-content;
-  max-width: 100%;
-  align-self: center;
-  box-sizing: border-box;
-  margin-top: 2px;
+  max-width: none;
+  white-space: nowrap;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: left center;
+}
+
+.calendar-day-slot.calendar-selected .calendar-relative-day-label {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  color: #111 !important;
 }
 .calendar-week-label {
   font-size: 0.9em;
@@ -615,6 +627,10 @@ $calendar-nav-col-width: 122px;
   font-weight: 500;
   color: var(--cal-day-fg);
   white-space: nowrap;
+}
+
+.calendar-day-slot.calendar-today .calendar-day-badge__num {
+  font-weight: 700;
 }
 
 .calendar-day-slot.calendar-past:not(.calendar-selected) .calendar-day-badge__num {
