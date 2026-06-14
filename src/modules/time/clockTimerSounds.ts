@@ -1,3 +1,16 @@
+import {
+  CLOCK_TIMER_ALARM_MELODIES,
+  type ClockTimerAlarmMelodyId,
+} from './clockTimerMelodies';
+import { getClockTimerAlarmMelodyId } from './clockTimerMelodySettings';
+import {
+  Note,
+  isRestNote,
+  melodyStepDurationSec,
+  noteToFrequency,
+  type MelodyStep,
+} from './clockTimerNotes';
+
 let audioCtx: AudioContext | null = null;
 let alarmStopFn: (() => void) | null = null;
 
@@ -9,9 +22,11 @@ const PIANO_PARTIALS: ReadonlyArray<{ ratio: number; gain: number }> = [
   { ratio: 5, gain: 0.06 },
 ];
 
-const COUNTDOWN_BEEP_MAX_SECONDS = 10;
-const COUNTDOWN_MIN_VOLUME = 0.07;
-const COUNTDOWN_MAX_VOLUME = 0.58;
+export const CLOCK_TIMER_COUNTDOWN_SECONDS = 5;
+
+const COUNTDOWN_BEEP_MAX_SECONDS = CLOCK_TIMER_COUNTDOWN_SECONDS;
+const COUNTDOWN_MIN_VOLUME = 0.06;
+const COUNTDOWN_MAX_VOLUME = 0.78;
 const ALARM_MIN_VOLUME = 0.32;
 const ALARM_MAX_VOLUME = 0.82;
 
@@ -58,30 +73,35 @@ function playPianoNote(
 
 function countdownBeepVolume(secondsLeft: number): number {
   const clamped = Math.max(1, Math.min(COUNTDOWN_BEEP_MAX_SECONDS, secondsLeft));
-  const progress = (COUNTDOWN_BEEP_MAX_SECONDS - clamped + 1) / COUNTDOWN_BEEP_MAX_SECONDS;
-  return COUNTDOWN_MIN_VOLUME + progress * (COUNTDOWN_MAX_VOLUME - COUNTDOWN_MIN_VOLUME);
+  const beepIndex = COUNTDOWN_BEEP_MAX_SECONDS - clamped + 1;
+  const progress = beepIndex / COUNTDOWN_BEEP_MAX_SECONDS;
+  const curved = progress ** 1.35;
+  return COUNTDOWN_MIN_VOLUME + curved * (COUNTDOWN_MAX_VOLUME - COUNTDOWN_MIN_VOLUME);
 }
 
 export function playCountdownBeep(secondsLeft: number): void {
   const ctx = getAudioContext();
   const volume = countdownBeepVolume(secondsLeft);
-  playPianoNote(ctx, 659.25, 0.14, volume);
+  const frequency = noteToFrequency(Note.E5);
+  if (frequency !== null) {
+    playPianoNote(ctx, frequency, 0.14, volume);
+  }
 }
 
-const ALARM_MELODY: ReadonlyArray<{ freq: number; dur: number }> = [
-  { freq: 523.25, dur: 0.3 },
-  { freq: 659.25, dur: 0.3 },
-  { freq: 783.99, dur: 0.3 },
-  { freq: 1046.5, dur: 0.45 },
-  { freq: 783.99, dur: 0.3 },
-  { freq: 659.25, dur: 0.3 },
-  { freq: 523.25, dur: 0.45 },
-];
+function resolveAlarmMelody(melodyId?: ClockTimerAlarmMelodyId): MelodyStep[] {
+  const id = melodyId ?? getClockTimerAlarmMelodyId();
+  return CLOCK_TIMER_ALARM_MELODIES[id];
+}
 
-export function playTimerAlarm(maxDurationMs: number, onEnd?: () => void): () => void {
+export function playTimerAlarm(
+  maxDurationMs: number,
+  onEnd?: () => void,
+  melodyId?: ClockTimerAlarmMelodyId,
+): () => void {
   stopTimerAlarm();
 
   const ctx = getAudioContext();
+  const melody = resolveAlarmMelody(melodyId);
   const startedAt = performance.now();
   let noteIndex = 0;
   let stopped = false;
@@ -98,10 +118,18 @@ export function playTimerAlarm(maxDurationMs: number, onEnd?: () => void): () =>
 
     const intensity = Math.min(1, elapsed / maxDurationMs);
     const volume = ALARM_MIN_VOLUME + intensity * (ALARM_MAX_VOLUME - ALARM_MIN_VOLUME);
-    const note = ALARM_MELODY[noteIndex % ALARM_MELODY.length]!;
-    playPianoNote(ctx, note.freq, note.dur, volume);
+    const step = melody[noteIndex % melody.length]!;
+    const durationSec = melodyStepDurationSec(step);
+
+    if (!isRestNote(step.note)) {
+      const frequency = noteToFrequency(step.note);
+      if (frequency !== null) {
+        playPianoNote(ctx, frequency, durationSec, volume);
+      }
+    }
+
     noteIndex += 1;
-    timeoutId = setTimeout(scheduleNext, note.dur * 1000);
+    timeoutId = setTimeout(scheduleNext, durationSec * 1000);
   };
 
   scheduleNext();
@@ -124,3 +152,11 @@ export function stopTimerAlarm(): void {
   alarmStopFn?.();
   alarmStopFn = null;
 }
+
+export { Note } from './clockTimerNotes';
+export {
+  CLASSIC_ALARM_MELODY,
+  GENTLE_ALARM_MELODY,
+  CLOCK_TIMER_ALARM_MELODY_IDS,
+  type ClockTimerAlarmMelodyId,
+} from './clockTimerMelodies';

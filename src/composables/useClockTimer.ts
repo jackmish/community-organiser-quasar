@@ -4,6 +4,7 @@ import {
   playTimerAlarm,
   resumeClockTimerAudio,
   stopTimerAlarm,
+  CLOCK_TIMER_COUNTDOWN_SECONDS,
 } from 'src/modules/time/clockTimerSounds';
 
 export type ClockTimerPhase = 'setup' | 'running' | 'paused' | 'alarm';
@@ -11,7 +12,7 @@ export type ClockTimerPhase = 'setup' | 'running' | 'paused' | 'alarm';
 export const CLOCK_TIMER_MIN_MINUTES = 0;
 export const CLOCK_TIMER_MAX_MINUTES = 15;
 export const CLOCK_TIMER_DEFAULT_MINUTES = 0;
-const COUNTDOWN_BEEP_SECONDS = 10;
+const COUNTDOWN_BEEP_SECONDS = CLOCK_TIMER_COUNTDOWN_SECONDS;
 const ALARM_MAX_MS = 10_000;
 const TICK_MS = 250;
 
@@ -141,6 +142,18 @@ export function useClockTimer() {
     durationMinutes.value = minutes;
   }
 
+  function startAlarmTest(): void {
+    if (phase.value !== 'setup') return;
+    resumeClockTimerAudio();
+    durationMinutes.value = 0;
+    totalMs.value = COUNTDOWN_BEEP_SECONDS * 1000;
+    remainingMs.value = totalMs.value;
+    endsAt = Date.now() + totalMs.value;
+    phase.value = 'running';
+    lastBeepSecond = -1;
+    startTick();
+  }
+
   function tryStartFromDuration(): void {
     if (durationMinutes.value > 0) {
       startTimer(durationMinutes.value);
@@ -189,6 +202,7 @@ export function useClockTimer() {
     thumbCenterLeft,
     setDurationMinutes,
     tryStartFromDuration,
+    startAlarmTest,
     pause,
     resume,
     cancel,

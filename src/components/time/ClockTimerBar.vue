@@ -1,80 +1,113 @@
 <template>
   <div class="clock-timer" :class="{ 'clock-timer--alarm': phase === 'alarm' }">
-    <div v-if="phase === 'setup'" class="clock-timer__actions clock-timer__actions--start">
-      <q-btn
-        square
-        unelevated
-        class="clock-timer__btn clock-timer__btn--mode"
-        icon="tune"
-        disable
-        :aria-label="$text('clock.timer.mode')"
-      >
-        <q-tooltip>{{ $text('clock.timer.mode_soon') }}</q-tooltip>
-      </q-btn>
-    </div>
-
-    <div class="clock-timer__track">
-      <template v-if="phase === 'setup'">
-        <div
-          ref="trackRef"
-          class="clock-timer__slider-wrap"
-          role="slider"
-          :aria-valuemin="CLOCK_TIMER_MIN_MINUTES"
-          :aria-valuemax="CLOCK_TIMER_MAX_MINUTES"
-          :aria-valuenow="durationMinutes"
-          :aria-label="$text('clock.timer.set_minutes')"
-          tabindex="0"
-          @keydown="onTrackKeydown"
-          @pointerdown="onTrackPointerDown"
-          @pointermove="onTrackPointerMove"
-          @pointerup="onTrackPointerUp"
-          @pointercancel="onTrackPointerUp"
-        >
-          <div class="clock-timer__rail" aria-hidden="true">
-            <div
-              class="clock-timer__slots"
-              :style="{ gridTemplateColumns: `repeat(${CLOCK_TIMER_MAX_MINUTES + 1}, 1fr)` }"
-            >
-              <div
-                v-for="minute in slotMinutes"
-                :key="minute"
-                class="clock-timer__slot"
-                :class="{
-                  'clock-timer__slot--in-range':
-                    durationMinutes > 0 && minute <= durationMinutes,
-                }"
-                :style="slotStyle(minute)"
-              />
+    <template v-if="phase === 'setup'">
+      <div class="clock-timer__setup">
+        <div class="clock-timer__start-col">
+          <q-btn
+            square
+            unelevated
+            class="clock-timer__btn clock-timer__btn--mode"
+            :class="{ 'clock-timer__btn--active': optionsOpen }"
+            icon="tune"
+            :aria-label="$text('clock.timer.options')"
+            :aria-expanded="optionsOpen"
+            @click="toggleOptions"
+          />
+          <div v-if="optionsOpen" class="clock-timer__options">
+            <div class="clock-timer__options-section">
+              <span class="clock-timer__options-label">{{ $text('clock.timer.melody') }}</span>
+              <div class="clock-timer__melody-switch">
+                <q-btn
+                  v-for="id in melodyIds"
+                  :key="id"
+                  flat
+                  dense
+                  no-caps
+                  class="clock-timer__melody-btn"
+                  :class="{ 'clock-timer__melody-btn--active': melodyId === id }"
+                  :label="$text(`clock.timer.melody_${id}`)"
+                  :aria-label="$text(`clock.timer.melody_${id}`)"
+                  @click="selectMelody(id)"
+                />
+              </div>
             </div>
+            <q-btn
+              flat
+              dense
+              no-caps
+              class="clock-timer__options-btn"
+              icon="notifications_active"
+              :label="$text('clock.timer.alarm_test')"
+              :aria-label="$text('clock.timer.alarm_test')"
+              @click="onAlarmTest"
+            />
+          </div>
+        </div>
+
+        <div class="clock-timer__track">
+          <div
+            ref="trackRef"
+            class="clock-timer__slider-wrap"
+            role="slider"
+            :aria-valuemin="CLOCK_TIMER_MIN_MINUTES"
+            :aria-valuemax="CLOCK_TIMER_MAX_MINUTES"
+            :aria-valuenow="durationMinutes"
+            :aria-label="$text('clock.timer.set_minutes')"
+            tabindex="0"
+            @keydown="onTrackKeydown"
+            @pointerdown="onTrackPointerDown"
+            @pointermove="onTrackPointerMove"
+            @pointerup="onTrackPointerUp"
+            @pointercancel="onTrackPointerUp"
+          >
+            <div class="clock-timer__rail" aria-hidden="true">
+              <div
+                class="clock-timer__slots"
+                :style="{ gridTemplateColumns: `repeat(${CLOCK_TIMER_MAX_MINUTES + 1}, 1fr)` }"
+              >
+                <div
+                  v-for="minute in slotMinutes"
+                  :key="minute"
+                  class="clock-timer__slot"
+                  :class="{
+                    'clock-timer__slot--in-range':
+                      durationMinutes > 0 && minute <= durationMinutes,
+                  }"
+                  :style="slotStyle(minute)"
+                />
+              </div>
+              <span
+                v-for="mark in scaleMarks"
+                :key="`mark-${mark}`"
+                class="clock-timer__scale-mark"
+                :style="{ left: minuteCenterLeft(mark) }"
+              >
+                {{ mark }}
+              </span>
+            </div>
+
             <span
-              v-for="mark in scaleMarks"
-              :key="`mark-${mark}`"
-              class="clock-timer__scale-mark"
-              :style="{ left: minuteCenterLeft(mark) }"
+              class="clock-timer__thumb"
+              :style="{ left: thumbCenterLeft }"
+              :aria-label="$text('clock.timer.minutes_short').replace('{value}', durationLabel)"
             >
-              {{ mark }}
+              <q-icon name="touch_app" class="clock-timer__thumb-icon" />
+            </span>
+
+            <span
+              v-if="isDragging"
+              class="clock-timer__value-tip"
+              :style="{ left: thumbCenterLeft }"
+            >
+              {{ $text('clock.timer.minutes_short').replace('{value}', durationLabel) }}
             </span>
           </div>
-
-          <span
-            class="clock-timer__thumb"
-            :style="{ left: thumbCenterLeft }"
-            :aria-label="$text('clock.timer.minutes_short').replace('{value}', durationLabel)"
-          >
-            <q-icon name="touch_app" class="clock-timer__thumb-icon" />
-          </span>
-
-          <span
-            v-if="isDragging"
-            class="clock-timer__value-tip"
-            :style="{ left: thumbCenterLeft }"
-          >
-            {{ $text('clock.timer.minutes_short').replace('{value}', durationLabel) }}
-          </span>
         </div>
-      </template>
+      </div>
+    </template>
 
-      <template v-else>
+    <template v-else>
+      <div class="clock-timer__track">
         <div class="clock-timer__progress-wrap">
           <div
             class="clock-timer__progress"
@@ -99,52 +132,64 @@
             {{ phase === 'alarm' ? '0:00' : remainingLabel }}
           </span>
         </div>
-      </template>
-    </div>
+      </div>
 
-    <div v-if="phase !== 'setup'" class="clock-timer__actions clock-timer__actions--end">
-      <template v-if="phase === 'alarm'">
-        <q-btn
-          square
-          unelevated
-          class="clock-timer__btn clock-timer__btn--alarm"
-          icon="notifications_off"
-          :aria-label="$text('clock.timer.stop')"
-          @click="dismissAlarm"
-        />
-      </template>
+      <div class="clock-timer__actions clock-timer__actions--end">
+        <template v-if="phase === 'alarm'">
+          <q-btn
+            square
+            unelevated
+            class="clock-timer__btn clock-timer__btn--alarm"
+            icon="notifications_off"
+            :aria-label="$text('clock.timer.stop')"
+            @click="dismissAlarm"
+          />
+        </template>
 
-      <template v-else>
-        <q-btn
-          square
-          unelevated
-          class="clock-timer__btn"
-          :icon="phase === 'paused' ? 'play_arrow' : 'pause'"
-          :aria-label="phase === 'paused' ? $text('clock.timer.resume') : $text('clock.timer.pause')"
-          @click="phase === 'paused' ? resume() : pause()"
-        />
-        <q-btn
-          square
-          unelevated
-          class="clock-timer__btn"
-          icon="close"
-          :aria-label="$text('clock.timer.cancel')"
-          @click="cancel"
-        />
-      </template>
-    </div>
+        <template v-else>
+          <q-btn
+            square
+            unelevated
+            class="clock-timer__btn"
+            :icon="phase === 'paused' ? 'play_arrow' : 'pause'"
+            :aria-label="phase === 'paused' ? $text('clock.timer.resume') : $text('clock.timer.pause')"
+            @click="phase === 'paused' ? resume() : pause()"
+          />
+          <q-btn
+            square
+            unelevated
+            class="clock-timer__btn"
+            icon="close"
+            :aria-label="$text('clock.timer.cancel')"
+            @click="cancel"
+          />
+        </template>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import {
   getMinuteSlotCenterPercent,
   useClockTimer,
 } from 'src/composables/useClockTimer';
+import {
+  CLOCK_TIMER_ALARM_MELODY_IDS,
+  type ClockTimerAlarmMelodyId,
+} from 'src/modules/time/clockTimerMelodies';
+import {
+  CLOCK_TIMER_MELODY_CHANGED_EVENT,
+  loadClockTimerAlarmMelody,
+  saveClockTimerAlarmMelody,
+} from 'src/modules/time/clockTimerMelodySettings';
 
 const isDragging = ref(false);
+const optionsOpen = ref(false);
+const melodyId = ref<ClockTimerAlarmMelodyId>('classic');
+const melodyIds = CLOCK_TIMER_ALARM_MELODY_IDS;
 const trackRef = ref<HTMLElement | null>(null);
 let trackPointerActive = false;
 
@@ -165,6 +210,7 @@ const {
   thumbCenterLeft,
   setDurationMinutes,
   tryStartFromDuration,
+  startAlarmTest,
   pause,
   resume,
   cancel,
@@ -178,6 +224,42 @@ const slotMinutes = computed(() =>
 );
 
 const scaleMarks = SCALE_MARK_MINUTES;
+
+watch(phase, (next) => {
+  if (next !== 'setup') {
+    optionsOpen.value = false;
+  }
+});
+
+function onMelodyChanged(event: Event): void {
+  const detail = (event as CustomEvent<{ melodyId?: ClockTimerAlarmMelodyId }>).detail;
+  if (detail?.melodyId) {
+    melodyId.value = detail.melodyId;
+  }
+}
+
+onMounted(async () => {
+  melodyId.value = await loadClockTimerAlarmMelody();
+  window.addEventListener(CLOCK_TIMER_MELODY_CHANGED_EVENT, onMelodyChanged as EventListener);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener(CLOCK_TIMER_MELODY_CHANGED_EVENT, onMelodyChanged as EventListener);
+});
+
+async function selectMelody(id: ClockTimerAlarmMelodyId): Promise<void> {
+  melodyId.value = id;
+  await saveClockTimerAlarmMelody(id);
+}
+
+function toggleOptions(): void {
+  optionsOpen.value = !optionsOpen.value;
+}
+
+function onAlarmTest(): void {
+  optionsOpen.value = false;
+  startAlarmTest();
+}
 
 function minuteCenterLeft(minute: number): string {
   return `${getMinuteSlotCenterPercent(minute, CLOCK_TIMER_MAX_MINUTES)}%`;
@@ -266,8 +348,86 @@ function onTrackKeydown(event: KeyboardEvent): void {
   align-items: stretch;
 }
 
-.clock-timer__actions--start {
+.clock-timer__setup {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+}
+
+.clock-timer__start-col {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 6;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.clock-timer__options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 10.5rem;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--clock-timer-thumb-bg, #0277bd) 88%, #000000);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
+}
+
+.clock-timer__options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clock-timer__options-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.clock-timer__melody-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clock-timer__melody-btn {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--clock-panel-fg, #ffffff);
+  opacity: 0.82;
+}
+
+.clock-timer__melody-btn--active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.clock-timer__melody-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.clock-timer__options-btn {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--clock-panel-fg, #ffffff);
+}
+
+.clock-timer__options-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .clock-timer__actions--end {
@@ -442,7 +602,15 @@ function onTrackKeydown(event: KeyboardEvent): void {
 }
 
 .clock-timer__btn--mode {
-  opacity: 0.55;
+  opacity: 1;
+}
+
+.clock-timer__btn--active {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.clock-timer__btn--mode:not(.clock-timer__btn--active) {
+  opacity: 0.85;
 }
 
 .clock-timer__btn--alarm {
