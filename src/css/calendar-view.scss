@@ -288,7 +288,8 @@ $calendar-nav-col-width: 122px;
     opacity: 0.62;
   }
 
-  &.calendar-day-date-only {
+  &.calendar-day-date-only,
+  &.calendar-day-large-date {
     overflow: hidden;
 
     .calendar-day-content {
@@ -322,9 +323,32 @@ $calendar-nav-col-width: 122px;
       font-size: 0.82em;
       padding: 0;
     }
+  }
 
+  &.calendar-day-date-only {
     .calendar-events {
       display: none;
+    }
+  }
+
+  &.calendar-day-large-date:not(.calendar-day-date-only) {
+    .calendar-top,
+    .calendar-day-row {
+      flex: 0 0 auto;
+    }
+
+    .calendar-day-content {
+      justify-content: center;
+      gap: 0;
+    }
+
+    .calendar-day-row {
+      gap: 0;
+    }
+
+    .calendar-events {
+      flex: 0 0 auto;
+      margin-top: 0;
     }
   }
 

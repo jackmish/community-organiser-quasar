@@ -147,7 +147,7 @@
                     ]"
                   >
                   <div
-                    v-if="isDayHasEvents(day)"
+                    v-if="isDayHasEventsBadge(day)"
                     class="calendar-day-badge"
                     aria-hidden="true"
                   >
@@ -178,13 +178,14 @@
                           day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
                       },
                       { 'calendar-day-date-only': isDayDateOnly(day) },
-                      { 'calendar-day-has-events': isDayHasEvents(day) },
+                      { 'calendar-day-large-date': isDayLargeDateLayout(day) },
+                      { 'calendar-day-has-events': isDayHasEventsBadge(day) },
                     ]"
                   >
                     <div class="calendar-day-content">
                       <div class="calendar-top">
                         <div class="calendar-day-row">
-                          <div v-if="!isDayHasEvents(day)" class="calendar-day-number">
+                          <div v-if="!isDayHasEventsBadge(day)" class="calendar-day-number">
                             {{ parseDay(day).getDate() }}
                           </div>
                           <div v-if="getWeekLabel(day)" class="calendar-week-inline">
@@ -538,6 +539,44 @@ const calendarViewDays = ref(42);
 const tableWrapper = ref<HTMLElement | null>(null);
 const scrollFlipEl = ref<HTMLElement | null>(null);
 
+const CALENDAR_DAY_BTN_MIN_HEIGHT_PX = 60;
+
+/** Match day-button height within each calendar row to the tallest natural button in that row. */
+function syncCalendarRowDayHeights() {
+  try {
+    const wrapper =
+      tableWrapper.value ?? document.querySelector<HTMLElement>(".calendar-table-wrapper");
+    if (!wrapper) return;
+
+    const rows = wrapper.querySelectorAll<HTMLTableRowElement>(
+      "table.calendar-table tbody tr"
+    );
+
+    for (const row of rows) {
+      const buttons = Array.from(
+        row.querySelectorAll<HTMLElement>(".calendar-day-btn")
+      );
+      if (!buttons.length) continue;
+
+      for (const btn of buttons) {
+        btn.style.minHeight = "";
+      }
+
+      let maxHeight = CALENDAR_DAY_BTN_MIN_HEIGHT_PX;
+      for (const btn of buttons) {
+        maxHeight = Math.max(maxHeight, btn.getBoundingClientRect().height);
+      }
+
+      const minHeight = `${Math.ceil(maxHeight)}px`;
+      for (const btn of buttons) {
+        btn.style.minHeight = minHeight;
+      }
+    }
+  } catch {
+    // non-critical layout polish
+  }
+}
+
 // Scroll so the target day is in view with the previous calendar day visible
 // to the left when possible (avoids pinning today flush to the viewport edge).
 // Runs once on mount only.
@@ -632,6 +671,7 @@ onMounted(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
+    syncCalendarRowDayHeights();
     // Initial scroll: show today with previous day visible when in range
     scrollToDay(format(new Date(), "yyyy-MM-dd"));
   });
@@ -909,23 +949,24 @@ onUpdated(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
+    syncCalendarRowDayHeights();
   });
 });
 
+function onCalendarLayoutResize() {
+  collectMonthEdges();
+  createOverlaysFromEdges();
+  syncCalendarRowDayHeights();
+}
+
 onMounted(() => {
-  window.addEventListener("resize", () => {
-    collectMonthEdges();
-    createOverlaysFromEdges();
-  });
+  window.addEventListener("resize", onCalendarLayoutResize);
 });
 
 onBeforeUnmount(() => {
   removeExistingOverlays();
   try {
-    window.removeEventListener("resize", () => {
-      collectMonthEdges();
-      createOverlaysFromEdges();
-    });
+    window.removeEventListener("resize", onCalendarLayoutResize);
   } catch (e) {
     // ignore
   }
@@ -1404,8 +1445,17 @@ function isDayDateOnly(day: string): boolean {
   return true;
 }
 
-function isDayHasEvents(day: string): boolean {
-  return getEventsForDay(day).length > 0;
+function isDayLargeDateLayout(day: string): boolean {
+  if (getHoliday(day)) return false;
+  const today = format(new Date(), 'yyyy-MM-dd');
+  if (day === today) return false;
+  if (day === format(addDays(new Date(), -1), 'yyyy-MM-dd')) return false;
+  if (day === format(addDays(new Date(), 1), 'yyyy-MM-dd')) return false;
+  return getEventsForDay(day).length <= 1;
+}
+
+function isDayHasEventsBadge(day: string): boolean {
+  return getEventsForDay(day).length >= 2;
 }
 
 const CALENDAR_EVENT_TITLE_MAX = 24;
