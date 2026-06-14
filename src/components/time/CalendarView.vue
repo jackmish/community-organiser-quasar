@@ -1411,7 +1411,7 @@ function isDayDateOnly(day: string): boolean {
   display: inline-flex;
   align-items: center;
   font-size: 0.82em;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--cal-day-muted-fg, rgba(236, 239, 241, 0.55));
   background: transparent;
   padding: 2px 6px;
   border-radius: 6px;

@@ -7,13 +7,23 @@ $highlight: rgba(50, 200, 255, 0.5);
 $opposite-color: rgba(156, 169, 32);
 $sep-color: $primary;
 
+.calendar-root {
+  --cal-day-bg: rgba(28, 30, 36, 0.94);
+  --cal-day-fg: #eceff1;
+  --cal-day-muted-fg: rgba(236, 239, 241, 0.55);
+  --cal-past-day-bg: rgba(16, 18, 22, 0.92);
+  --cal-past-day-fg: rgba(236, 239, 241, 0.38);
+  --cal-today-outline: rgba(255, 255, 255, 0.9);
+  --cal-weekend-highlight: rgba(120, 170, 255, 0.22);
+}
+
 @mixin btn-base() {
   white-space: normal !important;
   width: calc(100% - 8px);
   margin: 0 auto;
   min-height: 60px;
-  background: var(--cal-day-bg, rgba(255, 255, 255, 0.9));
-  color: black !important;
+  background: var(--cal-day-bg);
+  color: var(--cal-day-fg) !important;
   //   border: 2px solid $muted;
   position: relative;
 }
@@ -156,22 +166,22 @@ $calendar-nav-col-width: 122px;
 
   &.calendar-today {
     font-weight: bold;
-    outline: 2px dashed white !important;
+    outline: 2px dashed var(--cal-today-outline) !important;
     outline-offset: 8px;
   }
 
   &.calendar-selected {
     background-color: var(--cal-selected-bg, #1976d2) !important;
     color: var(--cal-selected-fg, white) !important;
-    outline: 8px dashed white !important;
+    outline: 8px dashed var(--cal-today-outline) !important;
     outline-offset: 2px;
 
     .calendar-day-number {
       color: var(--cal-selected-day-fg, white) !important;
     }
     .calendar-today-label {
-      background-color: white !important;
-      color: black !important;
+      background-color: rgba(255, 255, 255, 0.92) !important;
+      color: #111 !important;
     }
   }
 
@@ -190,13 +200,12 @@ $calendar-nav-col-width: 122px;
   }
 
   &.calendar-past {
-    background-color: var(--cal-past-day-bg, rgba(255, 255, 255, 0.8));
+    background-color: var(--cal-past-day-bg);
     border: none !important;
-    // filter: sepia(100%) hue-rotate(180deg) brightness(50%);
-    filter: grayscale(70%) brightness(65%);
+    filter: brightness(0.78) saturate(0.55);
   }
   &.calendar-past .calendar-day-number {
-    color: #444 !important;
+    color: var(--cal-past-day-fg) !important;
   }
 
   &.calendar-day-date-only {
@@ -242,17 +251,17 @@ $calendar-nav-col-width: 122px;
 .calendar-day-number {
   font-size: 1.6em;
   font-weight: 500;
-  color: black;
+  color: var(--cal-day-fg);
 }
 .calendar-today-label {
   font-size: 0.9em;
-  color: black;
+  color: var(--cal-day-fg);
   font-weight: bold;
   letter-spacing: 0.5px;
 }
 .calendar-week-label {
   font-size: 0.9em;
-  color: black;
+  color: var(--cal-day-fg);
   font-weight: normal;
   letter-spacing: 0.5px;
 }

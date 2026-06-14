@@ -65,7 +65,8 @@ describe('calendar theme', () => {
     expect(vars['--cal-selected-bg']).toBe('#2e7d32');
     expect(vars['--cal-selected-day-fg']).toBeDefined();
     expect(vars['--cal-today-column-bg']).toContain('rgba');
-    expect(vars['--cal-day-bg']).toContain('255');
+    expect(vars['--cal-day-bg']).toContain('rgba');
+    expect(vars['--cal-day-fg']).toBe('#eceff1');
   });
 
   it('does not colorize calendar when only calendar flag is set', () => {

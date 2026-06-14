@@ -306,12 +306,13 @@ export function getCalendarControlColors(theme?: CalendarThemeOptions): {
 const CALENDAR_WEEKDAY_TH_TINT = 0.52;
 
 /** Weekend / holiday cell wash over day background. */
-const CALENDAR_WEEKEND_HIGHLIGHT_ALPHA = 0.34;
 
 function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, string> {
   const g = theme.groupColor || GROUP_DEFAULT_BACKGROUND;
   const groupText = theme.groupTextColor || getContrastColor(g);
   const tones = theme.colorizeTones ?? buildCalendarColorizeTones(g);
+  const dayBg = hexToRgba(darkenHex(g, 0.84), 0.94);
+  const pastDayBg = hexToRgba(darkenHex(g, 0.9), 0.92);
   return {
     '--cal-weekday-bg': hexToRgba(
       blendHex('#eeeeee', tones.bright, CALENDAR_WEEKDAY_TH_TINT),
@@ -323,10 +324,14 @@ function calendarGridCssVariables(theme: CalendarThemeOptions): Record<string, s
     ),
     '--cal-weekend-th-bg': g,
     '--cal-weekend-th-fg': getContrastColor(g),
-    '--cal-weekend-highlight': hexToRgba(g, CALENDAR_WEEKEND_HIGHLIGHT_ALPHA),
-    '--cal-today-column-bg': hexToRgba(g, 0.28),
-    '--cal-day-bg': 'rgba(255, 255, 255, 0.92)',
-    '--cal-past-day-bg': 'rgba(255, 255, 255, 0.82)',
+    '--cal-weekend-highlight': hexToRgba(lightenHex(g, 0.22), 0.2),
+    '--cal-today-column-bg': hexToRgba(g, 0.18),
+    '--cal-day-bg': dayBg,
+    '--cal-day-fg': '#eceff1',
+    '--cal-day-muted-fg': 'rgba(236, 239, 241, 0.55)',
+    '--cal-past-day-bg': pastDayBg,
+    '--cal-past-day-fg': 'rgba(236, 239, 241, 0.38)',
+    '--cal-today-outline': hexToRgba(lightenHex(g, 0.55), 0.92),
     '--cal-selected-bg': g,
     '--cal-selected-fg': getContrastColor(g),
     '--cal-selected-day-fg': groupText,
