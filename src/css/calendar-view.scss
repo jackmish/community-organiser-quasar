@@ -377,6 +377,12 @@ $calendar-nav-col-width: 122px;
       padding: 0;
     }
 
+    .calendar-top {
+      padding-left: 8px;
+      padding-right: 8px;
+      box-sizing: border-box;
+    }
+
     .calendar-events {
       width: 100%;
       align-self: stretch;
@@ -401,7 +407,7 @@ $calendar-nav-col-width: 122px;
 
     .calendar-top {
       gap: 2px;
-      padding: 0 8px;
+      padding-top: 2px;
     }
 
     .calendar-events {
@@ -435,9 +441,10 @@ $calendar-nav-col-width: 122px;
   letter-spacing: 0.5px;
   display: inline-block;
   width: fit-content;
-  max-width: 100%;
+  max-width: calc(100% - 16px);
   align-self: center;
   box-sizing: border-box;
+  margin-top: 2px;
 }
 .calendar-week-label {
   font-size: 0.9em;
