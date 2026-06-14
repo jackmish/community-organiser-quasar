@@ -226,7 +226,7 @@
                           <div
                             v-for="ev in getEventsForDay(day)"
                             :key="ev.id + '-' + (ev.eventTime || '')"
-                            :class="ev.timeMode === 'holiday' ? 'calendar-holiday-pill q-pa-xs' : 'calendar-event-pill q-pa-xs'"
+                            :class="ev.timeMode === 'holiday' ? 'calendar-holiday-pill' : 'calendar-event-pill'"
                             :title="ev.name + (ev.eventTime ? ' • ' + ev.eventTime : '')"
                             :style="ev.timeMode === 'holiday' ? {} : {
                               backgroundColor: themePriorityColors[ev.priority] || '#888',
@@ -247,12 +247,15 @@
                             </span>
                             <span
                               class="event-title"
+                              :class="{
+                                'event-title--truncated': isCalendarEventTitleTruncated(ev.name),
+                              }"
                               @pointerdown="() => startLongPress(ev)"
                               @pointerup="() => onEventPointerUp(ev)"
                               @pointercancel="cancelLongPress"
                               @pointerleave="cancelLongPress"
                             >
-                              {{ ev.name }}
+                              {{ formatCalendarEventTitle(ev.name) }}
                             </span>
                           </div>
                         </template>
@@ -1403,6 +1406,20 @@ function isDayDateOnly(day: string): boolean {
 
 function isDayHasEvents(day: string): boolean {
   return getEventsForDay(day).length > 0;
+}
+
+const CALENDAR_EVENT_TITLE_MAX = 24;
+
+function formatCalendarEventTitle(name: string, maxLen = CALENDAR_EVENT_TITLE_MAX): string {
+  const text = (name ?? '').trim();
+  return text.length > maxLen ? text.slice(0, maxLen) : text;
+}
+
+function isCalendarEventTitleTruncated(
+  name: string,
+  maxLen = CALENDAR_EVENT_TITLE_MAX,
+): boolean {
+  return (name ?? '').trim().length > maxLen;
 }
 
 </script>

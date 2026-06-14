@@ -235,17 +235,6 @@ $calendar-nav-col-width: 122px;
 .calendar-day-btn {
   @include btn-base();
 
-  :deep(.q-btn__wrapper) {
-    padding: 0 !important;
-    min-height: 0 !important;
-    width: 100%;
-  }
-
-  :deep(.q-btn__content) {
-    padding: 0 !important;
-    width: 100%;
-  }
-
   &.calendar-today {
     font-weight: bold;
     outline: 2px dashed var(--cal-today-outline) !important;
@@ -340,6 +329,26 @@ $calendar-nav-col-width: 122px;
   }
 
   &.calendar-day-has-events {
+    overflow: visible;
+
+    :deep(.q-btn__wrapper) {
+      padding: 0 !important;
+      min-height: 0 !important;
+      align-items: stretch !important;
+      width: 100%;
+    }
+
+    :deep(.q-btn__content) {
+      padding: 0 !important;
+      align-items: stretch !important;
+      width: 100%;
+    }
+
+    .calendar-day-content {
+      width: 100%;
+      align-items: stretch;
+    }
+
     &.calendar-today {
       outline: none !important;
     }
@@ -354,11 +363,13 @@ $calendar-nav-col-width: 122px;
 
     .calendar-top {
       gap: 2px;
-      padding-top: 0;
+      padding: 0 8px;
     }
 
     .calendar-events {
       margin-top: 0;
+      width: 100%;
+      align-self: stretch;
     }
   }
 }
@@ -538,7 +549,10 @@ $calendar-nav-col-width: 122px;
   margin-top: auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
+  width: 100%;
+  align-self: stretch;
 }
 .calendar-event-pill {
   border-radius: 6px;
@@ -547,9 +561,11 @@ $calendar-nav-col-width: 122px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  width: fit-content;
   max-width: 100%;
   overflow: hidden;
-  white-space: normal;
+  white-space: nowrap;
+  box-sizing: border-box;
   font-family: Arial, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, sans-serif;
 }
 .today-jump-btn {
@@ -563,31 +579,47 @@ $calendar-nav-col-width: 122px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
   background-color: #c62828;
   color: #fff;
 }
 .calendar-holiday-pill .event-title {
   font-weight: 600;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  white-space: nowrap;
+  line-height: 1;
+  text-overflow: clip;
+
+  &.event-title--truncated {
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 10px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 10px), transparent 100%);
+  }
 }
 .calendar-event-pill .event-time {
   font-weight: 600;
   opacity: 0.95;
+  flex-shrink: 0;
 }
 .calendar-event-pill .event-title {
   font-weight: 600;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-word;
+  flex: 0 1 auto;
+  white-space: nowrap;
   line-height: 1;
+  text-overflow: clip;
   text-transform: none !important;
+
+  &.event-title--truncated {
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 10px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 10px), transparent 100%);
+  }
 }
 
 .calendar-day-btn .co21-watermark-text {
