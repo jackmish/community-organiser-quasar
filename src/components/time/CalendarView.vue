@@ -179,6 +179,7 @@
                       },
                       { 'calendar-day-date-only': isDayDateOnly(day) },
                       { 'calendar-day-large-date': isDayLargeDateLayout(day) },
+                      { 'calendar-day-with-events': isDayWithEvents(day) },
                       { 'calendar-day-has-events': isDayHasEventsBadge(day) },
                     ]"
                   >
@@ -248,9 +249,7 @@
                             </span>
                             <span
                               class="event-title"
-                              :class="{
-                                'event-title--truncated': isCalendarEventTitleTruncated(ev.name),
-                              }"
+                              :data-full-title="ev.name"
                               @pointerdown="() => startLongPress(ev)"
                               @pointerup="() => onEventPointerUp(ev)"
                               @pointercancel="cancelLongPress"
@@ -540,6 +539,21 @@ const tableWrapper = ref<HTMLElement | null>(null);
 const scrollFlipEl = ref<HTMLElement | null>(null);
 
 const CALENDAR_DAY_BTN_MIN_HEIGHT_PX = 60;
+const CALENDAR_EVENT_TITLE_MAX = 20;
+
+function formatCalendarEventTitle(
+  name: string,
+  maxLen = CALENDAR_EVENT_TITLE_MAX,
+): string {
+  const text = (name ?? "").trim();
+  return text.length > maxLen ? text.slice(0, maxLen) : text;
+}
+
+function eventTitleFullLength(titleEl: HTMLElement): number {
+  const fromData = titleEl.dataset.fullTitle;
+  if (fromData != null) return fromData.trim().length;
+  return (titleEl.textContent ?? "").trim().length;
+}
 
 /** Match day-button height within each calendar row to the tallest natural button in that row. */
 function syncCalendarRowDayHeights() {
@@ -575,6 +589,39 @@ function syncCalendarRowDayHeights() {
   } catch {
     // non-critical layout polish
   }
+}
+
+/** Apply fade on titles that were shortened or overflow the pill. */
+function syncCalendarEventPills() {
+  try {
+    const wrapper =
+      tableWrapper.value ?? document.querySelector<HTMLElement>(".calendar-table-wrapper");
+    if (!wrapper) return;
+
+    const pills = Array.from(
+      wrapper.querySelectorAll<HTMLElement>(".calendar-event-pill, .calendar-holiday-pill")
+    );
+
+    for (const pill of pills) {
+      const title = pill.querySelector<HTMLElement>(".event-title");
+      if (!title) continue;
+
+      title.classList.remove("event-title--truncated");
+
+      if (eventTitleFullLength(title) > CALENDAR_EVENT_TITLE_MAX) {
+        title.classList.add("event-title--truncated");
+      } else if (title.scrollWidth > title.clientWidth + 1) {
+        title.classList.add("event-title--truncated");
+      }
+    }
+  } catch {
+    // non-critical layout polish
+  }
+}
+
+function syncCalendarLayout() {
+  syncCalendarRowDayHeights();
+  syncCalendarEventPills();
 }
 
 // Scroll so the target day is in view with the previous calendar day visible
@@ -671,7 +718,7 @@ onMounted(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
-    syncCalendarRowDayHeights();
+    syncCalendarLayout();
     // Initial scroll: show today with previous day visible when in range
     scrollToDay(format(new Date(), "yyyy-MM-dd"));
   });
@@ -949,14 +996,14 @@ onUpdated(() => {
   nextTick().then(() => {
     collectMonthEdges();
     createOverlaysFromEdges();
-    syncCalendarRowDayHeights();
+    syncCalendarLayout();
   });
 });
 
 function onCalendarLayoutResize() {
   collectMonthEdges();
   createOverlaysFromEdges();
-  syncCalendarRowDayHeights();
+  syncCalendarLayout();
 }
 
 onMounted(() => {
@@ -1458,18 +1505,8 @@ function isDayHasEventsBadge(day: string): boolean {
   return getEventsForDay(day).length >= 2;
 }
 
-const CALENDAR_EVENT_TITLE_MAX = 24;
-
-function formatCalendarEventTitle(name: string, maxLen = CALENDAR_EVENT_TITLE_MAX): string {
-  const text = (name ?? '').trim();
-  return text.length > maxLen ? text.slice(0, maxLen) : text;
-}
-
-function isCalendarEventTitleTruncated(
-  name: string,
-  maxLen = CALENDAR_EVENT_TITLE_MAX,
-): boolean {
-  return (name ?? '').trim().length > maxLen;
+function isDayWithEvents(day: string): boolean {
+  return getEventsForDay(day).length > 0;
 }
 
 </script>
