@@ -204,7 +204,7 @@
                           v-else-if="
                             day === format(addDays(new Date(), -1), 'yyyy-MM-dd')
                           "
-                          class="calendar-today-label"
+                          class="calendar-today-label calendar-gray-label"
                         >
                           {{ $text("ui.yesterday") }}
                         </div>
@@ -237,26 +237,50 @@
                                 : '#fff',
                             }"
                           >
-                            <span
-                              class="event-time"
-                              v-if="ev.eventTime && ev.timeMode !== 'holiday'"
-                              @pointerdown="() => startLongPress(ev)"
-                              @pointerup="() => onEventPointerUp(ev)"
-                              @pointercancel="cancelLongPress"
-                              @pointerleave="cancelLongPress"
+                            <template
+                              v-for="parts in [getCalendarEventPillParts(ev)]"
+                              :key="parts.time || parts.lead || parts.title || ''"
                             >
-                              {{ ev.eventTime }}
-                            </span>
-                            <span
-                              class="event-title"
-                              :data-full-title="ev.name"
-                              @pointerdown="() => startLongPress(ev)"
-                              @pointerup="() => onEventPointerUp(ev)"
-                              @pointercancel="cancelLongPress"
-                              @pointerleave="cancelLongPress"
-                            >
-                              {{ formatCalendarEventTitle(ev.name) }}
-                            </span>
+                              <span
+                                v-if="parts.time"
+                                class="event-time"
+                                @pointerdown="() => startLongPress(ev)"
+                                @pointerup="() => onEventPointerUp(ev)"
+                                @pointercancel="cancelLongPress"
+                                @pointerleave="cancelLongPress"
+                              >
+                                {{ parts.time }}
+                              </span>
+                              <span
+                                v-else-if="parts.lead"
+                                class="event-lead"
+                                :class="{
+                                  'event-title--truncated':
+                                    !parts.rest && isCalendarEventTitleTruncated(ev.name),
+                                }"
+                                :data-full-title="ev.name"
+                                @pointerdown="() => startLongPress(ev)"
+                                @pointerup="() => onEventPointerUp(ev)"
+                                @pointercancel="cancelLongPress"
+                                @pointerleave="cancelLongPress"
+                              >
+                                {{ parts.lead }}
+                              </span>
+                              <span
+                                v-if="parts.time ? parts.title : parts.rest"
+                                class="event-title"
+                                :class="{
+                                  'event-title--truncated': isCalendarEventTitleTruncated(ev.name),
+                                }"
+                                :data-full-title="ev.name"
+                                @pointerdown="() => startLongPress(ev)"
+                                @pointerup="() => onEventPointerUp(ev)"
+                                @pointercancel="cancelLongPress"
+                                @pointerleave="cancelLongPress"
+                              >
+                                {{ parts.time ? parts.title : parts.rest }}
+                              </span>
+                            </template>
                           </div>
                         </template>
                       </div>
@@ -549,6 +573,47 @@ function formatCalendarEventTitle(
   return text.length > maxLen ? text.slice(0, maxLen) : text;
 }
 
+function calendarEventFirstWord(text: string): string {
+  const match = text.trim().match(/^\S+/);
+  return match?.[0] ?? "";
+}
+
+function calendarEventAfterFirstWord(text: string): string {
+  const trimmed = text.trim();
+  const first = calendarEventFirstWord(trimmed);
+  if (!first || first.length >= trimmed.length) return "";
+  return trimmed.slice(first.length).trimStart();
+}
+
+function isCalendarEventTitleTruncated(name: string): boolean {
+  return (name ?? "").trim().length > CALENDAR_EVENT_TITLE_MAX;
+}
+
+function getCalendarEventPillParts(ev: {
+  name: string;
+  eventTime?: string | null;
+  timeMode?: string | null;
+}) {
+  const display = formatCalendarEventTitle(ev.name);
+  const hasTime = !!ev.eventTime && ev.timeMode !== "holiday";
+  if (hasTime) {
+    return {
+      time: ev.eventTime as string,
+      title: display,
+      lead: null as string | null,
+      rest: null as string | null,
+    };
+  }
+  const lead = calendarEventFirstWord(display);
+  const rest = calendarEventAfterFirstWord(display);
+  return {
+    time: null as string | null,
+    title: null as string | null,
+    lead,
+    rest: rest || null,
+  };
+}
+
 function eventTitleFullLength(titleEl: HTMLElement): number {
   const fromData = titleEl.dataset.fullTitle;
   if (fromData != null) return fromData.trim().length;
@@ -603,14 +668,27 @@ function syncCalendarEventPills() {
     );
 
     for (const pill of pills) {
-      const title = pill.querySelector<HTMLElement>(".event-title");
+      pill.querySelectorAll<HTMLElement>(".event-title, .event-lead").forEach((title) => {
+        title.classList.remove("event-title--truncated");
+      });
+    }
+
+    for (const pill of pills) {
+      const title =
+        pill.querySelector<HTMLElement>(".event-title") ??
+        pill.querySelector<HTMLElement>(".event-lead");
       if (!title) continue;
-
-      title.classList.remove("event-title--truncated");
-
       if (eventTitleFullLength(title) > CALENDAR_EVENT_TITLE_MAX) {
         title.classList.add("event-title--truncated");
-      } else if (title.scrollWidth > title.clientWidth + 1) {
+      }
+    }
+
+    for (const pill of pills) {
+      const title =
+        pill.querySelector<HTMLElement>(".event-title") ??
+        pill.querySelector<HTMLElement>(".event-lead");
+      if (!title || title.classList.contains("event-title--truncated")) continue;
+      if (title.scrollWidth > title.clientWidth + 1) {
         title.classList.add("event-title--truncated");
       }
     }
