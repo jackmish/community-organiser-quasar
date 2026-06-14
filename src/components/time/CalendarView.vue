@@ -355,6 +355,7 @@ import {
   formatAppWeekday,
 } from "src/modules/lang/dateFormat";
 import { useLongPress } from "src/composables/useLongPress";
+import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
 import {
   occursOnDay,
@@ -563,14 +564,22 @@ const tableWrapper = ref<HTMLElement | null>(null);
 const scrollFlipEl = ref<HTMLElement | null>(null);
 
 const CALENDAR_DAY_BTN_MIN_HEIGHT_PX = 60;
-const CALENDAR_EVENT_TITLE_MAX = 20;
+const CALENDAR_EVENT_TITLE_MAX_DEFAULT = 20;
+const CALENDAR_EVENT_TITLE_MAX_TABLET_LANDSCAPE = 10;
 
-function formatCalendarEventTitle(
-  name: string,
-  maxLen = CALENDAR_EVENT_TITLE_MAX,
-): string {
+const $q = useQuasar();
+
+/** Horizontal tablet band (md–lg, landscape): narrower day cells need shorter labels. */
+const calendarEventTitleMax = computed(() => {
+  const { lt, width, height } = $q.screen;
+  if (!lt.md && lt.lg && width > height) return CALENDAR_EVENT_TITLE_MAX_TABLET_LANDSCAPE;
+  return CALENDAR_EVENT_TITLE_MAX_DEFAULT;
+});
+
+function formatCalendarEventTitle(name: string, maxLen?: number): string {
+  const limit = maxLen ?? calendarEventTitleMax.value;
   const text = (name ?? "").trim();
-  return text.length > maxLen ? text.slice(0, maxLen) : text;
+  return text.length > limit ? text.slice(0, limit) : text;
 }
 
 function calendarEventFirstWord(text: string): string {
@@ -586,7 +595,7 @@ function calendarEventAfterFirstWord(text: string): string {
 }
 
 function isCalendarEventTitleTruncated(name: string): boolean {
-  return (name ?? "").trim().length > CALENDAR_EVENT_TITLE_MAX;
+  return (name ?? "").trim().length > calendarEventTitleMax.value;
 }
 
 function getCalendarEventPillParts(ev: {
@@ -678,7 +687,7 @@ function syncCalendarEventPills() {
         pill.querySelector<HTMLElement>(".event-title") ??
         pill.querySelector<HTMLElement>(".event-lead");
       if (!title) continue;
-      if (eventTitleFullLength(title) > CALENDAR_EVENT_TITLE_MAX) {
+      if (eventTitleFullLength(title) > calendarEventTitleMax.value) {
         title.classList.add("event-title--truncated");
       }
     }
@@ -1181,6 +1190,10 @@ const displayManager = new CalendarDisplayManager();
 
 // Reset manager when calendar base or view size changes
 watch([calendarBaseDate, calendarViewDays], () => displayManager.reset());
+
+watch(calendarEventTitleMax, () => {
+  void nextTick().then(syncCalendarLayout);
+});
 
 // Online/offline detection
 const isOnline = ref(navigator.onLine);

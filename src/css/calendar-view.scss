@@ -646,7 +646,7 @@ $calendar-nav-col-width: 122px;
 .calendar-holiday-pill {
   border-radius: 6px;
   padding: 4px 6px;
-  font-size: 11px;
+  font-size: var(--cal-event-pill-text-size, 11px);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -655,7 +655,8 @@ $calendar-nav-col-width: 122px;
   overflow: hidden;
   white-space: nowrap;
   box-sizing: border-box;
-  line-height: 1.15;
+  line-height: 1;
+  min-height: calc(var(--cal-event-pill-lead-size, 13px) + 8px);
 }
 
 .calendar-event-pill {
@@ -678,12 +679,14 @@ $calendar-nav-col-width: 122px;
   white-space: nowrap;
   line-height: 1;
   font-size: var(--cal-event-pill-text-size, 11px);
+  display: inline-flex;
+  align-items: center;
 
   &.event-title--truncated {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     max-width: 100%;
     overflow: hidden;
-    vertical-align: bottom;
     mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
     -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
   }
@@ -697,12 +700,14 @@ $calendar-nav-col-width: 122px;
   line-height: 1;
   flex-shrink: 0;
   opacity: 0.95;
+  display: inline-flex;
+  align-items: center;
 
   &.event-title--truncated {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     max-width: 100%;
     overflow: hidden;
-    vertical-align: bottom;
     mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
     -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
   }
@@ -719,12 +724,14 @@ $calendar-nav-col-width: 122px;
   line-height: 1;
   font-size: var(--cal-event-pill-text-size, 11px);
   text-transform: none !important;
+  display: inline-flex;
+  align-items: center;
 
   &.event-title--truncated {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     max-width: 100%;
     overflow: hidden;
-    vertical-align: bottom;
     mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
     -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.25em), transparent 100%);
   }
