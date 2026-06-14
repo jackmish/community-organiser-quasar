@@ -15,32 +15,50 @@
 
     <div class="clock-timer__track">
       <template v-if="phase === 'setup'">
-        <div class="clock-timer__slider-wrap">
+        <div
+          ref="trackRef"
+          class="clock-timer__slider-wrap"
+          role="slider"
+          :aria-valuemin="CLOCK_TIMER_MIN_MINUTES"
+          :aria-valuemax="CLOCK_TIMER_MAX_MINUTES"
+          :aria-valuenow="durationMinutes"
+          :aria-label="$text('clock.timer.set_minutes')"
+          tabindex="0"
+          @keydown="onTrackKeydown"
+          @pointerdown="onTrackPointerDown"
+          @pointermove="onTrackPointerMove"
+          @pointerup="onTrackPointerUp"
+          @pointercancel="onTrackPointerUp"
+        >
           <div class="clock-timer__rail" aria-hidden="true">
-            <span
-              v-for="minute in divisionMinutes"
-              :key="minute"
-              class="clock-timer__division"
-              :class="{ 'clock-timer__division--minor': minute % 5 !== 0 }"
-              :style="{ left: divisionPosition(minute) }"
-            />
-            <span class="clock-timer__fill" :style="{ width: fillWidth }" />
+            <div
+              class="clock-timer__slots"
+              :style="{ gridTemplateColumns: `repeat(${CLOCK_TIMER_MAX_MINUTES + 1}, 1fr)` }"
+            >
+              <div
+                v-for="minute in slotMinutes"
+                :key="minute"
+                class="clock-timer__slot"
+                :class="{
+                  'clock-timer__slot--in-range':
+                    durationMinutes > 0 && minute <= durationMinutes,
+                }"
+                :style="slotStyle(minute)"
+              />
+            </div>
             <span
               v-for="mark in scaleMarks"
-              :key="mark"
+              :key="`mark-${mark}`"
               class="clock-timer__scale-mark"
-              :style="{ left: divisionPosition(mark) }"
+              :style="{ left: minuteCenterLeft(mark) }"
             >
               {{ mark }}
-            </span>
-            <span class="clock-timer__max-mark">
-              {{ $text('clock.timer.max_minutes').replace('{value}', String(CLOCK_TIMER_MAX_MINUTES)) }}
             </span>
           </div>
 
           <span
             class="clock-timer__thumb"
-            :style="{ left: thumbLeft }"
+            :style="{ left: thumbCenterLeft }"
             :aria-label="$text('clock.timer.minutes_short').replace('{value}', durationLabel)"
           >
             <q-icon name="touch_app" class="clock-timer__thumb-icon" />
@@ -49,25 +67,10 @@
           <span
             v-if="isDragging"
             class="clock-timer__value-tip"
-            :style="{ left: thumbPosition }"
+            :style="{ left: thumbCenterLeft }"
           >
             {{ $text('clock.timer.minutes_short').replace('{value}', durationLabel) }}
           </span>
-
-          <input
-            :value="durationMinutes"
-            class="clock-timer__slider clock-timer__slider--reversed"
-            type="range"
-            :min="CLOCK_TIMER_MIN_MINUTES"
-            :max="CLOCK_TIMER_MAX_MINUTES"
-            step="1"
-            :aria-label="$text('clock.timer.set_minutes')"
-            @pointerdown="onSliderPointerDown"
-            @pointerup="onSliderPointerUp"
-            @pointercancel="onSliderPointerUp"
-            @input="onSliderInput"
-            @change="onSliderChange"
-          />
         </div>
       </template>
 
@@ -136,11 +139,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { $text } from 'src/modules/lang';
-import { useClockTimer } from 'src/composables/useClockTimer';
+import {
+  getMinuteSlotCenterPercent,
+  useClockTimer,
+} from 'src/composables/useClockTimer';
 
 const isDragging = ref(false);
+const trackRef = ref<HTMLElement | null>(null);
+let trackPointerActive = false;
 
-const SCALE_MARK_MINUTES = [5, 10] as const;
+const SCALE_MARK_MINUTES = [5, 10, 15] as const;
+
+/** One solid mix level per slot — sharp steps, 16-level posterized strip. */
+const SLOT_IDLE_STEPS = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68] as const;
+const SLOT_FILL_STEPS = [26, 32, 38, 44, 50, 56, 62, 68, 74, 80, 86, 90, 94, 96, 98, 100] as const;
 
 const {
   phase,
@@ -150,9 +162,7 @@ const {
   segmentFillPercent,
   remainingLabel,
   durationLabel,
-  thumbPosition,
-  thumbLeft,
-  fillWidth,
+  thumbCenterLeft,
   setDurationMinutes,
   tryStartFromDuration,
   pause,
@@ -163,34 +173,73 @@ const {
   CLOCK_TIMER_MAX_MINUTES,
 } = useClockTimer();
 
-const divisionMinutes = computed(() =>
-  Array.from({ length: CLOCK_TIMER_MAX_MINUTES + 1 }, (_, index) => index),
+const slotMinutes = computed(() =>
+  Array.from({ length: CLOCK_TIMER_MAX_MINUTES + 1 }, (_, index) => CLOCK_TIMER_MAX_MINUTES - index),
 );
 
 const scaleMarks = SCALE_MARK_MINUTES;
 
-function divisionPosition(minute: number): string {
-  if (CLOCK_TIMER_MAX_MINUTES <= 0) return '100%';
-  const ratio = minute / CLOCK_TIMER_MAX_MINUTES;
-  return `${(1 - ratio) * 100}%`;
+function minuteCenterLeft(minute: number): string {
+  return `${getMinuteSlotCenterPercent(minute, CLOCK_TIMER_MAX_MINUTES)}%`;
 }
 
-function onSliderPointerDown(): void {
+function slotStyle(minute: number): Record<string, string> {
+  const slotIndex = CLOCK_TIMER_MAX_MINUTES - minute;
+  const idleMix = SLOT_IDLE_STEPS[slotIndex] ?? SLOT_IDLE_STEPS[0];
+  const fillMix = SLOT_FILL_STEPS[slotIndex] ?? SLOT_FILL_STEPS[0];
+  return {
+    '--slot-idle-color': `color-mix(in srgb, var(--clock-panel-fg, #ffffff) ${idleMix}%, transparent)`,
+    '--slot-fill-color': `color-mix(in srgb, var(--clock-timer-thumb-bg, #0277bd) ${fillMix}%, transparent)`,
+  };
+}
+
+function pickMinuteFromPointer(event: PointerEvent): number {
+  const el = trackRef.value;
+  if (!el) return CLOCK_TIMER_MIN_MINUTES;
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0) return CLOCK_TIMER_MIN_MINUTES;
+  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  const slotIndex = Math.round(ratio * (CLOCK_TIMER_MAX_MINUTES + 1) - 0.5);
+  const bounded = Math.max(0, Math.min(CLOCK_TIMER_MAX_MINUTES, slotIndex));
+  return CLOCK_TIMER_MAX_MINUTES - bounded;
+}
+
+function onTrackPointerDown(event: PointerEvent): void {
+  if (event.button !== 0) return;
+  trackPointerActive = true;
   isDragging.value = true;
+  (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
+  setDurationMinutes(pickMinuteFromPointer(event));
 }
 
-function onSliderPointerUp(): void {
+function onTrackPointerMove(event: PointerEvent): void {
+  if (!trackPointerActive) return;
+  setDurationMinutes(pickMinuteFromPointer(event));
+}
+
+function onTrackPointerUp(): void {
+  if (!trackPointerActive) return;
+  trackPointerActive = false;
   isDragging.value = false;
+  tryStartFromDuration();
 }
 
-function onSliderInput(event: Event): void {
-  isDragging.value = true;
-  const minutes = Number((event.target as HTMLInputElement).value);
-  setDurationMinutes(minutes);
-}
-
-function onSliderChange(): void {
-  isDragging.value = false;
+function onTrackKeydown(event: KeyboardEvent): void {
+  let next = durationMinutes.value;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    next += 1;
+  } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    next -= 1;
+  } else if (event.key === 'Home') {
+    next = CLOCK_TIMER_MAX_MINUTES;
+  } else if (event.key === 'End') {
+    next = CLOCK_TIMER_MIN_MINUTES;
+  } else {
+    return;
+  }
+  event.preventDefault();
+  const clamped = Math.max(CLOCK_TIMER_MIN_MINUTES, Math.min(CLOCK_TIMER_MAX_MINUTES, next));
+  setDurationMinutes(clamped);
   tryStartFromDuration();
 }
 </script>
@@ -233,7 +282,15 @@ function onSliderChange(): void {
   overflow: visible;
 }
 
-.clock-timer__slider-wrap,
+.clock-timer__slider-wrap {
+  position: relative;
+  width: 100%;
+  height: var(--clock-timer-size);
+  overflow: visible;
+  cursor: pointer;
+  touch-action: none;
+}
+
 .clock-timer__progress-wrap {
   position: relative;
   width: 100%;
@@ -244,34 +301,25 @@ function onSliderChange(): void {
 .clock-timer__rail {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 22%, transparent);
   overflow: hidden;
   pointer-events: none;
 }
 
-.clock-timer__division {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  transform: translateX(-0.5px);
-  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 34%, transparent);
-}
-
-.clock-timer__division--minor {
-  top: 25%;
-  bottom: 25%;
-  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 24%, transparent);
-}
-
-.clock-timer__fill {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: auto;
+.clock-timer__slots {
+  display: grid;
+  width: 100%;
   height: 100%;
-  background: color-mix(in srgb, var(--clock-timer-thumb-bg, #0277bd) 55%, transparent);
-  transition: width 0.08s linear;
+  gap: 2px;
+  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 8%, transparent);
+}
+
+.clock-timer__slot {
+  height: 100%;
+  background: var(--slot-idle-color);
+}
+
+.clock-timer__slot--in-range {
+  background: var(--slot-fill-color);
 }
 
 .clock-timer__thumb {
@@ -283,7 +331,7 @@ function onSliderChange(): void {
   justify-content: center;
   width: var(--clock-timer-thumb-size);
   height: var(--clock-timer-thumb-size);
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 68%, transparent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
@@ -294,58 +342,6 @@ function onSliderChange(): void {
 .clock-timer__thumb-icon {
   font-size: 1.45rem;
   color: var(--clock-timer-thumb-bg, #0277bd);
-}
-
-.clock-timer__slider {
-  position: relative;
-  z-index: 3;
-  width: 100%;
-  height: var(--clock-timer-size);
-  margin: 0;
-  padding: 0;
-  appearance: none;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  cursor: ew-resize;
-}
-
-.clock-timer__slider::-webkit-slider-runnable-track {
-  height: var(--clock-timer-size);
-  border-radius: 0;
-  background: transparent;
-}
-
-.clock-timer__slider--reversed {
-  direction: rtl;
-}
-
-.clock-timer__slider::-webkit-slider-thumb {
-  appearance: none;
-  width: var(--clock-timer-thumb-size);
-  height: var(--clock-timer-thumb-size);
-  margin-top: calc((var(--clock-timer-size) - var(--clock-timer-thumb-size)) / 2);
-  border-radius: 50%;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  cursor: ew-resize;
-}
-
-.clock-timer__slider::-moz-range-track {
-  height: var(--clock-timer-size);
-  border-radius: 0;
-  background: transparent;
-}
-
-.clock-timer__slider::-moz-range-thumb {
-  width: var(--clock-timer-thumb-size);
-  height: var(--clock-timer-thumb-size);
-  border-radius: 50%;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  cursor: ew-resize;
 }
 
 .clock-timer__value-tip {
@@ -378,22 +374,6 @@ function onSliderChange(): void {
   color: var(--clock-timer-thumb-bg, #0277bd);
   background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 22%, transparent);
   pointer-events: none;
-}
-
-.clock-timer__max-mark {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  z-index: 1;
-  transform: translateY(-50%);
-  padding: 2px 7px;
-  border-radius: 2px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--clock-timer-thumb-bg, #0277bd);
-  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 88%, transparent);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--clock-timer-thumb-bg, #0277bd) 35%, transparent);
 }
 
 .clock-timer__progress {

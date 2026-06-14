@@ -15,6 +15,14 @@ const COUNTDOWN_BEEP_SECONDS = 10;
 const ALARM_MAX_MS = 10_000;
 const TICK_MS = 250;
 
+export function getMinuteSlotCenterPercent(
+  minute: number,
+  max: number = CLOCK_TIMER_MAX_MINUTES,
+): number {
+  const slotIndex = max - minute;
+  return ((slotIndex + 0.5) / (max + 1)) * 100;
+}
+
 function formatRemaining(ms: number): string {
   const totalSec = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(totalSec / 60);
@@ -63,28 +71,9 @@ export function useClockTimer() {
 
   const durationLabel = computed(() => String(durationMinutes.value));
 
-  const valueRatio = computed(() => {
-    const span = CLOCK_TIMER_MAX_MINUTES - CLOCK_TIMER_MIN_MINUTES;
-    if (span <= 0) return 0;
-    return (durationMinutes.value - CLOCK_TIMER_MIN_MINUTES) / span;
-  });
-
-  const thumbRatioFromLeft = computed(() => 1 - valueRatio.value);
-
-  const thumbPosition = computed(() => {
-    const ratio = thumbRatioFromLeft.value;
-    return `calc(${ratio} * (100% - var(--clock-timer-thumb-size)) + calc(var(--clock-timer-thumb-size) / 2))`;
-  });
-
-  const thumbLeft = computed(() => {
-    const ratio = thumbRatioFromLeft.value;
-    return `calc(${ratio} * (100% - var(--clock-timer-thumb-size)))`;
-  });
-
-  const fillWidth = computed(() => {
-    if (valueRatio.value <= 0) return '0%';
-    return `calc(${valueRatio.value} * (100% - var(--clock-timer-thumb-size)) + var(--clock-timer-thumb-size))`;
-  });
+  const thumbCenterLeft = computed(
+    () => `${getMinuteSlotCenterPercent(durationMinutes.value)}%`,
+  );
 
   function stopTick(): void {
     if (tickTimer) {
@@ -197,9 +186,7 @@ export function useClockTimer() {
     segmentFillPercent,
     remainingLabel,
     durationLabel,
-    thumbPosition,
-    thumbLeft,
-    fillWidth,
+    thumbCenterLeft,
     setDurationMinutes,
     tryStartFromDuration,
     pause,

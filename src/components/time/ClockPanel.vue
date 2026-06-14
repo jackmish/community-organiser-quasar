@@ -14,7 +14,7 @@
       <div class="clock-panel__date-col">
         <div class="clock-panel__date-primary">
           <span>{{ dateWeekday }}</span>
-          <span>{{ dateDay }}</span>
+          <span class="clock-panel__date-day">{{ dateDay }}</span>
         </div>
         <div class="clock-panel__date-secondary">{{ dateMonthYear }}</div>
       </div>
@@ -254,6 +254,16 @@ onBeforeUnmount(() => {
   font-weight: 700;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+.clock-panel__date-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.05em 0.28em;
+  color: var(--clock-timer-thumb-bg, #0277bd);
+  background: var(--clock-panel-fg, #ffffff);
+  line-height: 1;
 }
 
 .clock-panel__date-secondary {
