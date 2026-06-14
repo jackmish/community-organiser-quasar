@@ -134,6 +134,26 @@
                     />
                     <div v-else class="calendar-month-label-above"></div>
                   </div>
+                  <div
+                    class="calendar-day-slot"
+                    :class="[
+                      { 'calendar-weekend': isWeekend(day) },
+                      { 'calendar-holiday': !!getHoliday(day) },
+                      { 'calendar-selected': day === selectedDate },
+                      {
+                        'calendar-past':
+                          day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
+                      },
+                    ]"
+                  >
+                  <div
+                    v-if="isDayHasEvents(day)"
+                    class="calendar-day-badge"
+                    aria-hidden="true"
+                  >
+                    <span class="calendar-day-badge__arc" />
+                    <span class="calendar-day-badge__num">{{ parseDay(day).getDate() }}</span>
+                  </div>
                   <q-btn
                     size="sm"
                     @pointerdown="onDayPointerDown($event, day)"
@@ -158,12 +178,13 @@
                           day <= format(addDays(new Date(), -1), 'yyyy-MM-dd'),
                       },
                       { 'calendar-day-date-only': isDayDateOnly(day) },
+                      { 'calendar-day-has-events': isDayHasEvents(day) },
                     ]"
                   >
                     <div class="calendar-day-content">
                       <div class="calendar-top">
                         <div class="calendar-day-row">
-                          <div class="calendar-day-number">
+                          <div v-if="!isDayHasEvents(day)" class="calendar-day-number">
                             {{ parseDay(day).getDate() }}
                           </div>
                           <div v-if="getWeekLabel(day)" class="calendar-week-inline">
@@ -238,6 +259,7 @@
                       </div>
                     </div>
                   </q-btn>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -761,7 +783,7 @@ function createOverlaysFromEdges() {
             height: `${sepThickness}px`,
             backgroundColor: overlayColorForMonth(monthKey)[0],
             pointerEvents: "none",
-            zIndex: "9999",
+            zIndex: "0",
             boxShadow: "0 0 6px rgba(0,0,0,0.12)",
           } as any);
           wrapper.appendChild(s);
@@ -867,7 +889,7 @@ function createOverlaysFromEdges() {
             backgroundColor: overlayColorForMonth(mA)[0],
             opacity: `1`,
             pointerEvents: "none",
-            zIndex: "9999",
+            zIndex: "0",
             boxShadow: "0 0 6px rgba(0,0,0,0.12)",
           } as any);
           wrapper.appendChild(sep);
@@ -1378,6 +1400,10 @@ function isDayDateOnly(day: string): boolean {
   if (day === format(addDays(new Date(), -1), 'yyyy-MM-dd')) return false;
   if (day === format(addDays(new Date(), 1), 'yyyy-MM-dd')) return false;
   return true;
+}
+
+function isDayHasEvents(day: string): boolean {
+  return getEventsForDay(day).length > 0;
 }
 
 </script>
