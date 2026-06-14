@@ -6,6 +6,10 @@ import type {
   LanSyncTaskDeletionPayload,
   LanSyncTaskPayload,
 } from 'src/modules/lan/lanSyncAuth';
+import {
+  isTaskBlockedByDeletionTombstone,
+  type TaskDeletionTombstone,
+} from './taskDeletionLog';
 
 function tsMs(v: string | undefined): number {
   if (!v) return 0;
@@ -158,11 +162,21 @@ export function taskDateKeyFromFlat(t: FlatTask): string {
 }
 
 /** Same task id → keep the row with the newest updatedAt; remote only overwrites fields it sends. */
-export function mergeTasksByNewest(local: FlatTask[], remote: LanSyncTaskPayload[]): FlatTask[] {
+export function mergeTasksByNewest(
+  local: FlatTask[],
+  remote: LanSyncTaskPayload[],
+  deletionTombstones?: Record<string, TaskDeletionTombstone>,
+): FlatTask[] {
   const byId = new Map(local.map((t) => [String(t.id), { ...t }]));
   for (const r of remote) {
     const id = String(r.id || '').trim();
     if (!id) continue;
+    if (
+      deletionTombstones &&
+      isTaskBlockedByDeletionTombstone(id, r.updatedAt, deletionTombstones)
+    ) {
+      continue;
+    }
     const existing = byId.get(id);
     if (!existing) {
       byId.set(id, { ...r, id });

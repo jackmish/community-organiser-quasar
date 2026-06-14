@@ -29,9 +29,11 @@ import {
 } from './organiserLanMerge';
 import { adoptInboundGroupBackground } from 'src/modules/group/utils/groupBackgroundStorage';
 import {
+  getTaskDeletionTombstoneIds,
+  getTaskDeletionTombstoneMap,
   listTaskDeletionsForSync,
   mergeRemoteTaskDeletions,
-  pruneTaskDeletionTombstones,
+  pruneFullyAcknowledgedTaskDeletions,
   type TaskDeletionTombstone,
 } from './taskDeletionLog';
 import type {
@@ -48,12 +50,13 @@ import {
   adoptNextSyncToken,
   ensurePeerSyncSession,
   findSyncPeerState,
+  loadSyncPeerStates,
   upsertSyncPeerState,
   type SyncPeerRecord,
 } from './syncPeerState';
 import { withOrganiserSyncTriggerSuppressed } from './lanOrganiserSyncTrigger';
 import { enqueueSyncRun, updateSyncRun } from './syncRunQueue';
-import { loadOwnDeviceMeta } from './deviceRoleAssignment';
+import { loadOwnDeviceMeta, normalizeDeviceId } from './deviceRoleAssignment';
 import { LAN_INFO_PROBE_MS, probeLanPeerInfo } from 'src/modules/lan/lanPeerConnectivity';
 import logger from 'src/utils/logger';
 import type { Group } from 'src/modules/group/models/GroupModel';
@@ -112,15 +115,34 @@ function filterTasksForSyncOutbound(
   tasks: FlatTask[],
   peer: SyncPeerRecord | null,
   globalSinceMs: number,
+  tombstoneIds?: Set<string>,
 ): FlatTask[] {
-  if (!globalSinceMs) return tasks;
   return tasks.filter((t) => {
     const id = String(t.id);
+    if (tombstoneIds?.has(id)) return false;
+    if (!globalSinceMs) return true;
     const perTask = peer?.taskSyncedAt[id];
     if (perTask === undefined) return true;
     const wm = perTask > 0 ? perTask : globalSinceMs;
     return tsMs(t.updatedAt) > wm;
   });
+}
+
+async function listContractPeerDeviceIds(): Promise<string[]> {
+  const local = await loadOwnDeviceMeta();
+  const selfId = normalizeDeviceId(local.id);
+  const { loadConnectedDevices } = await import('./deviceRoleAssignment');
+  const devices = await loadConnectedDevices();
+  return devices
+    .map((d) => normalizeDeviceId(d.id))
+    .filter((id) => id && id !== selfId);
+}
+
+async function pruneTaskDeletionsAfterExchange(): Promise<void> {
+  const contractPeerIds = await listContractPeerDeviceIds();
+  if (!contractPeerIds.length) return;
+  const peerStates = await loadSyncPeerStates();
+  await pruneFullyAcknowledgedTaskDeletions(peerStates, contractPeerIds);
 }
 
 function filterGroupsForSyncOutbound<G extends { id: string; updatedAt?: string }>(
@@ -245,7 +267,13 @@ export async function buildOutboundSyncDelta(opts: {
   const allGroups = CC.group?.list?.all?.value ?? [];
   const scopedGroups = filterGroupsInScope(allGroups, opts.scope);
   const scopedTasks = filterTasksInScope(collectFlatTasks(), opts.scope);
-  const changedTasks = filterTasksForSyncOutbound(scopedTasks, opts.peer ?? null, opts.sinceMs);
+  const tombstoneIds = await getTaskDeletionTombstoneIds();
+  const changedTasks = filterTasksForSyncOutbound(
+    scopedTasks,
+    opts.peer ?? null,
+    opts.sinceMs,
+    tombstoneIds,
+  );
   const groupPayloads = await Promise.all(scopedGroups.map((g) => groupPayloadFromLocalAsync(g)));
   const changedGroups = filterGroupsForSyncOutbound(
     groupPayloads,
@@ -253,7 +281,7 @@ export async function buildOutboundSyncDelta(opts: {
     opts.sinceMs,
   );
   const tasks = changedTasks.map((t) => taskPayloadFromFlat(t));
-  const deletedTasks = await listTaskDeletionsForSync(opts.sinceMs, opts.scope);
+  const deletedTasks = await listTaskDeletionsForSync(opts.sinceMs, opts.scope, opts.peer);
   const deletedGroups = await listGroupDeletionsForSync(opts.sinceMs, opts.scope);
   return { groups: changedGroups, tasks, deletedTasks, deletedGroups };
 }
@@ -321,7 +349,8 @@ export async function applyInboundSyncDelta(
       (remoteTasks ?? []) as FlatTask[],
       inboundScope,
     ) as LanSyncExchangeRequest['tasks'];
-    mergedTasks = mergeTasksByNewest(localFlat, remoteInScope ?? []);
+    const tombstones = await getTaskDeletionTombstoneMap();
+    mergedTasks = mergeTasksByNewest(localFlat, remoteInScope ?? [], tombstones);
   }
 
   if (!shouldMergeTasks && !shouldPersistGroups) {
@@ -416,7 +445,6 @@ export async function handleLanSyncExchangeRequest(
     typeof req.since === 'number' &&
     req.since >= 0;
   const sinceMs = explicitSince ? req.since! : peer.lastSyncAt > 0 ? peer.lastSyncAt : 0;
-  const isInitialExchangeWithPeer = peer.lastSyncAt <= 0;
 
   if (
     req.groups?.length ||
@@ -425,11 +453,15 @@ export async function handleLanSyncExchangeRequest(
     req.deletedGroups?.length
   ) {
     await applyInboundSyncDelta(req.groups, req.tasks, scope, req.deletedTasks, {
-      applyRemoteDeletions: !isInitialExchangeWithPeer,
+      applyRemoteDeletions: (req.deletedTasks?.length ?? 0) > 0,
       deletedGroups: req.deletedGroups ?? [],
     });
-    const inboundDeletions = isInitialExchangeWithPeer ? [] : (req.deletedTasks ?? []);
-    peer = markSyncedFlags(peer, req.groups ?? [], req.tasks ?? [], inboundDeletions);
+    peer = markSyncedFlags(
+      peer,
+      req.groups ?? [],
+      req.tasks ?? [],
+      req.deletedTasks ?? [],
+    );
   }
 
   const outbound = await buildOutboundSyncDelta({ sinceMs, scope, peer });
@@ -447,9 +479,7 @@ export async function handleLanSyncExchangeRequest(
   };
   await upsertSyncPeerState(peerPatch);
 
-  if (outbound.deletedTasks.length) {
-    await pruneTaskDeletionTombstones(outbound.deletedTasks.map((d) => d.id));
-  }
+  await pruneTaskDeletionsAfterExchange();
   if (outbound.deletedGroups.length) {
     await pruneGroupDeletionTombstones(outbound.deletedGroups.map((d) => d.id));
   }
@@ -576,14 +606,14 @@ export async function runSyncWithPeer(opts: {
     }
 
     await applyInboundSyncDelta(res.groups, res.tasks, scope, res.deletedTasks, {
-      applyRemoteDeletions: incremental,
+      applyRemoteDeletions: (res.deletedTasks?.length ?? 0) > 0,
       deletedGroups: res.deletedGroups ?? [],
     });
     const synced = markSyncedFlags(
       peer,
       [...outbound.groups, ...res.groups],
       [...outbound.tasks, ...res.tasks],
-      incremental ? [...outbound.deletedTasks, ...(res.deletedTasks ?? [])] : [],
+      [...outbound.deletedTasks, ...(res.deletedTasks ?? [])],
     );
     const now = Date.now();
     await upsertSyncPeerState({
@@ -607,15 +637,11 @@ export async function runSyncWithPeer(opts: {
       tasksReceived: res.tasks.length,
       message: incremental ? 'incremental' : 'full',
     });
-    const prunedIds = [
-      ...outbound.deletedTasks.map((d) => d.id),
-      ...(res.deletedTasks ?? []).map((d) => d.id),
-    ];
-    if (prunedIds.length) await pruneTaskDeletionTombstones(prunedIds);
     const prunedGroupIds = [
       ...outbound.deletedGroups.map((d) => d.id),
       ...(res.deletedGroups ?? []).map((d) => d.id),
     ];
+    await pruneTaskDeletionsAfterExchange();
     if (prunedGroupIds.length) await pruneGroupDeletionTombstones(prunedGroupIds);
     return true;
   } catch (e) {

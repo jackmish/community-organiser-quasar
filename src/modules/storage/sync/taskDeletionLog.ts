@@ -1,4 +1,6 @@
+import { normalizeDeviceId } from './deviceRoleAssignment';
 import { patchCo21Settings, loadCo21Settings } from './roleProfileSettings';
+import type { SyncPeerRecord } from './syncPeerState';
 
 export type TaskDeletionTombstone = {
   id: string;
@@ -9,6 +11,11 @@ export type TaskDeletionTombstone = {
 type TombstoneMap = Record<string, TaskDeletionTombstone>;
 
 const SETTINGS_KEY = 'deletedTaskTombstones';
+
+function tombstoneDeletedMs(t: TaskDeletionTombstone): number {
+  const n = Date.parse(t.deletedAt);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function normalizeTombstone(raw: unknown): TaskDeletionTombstone | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -37,6 +44,16 @@ async function saveTombstoneMap(map: TombstoneMap): Promise<void> {
   await patchCo21Settings({ [SETTINGS_KEY]: map });
 }
 
+/** Active deletion tombstones (tasks removed locally, pending peer ack). */
+export async function getTaskDeletionTombstoneMap(): Promise<TombstoneMap> {
+  return loadTombstoneMap();
+}
+
+export async function getTaskDeletionTombstoneIds(): Promise<Set<string>> {
+  const map = await loadTombstoneMap();
+  return new Set(Object.keys(map));
+}
+
 /** Record a task deletion for LAN sync (call before saveData). */
 export async function recordTaskDeletion(
   taskId: string,
@@ -52,32 +69,71 @@ export async function recordTaskDeletion(
   await saveTombstoneMap(map);
 }
 
-/** Tombstones to send on the next sync exchange (incremental watermark). */
+function peerAckedDeletion(peer: SyncPeerRecord | null | undefined, tomb: TaskDeletionTombstone): boolean {
+  if (!peer) return false;
+  const delMs = tombstoneDeletedMs(tomb);
+  if (!delMs) return false;
+  const ackMs = peer.taskSyncedAt[tomb.id];
+  return ackMs !== undefined && ackMs >= delMs;
+}
+
+/** Tombstones to send to a specific peer (until that peer has acked each deletion). */
 export async function listTaskDeletionsForSync(
   sinceMs: number,
   scope: Set<string>,
+  peer?: SyncPeerRecord | null,
 ): Promise<TaskDeletionTombstone[]> {
-  // Baseline / first exchange after contract: tasks only (additive). Tombstones can
-  // delete the peer's copy of ids that only existed locally on this device.
-  if (sinceMs <= 0 || !scope.size) return [];
+  if (!scope.size) return [];
   const map = await loadTombstoneMap();
   const out: TaskDeletionTombstone[] = [];
   for (const t of Object.values(map)) {
-    const ts = Date.parse(t.deletedAt);
-    if (Number.isFinite(ts) && ts <= sinceMs) continue;
     if (t.groupId && !scope.has(t.groupId)) continue;
+    if (peer) {
+      if (peerAckedDeletion(peer, t)) continue;
+    } else {
+      const delMs = tombstoneDeletedMs(t);
+      if (sinceMs > 0 && delMs > 0 && delMs <= sinceMs) continue;
+    }
     out.push(t);
   }
   return out;
 }
 
-/** Drop tombstones after they were included in a successful exchange. */
+/** @deprecated Prefer pruneFullyAcknowledgedTaskDeletions. */
 export async function pruneTaskDeletionTombstones(ids: string[]): Promise<void> {
   if (!ids.length) return;
   const map = await loadTombstoneMap();
   let changed = false;
   for (const id of ids) {
     if (map[id]) {
+      delete map[id];
+      changed = true;
+    }
+  }
+  if (changed) await saveTombstoneMap(map);
+}
+
+/** Drop tombstones only after every contract peer has acked the deletion. */
+export async function pruneFullyAcknowledgedTaskDeletions(
+  peerStates: SyncPeerRecord[],
+  contractPeerIds: string[],
+): Promise<void> {
+  if (!contractPeerIds.length) return;
+  const map = await loadTombstoneMap();
+  const peersById = new Map(
+    peerStates.map((p) => [normalizeDeviceId(p.peerDeviceId), p] as const),
+  );
+  let changed = false;
+  for (const [id, tomb] of Object.entries(map)) {
+    const delMs = tombstoneDeletedMs(tomb);
+    if (!delMs) continue;
+    const allAcked = contractPeerIds.every((peerId) => {
+      const peer = peersById.get(normalizeDeviceId(peerId));
+      if (!peer) return false;
+      const ackMs = peer.taskSyncedAt[id];
+      return ackMs !== undefined && ackMs >= delMs;
+    });
+    if (allAcked) {
       delete map[id];
       changed = true;
     }
@@ -102,4 +158,19 @@ export async function mergeRemoteTaskDeletions(
   }
   if (applied.length) await saveTombstoneMap(map);
   return applied;
+}
+
+/** True when a remote task payload must not resurrect a locally deleted id. */
+export function isTaskBlockedByDeletionTombstone(
+  taskId: string,
+  taskUpdatedAt: string | undefined,
+  tombstones: TombstoneMap,
+): boolean {
+  const tomb = tombstones[taskId];
+  if (!tomb) return false;
+  const delMs = tombstoneDeletedMs(tomb);
+  if (!delMs) return true;
+  const remoteMs = Date.parse(taskUpdatedAt ?? '');
+  if (!Number.isFinite(remoteMs)) return true;
+  return delMs >= remoteMs;
 }
