@@ -102,7 +102,7 @@ export function useClockTimer() {
 
     if (secondsLeft > 0 && secondsLeft <= COUNTDOWN_BEEP_SECONDS && secondsLeft !== lastBeepSecond) {
       lastBeepSecond = secondsLeft;
-      playCountdownBeep();
+      playCountdownBeep(secondsLeft);
     }
 
     if (remainingMs.value <= 0) {

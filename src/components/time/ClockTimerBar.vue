@@ -25,6 +25,14 @@
               :style="{ left: divisionPosition(minute) }"
             />
             <span class="clock-timer__fill" :style="{ width: fillWidth }" />
+            <span
+              v-for="mark in scaleMarks"
+              :key="mark"
+              class="clock-timer__scale-mark"
+              :style="{ left: divisionPosition(mark) }"
+            >
+              {{ mark }}
+            </span>
             <span class="clock-timer__max-mark">
               {{ $text('clock.timer.max_minutes').replace('{value}', String(CLOCK_TIMER_MAX_MINUTES)) }}
             </span>
@@ -33,8 +41,17 @@
           <span
             class="clock-timer__thumb"
             :style="{ left: thumbLeft }"
+            :aria-label="$text('clock.timer.minutes_short').replace('{value}', durationLabel)"
           >
-            <span class="clock-timer__thumb-value">{{ durationLabel }}</span>
+            <q-icon name="touch_app" class="clock-timer__thumb-icon" />
+          </span>
+
+          <span
+            v-if="isDragging"
+            class="clock-timer__value-tip"
+            :style="{ left: thumbPosition }"
+          >
+            {{ $text('clock.timer.minutes_short').replace('{value}', durationLabel) }}
           </span>
 
           <input
@@ -45,6 +62,9 @@
             :max="CLOCK_TIMER_MAX_MINUTES"
             step="1"
             :aria-label="$text('clock.timer.set_minutes')"
+            @pointerdown="onSliderPointerDown"
+            @pointerup="onSliderPointerUp"
+            @pointercancel="onSliderPointerUp"
             @input="onSliderInput"
             @change="onSliderChange"
           />
@@ -98,9 +118,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { $text } from 'src/modules/lang';
 import { useClockTimer } from 'src/composables/useClockTimer';
+
+const isDragging = ref(false);
+
+const SCALE_MARK_MINUTES = [5, 10] as const;
 
 const {
   phase,
@@ -108,6 +132,7 @@ const {
   progressPercent,
   remainingLabel,
   durationLabel,
+  thumbPosition,
   thumbLeft,
   fillWidth,
   setDurationMinutes,
@@ -124,18 +149,30 @@ const divisionMinutes = computed(() =>
   Array.from({ length: CLOCK_TIMER_MAX_MINUTES + 1 }, (_, index) => index),
 );
 
+const scaleMarks = SCALE_MARK_MINUTES;
+
 function divisionPosition(minute: number): string {
   if (CLOCK_TIMER_MAX_MINUTES <= 0) return '100%';
   const ratio = minute / CLOCK_TIMER_MAX_MINUTES;
   return `${(1 - ratio) * 100}%`;
 }
 
+function onSliderPointerDown(): void {
+  isDragging.value = true;
+}
+
+function onSliderPointerUp(): void {
+  isDragging.value = false;
+}
+
 function onSliderInput(event: Event): void {
+  isDragging.value = true;
   const minutes = Number((event.target as HTMLInputElement).value);
   setDurationMinutes(minutes);
 }
 
 function onSliderChange(): void {
+  isDragging.value = false;
   tryStartFromDuration();
 }
 </script>
@@ -143,8 +180,7 @@ function onSliderChange(): void {
 <style scoped>
 .clock-timer {
   --clock-timer-size: 40px;
-  --clock-timer-thumb-size: var(--clock-timer-size);
-  --clock-timer-thumb-radius: 8px;
+  --clock-timer-thumb-size: 54px;
 
   display: flex;
   align-items: stretch;
@@ -222,30 +258,24 @@ function onSliderChange(): void {
 
 .clock-timer__thumb {
   position: absolute;
-  top: 0;
+  top: 50%;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   width: var(--clock-timer-thumb-size);
   height: var(--clock-timer-thumb-size);
-  border-radius: var(--clock-timer-thumb-radius);
-  background: var(--clock-timer-thumb-bg, #0277bd);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.72),
-    0 2px 5px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.65));
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--clock-panel-fg, #ffffff);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
   transition: left 0.08s linear;
   pointer-events: none;
 }
 
-.clock-timer__thumb-value {
-  font-size: 0.82rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  color: var(--clock-panel-fg, #ffffff);
+.clock-timer__thumb-icon {
+  font-size: 1.45rem;
+  color: var(--clock-timer-thumb-bg, #0277bd);
 }
 
 .clock-timer__slider {
@@ -276,8 +306,8 @@ function onSliderChange(): void {
   appearance: none;
   width: var(--clock-timer-thumb-size);
   height: var(--clock-timer-thumb-size);
-  margin-top: 0;
-  border-radius: var(--clock-timer-thumb-radius);
+  margin-top: calc((var(--clock-timer-size) - var(--clock-timer-thumb-size)) / 2);
+  border-radius: 50%;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -293,11 +323,43 @@ function onSliderChange(): void {
 .clock-timer__slider::-moz-range-thumb {
   width: var(--clock-timer-thumb-size);
   height: var(--clock-timer-thumb-size);
-  border-radius: var(--clock-timer-thumb-radius);
+  border-radius: 50%;
   border: 0;
   background: transparent;
   box-shadow: none;
   cursor: ew-resize;
+}
+
+.clock-timer__value-tip {
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--clock-timer-thumb-bg, #0277bd);
+  background: var(--clock-panel-fg, #ffffff);
+}
+
+.clock-timer__scale-mark {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--clock-timer-thumb-bg, #0277bd);
+  background: color-mix(in srgb, var(--clock-panel-fg, #ffffff) 22%, transparent);
+  pointer-events: none;
 }
 
 .clock-timer__max-mark {

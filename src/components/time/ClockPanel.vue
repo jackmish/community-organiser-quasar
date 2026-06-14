@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useQuasar } from 'quasar';
 import { getLocale } from 'src/modules/lang';
 import { formatAppMonthLong, formatAppWeekday } from 'src/modules/lang/dateFormat';
 import CC from 'src/CCAccess';
@@ -50,6 +51,20 @@ const PANEL_DEFAULT_FG = '#ffffff';
 const clockEnabled = ref(false);
 const now = ref(new Date());
 let tickTimer: ReturnType<typeof setInterval> | null = null;
+
+const $q = useQuasar();
+
+const isTabletLandscape = computed(() => {
+  const { lt, width, height } = $q.screen;
+  return !lt.md && lt.lg && width > height;
+});
+
+function truncateWeekdayLabel(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return name;
+  const slice = trimmed.slice(0, 5);
+  return slice.charAt(0).toUpperCase() + slice.slice(1);
+}
 
 const groupThemeRevision = ref(0);
 
@@ -119,7 +134,10 @@ const timeText = computed(() =>
   }).format(now.value),
 );
 
-const dateWeekday = computed(() => formatAppWeekday(now.value, 'long'));
+const dateWeekday = computed(() => {
+  const long = formatAppWeekday(now.value, 'long');
+  return isTabletLandscape.value ? truncateWeekdayLabel(long) : long;
+});
 
 const dateDay = computed(() => String(now.value.getDate()));
 
@@ -181,6 +199,17 @@ onBeforeUnmount(() => {
 
 .clock-panel__body {
   padding: 20px 32px 28px;
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) and (orientation: landscape) {
+  .clock-panel__body {
+    padding-left: 14px;
+    padding-right: 20px;
+  }
+
+  .clock-panel__row {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 1439px) {
