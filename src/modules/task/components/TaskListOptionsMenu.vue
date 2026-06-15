@@ -10,7 +10,7 @@
     <q-menu auto-close>
       <q-list style="min-width: 160px">
         <template v-if="showMobileViewModeToggle">
-          <q-item clickable @click="void onToggleAppViewMode()">
+          <q-item clickable @click="void onToggleFilesMode()">
             <q-item-section avatar>
               <q-icon :name="isFilesMode ? 'calendar_month' : 'folder_shared'" />
             </q-item-section>
@@ -19,6 +19,18 @@
                 isFilesMode
                   ? $text('files.switch_to_calendar')
                   : $text('files.switch_to_files')
+              }}
+            </q-item-section>
+          </q-item>
+          <q-item clickable @click="void onToggleNotesMode()">
+            <q-item-section avatar>
+              <q-icon :name="isNotesMode ? 'calendar_month' : 'description'" />
+            </q-item-section>
+            <q-item-section>
+              {{
+                isNotesMode
+                  ? $text('notes.switch_to_calendar')
+                  : $text('notes.switch_to_notes')
               }}
             </q-item-section>
           </q-item>
@@ -126,9 +138,9 @@ const modeGroup = computed(() => {
   return (groups.value || []).find((g: { id?: string }) => String(g.id) === activeId) || null;
 });
 
-const { isFilesMode, toggleViewMode } = useAppViewMode(modeGroup);
+const { isFilesMode, isNotesMode, toggleFilesMode, toggleNotesMode } = useAppViewMode(modeGroup);
 
-async function onToggleAppViewMode(): Promise<void> {
+async function onToggleFilesMode(): Promise<void> {
   const group = modeGroup.value;
   if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
     try {
@@ -139,7 +151,11 @@ async function onToggleAppViewMode(): Promise<void> {
       logger.error('[TaskListOptionsMenu] enable files module failed', e);
     }
   }
-  await toggleViewMode();
+  await toggleFilesMode();
+}
+
+async function onToggleNotesMode(): Promise<void> {
+  await toggleNotesMode();
 }
 
 function onEditGroup() {

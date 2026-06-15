@@ -2,7 +2,7 @@ import type { CSSProperties, InjectionKey, Ref } from "vue";
 import type CCAccess from "src/CCAccess";
 import type { MediaTaskTypeId } from "src/modules/media/mediaTaskTypes";
 
-export type AddFormDefaultTypeId = "Todo" | "TimeEvent" | MediaTaskTypeId;
+export type AddFormDefaultTypeId = "Todo" | "TimeEvent" | "NoteLater" | MediaTaskTypeId;
 
 export type DayOrganiserPanelContext = {
   panelHidden: Ref<boolean>;

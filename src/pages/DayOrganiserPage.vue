@@ -81,32 +81,58 @@
                     </q-btn>
                     <div class="task-header-v-separator" aria-hidden="true" />
                   </div>
-                  <button
-                    v-if="!$q.screen.lt.md"
-                    type="button"
-                    class="task-header-mode-btn"
-                    :style="filesModeBtnStyle"
-                    :title="
-                      isFilesMode
-                        ? $text('files.switch_to_calendar')
-                        : $text('files.switch_to_files')
-                    "
-                    :aria-label="
-                      isFilesMode
-                        ? $text('files.switch_to_calendar')
-                        : $text('files.switch_to_files')
-                    "
-                    @click="void onToggleAppViewMode()"
-                  >
-                    <q-icon
-                      :name="isFilesMode ? 'calendar_month' : 'folder_shared'"
-                      size="20px"
-                      class="q-mr-xs task-header-mode-btn__icon"
-                    />
-                    {{ isFilesMode ? $text('files.calendar_label') : $text('files.label') }}
-                  </button>
+                  <div v-if="!$q.screen.lt.md" class="task-header-mode-btns">
+                    <button
+                      type="button"
+                      class="task-header-mode-btn"
+                      :class="{ 'task-header-mode-btn--active': isFilesMode }"
+                      :style="taskHeaderModeBtnStyle(isFilesMode)"
+                      :title="
+                        isFilesMode
+                          ? $text('files.switch_to_calendar')
+                          : $text('files.switch_to_files')
+                      "
+                      :aria-label="
+                        isFilesMode
+                          ? $text('files.switch_to_calendar')
+                          : $text('files.switch_to_files')
+                      "
+                      @click="void onToggleFilesMode()"
+                    >
+                      <q-icon
+                        name="folder_shared"
+                        size="20px"
+                        class="q-mr-xs task-header-mode-btn__icon"
+                      />
+                      {{ $text('files.label') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="task-header-mode-btn"
+                      :class="{ 'task-header-mode-btn--active': isNotesMode }"
+                      :style="taskHeaderModeBtnStyle(isNotesMode)"
+                      :title="
+                        isNotesMode
+                          ? $text('notes.switch_to_calendar')
+                          : $text('notes.switch_to_notes')
+                      "
+                      :aria-label="
+                        isNotesMode
+                          ? $text('notes.switch_to_calendar')
+                          : $text('notes.switch_to_notes')
+                      "
+                      @click="void onToggleNotesMode()"
+                    >
+                      <q-icon
+                        name="description"
+                        size="20px"
+                        class="q-mr-xs task-header-mode-btn__icon"
+                      />
+                      {{ $text('notes.label') }}
+                    </button>
+                  </div>
                   <div
-                    v-if="!isFilesMode"
+                    v-if="!isAlternateListMode"
                     class="row items-center no-wrap task-header-date-nav"
                   >
                     <q-btn
@@ -164,7 +190,7 @@
                 justifyContent="flex-start"
               />
             </q-card-section>
-            <q-card-section v-if="!isFilesMode && sortedTasks.length === 0">
+            <q-card-section v-if="!isFilesMode && displayTaskListCount === 0">
               <p class="text-grey-6">{{ $text("ui.no_tasks_for_day") }}</p>
             </q-card-section>
 
@@ -172,10 +198,10 @@
             <TasksListSmall
               v-if="!isFilesMode"
               :key="reloadKey"
-              :tasks-with-time="tasksWithTime"
-              :tasks-without-time="tasksWithoutTime"
-              :hidden-groups="hiddenGroupSummary.groups"
-              :replenish-tasks="replenishTasks"
+              :tasks-with-time="displayTasksWithTime"
+              :tasks-without-time="displayTasksWithoutTime"
+              :hidden-groups="isNotesMode ? [] : hiddenGroupSummary.groups"
+              :replenish-tasks="isNotesMode ? [] : replenishTasks"
               :selected-task-id="selectedTaskId"
               @task-click="onTaskClicked"
               @task-context="handleTaskContext"
@@ -208,7 +234,7 @@
           </q-btn>
 
           <q-btn
-            v-if="!isFilesMode"
+            v-if="!isAlternateListMode"
             class="list-done-btn"
             unelevated
             no-caps
@@ -241,7 +267,7 @@
         </div>
       </div>
 
-      <div v-if="!isFilesMode" class="row q-col-gutter-md day-organiser-calendar-row">
+      <div v-if="!isAlternateListMode" class="row q-col-gutter-md day-organiser-calendar-row">
         <div
           ref="calendarSectionRef"
           class="col-12 col-md-8 day-organiser-calendar-section day-organiser-scroll-anchor"
@@ -400,7 +426,7 @@
     </div>
 
     <q-btn
-      v-if="showScrollToggle && !isFilesMode"
+      v-if="showScrollToggle && !isAlternateListMode"
       unelevated
       class="mobile-section-toggle-btn"
       :class="{ 'add-task-btn--colorize': addTaskBtnColorize }"
@@ -636,7 +662,10 @@ const mergeSourceGroup = computed(() => {
 
 const {
   isFilesMode,
-  toggleViewMode: toggleAppViewMode,
+  isNotesMode,
+  isAlternateListMode,
+  toggleFilesMode: toggleAppFilesMode,
+  toggleNotesMode: toggleAppNotesMode,
   refreshModes: refreshAppViewModes,
   onExternalChange: onAppViewModeExternalChange,
 } = useAppViewMode(mergeSourceGroup);
@@ -644,7 +673,7 @@ const {
 /** After persisted view mode is loaded; avoids clearing selection on first hydrate. */
 const appViewModeReady = ref(false);
 
-async function onToggleAppViewMode(): Promise<void> {
+async function onToggleFilesMode(): Promise<void> {
   const group = mergeSourceGroup.value;
   if (!isFilesMode.value && group?.id && !group.mediaEnabled) {
     try {
@@ -655,7 +684,11 @@ async function onToggleAppViewMode(): Promise<void> {
       logger.error("[DayOrganiser] enable files module failed", e);
     }
   }
-  await toggleAppViewMode();
+  await toggleAppFilesMode();
+}
+
+async function onToggleNotesMode(): Promise<void> {
+  await toggleAppNotesMode();
 }
 
 async function onTaskClicked(task: any, rect?: DOMRect | null) {
@@ -1125,7 +1158,7 @@ watch(
   () => CC.task.time.currentDate.value,
   (newDate, oldDate) => {
     try {
-      if (newDate !== oldDate && !isFilesMode.value) {
+      if (newDate !== oldDate && !isAlternateListMode.value) {
         addFormDefaultTypeId.value = defaultAddTypeForCalendarDate(newDate);
         // Defer check so long-press day-click handlers run first.
         setTimeout(() => {
@@ -1304,6 +1337,55 @@ const {
   task: CC.task,
   group: CC.group,
 });
+
+const NOTE_TASK_TYPE_ID = "NoteLater";
+
+const noteListTasks = computed(() => {
+  try {
+    let list = (allTasks.value || []).filter((t) => {
+      if (String(t.type_id || "") !== NOTE_TASK_TYPE_ID) return false;
+      if (Number(t.status_id) === 0) return false;
+      try {
+        const gid = String(t.groupId ?? (t as { group_id?: string }).group_id ?? "").trim();
+        if (gid && !CC.group.list.isVisibleForActive(gid)) return false;
+      } catch {
+        // include when visibility helper unavailable
+      }
+      return true;
+    });
+    list = list.slice().sort((a, b) => {
+      const hasTimeA = !!a.eventTime;
+      const hasTimeB = !!b.eventTime;
+      if (hasTimeA && !hasTimeB) return -1;
+      if (!hasTimeA && hasTimeB) return 1;
+      if (hasTimeA && hasTimeB) {
+        return String(a.eventTime).localeCompare(String(b.eventTime));
+      }
+      const na = String(a.name || "").toLowerCase();
+      const nb = String(b.name || "").toLowerCase();
+      return na.localeCompare(nb);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+});
+
+const displayTasksWithTime = computed(() =>
+  isNotesMode.value
+    ? noteListTasks.value.filter((t) => !!t.eventTime)
+    : tasksWithTime.value,
+);
+
+const displayTasksWithoutTime = computed(() =>
+  isNotesMode.value
+    ? noteListTasks.value.filter((t) => !t.eventTime)
+    : tasksWithoutTime.value,
+);
+
+const displayTaskListCount = computed(() =>
+  isNotesMode.value ? noteListTasks.value.length : sortedTasks.value.length,
+);
 
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed
 
@@ -1502,14 +1584,21 @@ const { activeGroupColor, activeGroupTextColor, headerStyle, cardStyle, watermar
   useGroupColor(CC.group.list.all, CC.group.active.activeGroup);
 
 /** Mode toggle: same as header — text color as button bg, group bg as button label/icon. */
-const filesModeBtnStyle = computed(() => {
+function taskHeaderModeBtnStyle(active: boolean): Record<string, string> {
   const btnBg = String(headerStyle.value.color || activeGroupTextColor.value);
   const btnFg = String(headerStyle.value.background || activeGroupColor.value);
+  if (active) {
+    return {
+      backgroundColor: btnBg,
+      color: btnFg,
+    };
+  }
   return {
-    backgroundColor: btnBg,
-    color: btnFg,
+    backgroundColor: "transparent",
+    color: btnBg,
+    border: `1px solid color-mix(in srgb, ${btnBg} 55%, transparent)`,
   };
-});
+}
 
 function resolveActiveGroupRecord(): Record<string, unknown> | null {
   try {
@@ -1665,21 +1754,21 @@ const lastAddAnchored = ref(false);
 
 function defaultAddTypeForView(): AddFormDefaultTypeId {
   if (isFilesMode.value) return DEFAULT_MEDIA_TASK_TYPE_ID;
+  if (isNotesMode.value) return "NoteLater";
   return defaultAddTypeForCalendarDate(CC.task.time.currentDate.value);
 }
 
 /** Calendar / date-driven add: today → Todo, other days → TimeEvent; files mode keeps media type. */
 function defaultAddTypeForCalendarDate(date: string): AddFormDefaultTypeId {
   if (isFilesMode.value) return DEFAULT_MEDIA_TASK_TYPE_ID;
+  if (isNotesMode.value) return "NoteLater";
   const d = String(date || "").trim();
   if (!d || d === todayString()) return "Todo";
   return "TimeEvent";
 }
 
-watch(isFilesMode, (filesMode) => {
-  addFormDefaultTypeId.value = filesMode
-    ? DEFAULT_MEDIA_TASK_TYPE_ID
-    : defaultAddTypeForCalendarDate(CC.task.time.currentDate.value);
+watch([isFilesMode, isNotesMode], () => {
+  addFormDefaultTypeId.value = defaultAddTypeForView();
   if (!appViewModeReady.value) return;
   clearTaskToEdit();
   try {
@@ -2344,6 +2433,13 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.task-header-mode-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .task-header-mode-btn {
   flex-shrink: 0;
   display: inline-flex;
@@ -2359,6 +2455,8 @@ onMounted(async () => {
   line-height: 1.2;
   cursor: pointer;
   box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .task-header-mode-btn:hover {

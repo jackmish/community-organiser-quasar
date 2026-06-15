@@ -26,7 +26,10 @@ export function useAppViewMode(
   });
 
   const isFilesMode = computed(() => storedMode.value === 'files');
-  const isCalendarMode = computed(() => !isFilesMode.value);
+  const isNotesMode = computed(() => storedMode.value === 'notes');
+  const isCalendarMode = computed(() => storedMode.value === 'calendar');
+  /** Files or notes — calendar row and date nav are hidden. */
+  const isAlternateListMode = computed(() => isFilesMode.value || isNotesMode.value);
 
   async function refreshModes(): Promise<void> {
     modeByGroup.value = await loadMediaViewModeMap();
@@ -42,7 +45,15 @@ export function useAppViewMode(
   }
 
   async function toggleViewMode(): Promise<void> {
+    await toggleFilesMode();
+  }
+
+  async function toggleFilesMode(): Promise<void> {
     await setViewMode(isFilesMode.value ? 'calendar' : 'files');
+  }
+
+  async function toggleNotesMode(): Promise<void> {
+    await setViewMode(isNotesMode.value ? 'calendar' : 'notes');
   }
 
   function onExternalChange(ev: Event): void {
@@ -61,10 +72,14 @@ export function useAppViewMode(
     isFilesMode,
     /** @deprecated Use isFilesMode */
     isMediaMode: isFilesMode,
+    isNotesMode,
     isCalendarMode,
+    isAlternateListMode,
     refreshModes,
     setViewMode,
     toggleViewMode,
+    toggleFilesMode,
+    toggleNotesMode,
     onExternalChange,
   };
 }
