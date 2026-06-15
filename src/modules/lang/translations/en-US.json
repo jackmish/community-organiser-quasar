@@ -6,6 +6,8 @@
   "task.type.todo": "To-do",
   "task.type.event": "Event",
   "task.todo.choose_day": "Choose the day",
+  "task.todo.pick_mode.day": "Day choice",
+  "task.todo.pick_mode.notes": "Choice with notes",
   "task.todo.schedule_on_calendar": "Schedule on calendar",
   "task.todo.save_scheduled": "Save task",
   "task.todo.save_and_edit": "Save and edit",

@@ -463,6 +463,17 @@
     />
 
     <div v-if="todoScheduleActive" class="todo-schedule-footer">
+      <q-btn-toggle
+        v-model="todoSchedulePickMode"
+        dense
+        inline
+        rounded
+        unelevated
+        mandatory
+        toggle-color="primary"
+        class="todo-schedule-footer__mode-toggle"
+        :options="todoSchedulePickModeOptions"
+      />
       <div
         class="todo-schedule-footer__date"
         :class="
@@ -563,7 +574,7 @@ import {
   readGroupBackgroundFields,
 } from "src/modules/group/utils/groupBackground";
 import { getContrastColor } from "src/utils/colorUtils";
-import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
+import { todoCalendarSchedule, type TodoSchedulePickMode } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
 import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
@@ -631,6 +642,7 @@ const {
   isDraft: todoScheduleIsDraft,
   sourceTask: todoScheduleSourceTask,
   pickedDate: todoSchedulePickedDate,
+  pickMode: todoSchedulePickMode,
   scheduleHour: todoScheduleHour,
   scheduleMinute: todoScheduleMinute,
   hasPickedDate: todoScheduleHasPickedDate,
@@ -638,6 +650,11 @@ const {
   pickDay: pickTodoScheduleDay,
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
+
+const todoSchedulePickModeOptions = computed(() => [
+  { label: $text("task.todo.pick_mode.day"), value: "day" as TodoSchedulePickMode },
+  { label: $text("task.todo.pick_mode.notes"), value: "notes" as TodoSchedulePickMode },
+]);
 
 /** Task list + calendar stack vertically below lg (1439px); incl. tablet landscape (1024px+). */
 const isStackedOrganiserLayout = computed(() => $q.screen.lt.lg);

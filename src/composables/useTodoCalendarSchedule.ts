@@ -3,6 +3,11 @@ import { computed, ref, shallowRef } from 'vue';
 /** Sentinel id for scheduling a not-yet-saved task from the add form. */
 export const TODO_SCHEDULE_DRAFT_ID = '__draft__';
 
+/** How the calendar pick UI behaves: day only, or day with notes. */
+export type TodoSchedulePickMode = 'day' | 'notes';
+
+export const DEFAULT_TODO_SCHEDULE_PICK_MODE: TodoSchedulePickMode = 'day';
+
 /** Minimal task fields needed to schedule a Todo on the calendar. */
 export type TodoScheduleTask = {
   id: string;
@@ -18,6 +23,7 @@ const active = ref(false);
 const isDraft = ref(false);
 const sourceTask = shallowRef<TodoScheduleTask | null>(null);
 const pickedDate = ref('');
+const pickMode = ref<TodoSchedulePickMode>(DEFAULT_TODO_SCHEDULE_PICK_MODE);
 const scheduleHour = ref<number | null>(null);
 const scheduleMinute = ref<number | null>(null);
 
@@ -30,6 +36,7 @@ export function useTodoCalendarSchedule() {
     isDraft.value = false;
     sourceTask.value = task;
     pickedDate.value = '';
+    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
     active.value = true;
@@ -40,6 +47,7 @@ export function useTodoCalendarSchedule() {
     isDraft.value = true;
     sourceTask.value = { ...task, id: TODO_SCHEDULE_DRAFT_ID };
     pickedDate.value = '';
+    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
     active.value = true;
@@ -50,6 +58,7 @@ export function useTodoCalendarSchedule() {
     isDraft.value = false;
     sourceTask.value = null;
     pickedDate.value = '';
+    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
   }
@@ -74,6 +83,7 @@ export function useTodoCalendarSchedule() {
     isDraft,
     sourceTask,
     pickedDate,
+    pickMode,
     scheduleHour,
     scheduleMinute,
     hasPickedDate,
