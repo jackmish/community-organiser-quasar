@@ -71,7 +71,7 @@
         <div ref="scrollFlipEl" class="calendar-scroll-flip">
         <div ref="tableWrapper" class="calendar-table-wrapper">
           <table class="calendar-table">
-            <thead>
+            <thead class="calendar-weekday-header">
               <tr>
                 <th
                   v-for="(day, dayHeaderIndex) in calendarCurrentWeek"

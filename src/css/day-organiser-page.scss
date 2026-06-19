@@ -22,6 +22,16 @@
   max-width: calc(100vw - 24px);
 }
 
+html.co21-schedule-mode .todo-schedule-pick-banner {
+  top: 12px;
+}
+
+@media (max-width: 1439px) {
+  html.co21-schedule-mode .calendar-weekday-header {
+    scroll-margin-top: 56px;
+  }
+}
+
 .todo-schedule-footer {
   position: fixed;
   left: 0;

@@ -1,7 +1,11 @@
 <template>
-  <q-layout view="lHh Lpr lFf" class="co21-main-layout">
+  <q-layout
+    view="lHh Lpr lFf"
+    class="co21-main-layout"
+    :class="{ 'co21-main-layout--schedule': todoScheduleActive }"
+  >
     <Co21AppBackground :visible-slot="visibleSlot" :layer0="layer0" :layer1="layer1" />
-    <q-header class="co21-app-header" :style="mainToolbarStyle">
+    <q-header v-if="!todoScheduleActive" class="co21-app-header" :style="mainToolbarStyle">
       <q-toolbar class="co21-header-toolbar">
         <q-toolbar-title style="display: flex; align-items: center; gap: 12px; overflow: visible">
           <div class="co21-header-logo">
@@ -233,6 +237,7 @@ import {
 import { persistPairedLanDevice } from "src/modules/lan/lanPairingRegister";
 // sample data is loaded by the presentation manager when requested
 import { presentation } from "src/modules/presentation/presentationRepository";
+import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 const isOnline = ref(false);
 let checkInterval: number | undefined;
 let lanPairingCompleteUnsub: (() => void) | null = null;
@@ -468,6 +473,22 @@ const { mainToolbarStyle } = useGroupColor(
 );
 
 const menuOpen = ref(false);
+
+const todoScheduleActive = computed(() => todoCalendarSchedule.active.value);
+
+watch(
+  todoScheduleActive,
+  (active) => {
+    try {
+      document.documentElement.classList.toggle("co21-schedule-mode", active);
+    } catch {
+      void 0;
+    }
+    if (active) menuOpen.value = false;
+  },
+  { immediate: true },
+);
+
 const selectedLanguage = ref("en-US");
 const langSelect = ref<any>(null);
 const filteredLangOptions = ref<any[]>([...langOptions]);
@@ -719,6 +740,11 @@ async function reloadWithTestData() {
 }
 
 onUnmounted(() => {
+  try {
+    document.documentElement.classList.remove("co21-schedule-mode");
+  } catch {
+    void 0;
+  }
   if (backgroundServicesStarted) {
     stopPendingActionsScheduler();
     stopLanDataSyncScheduler();

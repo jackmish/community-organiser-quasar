@@ -2067,11 +2067,19 @@ function onCalendarSelectedDate(d: string) {
 }
 
 function scrollToCalendarSection() {
-  try {
-    calendarSectionRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-  } catch {
-    void 0;
-  }
+  if (!isStackedOrganiserLayout.value) return;
+  void nextTick(() => {
+    requestAnimationFrame(() => {
+      try {
+        const section = calendarSectionRef.value;
+        const target =
+          section?.querySelector<HTMLElement>(".calendar-weekday-header") ?? section;
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch {
+        void 0;
+      }
+    });
+  });
 }
 
 function cancelTodoSchedule() {
@@ -2242,8 +2250,8 @@ function onTodoScheduleOpen() {
   if (todoCalendarSchedule.pickMode.value === "notes") {
     syncTodoSchedulePlanningEditor();
   }
-  scrollToCalendarSection();
   panelHidden.value = true;
+  scrollToCalendarSection();
 }
 
 async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null }) {
