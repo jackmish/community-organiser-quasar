@@ -9,6 +9,8 @@ import {
   scheduleHasPlanningContent,
   orderPlanningNotesForDisplay,
   toPersistedPlanningDayEntry,
+  listPlanningTagImportCandidates,
+  mergeImportedPlanningTags,
 } from '../../src/modules/task/dayPlanning/dayPlanningUtils';
 import { formatPlanningNoteDisplayText } from '../../src/modules/task/dayPlanning/dayPlanningTypes';
 
@@ -83,6 +85,51 @@ describe('dayPlanningUtils', () => {
     expect(schedule).toEqual({ mode: 'notes', tags: [], days: {} });
     expect(scheduleHasPlanningData(schedule)).toBe(true);
     expect(scheduleHasPlanningContent(schedule)).toBe(false);
+  });
+
+  it('lists import candidates by type and search', () => {
+    const tasks = [
+      {
+        id: '1',
+        name: 'Alpha meet',
+        type_id: 'TimeEvent',
+        dayPlanning: { mode: 'notes' as const, tags: [{ id: 't1', label: 'Anna' }], days: {} },
+      },
+      {
+        id: '2',
+        name: 'Beta meet',
+        type_id: 'TimeEvent',
+        dayPlanning: { mode: 'notes' as const, tags: [{ id: 't2', label: 'Bob' }], days: {} },
+      },
+      {
+        id: '3',
+        name: 'Todo item',
+        type_id: 'Todo',
+        dayPlanning: { mode: 'notes' as const, tags: [{ id: 't3', label: 'X' }], days: {} },
+      },
+    ];
+    const filtered = listPlanningTagImportCandidates(tasks, {
+      sourceTaskId: '9',
+      typeId: 'TimeEvent',
+      search: 'beta',
+    });
+    expect(filtered.map((t) => t.id)).toEqual(['2']);
+    expect(filtered[0]?.tags.map((t) => t.label)).toEqual(['Bob']);
+  });
+
+  it('merges imported tags without duplicating labels', () => {
+    const merged = mergeImportedPlanningTags(
+      [{ id: 'a', label: 'Anna' }],
+      [
+        { id: 'b', label: 'anna' },
+        { id: 'c', label: 'Chris' },
+      ],
+      () => 'new-id',
+    );
+    expect(merged).toEqual([
+      { id: 'a', label: 'Anna' },
+      { id: 'new-id', label: 'Chris' },
+    ]);
   });
 });
 

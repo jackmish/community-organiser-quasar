@@ -569,6 +569,7 @@ function openTodoCalendarSchedule() {
 function applyDraftSchedule(detail: {
   date: string;
   eventTime: string;
+  description?: string;
   dayPlanning?: DayPlanningSchedule | null;
   meetingSchedule?: TodoMeetingSchedule | null;
   repeat?: Record<string, unknown> | null;
@@ -576,6 +577,9 @@ function applyDraftSchedule(detail: {
   const planning = detail.dayPlanning ?? detail.meetingSchedule ?? null;
   localNewTask.value.eventDate = detail.date;
   localNewTask.value.eventTime = detail.eventTime || "";
+  if (detail.description != null) {
+    localNewTask.value.description = detail.description;
+  }
   localNewTask.value.type_id = "TimeEvent";
   localNewTask.value.timeMode = "event";
   localNewTask.value.dayPlanning = planning;

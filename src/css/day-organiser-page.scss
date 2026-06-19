@@ -145,9 +145,10 @@
 
 .todo-schedule-footer__time {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   flex: 0 0 auto;
+  overflow: visible;
 }
 
 .todo-schedule-footer__actions {

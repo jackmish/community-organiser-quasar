@@ -228,3 +228,94 @@ export function clonePlanningSession(
   }
   return { tags, days };
 }
+
+export type PlanningTagImportCandidate = {
+  id: string;
+  name: string;
+  typeId: string;
+  tags: PlanningTag[];
+};
+
+/** Partial schedule shape — tag import only reads `tags`. */
+export type PlanningTagImportSchedule = {
+  mode: 'notes';
+  tags?: PlanningTag[] | null | undefined;
+  days?: Record<string, PlanningDayEntry> | null | undefined;
+};
+
+export type PlanningTagImportTask = {
+  id?: string | null | undefined;
+  name?: string | null | undefined;
+  type_id?: string | null | undefined;
+  type?: string | null | undefined;
+  dayPlanning?: PlanningTagImportSchedule | null | undefined;
+  meetingSchedule?: PlanningTagImportSchedule | null | undefined;
+};
+
+export function resolveTaskTypeId(task: {
+  type_id?: string | null | undefined;
+  type?: string | null | undefined;
+}): string {
+  return String(task.type_id || task.type || '').trim();
+}
+
+export function resolveTaskPlanningSchedule(task: {
+  dayPlanning?: PlanningTagImportSchedule | null | undefined;
+  meetingSchedule?: PlanningTagImportSchedule | null | undefined;
+}): PlanningTagImportSchedule | null {
+  const raw = task.dayPlanning ?? task.meetingSchedule ?? null;
+  return raw?.mode === 'notes' ? raw : null;
+}
+
+export function taskHasImportablePlanningTags(task: {
+  dayPlanning?: PlanningTagImportSchedule | null | undefined;
+  meetingSchedule?: PlanningTagImportSchedule | null | undefined;
+}): boolean {
+  const schedule = resolveTaskPlanningSchedule(task);
+  return normalizePlanningTags(schedule?.tags).length > 0;
+}
+
+export function listPlanningTagImportCandidates(
+  tasks: readonly PlanningTagImportTask[],
+  options: {
+    sourceTaskId?: string | null | undefined;
+    typeId?: string | null | undefined;
+    search?: string | null | undefined;
+  } = {},
+): PlanningTagImportCandidate[] {
+  const sourceId = String(options.sourceTaskId || '').trim();
+  const typeId = String(options.typeId || '').trim();
+  const query = String(options.search || '').trim().toLowerCase();
+  const out: PlanningTagImportCandidate[] = [];
+
+  for (const task of tasks) {
+    const id = String(task.id || '').trim();
+    if (!id || (sourceId && id === sourceId)) continue;
+    if (typeId && resolveTaskTypeId(task) !== typeId) continue;
+    if (!taskHasImportablePlanningTags(task)) continue;
+    const schedule = resolveTaskPlanningSchedule(task);
+    const tags = normalizePlanningTags(schedule?.tags);
+    if (!tags.length) continue;
+    const name = String(task.name || '').trim() || id;
+    if (query && !name.toLowerCase().includes(query)) continue;
+    out.push({ id, name, typeId: resolveTaskTypeId(task), tags });
+  }
+
+  return out.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+export function mergeImportedPlanningTags(
+  existing: PlanningTag[],
+  imported: PlanningTag[],
+  createId: () => string = createPlanningId,
+): PlanningTag[] {
+  const merged = [...normalizePlanningTags(existing)];
+  const seen = new Set(merged.map((t) => t.label.toLowerCase()));
+  for (const tag of normalizePlanningTags(imported)) {
+    const key = tag.label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ id: createId(), label: tag.label });
+  }
+  return merged;
+}

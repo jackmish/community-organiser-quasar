@@ -305,6 +305,7 @@
             v-if="showTodoScheduleDayEditor && !isStackedOrganiserLayout"
             class="todo-schedule-planning-panel"
             :editing-day="todoSchedulePlanningDay"
+            :tasks="allTasks"
           />
           <div class="q-mb-md sidebar-time-meteo">
             <ClockPanel />
@@ -477,104 +478,110 @@
     >
       <TodoScheduleDayEditor
         v-if="showTodoScheduleDayEditor && isStackedOrganiserLayout"
+        v-model:expanded="todoScheduleDayEditorExpanded"
+        compact
         class="todo-schedule-planning-panel todo-schedule-planning-panel--footer"
         :editing-day="todoSchedulePlanningDay"
+        :tasks="allTasks"
       />
-      <div
-        v-if="!isStackedOrganiserLayout"
-        class="todo-schedule-footer__mode-toggle"
-        role="radiogroup"
-        :aria-label="$text('task.todo.pick_mode.group')"
-      >
-        <q-radio
-          v-for="opt in todoSchedulePickModeOptions"
-          :key="opt.value"
-          v-model="todoSchedulePickMode"
-          :val="opt.value"
-          :label="opt.label"
-          dense
-          class="todo-schedule-mode-radio"
-        />
-      </div>
-      <div
-        class="todo-schedule-footer__date"
-        :class="
-          todoScheduleHasPickedDate
-            ? 'text-primary text-weight-medium'
-            : 'todo-schedule-footer__date--placeholder'
-        "
-      >
-        {{
-          todoScheduleHasPickedDate
-            ? formatDisplayDate(todoSchedulePickedDate)
-            : $text('task.todo.choose_day')
-        }}
-      </div>
-      <div class="todo-schedule-footer__time">
-        <q-input
-          v-model.number="todoScheduleHour"
-          type="number"
-          :label="$text('label.hour')"
-          outlined
-          dense
-          min="0"
-          max="23"
-          style="max-width: 88px"
-        />
-        <q-input
-          v-model.number="todoScheduleMinute"
-          type="number"
-          :label="$text('label.minute')"
-          outlined
-          dense
-          min="0"
-          max="59"
-          style="max-width: 88px"
-        />
-      </div>
-      <div class="todo-schedule-footer__actions">
-        <template v-if="todoScheduleIsDraft">
-          <q-btn
-            unelevated
-            color="primary"
-            icon="check"
-            :label="$text('task.todo.apply_schedule')"
-            @click="confirmTodoSchedule(false)"
+      <template v-if="showTodoScheduleStdFooter">
+        <div
+          v-if="!isStackedOrganiserLayout"
+          class="todo-schedule-footer__mode-toggle"
+          role="radiogroup"
+          :aria-label="$text('task.todo.pick_mode.group')"
+        >
+          <q-radio
+            v-for="opt in todoSchedulePickModeOptions"
+            :key="opt.value"
+            v-model="todoSchedulePickMode"
+            :val="opt.value"
+            :label="opt.label"
+            dense
+            class="todo-schedule-mode-radio"
           />
-        </template>
-        <template v-else>
-          <q-btn
-            unelevated
-            color="orange"
-            icon="edit"
-            :label="$text('task.todo.edit')"
-            @click="confirmTodoSchedule(true)"
+        </div>
+        <div
+          class="todo-schedule-footer__date"
+          :class="
+            todoScheduleHasPickedDate
+              ? 'text-primary text-weight-medium'
+              : 'todo-schedule-footer__date--placeholder'
+          "
+        >
+          {{
+            todoScheduleHasPickedDate
+              ? formatDisplayDate(todoSchedulePickedDate)
+              : $text('task.todo.choose_day')
+          }}
+        </div>
+        <div class="todo-schedule-footer__time">
+          <q-input
+            v-model.number="todoScheduleHour"
+            type="number"
+            :label="$text('label.hour')"
+            outlined
+            dense
+            min="0"
+            max="23"
+            style="max-width: 88px"
           />
-          <q-btn
-            unelevated
-            color="primary"
-            icon="save"
-            :label="$text('task.todo.save_scheduled')"
-            @click="confirmTodoSchedule(false)"
+          <q-input
+            v-model.number="todoScheduleMinute"
+            type="number"
+            :label="$text('label.minute')"
+            outlined
+            dense
+            min="0"
+            max="59"
+            style="max-width: 88px"
           />
-        </template>
-      </div>
-      <div
-        v-if="isStackedOrganiserLayout"
-        class="todo-schedule-footer__mode-toggle todo-schedule-footer__mode-toggle--below"
-        role="radiogroup"
-        :aria-label="$text('task.todo.pick_mode.group')"
-      >
-        <q-radio
-          v-for="opt in todoSchedulePickModeOptions"
-          :key="`stacked-${opt.value}`"
-          v-model="todoSchedulePickMode"
-          :val="opt.value"
-          :label="opt.label"
-          dense
-          class="todo-schedule-mode-radio"
-        />
-      </div>
+          <TodoScheduleDescriptionField v-model="todoScheduleDescription" />
+        </div>
+        <div class="todo-schedule-footer__actions">
+          <template v-if="todoScheduleIsDraft">
+            <q-btn
+              unelevated
+              color="primary"
+              icon="check"
+              :label="$text('task.todo.apply_schedule')"
+              @click="confirmTodoSchedule(false)"
+            />
+          </template>
+          <template v-else>
+            <q-btn
+              unelevated
+              color="orange"
+              icon="edit"
+              :label="$text('task.todo.edit')"
+              @click="confirmTodoSchedule(true)"
+            />
+            <q-btn
+              unelevated
+              color="primary"
+              icon="save"
+              :label="$text('task.todo.save_scheduled')"
+              @click="confirmTodoSchedule(false)"
+            />
+          </template>
+        </div>
+        <div
+          v-if="isStackedOrganiserLayout"
+          class="todo-schedule-footer__mode-toggle todo-schedule-footer__mode-toggle--below"
+          role="radiogroup"
+          :aria-label="$text('task.todo.pick_mode.group')"
+        >
+          <q-radio
+            v-for="opt in todoSchedulePickModeOptions"
+            :key="`stacked-${opt.value}`"
+            v-model="todoSchedulePickMode"
+            :val="opt.value"
+            :label="opt.label"
+            dense
+            class="todo-schedule-mode-radio"
+          />
+        </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -599,6 +606,7 @@ import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
 import { formatDisplayDate, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
 import TodoScheduleDayEditor from "src/modules/task/components/element/TodoScheduleDayEditor.vue";
+import TodoScheduleDescriptionField from "src/modules/task/components/element/TodoScheduleDescriptionField.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
 import type { PlanningDayOverlay } from "src/modules/task/dayPlanning/dayPlanningTypes";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
@@ -618,7 +626,7 @@ import {
   readGroupBackgroundFields,
 } from "src/modules/group/utils/groupBackground";
 import { getContrastColor } from "src/utils/colorUtils";
-import { todoCalendarSchedule, type DayPlanningSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode, type TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import { todoCalendarSchedule, rememberTodoSchedulePickMode, type DayPlanningSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode, type TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 import { scheduleHasPlanningData } from "src/modules/task/dayPlanning/dayPlanningUtils";
 import type { Task } from "src/modules/task/models/TaskModel";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
@@ -690,6 +698,7 @@ const {
   pickedDate: todoSchedulePickedDate,
   scheduleHour: todoScheduleHour,
   scheduleMinute: todoScheduleMinute,
+  scheduleDescription: todoScheduleDescription,
   hasPickedDate: todoScheduleHasPickedDate,
   editingDay: todoScheduleEditingDay,
   cancel: cancelTodoScheduleState,
@@ -723,6 +732,8 @@ const showTodoScheduleDayEditor = computed(
   () => todoScheduleActive.value && todoSchedulePickMode.value === "notes" && Boolean(todoSchedulePlanningDay.value),
 );
 
+const todoScheduleDayEditorExpanded = ref(false);
+
 const todoScheduleDayMarks = computed(() => {
   if (!todoScheduleActive.value || todoCalendarSchedule.pickMode.value !== "notes") return {};
   return todoCalendarSchedule.scheduleDayMarks.value;
@@ -751,6 +762,13 @@ const todoSchedulePickModeOptions = computed(() => [
 
 /** Task list + calendar stack vertically below lg (1439px); incl. tablet landscape (1024px+). */
 const isStackedOrganiserLayout = computed(() => $q.screen.lt.lg);
+
+const showTodoScheduleStdFooter = computed(() => {
+  if (!isStackedOrganiserLayout.value) return true;
+  if (!showTodoScheduleDayEditor.value) return true;
+  return !todoScheduleDayEditorExpanded.value;
+});
+
 const { showScrollToggle, scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
     enabled: isStackedOrganiserLayout,
@@ -1110,6 +1128,7 @@ function toTodoScheduleTask(task: Task): TodoScheduleTask {
   return {
     id: String(task.id),
     name: task.name,
+    description: task.description,
     eventTime: task.eventTime,
     eventDate: task.eventDate ?? task.date,
     date: task.date ?? task.eventDate,
@@ -2058,6 +2077,7 @@ function cancelTodoSchedule() {
 type TodoScheduleApplyDetail = {
   date: string;
   eventTime: string;
+  description?: string;
   dayPlanning?: DayPlanningSchedule | null;
   meetingSchedule?: TodoMeetingSchedule | null;
   repeat?: Record<string, unknown>;
@@ -2075,6 +2095,7 @@ function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleAppl
         date: detail.date,
         eventDate: detail.date,
         eventTime: detail.eventTime,
+        description: detail.description ?? active.description,
         timeMode: "event",
         dayPlanning: detail.dayPlanning ?? null,
         meetingSchedule: detail.dayPlanning ?? detail.meetingSchedule ?? null,
@@ -2115,6 +2136,8 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   const date = todoSchedulePickedDate.value.trim();
   if (!task || !date) return;
 
+  rememberTodoSchedulePickMode(todoSchedulePickMode.value);
+
   const dayPlanning = buildTodoDayPlanning();
   const scheduleExtras =
     todoSchedulePickMode.value === "notes" && dayPlanning
@@ -2127,6 +2150,7 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   const detail: TodoScheduleApplyDetail = {
     date,
     eventTime: buildTodoScheduleEventTime(),
+    description: todoScheduleDescription.value,
     dayPlanning: scheduleExtras.dayPlanning,
     meetingSchedule: scheduleExtras.meetingSchedule,
     ...(repeatExtras.repeat != null ? { repeat: repeatExtras.repeat } : {}),
@@ -2168,6 +2192,7 @@ async function confirmTodoSchedule(goToEdit: boolean) {
     date,
     eventDate: date,
     eventTime: detail.eventTime,
+    description: detail.description ?? task.description,
     timeMode: "event",
     ...scheduleExtras,
     ...repeatExtras,

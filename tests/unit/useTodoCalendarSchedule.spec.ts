@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   DEFAULT_TODO_SCHEDULE_PICK_MODE,
   TODO_SCHEDULE_DRAFT_ID,
+  rememberTodoSchedulePickMode,
+  resetRememberedTodoSchedulePickMode,
   todoCalendarSchedule,
 } from '../../src/composables/useTodoCalendarSchedule';
 import { DEFAULT_PLANNING_TAG_ID } from '../../src/modules/task/dayPlanning/dayPlanningTypes';
@@ -9,6 +11,7 @@ import { DEFAULT_PLANNING_TAG_ID } from '../../src/modules/task/dayPlanning/dayP
 describe('useTodoCalendarSchedule pickMode', () => {
   afterEach(() => {
     todoCalendarSchedule.cancel();
+    resetRememberedTodoSchedulePickMode();
   });
 
   it('defaults to day choice', () => {
@@ -16,10 +19,16 @@ describe('useTodoCalendarSchedule pickMode', () => {
     expect(todoCalendarSchedule.pickMode.value).toBe('day');
   });
 
-  it('resets to day choice when scheduling starts', () => {
+  it('uses day choice when scheduling starts without saved planning', () => {
     todoCalendarSchedule.pickMode.value = 'notes';
     todoCalendarSchedule.start({ id: 'task-1', name: 'Meeting' });
     expect(todoCalendarSchedule.pickMode.value).toBe('day');
+  });
+
+  it('restores last saved pick mode for new scheduling sessions', () => {
+    rememberTodoSchedulePickMode('notes');
+    todoCalendarSchedule.start({ id: 'task-1b', name: 'Meeting' });
+    expect(todoCalendarSchedule.pickMode.value).toBe('notes');
   });
 
   it('loads planning notes in notes mode', () => {
@@ -107,6 +116,33 @@ describe('useTodoCalendarSchedule pickMode', () => {
     expect(note?.status).toBe('important');
   });
 
+  it('imports planning tags without copying day notes', () => {
+    todoCalendarSchedule.start({ id: 'task-10', type_id: 'TimeEvent' });
+    todoCalendarSchedule.pickMode.value = 'notes';
+    todoCalendarSchedule.importPlanningTags([
+      { id: 'foreign-1', label: 'Anna' },
+      { id: 'foreign-2', label: 'Bob' },
+    ]);
+    expect(todoCalendarSchedule.planningTags.value.map((t) => t.label)).toEqual(['Anna', 'Bob']);
+    expect(Object.keys(todoCalendarSchedule.dayEntries.value)).toHaveLength(0);
+  });
+
+  it('renames and removes planning tags', () => {
+    todoCalendarSchedule.start({ id: 'task-11' });
+    todoCalendarSchedule.pickMode.value = 'notes';
+    todoCalendarSchedule.addPlanningTag('Anna');
+    const tagId = todoCalendarSchedule.planningTags.value[0]!.id;
+    todoCalendarSchedule.addPlanningNote('2026-06-27', 'Note', 'probable');
+    todoCalendarSchedule.updatePlanningTag(tagId, 'Ann');
+    expect(todoCalendarSchedule.planningTags.value[0]?.label).toBe('Ann');
+    todoCalendarSchedule.removePlanningTag(tagId);
+    expect(todoCalendarSchedule.planningTags.value).toHaveLength(0);
+    expect(todoCalendarSchedule.selectedTagId.value).toBe(DEFAULT_PLANNING_TAG_ID);
+    expect(todoCalendarSchedule.dayEntries.value['2026-06-27']?.notes[0]?.tagId).toBe(
+      DEFAULT_PLANNING_TAG_ID,
+    );
+  });
+
   it('resets session on cancel so notes are not shared', () => {
     todoCalendarSchedule.start({ id: 'task-6' });
     todoCalendarSchedule.pickMode.value = 'notes';
@@ -124,10 +160,18 @@ describe('useTodoCalendarSchedule pickMode', () => {
     expect(todoCalendarSchedule.pickMode.value).toBe('notes');
   });
 
-  it('resets to day choice for draft scheduling', () => {
-    todoCalendarSchedule.pickMode.value = 'notes';
+  it('uses last saved pick mode for draft scheduling', () => {
+    rememberTodoSchedulePickMode('notes');
     todoCalendarSchedule.startDraft({ name: 'Draft meeting' });
-    expect(todoCalendarSchedule.pickMode.value).toBe('day');
+    expect(todoCalendarSchedule.pickMode.value).toBe('notes');
     expect(todoCalendarSchedule.sourceTask.value?.id).toBe(TODO_SCHEDULE_DRAFT_ID);
+  });
+
+  it('prefills schedule description from task', () => {
+    todoCalendarSchedule.start({
+      id: 'task-desc',
+      description: 'Bring documents',
+    });
+    expect(todoCalendarSchedule.scheduleDescription.value).toBe('Bring documents');
   });
 });

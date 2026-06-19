@@ -10,20 +10,46 @@ import {
   type PlanningNoteState,
   type PlanningNoteStatus,
 } from 'src/modules/task/dayPlanning/dayPlanningTypes';
-import { orderPlanningNotesForDisplay } from 'src/modules/task/dayPlanning/dayPlanningUtils';
+import {
+  orderPlanningNotesForDisplay,
+  resolveTaskTypeId,
+  type PlanningTagImportTask,
+} from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import { todoCalendarSchedule } from 'src/composables/useTodoCalendarSchedule';
+import TodoPlanningImportTagsDialog from './TodoPlanningImportTagsDialog.vue';
+import type { PlanningTag } from 'src/modules/task/dayPlanning/dayPlanningTypes';
 
 const props = defineProps<{
   editingDay: string;
+  tasks?: readonly PlanningTagImportTask[];
+  /** Mobile/stacked footer: hide inline tag add (use tags dialog). */
+  compact?: boolean;
 }>();
 
-const expanded = ref(true);
+const expanded = defineModel<boolean>('expanded', { default: true });
 const newTagInput = ref('');
 const noteInput = ref('');
 const noteStatus = ref<PlanningNoteStatus>('probable');
 const editingNoteId = ref<string | null>(null);
 const editNoteText = ref('');
 const editNoteStatus = ref<PlanningNoteStatus>('probable');
+const showTagsDialog = ref(false);
+
+const sourceTaskId = computed(() => {
+  const id = todoCalendarSchedule.sourceTask.value?.id;
+  return id ? String(id) : null;
+});
+
+const sourceTypeId = computed(() => {
+  const task = todoCalendarSchedule.sourceTask.value;
+  if (!task) return 'TimeEvent';
+  return resolveTaskTypeId({
+    type_id: task.type_id,
+    type: typeof task.type === 'string' ? task.type : undefined,
+  });
+});
+
+const importTasks = computed(() => props.tasks ?? []);
 
 const statusOptions = computed(() =>
   (['important', 'tricky', 'inconvenient', 'probable'] as PlanningNoteStatus[]).map((status) => ({
@@ -125,6 +151,10 @@ function onRestoreNote(noteId: string) {
   if (!props.editingDay) return;
   todoCalendarSchedule.restorePlanningNote(props.editingDay, noteId);
 }
+
+function onImportTags(tags: PlanningTag[]) {
+  todoCalendarSchedule.importPlanningTags(tags);
+}
 </script>
 
 <template>
@@ -152,8 +182,20 @@ function onRestoreNote(noteId: string) {
     <div v-show="expanded" class="todo-schedule-day-editor__body">
       <div class="todo-schedule-day-editor__columns">
         <div class="todo-schedule-day-editor__col todo-schedule-day-editor__col--tags">
-          <div class="todo-schedule-day-editor__col-label">
-            {{ $text('task.todo.planning.tags_label') }}
+          <div class="todo-schedule-day-editor__col-head">
+            <div class="todo-schedule-day-editor__col-label">
+              {{ $text('task.todo.planning.tags_label') }}
+            </div>
+            <q-btn
+              dense
+              flat
+              no-caps
+              size="sm"
+              icon="local_offer"
+              color="primary"
+              :label="$text('task.todo.planning.import_tags')"
+              @click="showTagsDialog = true"
+            />
           </div>
           <div class="todo-schedule-day-editor__tags">
             <q-btn
@@ -184,28 +226,30 @@ function onRestoreNote(noteId: string) {
         </div>
 
         <div class="todo-schedule-day-editor__col todo-schedule-day-editor__col--add">
-          <div class="todo-schedule-day-editor__col-label">
-            {{ $text('task.todo.planning.add_person_label') }}
-          </div>
-          <div class="todo-schedule-day-editor__add-row">
-            <q-input
-              v-model="newTagInput"
-              dense
-              outlined
-              class="todo-schedule-day-editor__tag-input"
-              :placeholder="$text('task.todo.planning.tag_placeholder')"
-              @keydown.enter.prevent="onAddTag"
-            />
-            <q-btn
-              dense
-              unelevated
-              color="primary"
-              icon="person_add"
-              :label="$text('task.todo.planning.add_tag')"
-              class="todo-schedule-day-editor__add-tag-btn"
-              @click="onAddTag"
-            />
-          </div>
+          <template v-if="!compact">
+            <div class="todo-schedule-day-editor__col-label">
+              {{ $text('task.todo.planning.add_person_label') }}
+            </div>
+            <div class="todo-schedule-day-editor__add-row">
+              <q-input
+                v-model="newTagInput"
+                dense
+                outlined
+                class="todo-schedule-day-editor__tag-input"
+                :placeholder="$text('task.todo.planning.tag_placeholder')"
+                @keydown.enter.prevent="onAddTag"
+              />
+              <q-btn
+                dense
+                unelevated
+                color="primary"
+                icon="person_add"
+                :label="$text('task.todo.planning.add_tag')"
+                class="todo-schedule-day-editor__add-tag-btn"
+                @click="onAddTag"
+              />
+            </div>
+          </template>
           <div class="todo-schedule-day-editor__status-row">
             <span class="todo-schedule-day-editor__col-label todo-schedule-day-editor__col-label--inline">
               {{ $text('task.todo.planning.status_label') }}
@@ -294,7 +338,7 @@ function onRestoreNote(noteId: string) {
                   dense
                   round
                   unelevated
-                  icon="check"
+                  icon="save"
                   color="primary"
                   :aria-label="$text('action.confirm')"
                   @click="confirmEditNote"
@@ -367,6 +411,14 @@ function onRestoreNote(noteId: string) {
         </div>
       </div>
     </div>
+
+    <TodoPlanningImportTagsDialog
+      v-model="showTagsDialog"
+      :tasks="importTasks"
+      :source-task-id="sourceTaskId"
+      :source-type-id="sourceTypeId"
+      @import="onImportTags"
+    />
   </div>
 </template>
 
@@ -459,6 +511,14 @@ function onRestoreNote(noteId: string) {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: rgba(0, 0, 0, 0.5);
+}
+
+.todo-schedule-day-editor__col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .todo-schedule-day-editor__col-label--inline {

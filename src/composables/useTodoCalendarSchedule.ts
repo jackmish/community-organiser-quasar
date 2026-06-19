@@ -15,7 +15,8 @@ import {
   createPlanningId,
   emptyPlanningDayEntry,
   orderPlanningNotesForDisplay,
-  scheduleHasPlanningData,
+  mergeImportedPlanningTags,
+  normalizePlanningTags,
 } from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import type { PlanningDayOverlay } from 'src/modules/task/dayPlanning/dayPlanningTypes';
 
@@ -26,6 +27,45 @@ export const TODO_SCHEDULE_DRAFT_ID = '__draft__';
 export type TodoSchedulePickMode = 'day' | 'notes';
 
 export const DEFAULT_TODO_SCHEDULE_PICK_MODE: TodoSchedulePickMode = 'day';
+
+const LAST_TODO_SCHEDULE_PICK_MODE_KEY = 'co21:todo-schedule-pick-mode';
+
+let rememberedPickMode: TodoSchedulePickMode | null = null;
+
+function readLastPickMode(): TodoSchedulePickMode {
+  if (rememberedPickMode) return rememberedPickMode;
+  if (typeof localStorage === 'undefined') return DEFAULT_TODO_SCHEDULE_PICK_MODE;
+  try {
+    const stored = localStorage.getItem(LAST_TODO_SCHEDULE_PICK_MODE_KEY);
+    if (stored === 'notes' || stored === 'day') {
+      rememberedPickMode = stored;
+      return stored;
+    }
+  } catch {
+    void 0;
+  }
+  return DEFAULT_TODO_SCHEDULE_PICK_MODE;
+}
+
+export function rememberTodoSchedulePickMode(mode: TodoSchedulePickMode) {
+  rememberedPickMode = mode;
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(LAST_TODO_SCHEDULE_PICK_MODE_KEY, mode);
+  } catch {
+    void 0;
+  }
+}
+
+export function resetRememberedTodoSchedulePickMode() {
+  rememberedPickMode = null;
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(LAST_TODO_SCHEDULE_PICK_MODE_KEY);
+  } catch {
+    void 0;
+  }
+}
 
 export type {
   DayPlanningSchedule,
@@ -42,6 +82,7 @@ export { DEFAULT_PLANNING_TAG_ID, PLANNING_NOTE_STATUS_ICONS } from 'src/modules
 export type TodoScheduleTask = {
   id: string;
   name?: string | undefined;
+  description?: string | undefined;
   eventTime?: string | undefined;
   eventDate?: string | undefined;
   date?: string | undefined;
@@ -59,6 +100,7 @@ const pickedDate = ref('');
 const pickMode = ref<TodoSchedulePickMode>(DEFAULT_TODO_SCHEDULE_PICK_MODE);
 const scheduleHour = ref<number | null>(null);
 const scheduleMinute = ref<number | null>(null);
+const scheduleDescription = ref('');
 const planningTags = ref<PlanningTag[]>([]);
 const selectedTagId = ref(DEFAULT_PLANNING_TAG_ID);
 const dayEntries = ref<Record<string, PlanningDayEntryState>>({});
@@ -86,11 +128,7 @@ function loadPlanningFromTask(task: TodoScheduleTask | null | undefined) {
     return;
   }
   resetPlanningSession();
-  pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
-}
-
-function taskHasPlanningNotes(task: TodoScheduleTask | null | undefined): boolean {
-  return scheduleHasPlanningData(resolveTaskPlanning(task));
+  pickMode.value = readLastPickMode();
 }
 
 function parseEventTimeParts(eventTime?: string | null): { hour: number; minute: number } | null {
@@ -110,6 +148,7 @@ function resolveTaskScheduleDate(task: TodoScheduleTask | null | undefined): str
 function prefillScheduleFromTask(task: TodoScheduleTask | null | undefined) {
   const date = resolveTaskScheduleDate(task);
   if (date) pickedDate.value = date;
+  scheduleDescription.value = String(task?.description ?? '').trim();
   const timeParts = parseEventTimeParts(task?.eventTime);
   if (timeParts) {
     scheduleHour.value = timeParts.hour;
@@ -227,6 +266,36 @@ export function useTodoCalendarSchedule() {
     return tag;
   }
 
+  function updatePlanningTag(tagId: string, label: string) {
+    const id = String(tagId || '').trim();
+    const trimmed = String(label || '').trim();
+    if (!id || !trimmed) return;
+    const duplicate = planningTags.value.find(
+      (t) => t.id !== id && t.label.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (duplicate) return;
+    planningTags.value = planningTags.value.map((t) =>
+      t.id === id ? { ...t, label: trimmed } : t,
+    );
+  }
+
+  function removePlanningTag(tagId: string) {
+    const id = String(tagId || '').trim();
+    if (!id) return;
+    planningTags.value = planningTags.value.filter((t) => t.id !== id);
+    if (selectedTagId.value === id) {
+      selectedTagId.value = DEFAULT_PLANNING_TAG_ID;
+    }
+    const nextDays: Record<string, PlanningDayEntryState> = {};
+    for (const [date, entry] of Object.entries(dayEntries.value)) {
+      const notes = entry.notes.map((note) =>
+        note.tagId === id ? { ...note, tagId: DEFAULT_PLANNING_TAG_ID } : note,
+      );
+      nextDays[date] = notes === entry.notes ? entry : { ...entry, notes };
+    }
+    dayEntries.value = nextDays;
+  }
+
   function addPlanningNote(date: string, text: string, status: PlanningNoteStatus = DEFAULT_PLANNING_NOTE_STATUS) {
     const d = String(date || '').trim();
     const trimmed = String(text || '').trim();
@@ -295,6 +364,10 @@ export function useTodoCalendarSchedule() {
     };
   }
 
+  function importPlanningTags(tags: PlanningTag[]) {
+    planningTags.value = mergeImportedPlanningTags(planningTags.value, tags);
+  }
+
   function buildDayPlanning(): DayPlanningSchedule | undefined {
     if (pickMode.value !== 'notes') return undefined;
     return buildDayPlanningSchedule(planningTags.value, dayEntries.value, {
@@ -323,11 +396,9 @@ export function useTodoCalendarSchedule() {
     pickedDate.value = '';
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    scheduleDescription.value = '';
     sessionKey.value += 1;
     loadPlanningFromTask(task);
-    if (!taskHasPlanningNotes(task)) {
-      pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
-    }
     prefillScheduleFromTask(task);
     active.value = true;
     syncPlanningEditorDay(task);
@@ -339,11 +410,9 @@ export function useTodoCalendarSchedule() {
     pickedDate.value = '';
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    scheduleDescription.value = '';
     sessionKey.value += 1;
     loadPlanningFromTask(sourceTask.value);
-    if (!taskHasPlanningNotes(sourceTask.value)) {
-      pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
-    }
     prefillScheduleFromTask(sourceTask.value);
     active.value = true;
     syncPlanningEditorDay(sourceTask.value);
@@ -354,9 +423,10 @@ export function useTodoCalendarSchedule() {
     isDraft.value = false;
     sourceTask.value = null;
     pickedDate.value = '';
-    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
+    pickMode.value = readLastPickMode();
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    scheduleDescription.value = '';
     resetPlanningSession();
   }
 
@@ -382,6 +452,7 @@ export function useTodoCalendarSchedule() {
     pickMode,
     scheduleHour,
     scheduleMinute,
+    scheduleDescription,
     planningTags,
     selectedTagId,
     dayEntries,
@@ -400,10 +471,13 @@ export function useTodoCalendarSchedule() {
     setDayImpossible,
     setSelectedTagId,
     addPlanningTag,
+    updatePlanningTag,
+    removePlanningTag,
     addPlanningNote,
     softRemovePlanningNote,
     restorePlanningNote,
     updatePlanningNote,
+    importPlanningTags,
     buildDayPlanning,
     buildMeetingSchedule,
     hasPlanningNotesData,
