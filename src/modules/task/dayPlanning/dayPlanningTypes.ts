@@ -46,6 +46,11 @@ export type PlanningNote = {
   status: PlanningNoteStatus;
 };
 
+/** Session note state — `pendingRemoval` is not persisted. */
+export type PlanningNoteState = PlanningNote & {
+  pendingRemoval?: boolean;
+};
+
 export type PlanningDayEntry = {
   possible?: boolean;
   impossible?: boolean;
@@ -80,5 +85,5 @@ export type PlanningDayOverlay = {
 export type PlanningDayEntryState = {
   possible: boolean;
   impossible: boolean;
-  notes: PlanningNote[];
+  notes: PlanningNoteState[];
 };

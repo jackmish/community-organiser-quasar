@@ -18,6 +18,7 @@
   "task.todo.planning.add_note": "Add note",
   "task.todo.planning.head_note": "Note",
   "task.todo.planning.mark_day": "Mark day",
+  "task.todo.planning.restore_note": "Restore",
   "task.todo.planning.status_label": "Note status",
   "task.todo.planning.status.important": "Important",
   "task.todo.planning.status.tricky": "Tricky",

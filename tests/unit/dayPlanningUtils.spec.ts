@@ -7,6 +7,8 @@ import {
   buildDayPlanningSchedule,
   scheduleHasPlanningData,
   scheduleHasPlanningContent,
+  orderPlanningNotesForDisplay,
+  toPersistedPlanningDayEntry,
 } from '../../src/modules/task/dayPlanning/dayPlanningUtils';
 import { formatPlanningNoteDisplayText } from '../../src/modules/task/dayPlanning/dayPlanningTypes';
 
@@ -28,6 +30,22 @@ describe('dayPlanningUtils', () => {
       { id: 'c', tagId: 't1', text: 'three', status: 'probable' as const },
     ];
     expect(getTopPriorityNotes(notes).map((n) => n.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('orders soft-removed notes at the end and excludes them from persist', () => {
+    const entry = normalizePlanningDayEntry({
+      notes: [
+        { id: '1', tagId: '__default__', text: 'a', status: 'probable' },
+        { id: '2', tagId: '__default__', text: 'b', status: 'important' },
+      ],
+    });
+    entry.notes[0]!.pendingRemoval = true;
+    const ordered = orderPlanningNotesForDisplay(entry.notes);
+    expect(ordered.map((n) => n.id)).toEqual(['2', '1']);
+    const overlay = buildPlanningDayOverlay(entry, []);
+    expect(overlay?.badges.map((b) => b.text)).toEqual(['b']);
+    const persisted = toPersistedPlanningDayEntry(entry);
+    expect(persisted?.notes?.map((n) => n.id)).toEqual(['2']);
   });
 
   it('sorts all notes by priority for overlay badges', () => {

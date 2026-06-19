@@ -80,6 +80,33 @@ describe('useTodoCalendarSchedule pickMode', () => {
     expect(todoCalendarSchedule.planningDayOverlays.value['2026-06-24']?.strikethrough).toBe(true);
   });
 
+  it('soft-removes notes until save and can restore', () => {
+    todoCalendarSchedule.start({ id: 'task-8' });
+    todoCalendarSchedule.pickMode.value = 'notes';
+    todoCalendarSchedule.addPlanningNote('2026-06-25', 'keep', 'probable');
+    todoCalendarSchedule.addPlanningNote('2026-06-25', 'drop', 'tricky');
+    const dropId = todoCalendarSchedule.dayEntries.value['2026-06-25']?.notes.find(
+      (n) => n.text === 'drop',
+    )?.id;
+    expect(dropId).toBeTruthy();
+    todoCalendarSchedule.softRemovePlanningNote('2026-06-25', dropId!);
+    expect(todoCalendarSchedule.planningDayOverlays.value['2026-06-25']?.badges).toHaveLength(1);
+    expect(todoCalendarSchedule.buildDayPlanning()?.days['2026-06-25']?.notes).toHaveLength(1);
+    todoCalendarSchedule.restorePlanningNote('2026-06-25', dropId!);
+    expect(todoCalendarSchedule.buildDayPlanning()?.days['2026-06-25']?.notes).toHaveLength(2);
+  });
+
+  it('updates an existing planning note', () => {
+    todoCalendarSchedule.start({ id: 'task-9' });
+    todoCalendarSchedule.pickMode.value = 'notes';
+    todoCalendarSchedule.addPlanningNote('2026-06-26', 'old', 'probable');
+    const id = todoCalendarSchedule.dayEntries.value['2026-06-26']?.notes[0]?.id;
+    todoCalendarSchedule.updatePlanningNote('2026-06-26', id!, 'new', 'important');
+    const note = todoCalendarSchedule.dayEntries.value['2026-06-26']?.notes[0];
+    expect(note?.text).toBe('new');
+    expect(note?.status).toBe('important');
+  });
+
   it('resets session on cancel so notes are not shared', () => {
     todoCalendarSchedule.start({ id: 'task-6' });
     todoCalendarSchedule.pickMode.value = 'notes';

@@ -14,6 +14,7 @@ import {
   clonePlanningSession,
   createPlanningId,
   emptyPlanningDayEntry,
+  orderPlanningNotesForDisplay,
   scheduleHasPlanningData,
 } from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import type { PlanningDayOverlay } from 'src/modules/task/dayPlanning/dayPlanningTypes';
@@ -241,8 +242,56 @@ export function useTodoCalendarSchedule() {
       ...dayEntries.value,
       [d]: {
         ...entry,
-        notes: [...entry.notes, note],
+        notes: orderPlanningNotesForDisplay([...entry.notes, note]),
       },
+    };
+  }
+
+  function softRemovePlanningNote(date: string, noteId: string) {
+    const d = String(date || '').trim();
+    const id = String(noteId || '').trim();
+    if (!d || !id) return;
+    const entry = ensureDayEntry(d);
+    const notes = entry.notes.map((note) =>
+      note.id === id ? { ...note, pendingRemoval: true } : note,
+    );
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: { ...entry, notes: orderPlanningNotesForDisplay(notes) },
+    };
+  }
+
+  function restorePlanningNote(date: string, noteId: string) {
+    const d = String(date || '').trim();
+    const id = String(noteId || '').trim();
+    if (!d || !id) return;
+    const entry = ensureDayEntry(d);
+    const notes = entry.notes.map((note) =>
+      note.id === id ? { ...note, pendingRemoval: false } : note,
+    );
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: { ...entry, notes: orderPlanningNotesForDisplay(notes) },
+    };
+  }
+
+  function updatePlanningNote(
+    date: string,
+    noteId: string,
+    text: string,
+    status: PlanningNoteStatus,
+  ) {
+    const d = String(date || '').trim();
+    const id = String(noteId || '').trim();
+    if (!d || !id) return;
+    const entry = ensureDayEntry(d);
+    const trimmed = String(text ?? '').trim();
+    const notes = entry.notes.map((note) =>
+      note.id === id ? { ...note, text: trimmed, status, pendingRemoval: false } : note,
+    );
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: { ...entry, notes: orderPlanningNotesForDisplay(notes) },
     };
   }
 
@@ -352,6 +401,9 @@ export function useTodoCalendarSchedule() {
     setSelectedTagId,
     addPlanningTag,
     addPlanningNote,
+    softRemovePlanningNote,
+    restorePlanningNote,
+    updatePlanningNote,
     buildDayPlanning,
     buildMeetingSchedule,
     hasPlanningNotesData,

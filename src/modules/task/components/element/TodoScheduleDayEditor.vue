@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { formatDisplayDate } from 'src/modules/task/utils/occursOnDay';
 import {
@@ -7,8 +7,10 @@ import {
   PLANNING_NOTE_STATUS_COLORS,
   PLANNING_NOTE_STATUS_ICONS,
   formatPlanningNoteDisplayText,
+  type PlanningNoteState,
   type PlanningNoteStatus,
 } from 'src/modules/task/dayPlanning/dayPlanningTypes';
+import { orderPlanningNotesForDisplay } from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import { todoCalendarSchedule } from 'src/composables/useTodoCalendarSchedule';
 
 const props = defineProps<{
@@ -19,6 +21,9 @@ const expanded = ref(true);
 const newTagInput = ref('');
 const noteInput = ref('');
 const noteStatus = ref<PlanningNoteStatus>('probable');
+const editingNoteId = ref<string | null>(null);
+const editNoteText = ref('');
+const editNoteStatus = ref<PlanningNoteStatus>('probable');
 
 const statusOptions = computed(() =>
   (['important', 'tricky', 'inconvenient', 'probable'] as PlanningNoteStatus[]).map((status) => ({
@@ -35,7 +40,17 @@ const dayEntry = computed(() => {
   return todoCalendarSchedule.dayEntries.value[d] ?? null;
 });
 
-const dayNotes = computed(() => dayEntry.value?.notes ?? []);
+const dayNotes = computed((): PlanningNoteState[] => {
+  const notes = dayEntry.value?.notes ?? [];
+  return orderPlanningNotesForDisplay(notes);
+});
+
+watch(
+  () => props.editingDay,
+  () => {
+    editingNoteId.value = null;
+  },
+);
 
 const addNoteLabel = computed(() =>
   noteInput.value.trim()
@@ -77,6 +92,38 @@ function statusBtnStyle(status: PlanningNoteStatus, selected: boolean) {
     backgroundColor: PLANNING_NOTE_STATUS_COLORS[status],
     color: '#fff',
   };
+}
+
+function startEditNote(note: PlanningNoteState) {
+  editingNoteId.value = note.id;
+  editNoteText.value = note.text;
+  editNoteStatus.value = note.status;
+}
+
+function cancelEditNote() {
+  editingNoteId.value = null;
+}
+
+function confirmEditNote() {
+  if (!props.editingDay || !editingNoteId.value) return;
+  todoCalendarSchedule.updatePlanningNote(
+    props.editingDay,
+    editingNoteId.value,
+    editNoteText.value,
+    editNoteStatus.value,
+  );
+  editingNoteId.value = null;
+}
+
+function onRemoveNote(noteId: string) {
+  if (!props.editingDay) return;
+  if (editingNoteId.value === noteId) editingNoteId.value = null;
+  todoCalendarSchedule.softRemovePlanningNote(props.editingDay, noteId);
+}
+
+function onRestoreNote(noteId: string) {
+  if (!props.editingDay) return;
+  todoCalendarSchedule.restorePlanningNote(props.editingDay, noteId);
 }
 </script>
 
@@ -211,23 +258,112 @@ function statusBtnStyle(status: PlanningNoteStatus, selected: boolean) {
           v-for="note in dayNotes"
           :key="note.id"
           class="todo-schedule-day-editor__note-item"
+          :class="{ 'todo-schedule-day-editor__note-item--removed': note.pendingRemoval }"
         >
-          <q-icon
-            :name="PLANNING_NOTE_STATUS_ICONS[note.status]"
-            size="16px"
-            :class="`planning-status-icon planning-status-icon--${note.status}`"
-          />
-          <span v-if="note.tagId !== DEFAULT_PLANNING_TAG_ID" class="todo-schedule-day-editor__note-tag">
-            {{
-              todoCalendarSchedule.planningTags.value.find((t) => t.id === note.tagId)?.label
-            }}
-          </span>
-          <span
-            class="todo-schedule-day-editor__note-text"
-            :class="{ 'todo-schedule-day-editor__note-text--placeholder': !note.text?.trim() }"
-          >
-            {{ formatPlanningNoteDisplayText(note.text) }}
-          </span>
+          <template v-if="editingNoteId === note.id && !note.pendingRemoval">
+            <div class="todo-schedule-day-editor__note-edit">
+              <div class="todo-schedule-day-editor__note-edit-status">
+                <q-btn
+                  v-for="opt in statusOptions"
+                  :key="`edit-${note.id}-${opt.value}`"
+                  dense
+                  round
+                  unelevated
+                  :icon="opt.icon"
+                  :color="editNoteStatus === opt.value ? undefined : 'grey-4'"
+                  :text-color="editNoteStatus === opt.value ? undefined : 'grey-8'"
+                  :style="statusBtnStyle(opt.value, editNoteStatus === opt.value)"
+                  class="todo-schedule-day-editor__status-btn todo-schedule-day-editor__status-btn--tiny"
+                  @click="editNoteStatus = opt.value"
+                >
+                  <q-tooltip>{{ opt.label }}</q-tooltip>
+                </q-btn>
+              </div>
+              <q-input
+                v-model="editNoteText"
+                dense
+                outlined
+                autogrow
+                type="textarea"
+                class="todo-schedule-day-editor__note-edit-input"
+                @keydown.enter.ctrl.prevent="confirmEditNote"
+                @keydown.enter.meta.prevent="confirmEditNote"
+              />
+              <div class="todo-schedule-day-editor__note-edit-actions">
+                <q-btn
+                  dense
+                  round
+                  unelevated
+                  icon="check"
+                  color="primary"
+                  :aria-label="$text('action.confirm')"
+                  @click="confirmEditNote"
+                />
+                <q-btn
+                  dense
+                  round
+                  flat
+                  icon="close"
+                  :aria-label="$text('action.cancel')"
+                  @click="cancelEditNote"
+                />
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <q-icon
+              :name="PLANNING_NOTE_STATUS_ICONS[note.status]"
+              size="16px"
+              :class="`planning-status-icon planning-status-icon--${note.status}`"
+            />
+            <span v-if="note.tagId !== DEFAULT_PLANNING_TAG_ID" class="todo-schedule-day-editor__note-tag">
+              {{
+                todoCalendarSchedule.planningTags.value.find((t) => t.id === note.tagId)?.label
+              }}
+            </span>
+            <span
+              class="todo-schedule-day-editor__note-text"
+              :class="{ 'todo-schedule-day-editor__note-text--placeholder': !note.text?.trim() }"
+            >
+              {{ formatPlanningNoteDisplayText(note.text) }}
+            </span>
+            <div class="todo-schedule-day-editor__note-actions">
+              <q-btn
+                v-if="note.pendingRemoval"
+                dense
+                flat
+                round
+                size="sm"
+                icon="undo"
+                color="primary"
+                :label="$text('task.todo.planning.restore_note')"
+                class="todo-schedule-day-editor__restore-btn"
+                @click="onRestoreNote(note.id)"
+              />
+              <template v-else>
+                <q-btn
+                  dense
+                  flat
+                  round
+                  size="sm"
+                  icon="edit"
+                  color="grey-7"
+                  :aria-label="$text('action.edit')"
+                  @click="startEditNote(note)"
+                />
+                <q-btn
+                  dense
+                  flat
+                  round
+                  size="sm"
+                  icon="delete"
+                  color="negative"
+                  :aria-label="$text('action.delete')"
+                  @click="onRemoveNote(note.id)"
+                />
+              </template>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -415,6 +551,65 @@ function statusBtnStyle(status: PlanningNoteStatus, selected: boolean) {
   gap: 6px;
   font-size: 0.82rem;
   line-height: 1.35;
+  padding: 4px 2px;
+  border-radius: 6px;
+}
+
+.todo-schedule-day-editor__note-item--removed {
+  opacity: 0.55;
+  background: rgba(0, 0, 0, 0.04);
+
+  .todo-schedule-day-editor__note-text {
+    text-decoration: line-through;
+  }
+}
+
+.todo-schedule-day-editor__note-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.todo-schedule-day-editor__restore-btn {
+  font-size: 0.72rem;
+  min-height: 28px;
+  padding: 0 8px;
+}
+
+.todo-schedule-day-editor__note-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+
+.todo-schedule-day-editor__note-edit-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+
+.todo-schedule-day-editor__status-btn--tiny {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.todo-schedule-day-editor__note-edit-input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.todo-schedule-day-editor__note-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
 }
 
 .todo-schedule-day-editor__note-tag {

@@ -8,6 +8,7 @@ import {
   type PlanningDayOverlay,
   type PlanningDayOverlayBadge,
   type PlanningNote,
+  type PlanningNoteState,
   type PlanningNoteStatus,
   type PlanningTag,
 } from './dayPlanningTypes';
@@ -40,7 +41,7 @@ export function normalizePlanningNote(raw: Partial<PlanningNote> | null | undefi
 }
 
 export function normalizePlanningDayEntry(entry?: PlanningDayEntry | null): PlanningDayEntryState {
-  const notes: PlanningNote[] = [];
+  const notes: PlanningNoteState[] = [];
   if (Array.isArray(entry?.notes)) {
     for (const item of entry.notes) {
       const note = normalizePlanningNote(item);
@@ -102,19 +103,34 @@ export function getTopPriorityNotes(notes: PlanningNote[]): PlanningNote[] {
   return notes.filter((n) => n.status === topStatus);
 }
 
-/** All notes sorted from most pessimistic status to least. */
+/** All active notes sorted from most pessimistic status to least. */
 export function sortNotesByPriority(notes: PlanningNote[]): PlanningNote[] {
   return [...notes].sort(
     (a, b) => PLANNING_NOTE_STATUS_PRIORITY[a.status] - PLANNING_NOTE_STATUS_PRIORITY[b.status],
   );
 }
 
+export function isActivePlanningNote(note: PlanningNoteState): boolean {
+  return !note.pendingRemoval;
+}
+
+export function activePlanningNotes(notes: PlanningNoteState[]): PlanningNote[] {
+  return sortNotesByPriority(notes.filter(isActivePlanningNote));
+}
+
+/** Active notes by priority, then soft-removed notes at the end. */
+export function orderPlanningNotesForDisplay(notes: PlanningNoteState[]): PlanningNoteState[] {
+  const active = sortNotesByPriority(notes.filter(isActivePlanningNote)) as PlanningNoteState[];
+  const removed = notes.filter((n) => n.pendingRemoval);
+  return [...active, ...removed];
+}
+
 export function buildPlanningDayOverlay(
   entry: PlanningDayEntryState,
   tags: PlanningTag[],
 ): PlanningDayOverlay | null {
-  const sortedNotes = sortNotesByPriority(entry.notes);
-  const topStatus = getMostPessimisticStatus(entry.notes);
+  const sortedNotes = activePlanningNotes(entry.notes);
+  const topStatus = getMostPessimisticStatus(sortedNotes);
   const hasMarks = entry.possible || entry.impossible;
   if (!sortedNotes.length && !hasMarks) return null;
 
@@ -144,12 +160,15 @@ export function toPersistedPlanningDayEntry(entry: PlanningDayEntryState): Plann
   if (entry.possible) out.possible = true;
   if (entry.impossible) out.impossible = true;
   if (entry.notes.length > 0) {
-    out.notes = entry.notes.map((n) => ({
-      id: n.id,
-      tagId: n.tagId,
-      text: n.text,
-      status: n.status,
-    }));
+    const kept = entry.notes.filter(isActivePlanningNote);
+    if (kept.length > 0) {
+      out.notes = kept.map((n) => ({
+        id: n.id,
+        tagId: n.tagId,
+        text: n.text,
+        status: n.status,
+      }));
+    }
   }
   if (!out.possible && !out.impossible && !out.notes?.length) return null;
   return out;

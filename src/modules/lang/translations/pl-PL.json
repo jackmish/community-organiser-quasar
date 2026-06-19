@@ -18,6 +18,7 @@
   "task.todo.planning.add_note": "Dodaj notatkę",
   "task.todo.planning.head_note": "Notatka",
   "task.todo.planning.mark_day": "Oznacz dzień",
+  "task.todo.planning.restore_note": "Przywróć",
   "task.todo.planning.status_label": "Status notatki",
   "task.todo.planning.status.important": "Ważne",
   "task.todo.planning.status.tricky": "Trudne",
