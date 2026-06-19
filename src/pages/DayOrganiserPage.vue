@@ -565,6 +565,15 @@
               @click="confirmTodoSchedule(false)"
             />
           </template>
+          <q-btn
+            unelevated
+            color="grey"
+            icon="close"
+            size="sm"
+            class="todo-schedule-footer__cancel"
+            :aria-label="$text('action.cancel')"
+            @click="cancelTodoSchedule"
+          />
         </div>
         <div
           v-if="isStackedOrganiserLayout"

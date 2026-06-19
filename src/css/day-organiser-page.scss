@@ -164,8 +164,15 @@ html.co21-schedule-mode .todo-schedule-pick-banner {
 .todo-schedule-footer__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   flex: 0 0 auto;
+}
+
+.todo-schedule-footer__cancel {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
 }
 
 $primary: #1976d2;
