@@ -34,6 +34,7 @@ const editingNoteId = ref<string | null>(null);
 const editNoteText = ref('');
 const editNoteStatus = ref<PlanningNoteStatus>('probable');
 const showTagsDialog = ref(false);
+const notesListExpanded = ref(false);
 
 const sourceTaskId = computed(() => {
   const id = todoCalendarSchedule.sourceTask.value?.id;
@@ -71,10 +72,24 @@ const dayNotes = computed((): PlanningNoteState[] => {
   return orderPlanningNotesForDisplay(notes);
 });
 
+const notesListToggleLabel = computed(() => {
+  const count = dayNotes.value.length;
+  if (count <= 0) return $text('task.todo.planning.show_notes');
+  return `${$text('task.todo.planning.show_notes')} (${count})`;
+});
+
 watch(
   () => props.editingDay,
   () => {
     editingNoteId.value = null;
+    notesListExpanded.value = false;
+  },
+);
+
+watch(
+  () => props.compact,
+  (isCompact) => {
+    if (isCompact) notesListExpanded.value = false;
   },
 );
 
@@ -91,6 +106,11 @@ const addNoteButtonStyle = computed(() => ({
 
 function toggleExpanded() {
   expanded.value = !expanded.value;
+}
+
+function toggleNotesList() {
+  notesListExpanded.value = !notesListExpanded.value;
+  if (!notesListExpanded.value) editingNoteId.value = null;
 }
 
 function onAddTag() {
@@ -158,31 +178,38 @@ function onImportTags(tags: PlanningTag[]) {
 </script>
 
 <template>
-  <div class="todo-schedule-day-editor">
+  <div class="todo-schedule-day-editor" :class="{ 'todo-schedule-day-editor--compact': compact }">
     <button
       type="button"
       class="todo-schedule-day-editor__head"
+      :class="{ 'todo-schedule-day-editor__head--compact': compact }"
       :aria-expanded="expanded"
+      :aria-label="compact ? (expanded ? $text('ui.hide') : $text('ui.show')) : undefined"
       @click="toggleExpanded"
     >
-      <span class="todo-schedule-day-editor__head-main">
-        <span class="todo-schedule-day-editor__head-date">
-          {{ formatDisplayDate(editingDay) }}
+      <template v-if="compact">
+        <q-icon :name="expanded ? 'expand_less' : 'expand_more'" size="20px" />
+      </template>
+      <template v-else>
+        <span class="todo-schedule-day-editor__head-main">
+          <span class="todo-schedule-day-editor__head-date">
+            {{ formatDisplayDate(editingDay) }}
+          </span>
+          <span class="todo-schedule-day-editor__head-note">
+            {{ $text('task.todo.planning.head_note') }}
+          </span>
         </span>
-        <span class="todo-schedule-day-editor__head-note">
-          {{ $text('task.todo.planning.head_note') }}
+        <span class="todo-schedule-day-editor__head-toggle">
+          {{ expanded ? $text('ui.hide') : $text('ui.show') }}
+          <q-icon :name="expanded ? 'expand_less' : 'expand_more'" size="18px" />
         </span>
-      </span>
-      <span class="todo-schedule-day-editor__head-toggle">
-        {{ expanded ? $text('ui.hide') : $text('ui.show') }}
-        <q-icon :name="expanded ? 'expand_less' : 'expand_more'" size="18px" />
-      </span>
+      </template>
     </button>
 
     <div v-show="expanded" class="todo-schedule-day-editor__body">
       <div class="todo-schedule-day-editor__columns">
         <div class="todo-schedule-day-editor__col todo-schedule-day-editor__col--tags">
-          <div class="todo-schedule-day-editor__col-head">
+          <div v-if="!compact" class="todo-schedule-day-editor__col-head">
             <div class="todo-schedule-day-editor__col-label">
               {{ $text('task.todo.planning.tags_label') }}
             </div>
@@ -251,30 +278,50 @@ function onImportTags(tags: PlanningTag[]) {
             </div>
           </template>
           <div class="todo-schedule-day-editor__status-row">
-            <span class="todo-schedule-day-editor__col-label todo-schedule-day-editor__col-label--inline">
+            <span
+              v-if="!compact"
+              class="todo-schedule-day-editor__col-label todo-schedule-day-editor__col-label--inline"
+            >
               {{ $text('task.todo.planning.status_label') }}
             </span>
-            <div class="todo-schedule-day-editor__status-buttons">
+            <div class="todo-schedule-day-editor__status-toolbar">
+              <div class="todo-schedule-day-editor__status-buttons">
+                <q-btn
+                  v-for="opt in statusOptions"
+                  :key="opt.value"
+                  round
+                  unelevated
+                  :icon="opt.icon"
+                  :color="noteStatus === opt.value ? undefined : 'grey-4'"
+                  :text-color="noteStatus === opt.value ? undefined : 'grey-8'"
+                  :style="statusBtnStyle(opt.value, noteStatus === opt.value)"
+                  class="todo-schedule-day-editor__status-btn"
+                  @click="noteStatus = opt.value"
+                >
+                  <q-tooltip>{{ opt.label }}</q-tooltip>
+                </q-btn>
+              </div>
               <q-btn
-                v-for="opt in statusOptions"
-                :key="opt.value"
-                round
+                v-if="compact"
+                dense
+                no-caps
                 unelevated
-                :icon="opt.icon"
-                :color="noteStatus === opt.value ? undefined : 'grey-4'"
-                :text-color="noteStatus === opt.value ? undefined : 'grey-8'"
-                :style="statusBtnStyle(opt.value, noteStatus === opt.value)"
-                class="todo-schedule-day-editor__status-btn"
-                @click="noteStatus = opt.value"
-              >
-                <q-tooltip>{{ opt.label }}</q-tooltip>
-              </q-btn>
+                icon="local_offer"
+                color="primary"
+                text-color="white"
+                :label="$text('task.todo.planning.tags_button')"
+                class="todo-schedule-day-editor__tags-dialog-btn"
+                @click="showTagsDialog = true"
+              />
             </div>
           </div>
         </div>
       </div>
 
-      <div class="todo-schedule-day-editor__note-row">
+      <div
+        class="todo-schedule-day-editor__note-row"
+        :class="{ 'todo-schedule-day-editor__note-row--inline': compact }"
+      >
         <q-input
           v-model="noteInput"
           dense
@@ -282,22 +329,53 @@ function onImportTags(tags: PlanningTag[]) {
           type="textarea"
           autogrow
           class="todo-schedule-day-editor__note"
-          :label="$text('task.todo.planning.note_label')"
+          :label="compact ? undefined : $text('task.todo.planning.note_label')"
+          :placeholder="compact ? $text('task.todo.planning.note_label') : undefined"
           @keydown.ctrl.enter.prevent="onAddNote"
           @keydown.meta.enter.prevent="onAddNote"
         />
         <q-btn
+          v-if="compact"
           dense
+          round
           unelevated
           icon="note_add"
-          :label="addNoteLabel"
-          class="todo-schedule-day-editor__add-note-btn"
+          class="todo-schedule-day-editor__add-note-btn todo-schedule-day-editor__add-note-btn--icon"
           :style="addNoteButtonStyle"
+          :aria-label="addNoteLabel"
           @click="onAddNote"
-        />
+        >
+          <q-tooltip>{{ addNoteLabel }}</q-tooltip>
+        </q-btn>
+        <template v-else>
+          <div class="todo-schedule-day-editor__note-actions-row">
+            <q-btn
+              dense
+              unelevated
+              icon="note_add"
+              :label="addNoteLabel"
+              class="todo-schedule-day-editor__add-note-btn"
+              :style="addNoteButtonStyle"
+              @click="onAddNote"
+            />
+          </div>
+        </template>
       </div>
+      <q-btn
+        v-if="compact && dayNotes.length"
+        dense
+        flat
+        no-caps
+        :icon="notesListExpanded ? 'expand_less' : 'list'"
+        :label="notesListExpanded ? $text('task.todo.planning.hide_notes') : notesListToggleLabel"
+        class="todo-schedule-day-editor__notes-toggle-btn"
+        @click="toggleNotesList"
+      />
 
-      <div v-if="dayNotes.length" class="todo-schedule-day-editor__notes-list">
+      <div
+        v-if="dayNotes.length && (!compact || notesListExpanded)"
+        class="todo-schedule-day-editor__notes-list"
+      >
         <div
           v-for="note in dayNotes"
           :key="note.id"
@@ -454,6 +532,17 @@ function onImportTags(tags: PlanningTag[]) {
   background: rgba(25, 118, 210, 0.2);
 }
 
+.todo-schedule-day-editor__head--compact {
+  justify-content: center;
+  padding: 2px 8px;
+  min-height: 28px;
+}
+
+.todo-schedule-day-editor--compact .todo-schedule-day-editor__body {
+  padding: 8px 10px 10px;
+  gap: 8px;
+}
+
 .todo-schedule-day-editor__head-main {
   display: flex;
   flex-direction: column;
@@ -567,10 +656,30 @@ function onImportTags(tags: PlanningTag[]) {
   margin-top: 4px;
 }
 
+.todo-schedule-day-editor__status-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.todo-schedule-day-editor__tags-dialog-btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 8px;
+}
+
 .todo-schedule-day-editor__status-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  flex: 0 1 auto;
 }
 
 .todo-schedule-day-editor__status-btn {
@@ -589,6 +698,24 @@ function onImportTags(tags: PlanningTag[]) {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.todo-schedule-day-editor__note-row--inline {
+  flex-wrap: nowrap;
+  align-items: center;
+
+  .todo-schedule-day-editor__note {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.todo-schedule-day-editor__add-note-btn--icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
 .todo-schedule-day-editor__note {
   flex: 1 1 180px;
   min-width: 0;
@@ -597,6 +724,21 @@ function onImportTags(tags: PlanningTag[]) {
 .todo-schedule-day-editor__add-note-btn {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.todo-schedule-day-editor__note-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.todo-schedule-day-editor__notes-toggle-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  align-self: flex-start;
 }
 
 .todo-schedule-day-editor__notes-list {

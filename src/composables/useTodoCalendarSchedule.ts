@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import {
   DEFAULT_PLANNING_NOTE_STATUS,
   DEFAULT_PLANNING_TAG_ID,
@@ -19,6 +19,7 @@ import {
   normalizePlanningTags,
 } from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import type { PlanningDayOverlay } from 'src/modules/task/dayPlanning/dayPlanningTypes';
+import { computeTaskNameFromDescription } from 'src/modules/task/utils/taskNameFromDescription';
 
 /** Sentinel id for scheduling a not-yet-saved task from the add form. */
 export const TODO_SCHEDULE_DRAFT_ID = '__draft__';
@@ -145,16 +146,73 @@ function resolveTaskScheduleDate(task: TodoScheduleTask | null | undefined): str
   return String(task?.eventDate || task?.date || '').trim();
 }
 
+function resolveTaskTimeMode(task: TodoScheduleTask | null | undefined): string {
+  const raw = task?.timeMode;
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  return 'event';
+}
+
 function prefillScheduleFromTask(task: TodoScheduleTask | null | undefined) {
   const date = resolveTaskScheduleDate(task);
   if (date) pickedDate.value = date;
-  scheduleDescription.value = String(task?.description ?? '').trim();
+  scheduleDescription.value = String(task?.description ?? '');
   const timeParts = parseEventTimeParts(task?.eventTime);
   if (timeParts) {
     scheduleHour.value = timeParts.hour;
     scheduleMinute.value = timeParts.minute;
   }
 }
+
+function syncSourceTaskScheduleFields() {
+  const task = sourceTask.value;
+  if (!task) return;
+  const date = pickedDate.value.trim();
+  const description = scheduleDescription.value;
+  const resolvedDate = date || resolveTaskScheduleDate(task);
+  const generatedName = computeTaskNameFromDescription({
+    description,
+    eventDate: resolvedDate,
+    date: resolvedDate,
+    type_id: String(task.type_id || 'TimeEvent'),
+    timeMode: resolveTaskTimeMode(task),
+  });
+  const next: TodoScheduleTask = {
+    ...task,
+    description,
+    eventTime: buildEventTimeFromRefs(),
+    ...(generatedName ? { name: generatedName } : {}),
+  };
+  if (date) {
+    next.date = date;
+    next.eventDate = date;
+  }
+  sourceTask.value = next;
+}
+
+function buildEventTimeFromRefs(): string {
+  if (scheduleHour.value == null || scheduleMinute.value == null) return '';
+  const h = Math.min(23, Math.max(0, Number(scheduleHour.value)));
+  const m = Math.min(59, Math.max(0, Number(scheduleMinute.value)));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+watch(scheduleDescription, (description) => {
+  const task = sourceTask.value;
+  if (!task || task.description === description) return;
+  const generatedName = computeTaskNameFromDescription({
+    description,
+    eventDate: pickedDate.value.trim() || resolveTaskScheduleDate(task),
+    date: pickedDate.value.trim() || resolveTaskScheduleDate(task),
+    type_id: String(task.type_id || 'TimeEvent'),
+    timeMode: resolveTaskTimeMode(task),
+  });
+  sourceTask.value = {
+    ...task,
+    description,
+    ...(generatedName ? { name: generatedName } : {}),
+  };
+});
 
 /** Shared state: schedule a Todo via the main calendar (preview or edit). */
 export function useTodoCalendarSchedule() {
@@ -437,11 +495,11 @@ export function useTodoCalendarSchedule() {
   }
 
   function buildEventTime(): string {
-    if (scheduleHour.value == null || scheduleMinute.value == null) return '';
-    const h = Math.min(23, Math.max(0, Number(scheduleHour.value)));
-    const m = Math.min(59, Math.max(0, Number(scheduleMinute.value)));
-    if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    return buildEventTimeFromRefs();
+  }
+
+  function getScheduleDescription(): string {
+    return scheduleDescription.value;
   }
 
   return {
@@ -483,6 +541,8 @@ export function useTodoCalendarSchedule() {
     hasPlanningNotesData,
     hasMeetingNotesData,
     buildEventTime,
+    getScheduleDescription,
+    syncSourceTaskScheduleFields,
   };
 }
 

@@ -275,7 +275,7 @@
           :class="{ 'day-organiser-calendar-section--pick': todoScheduleActive }"
         >
           <div
-            v-if="todoScheduleActive"
+            v-if="todoScheduleActive && todoSchedulePickMode !== 'notes'"
             class="todo-schedule-pick-banner"
             role="status"
           >
@@ -502,6 +502,7 @@
           />
         </div>
         <div
+          v-if="todoSchedulePickMode !== 'notes'"
           class="todo-schedule-footer__date"
           :class="
             todoScheduleHasPickedDate
@@ -628,6 +629,7 @@ import {
 import { getContrastColor } from "src/utils/colorUtils";
 import { todoCalendarSchedule, rememberTodoSchedulePickMode, type DayPlanningSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode, type TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 import { scheduleHasPlanningData } from "src/modules/task/dayPlanning/dayPlanningUtils";
+import { computeTaskNameFromDescription } from "src/modules/task/utils/taskNameFromDescription";
 import type { Task } from "src/modules/task/models/TaskModel";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
@@ -709,6 +711,8 @@ const {
   setDayImpossible: setTodoScheduleDayImpossible,
   buildDayPlanning: buildTodoDayPlanning,
   buildEventTime: buildTodoScheduleEventTime,
+  syncSourceTaskScheduleFields: syncTodoScheduleSourceFields,
+  getScheduleDescription: getTodoScheduleDescription,
 } = todoCalendarSchedule;
 
 const todoSchedulePickMode = computed({
@@ -2078,10 +2082,24 @@ type TodoScheduleApplyDetail = {
   date: string;
   eventTime: string;
   description?: string;
+  name?: string;
   dayPlanning?: DayPlanningSchedule | null;
   meetingSchedule?: TodoMeetingSchedule | null;
   repeat?: Record<string, unknown>;
 };
+
+function buildScheduleTaskName(description: string, date: string, task?: TodoScheduleTask | null): string {
+  return (
+    computeTaskNameFromDescription({
+      description,
+      eventDate: date,
+      date,
+      type_id: "TimeEvent",
+      timeMode: "event",
+      fallbackDate: CC.task.time.currentDate.value,
+    }) || String(task?.name || "")
+  );
+}
 
 function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleApplyDetail) {
   suppressPlannerOnNextEdit.value = true;
@@ -2095,7 +2113,8 @@ function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleAppl
         date: detail.date,
         eventDate: detail.date,
         eventTime: detail.eventTime,
-        description: detail.description ?? active.description,
+        description: detail.description ?? "",
+        ...(detail.name ? { name: detail.name } : {}),
         timeMode: "event",
         dayPlanning: detail.dayPlanning ?? null,
         meetingSchedule: detail.dayPlanning ?? detail.meetingSchedule ?? null,
@@ -2138,6 +2157,9 @@ async function confirmTodoSchedule(goToEdit: boolean) {
 
   rememberTodoSchedulePickMode(todoSchedulePickMode.value);
 
+  syncTodoScheduleSourceFields();
+  const syncedTask = todoScheduleSourceTask.value;
+
   const dayPlanning = buildTodoDayPlanning();
   const scheduleExtras =
     todoSchedulePickMode.value === "notes" && dayPlanning
@@ -2147,10 +2169,14 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   const syncedRepeat = syncRepeatWithPickedDate(task.repeat, date);
   const repeatExtras = syncedRepeat != null ? { repeat: syncedRepeat } : {};
 
+  const description = getTodoScheduleDescription();
+  const scheduleName = buildScheduleTaskName(description, date, syncedTask ?? task);
+
   const detail: TodoScheduleApplyDetail = {
     date,
     eventTime: buildTodoScheduleEventTime(),
-    description: todoScheduleDescription.value,
+    description,
+    name: scheduleName,
     dayPlanning: scheduleExtras.dayPlanning,
     meetingSchedule: scheduleExtras.meetingSchedule,
     ...(repeatExtras.repeat != null ? { repeat: repeatExtras.repeat } : {}),
@@ -2186,13 +2212,14 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   if (!task.id) return;
 
   const updated = {
-    ...task,
+    ...(syncedTask ?? task),
     type_id: "TimeEvent",
     type: "event",
     date,
     eventDate: date,
     eventTime: detail.eventTime,
-    description: detail.description ?? task.description,
+    description: detail.description ?? "",
+    name: detail.name || syncedTask?.name || task.name,
     timeMode: "event",
     ...scheduleExtras,
     ...repeatExtras,

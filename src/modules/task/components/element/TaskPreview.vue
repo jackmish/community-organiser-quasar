@@ -731,6 +731,7 @@ function onScheduleTodoClick() {
   todoCalendarSchedule.start({
     id: String(t.id),
     name: t.name,
+    description: t.description,
     eventTime: t.eventTime,
     eventDate: t.eventDate ?? t.date,
     date: t.date ?? t.eventDate,

@@ -174,4 +174,21 @@ describe('useTodoCalendarSchedule pickMode', () => {
     });
     expect(todoCalendarSchedule.scheduleDescription.value).toBe('Bring documents');
   });
+
+  it('syncs schedule description to source task and apply payload', () => {
+    todoCalendarSchedule.start({
+      id: 'task-desc-sync',
+      description: 'Initial',
+    });
+    todoCalendarSchedule.scheduleDescription.value = 'Updated in planner';
+    todoCalendarSchedule.pickDay('2026-07-01');
+    todoCalendarSchedule.scheduleHour.value = 9;
+    todoCalendarSchedule.scheduleMinute.value = 30;
+    todoCalendarSchedule.syncSourceTaskScheduleFields();
+    expect(todoCalendarSchedule.sourceTask.value?.description).toBe('Updated in planner');
+    expect(todoCalendarSchedule.sourceTask.value?.name).toBe('Updated in planner');
+    expect(todoCalendarSchedule.sourceTask.value?.eventDate).toBe('2026-07-01');
+    expect(todoCalendarSchedule.sourceTask.value?.eventTime).toBe('09:30');
+    expect(todoCalendarSchedule.getScheduleDescription()).toBe('Updated in planner');
+  });
 });
