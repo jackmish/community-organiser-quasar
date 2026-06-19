@@ -192,6 +192,7 @@
                       { 'calendar-day-large-date': isDayLargeDateLayout(day) },
                       { 'calendar-day-with-events': isDayWithEvents(day) },
                       { 'calendar-day-has-events': isDayHasEventsBadge(day) },
+                      getScheduleDayClasses(day),
                     ]"
                   >
                     <div class="calendar-day-content">
@@ -369,7 +370,18 @@ const props = defineProps<{
   selectedDate?: string;
   // Optional list of tasks so the calendar can render events
   tasks?: Array<any>;
+  /** Day marks while scheduling a todo (possible / impossible). */
+  scheduleDayMarks?: Record<string, { possible?: boolean; impossible?: boolean }>;
 }>();
+
+function getScheduleDayClasses(day: string) {
+  const mark = props.scheduleDayMarks?.[day];
+  if (!mark) return {};
+  return {
+    'calendar-day-schedule-possible': Boolean(mark.possible),
+    'calendar-day-schedule-impossible': Boolean(mark.impossible),
+  };
+}
 
 // Parse a YYYY-MM-DD day string into a local Date (avoid UTC parsing pitfalls)
 function parseDay(s: string) {
@@ -1656,6 +1668,19 @@ function getRelativeDayLabelType(day: string): "today" | "tomorrow" | null {
 
     .calendar-day-number {
       color: var(--cal-selected-day-fg) !important;
+    }
+  }
+
+  .calendar-day-btn.calendar-day-schedule-possible {
+    box-shadow: inset 0 0 0 2px #43a047;
+    background-color: rgba(67, 160, 71, 0.18) !important;
+  }
+
+  .calendar-day-btn.calendar-day-schedule-impossible {
+    .calendar-day-number,
+    .calendar-day-badge__num {
+      text-decoration: line-through;
+      opacity: 0.55;
     }
   }
 }

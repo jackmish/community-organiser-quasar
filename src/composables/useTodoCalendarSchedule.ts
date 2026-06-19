@@ -8,6 +8,45 @@ export type TodoSchedulePickMode = 'day' | 'notes';
 
 export const DEFAULT_TODO_SCHEDULE_PICK_MODE: TodoSchedulePickMode = 'day';
 
+export type TodoMeetingDayEntry = {
+  possible?: boolean;
+  impossible?: boolean;
+  note?: string;
+};
+
+/** Normalized in-memory day entry (all fields required for strict TS). */
+type TodoMeetingDayEntryState = {
+  possible: boolean;
+  impossible: boolean;
+  note: string;
+};
+
+function emptyDayEntry(): TodoMeetingDayEntryState {
+  return { possible: false, impossible: false, note: '' };
+}
+
+function normalizeDayEntry(entry?: TodoMeetingDayEntry): TodoMeetingDayEntryState {
+  return {
+    possible: Boolean(entry?.possible),
+    impossible: Boolean(entry?.impossible),
+    note: String(entry?.note || ''),
+  };
+}
+
+function toPersistedDayEntry(entry: TodoMeetingDayEntryState): TodoMeetingDayEntry {
+  const out: TodoMeetingDayEntry = {};
+  if (entry.possible) out.possible = true;
+  if (entry.impossible) out.impossible = true;
+  const note = entry.note.trim();
+  if (note) out.note = note;
+  return out;
+}
+
+export type TodoMeetingSchedule = {
+  mode: 'notes';
+  days: Record<string, TodoMeetingDayEntry>;
+};
+
 /** Minimal task fields needed to schedule a Todo on the calendar. */
 export type TodoScheduleTask = {
   id: string;
@@ -16,6 +55,8 @@ export type TodoScheduleTask = {
   eventDate?: string | undefined;
   date?: string | undefined;
   type_id?: string | undefined;
+  meetingSchedule?: TodoMeetingSchedule | null | undefined;
+  repeat?: Record<string, unknown> | null | undefined;
   [key: string]: unknown;
 };
 
@@ -26,19 +67,145 @@ const pickedDate = ref('');
 const pickMode = ref<TodoSchedulePickMode>(DEFAULT_TODO_SCHEDULE_PICK_MODE);
 const scheduleHour = ref<number | null>(null);
 const scheduleMinute = ref<number | null>(null);
+const dayEntries = ref<Record<string, TodoMeetingDayEntryState>>({});
+const editingDay = ref('');
+/** Bumped on each new schedule session so mode toggles re-sync to defaults. */
+const sessionKey = ref(0);
+
+function cloneDayEntries(
+  days: Record<string, TodoMeetingDayEntry> | undefined | null,
+): Record<string, TodoMeetingDayEntryState> {
+  if (!days) return {};
+  const out: Record<string, TodoMeetingDayEntryState> = {};
+  for (const [date, entry] of Object.entries(days)) {
+    out[date] = normalizeDayEntry(entry);
+  }
+  return out;
+}
+
+function resetDayNotes() {
+  dayEntries.value = {};
+  editingDay.value = '';
+}
+
+function loadMeetingScheduleFromTask(task: TodoScheduleTask | null | undefined) {
+  const schedule = task?.meetingSchedule;
+  if (schedule?.mode === 'notes' && schedule.days && Object.keys(schedule.days).length > 0) {
+    dayEntries.value = cloneDayEntries(schedule.days);
+    pickMode.value = 'notes';
+    return;
+  }
+  resetDayNotes();
+  pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
+}
 
 /** Shared state: schedule a Todo via the main calendar (preview or edit). */
 export function useTodoCalendarSchedule() {
   const hasPickedDate = computed(() => Boolean(pickedDate.value.trim()));
+
+  const scheduleDayMarks = computed(() => {
+    const marks: Record<string, { possible?: boolean; impossible?: boolean }> = {};
+    for (const [date, entry] of Object.entries(dayEntries.value)) {
+      if (entry.possible || entry.impossible) {
+        marks[date] = {
+          possible: Boolean(entry.possible),
+          impossible: Boolean(entry.impossible),
+        };
+      }
+    }
+    return marks;
+  });
+
+  function ensureDayEntry(date: string): TodoMeetingDayEntryState {
+    const d = String(date || '').trim();
+    if (!d) return emptyDayEntry();
+    const existing = dayEntries.value[d];
+    if (existing) return existing;
+    const created = emptyDayEntry();
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: created,
+    };
+    return created;
+  }
+
+  function openDayEditor(date: string) {
+    const d = String(date || '').trim();
+    if (!d) return;
+    ensureDayEntry(d);
+    editingDay.value = d;
+  }
+
+  function setDayPossible(date: string, value: boolean) {
+    const d = String(date || '').trim();
+    if (!d) return;
+    const entry = ensureDayEntry(d);
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: {
+        ...entry,
+        possible: value,
+        impossible: value ? false : entry.impossible,
+      },
+    };
+  }
+
+  function setDayImpossible(date: string, value: boolean) {
+    const d = String(date || '').trim();
+    if (!d) return;
+    const entry = ensureDayEntry(d);
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: {
+        ...entry,
+        impossible: value,
+        possible: value ? false : entry.possible,
+      },
+    };
+  }
+
+  function setDayNote(date: string, note: string) {
+    const d = String(date || '').trim();
+    if (!d) return;
+    const entry = ensureDayEntry(d);
+    dayEntries.value = {
+      ...dayEntries.value,
+      [d]: {
+        ...entry,
+        note,
+      },
+    };
+  }
+
+  function buildMeetingSchedule(): TodoMeetingSchedule | undefined {
+    if (pickMode.value !== 'notes') return undefined;
+    const days: Record<string, TodoMeetingDayEntry> = {};
+    for (const [date, entry] of Object.entries(dayEntries.value)) {
+      const persisted = toPersistedDayEntry(entry);
+      if (persisted.possible || persisted.impossible || persisted.note) {
+        days[date] = persisted;
+      }
+    }
+    if (Object.keys(days).length === 0) return undefined;
+    return { mode: 'notes', days };
+  }
+
+  function hasMeetingNotesData(): boolean {
+    return Boolean(buildMeetingSchedule());
+  }
 
   function start(task: TodoScheduleTask) {
     if (!task?.id) return;
     isDraft.value = false;
     sourceTask.value = task;
     pickedDate.value = '';
-    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    sessionKey.value += 1;
+    loadMeetingScheduleFromTask(task);
+    if (!task.meetingSchedule) {
+      pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
+    }
     active.value = true;
   }
 
@@ -47,9 +214,13 @@ export function useTodoCalendarSchedule() {
     isDraft.value = true;
     sourceTask.value = { ...task, id: TODO_SCHEDULE_DRAFT_ID };
     pickedDate.value = '';
-    pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    sessionKey.value += 1;
+    loadMeetingScheduleFromTask(sourceTask.value);
+    if (!task.meetingSchedule) {
+      pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
+    }
     active.value = true;
   }
 
@@ -61,6 +232,7 @@ export function useTodoCalendarSchedule() {
     pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     scheduleHour.value = null;
     scheduleMinute.value = null;
+    resetDayNotes();
   }
 
   function pickDay(date: string) {
@@ -86,11 +258,21 @@ export function useTodoCalendarSchedule() {
     pickMode,
     scheduleHour,
     scheduleMinute,
+    dayEntries,
+    editingDay,
+    sessionKey,
     hasPickedDate,
+    scheduleDayMarks,
     start,
     startDraft,
     cancel,
     pickDay,
+    openDayEditor,
+    setDayPossible,
+    setDayImpossible,
+    setDayNote,
+    buildMeetingSchedule,
+    hasMeetingNotesData,
     buildEventTime,
   };
 }

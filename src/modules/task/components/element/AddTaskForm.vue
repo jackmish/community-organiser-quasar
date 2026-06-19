@@ -27,7 +27,7 @@ import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
-import type { TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import type { TodoMeetingSchedule, TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import { browseSpaceFolder } from "src/modules/space/spaceService";
 import {
@@ -222,6 +222,7 @@ const {
   buildRepeatPayload,
   loadFromTask: loadRepeatFromTask,
   reset: resetRepeat,
+  syncFromPickedDate: syncRepeatFromPickedDate,
 } = useRepeatSchedule({ currentEventDate: toRef(props, "selectedDate") as any });
 
 // Local newTask state, default to today
@@ -274,6 +275,7 @@ type TaskType = {
   noteColor?: string;
   photo?: string;
   attachments?: TaskAttachment[];
+  meetingSchedule?: TodoMeetingSchedule | null;
 };
 
 const localNewTask = ref<TaskType>({
@@ -534,6 +536,11 @@ const showTodoCalendarBtn = computed(() => {
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
 
 function openTodoCalendarSchedule() {
+  const currentRepeat =
+    repeatMode.value === "cyclic"
+      ? buildRepeatPayload(localNewTask.value.eventDate)
+      : null;
+
   if (props.mode === "add") {
     todoCalendarSchedule.startDraft({
       name: localNewTask.value.name,
@@ -541,12 +548,16 @@ function openTodoCalendarSchedule() {
       eventTime: localNewTask.value.eventTime,
       eventDate: localNewTask.value.eventDate,
       type_id: localNewTask.value.type_id,
+      meetingSchedule: localNewTask.value.meetingSchedule ?? null,
+      repeat: currentRepeat,
     });
   } else {
     if (!localNewTask.value.id) return;
     todoCalendarSchedule.start({
       ...localNewTask.value,
       id: String(localNewTask.value.id),
+      meetingSchedule: localNewTask.value.meetingSchedule ?? null,
+      repeat: currentRepeat ?? props.initialTask?.repeat ?? null,
     } as TodoScheduleTask);
   }
   window.dispatchEvent(new Event("co21:todo-schedule-open"));
@@ -555,12 +566,22 @@ function openTodoCalendarSchedule() {
 function applyDraftSchedule(detail: {
   date: string;
   eventTime: string;
-  goToEdit?: boolean;
+  meetingSchedule?: TodoMeetingSchedule | null;
+  repeat?: Record<string, unknown> | null;
 }) {
   localNewTask.value.eventDate = detail.date;
   localNewTask.value.eventTime = detail.eventTime || "";
   localNewTask.value.type_id = "TimeEvent";
   localNewTask.value.timeMode = "event";
+  localNewTask.value.meetingSchedule = detail.meetingSchedule ?? null;
+  syncRepeatFromPickedDate(detail.date);
+  if (detail.repeat && typeof detail.repeat === "object") {
+    loadRepeatFromTask({
+      repeat: detail.repeat,
+      eventDate: detail.date,
+      date: detail.date,
+    });
+  }
   emit("calendar-date-select", detail.date);
   try {
     if (detail.eventTime) {
@@ -1032,6 +1053,7 @@ watch(
         noteColor: val.noteColor || "#9e9e9e",
         photo: resolveTaskPhoto(val),
         attachments: resolveTaskAttachments(val),
+        meetingSchedule: val.meetingSchedule ?? null,
         id: val.id,
       };
       // Load repeat state from the composable helper

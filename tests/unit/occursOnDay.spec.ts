@@ -7,6 +7,7 @@ import {
   getCycleType,
   getRepeatDays,
   occursOnDay,
+  syncRepeatWithPickedDate,
 } from '../../src/modules/task/utils/occursOnDay';
 
 // ─── parseYmdLocal ────────────────────────────────────────────────────────────
@@ -240,5 +241,26 @@ describe('occursOnDay', () => {
       repeat: { cycleType: 'other', eventDate: '2026-03-01', intervalDays: 0 },
     };
     expect(occursOnDay(task, '2026-03-01')).toBe(false);
+  });
+});
+
+describe('syncRepeatWithPickedDate', () => {
+  it('updates monthly nth-day anchor from picked date', () => {
+    const repeat = { cycleType: 'month', eventDate: '2025-01-10', days: [] };
+    const synced = syncRepeatWithPickedDate(repeat, '2026-06-20');
+    expect(synced?.eventDate).toBe('2026-06-20');
+    expect(occursOnDay({ repeat: synced }, '2026-08-20')).toBe(true);
+  });
+
+  it('updates annual anniversary anchor from picked date', () => {
+    const repeat = { cycleType: 'year', eventDate: '2020-03-15', days: [] };
+    const synced = syncRepeatWithPickedDate(repeat, '2026-07-04');
+    expect(synced?.eventDate).toBe('2026-07-04');
+    expect(occursOnDay({ repeat: synced }, '2028-07-04')).toBe(true);
+    expect(occursOnDay({ repeat: synced }, '2028-07-05')).toBe(false);
+  });
+
+  it('returns null when repeat is absent', () => {
+    expect(syncRepeatWithPickedDate(null, '2026-06-01')).toBeNull();
   });
 });

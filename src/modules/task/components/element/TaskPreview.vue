@@ -53,6 +53,17 @@
             @click.stop="onScheduleTodoClick"
           />
           <q-btn
+            v-else-if="hasMeetingScheduleNotes"
+            dense
+            round
+            unelevated
+            color="primary"
+            icon="event_note"
+            class="todo-schedule-calendar-btn"
+            :title="$text('task.todo.review_meeting_schedule')"
+            @click.stop="onReviewMeetingScheduleClick"
+          />
+          <q-btn
             dense
             unelevated
             color="orange"
@@ -228,6 +239,39 @@
         >
           {{ $text('files.no_task_folder') }}
         </q-banner>
+
+        <div
+          v-if="hasMeetingScheduleNotes"
+          class="meeting-schedule-preview q-mb-md"
+        >
+          <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+            {{ $text('task.todo.meeting_schedule_title') }}
+          </div>
+          <div
+            v-for="row in meetingScheduleRows"
+            :key="row.date"
+            class="meeting-schedule-preview__row text-body2"
+          >
+            <span class="meeting-schedule-preview__date">{{ row.dateLabel }}</span>
+            <span
+              v-if="row.mark"
+              class="meeting-schedule-preview__mark text-caption"
+              :class="{
+                'text-positive': row.mark === 'possible',
+                'text-negative': row.mark === 'impossible',
+              }"
+            >
+              ({{
+                row.mark === 'possible'
+                  ? $text('task.todo.day_mark_possible')
+                  : $text('task.todo.day_mark_impossible')
+              }})
+            </span>
+            <div v-if="row.note" class="meeting-schedule-preview__note text-grey-8">
+              {{ row.note }}
+            </div>
+          </div>
+        </div>
 
         <QuickAddSubtaskForm
           v-if="(task.type_id || '') === 'Todo' || (task.type_id || '') === 'TimeEvent'"
@@ -677,9 +721,37 @@ function onScheduleTodoClick() {
     eventDate: t.eventDate ?? t.date,
     date: t.date ?? t.eventDate,
     type_id: t.type_id,
+    meetingSchedule: t.meetingSchedule ?? null,
+    repeat: t.repeat ?? null,
   } as TodoScheduleTask);
   window.dispatchEvent(new Event("co21:todo-schedule-open"));
 }
+
+function onReviewMeetingScheduleClick() {
+  onScheduleTodoClick();
+}
+
+const hasMeetingScheduleNotes = computed(() => {
+  const schedule = activeTask.value?.meetingSchedule;
+  if (schedule?.mode !== "notes" || !schedule.days) return false;
+  return Object.values(schedule.days).some(
+    (entry) => entry?.possible || entry?.impossible || String(entry?.note || "").trim(),
+  );
+});
+
+const meetingScheduleRows = computed(() => {
+  const schedule = activeTask.value?.meetingSchedule;
+  if (!schedule?.days) return [];
+  return Object.entries(schedule.days)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, entry]) => ({
+      date,
+      dateLabel: formatDisplayDate(date),
+      mark: entry?.impossible ? ("impossible" as const) : entry?.possible ? ("possible" as const) : null,
+      note: String(entry?.note || "").trim(),
+    }))
+    .filter((row) => row.mark || row.note);
+});
 
 const displayDate = computed(() => {
   const task = activeTask.value || ({} as any);
@@ -936,6 +1008,32 @@ function buildHtmlFromParsed(
   return parts.join("");
 }
 </script>
+
+<style scoped>
+.meeting-schedule-preview {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(25, 118, 210, 0.06);
+  border: 1px solid rgba(25, 118, 210, 0.14);
+}
+
+.meeting-schedule-preview__row + .meeting-schedule-preview__row {
+  margin-top: 8px;
+}
+
+.meeting-schedule-preview__date {
+  font-weight: 600;
+}
+
+.meeting-schedule-preview__mark {
+  margin-left: 6px;
+}
+
+.meeting-schedule-preview__note {
+  margin-top: 2px;
+  white-space: pre-wrap;
+}
+</style>
 
 <style scoped>
 .shrinking {

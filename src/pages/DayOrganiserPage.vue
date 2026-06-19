@@ -294,6 +294,7 @@
             :key="reloadKey"
             :selected-date="CC.task.time.currentDate.value"
             :tasks="allTasks"
+            :schedule-day-marks="todoScheduleDayMarks"
             @update:selectedDate="onCalendarSelectedDate"
             @day-click="onCalendarDayClick"
           />
@@ -465,6 +466,7 @@
 
     <div v-if="todoScheduleActive" class="todo-schedule-footer">
       <q-btn-toggle
+        :key="todoScheduleSessionKey"
         v-model="todoSchedulePickMode"
         dense
         inline
@@ -475,6 +477,43 @@
         class="todo-schedule-footer__mode-toggle"
         :options="todoSchedulePickModeOptions"
       />
+      <div
+        v-if="todoSchedulePickMode === 'notes' && todoScheduleEditingDay"
+        class="todo-schedule-day-editor"
+      >
+        <div class="todo-schedule-day-editor__title">
+          {{ formatDisplayDate(todoScheduleEditingDay) }}
+        </div>
+        <q-checkbox
+          dense
+          :model-value="todoScheduleEditingDayPossible"
+          :label="$text('task.todo.day_possible')"
+          @update:model-value="onTodoScheduleDayPossible"
+        />
+        <q-checkbox
+          dense
+          :model-value="todoScheduleEditingDayImpossible"
+          :label="$text('task.todo.day_impossible')"
+          @update:model-value="onTodoScheduleDayImpossible"
+        />
+        <q-input
+          dense
+          outlined
+          type="textarea"
+          autogrow
+          class="todo-schedule-day-editor__note"
+          :model-value="todoScheduleEditingDayNote"
+          :label="$text('task.todo.day_note')"
+          @update:model-value="onTodoScheduleDayNote"
+        />
+        <q-btn
+          dense
+          unelevated
+          color="primary"
+          :label="$text('task.todo.use_as_meeting_day')"
+          @click="pickTodoScheduleDay(todoScheduleEditingDay)"
+        />
+      </div>
       <div
         class="todo-schedule-footer__date"
         :class="
@@ -516,6 +555,7 @@
           <q-btn
             unelevated
             color="primary"
+            icon="check"
             :label="$text('task.todo.apply_schedule')"
             @click="confirmTodoSchedule(false)"
           />
@@ -523,15 +563,17 @@
         <template v-else>
           <q-btn
             unelevated
-            color="primary"
-            :label="$text('task.todo.save_scheduled')"
-            @click="confirmTodoSchedule(false)"
+            color="orange"
+            icon="edit"
+            :label="$text('task.todo.edit')"
+            @click="confirmTodoSchedule(true)"
           />
           <q-btn
             unelevated
-            color="orange"
-            :label="$text('task.todo.save_and_edit')"
-            @click="confirmTodoSchedule(true)"
+            color="primary"
+            icon="save"
+            :label="$text('task.todo.save_scheduled')"
+            @click="confirmTodoSchedule(false)"
           />
         </template>
       </div>
@@ -557,7 +599,7 @@ import GroupManagementDialog from "src/modules/group/components/GroupManagementD
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
-import { formatDisplayDate } from "src/modules/task/utils/occursOnDay";
+import { formatDisplayDate, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
 import CalendarView from "src/components/time/CalendarView.vue";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
@@ -576,7 +618,7 @@ import {
   readGroupBackgroundFields,
 } from "src/modules/group/utils/groupBackground";
 import { getContrastColor } from "src/utils/colorUtils";
-import { todoCalendarSchedule, type TodoSchedulePickMode } from "src/composables/useTodoCalendarSchedule";
+import { todoCalendarSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode } from "src/composables/useTodoCalendarSchedule";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
 import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
@@ -596,7 +638,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide, toRef } from "vue";
 import { useMobileOrganiserScrollToggle } from "src/composables/useMobileOrganiserScrollToggle";
 import { checkAndSync, startSyncScheduler, stopSyncScheduler } from "src/modules/user/calendarSyncService";
 import { $text } from "src/modules/lang";
@@ -644,14 +686,54 @@ const {
   isDraft: todoScheduleIsDraft,
   sourceTask: todoScheduleSourceTask,
   pickedDate: todoSchedulePickedDate,
-  pickMode: todoSchedulePickMode,
   scheduleHour: todoScheduleHour,
   scheduleMinute: todoScheduleMinute,
   hasPickedDate: todoScheduleHasPickedDate,
+  scheduleDayMarks: todoScheduleDayMarks,
+  editingDay: todoScheduleEditingDay,
+  sessionKey: todoScheduleSessionKey,
   cancel: cancelTodoScheduleState,
   pickDay: pickTodoScheduleDay,
+  openDayEditor: openTodoScheduleDayEditor,
+  setDayPossible: setTodoScheduleDayPossible,
+  setDayImpossible: setTodoScheduleDayImpossible,
+  setDayNote: setTodoScheduleDayNote,
+  buildMeetingSchedule: buildTodoMeetingSchedule,
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
+
+const todoSchedulePickMode = toRef(todoCalendarSchedule, "pickMode");
+
+const todoScheduleEditingDayPossible = computed(
+  () => Boolean(todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.possible),
+);
+const todoScheduleEditingDayImpossible = computed(
+  () => Boolean(todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.impossible),
+);
+const todoScheduleEditingDayNote = computed(
+  () => (todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.note) || "",
+);
+
+function onTodoScheduleDayPossible(value: boolean) {
+  if (!todoScheduleEditingDay.value) return;
+  setTodoScheduleDayPossible(todoScheduleEditingDay.value, value);
+}
+
+function onTodoScheduleDayImpossible(value: boolean) {
+  if (!todoScheduleEditingDay.value) return;
+  setTodoScheduleDayImpossible(todoScheduleEditingDay.value, value);
+}
+
+function onTodoScheduleDayNote(value: string | number | null) {
+  if (!todoScheduleEditingDay.value) return;
+  setTodoScheduleDayNote(todoScheduleEditingDay.value, String(value ?? ""));
+}
+
+watch(todoSchedulePickMode, (mode) => {
+  if (mode === "day") {
+    todoScheduleEditingDay.value = "";
+  }
+});
 
 const todoSchedulePickModeOptions = computed(() => [
   { label: $text("task.todo.pick_mode.day"), value: "day" as TodoSchedulePickMode },
@@ -1879,6 +1961,10 @@ function onCalendarSelectedDate(d: string) {
     void 0;
   }
   if (todoScheduleActive.value) {
+    if (todoSchedulePickMode.value === "notes") {
+      openTodoScheduleDayEditor(d);
+      return;
+    }
     pickTodoScheduleDay(d);
   }
 }
@@ -1895,19 +1981,84 @@ function cancelTodoSchedule() {
   cancelTodoScheduleState();
 }
 
+type TodoScheduleApplyDetail = {
+  date: string;
+  eventTime: string;
+  meetingSchedule?: TodoMeetingSchedule | null;
+  repeat?: Record<string, unknown>;
+};
+
+function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleApplyDetail) {
+  try {
+    const active = CC.task.active.task.value;
+    if (active && task.id && String(active.id) === String(task.id)) {
+      CC.task.active.task.value = {
+        ...active,
+        type_id: "TimeEvent",
+        type: "event",
+        date: detail.date,
+        eventDate: detail.date,
+        eventTime: detail.eventTime,
+        timeMode: "event",
+        meetingSchedule: detail.meetingSchedule ?? null,
+        ...(detail.repeat != null ? { repeat: detail.repeat } : {}),
+      };
+    }
+  } catch {
+    void 0;
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("co21:todo-schedule-draft-applied", { detail }),
+    );
+  } catch {
+    void 0;
+  }
+
+  cancelTodoScheduleState();
+  try {
+    CC.task.time.setCurrentDate(detail.date);
+  } catch {
+    void 0;
+  }
+  panelHidden.value = false;
+  try {
+    CC.task.active.mode.value = "edit";
+  } catch {
+    void 0;
+  }
+}
+
 async function confirmTodoSchedule(goToEdit: boolean) {
   const task = todoScheduleSourceTask.value;
   const date = todoSchedulePickedDate.value.trim();
   if (!task || !date) return;
+
+  const meetingSchedule = buildTodoMeetingSchedule();
+  const scheduleExtras = meetingSchedule ? { meetingSchedule } : { meetingSchedule: null };
+
+  const syncedRepeat = syncRepeatWithPickedDate(task.repeat, date);
+  const repeatExtras = syncedRepeat != null ? { repeat: syncedRepeat } : {};
+
+  const detail: TodoScheduleApplyDetail = {
+    date,
+    eventTime: buildTodoScheduleEventTime(),
+    meetingSchedule: scheduleExtras.meetingSchedule,
+    ...(repeatExtras.repeat != null ? { repeat: repeatExtras.repeat } : {}),
+  };
+
+  if (goToEdit) {
+    applyTodoScheduleToEdit(task, detail);
+    return;
+  }
 
   if (todoScheduleIsDraft.value) {
     try {
       window.dispatchEvent(
         new CustomEvent("co21:todo-schedule-draft-applied", {
           detail: {
-            date,
-            eventTime: buildTodoScheduleEventTime(),
-            goToEdit,
+            ...detail,
           },
         }),
       );
@@ -1925,14 +2076,17 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   }
 
   if (!task.id) return;
+
   const updated = {
     ...task,
     type_id: "TimeEvent",
     type: "event",
     date,
     eventDate: date,
-    eventTime: buildTodoScheduleEventTime(),
+    eventTime: detail.eventTime,
     timeMode: "event",
+    ...scheduleExtras,
+    ...repeatExtras,
   };
   try {
     await handleUpdateTask(updated);
@@ -1943,13 +2097,6 @@ async function confirmTodoSchedule(goToEdit: boolean) {
       void 0;
     }
     panelHidden.value = false;
-    if (goToEdit) {
-      try {
-        CC.task.active.mode.value = "edit";
-      } catch {
-        void 0;
-      }
-    }
   } catch {
     void 0;
   }
@@ -1964,7 +2111,11 @@ async function onCalendarDayClick(payload: { date: string; rect: DOMRect | null 
   try {
     if (todoScheduleActive.value) {
       const date = payload?.date || CC.task.time.currentDate.value;
-      pickTodoScheduleDay(date);
+      if (todoSchedulePickMode.value === "notes") {
+        openTodoScheduleDayEditor(date);
+      } else {
+        pickTodoScheduleDay(date);
+      }
       try {
         CC.task.time.setCurrentDate(date);
       } catch {

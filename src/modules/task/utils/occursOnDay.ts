@@ -338,3 +338,44 @@ export function occursOnDay(task: any, day: string): boolean {
   }
   return false;
 }
+
+/**
+ * Update a task's `repeat.eventDate` anchor after the user picks a new calendar day.
+ * Handles monthly nth-day and annual anniversary cycles.
+ */
+export function syncRepeatWithPickedDate(
+  repeat: Record<string, unknown> | null | undefined,
+  pickedDate: string,
+): Record<string, unknown> | null {
+  if (!repeat || typeof repeat !== 'object') return null;
+
+  const rawCycle = repeat.cycleType ?? repeat.cycle_type;
+  const cycleType = typeof rawCycle === 'string' ? rawCycle : '';
+  if (!cycleType) return { ...repeat };
+
+  const out: Record<string, unknown> = {
+    ...repeat,
+    days: Array.isArray(repeat.days) ? [...(repeat.days as string[])] : [],
+  };
+
+  const trimmed = String(pickedDate || '').trim();
+  const parts = trimmed.split('-');
+  if (parts.length < 3) {
+    out.eventDate = trimmed;
+    return out;
+  }
+
+  const day = dayOfMonthFromYmdString(trimmed);
+  const month = monthFromYmdString(trimmed);
+  const y = parts[0];
+
+  if (cycleType === 'month' && day != null) {
+    out.eventDate = `${y}-${parts[1]}-${String(day).padStart(2, '0')}`;
+  } else if (cycleType === 'year' && day != null && month != null) {
+    out.eventDate = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  } else {
+    out.eventDate = trimmed;
+  }
+
+  return out;
+}

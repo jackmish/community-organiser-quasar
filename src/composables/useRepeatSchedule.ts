@@ -237,6 +237,19 @@ export function useRepeatSchedule(options?: {
     else if (repeatCycleType.value !== 'interval') repeatIntervalDays.value = null;
   }
 
+  /** Sync repeat UI fields after picking a day on the calendar. */
+  function syncFromPickedDate(date: string) {
+    if (repeatMode.value !== 'cyclic') return;
+    const day = dayOfMonthFromYmdString(date);
+    const month = monthFromYmdString(date);
+    if (repeatCycleType.value === 'nth') {
+      if (day != null) everyNDayOfMonth.value = day;
+      if (nthRepeatScope.value === 'annual' && month != null) {
+        nthRepeatMonth.value = month;
+      }
+    }
+  }
+
   return {
     repeatMode,
     repeatOptions,
@@ -254,5 +267,6 @@ export function useRepeatSchedule(options?: {
     reset,
     buildRepeatPayload,
     loadFromTask,
+    syncFromPickedDate,
   } as const;
 }

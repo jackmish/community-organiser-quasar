@@ -51,6 +51,11 @@ export class TaskModel extends BaseModel {
   photo?: string;
   /** Files attached to a task. */
   attachments?: TaskAttachment[];
+  /** Per-day meeting planning notes when scheduling with extended mode. */
+  meetingSchedule?: {
+    mode: 'notes';
+    days: Record<string, { possible?: boolean; impossible?: boolean; note?: string }>;
+  } | null;
 
   constructor(init?: Partial<TaskModel>) {
     super(init);
