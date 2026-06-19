@@ -1,0 +1,47 @@
+.mobile-calendar-day-indicators {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483645;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 10px;
+  pointer-events: none;
+}
+
+.mobile-calendar-day-indicators__chip {
+  min-width: 48px;
+  height: 28px;
+  border-radius: 0 0 48px 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 10px 9px;
+  opacity: 0.85;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.28),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.mobile-calendar-day-indicators__chip:active {
+  opacity: 0.95;
+  transform: translateY(1px);
+}
+
+.mobile-calendar-day-indicators__label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transform: translateY(-1px);
+}

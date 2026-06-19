@@ -414,6 +414,17 @@ body .q-dialog:not(.day-organiser-task-panel-dialog):not(.co21-light-dialog) ::v
   -webkit-text-fill-color: #ffffff !important;
 }
 
+/* Visually hide the app header without unmounting it (keeps Quasar layout height stable). */
+.co21-app-header.co21-app-header--concealed {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.co21-app-header.co21-app-header--concealed :deep(.q-header__content) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .q-dialog:not(.day-organiser-task-panel-dialog):not(.co21-light-dialog) .q-field--outlined .q-field__native,
 .q-dialog:not(.day-organiser-task-panel-dialog):not(.co21-light-dialog) .q-field--outlined .q-field__input {
   color: #fff !important;

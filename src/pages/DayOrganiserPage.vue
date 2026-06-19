@@ -447,6 +447,12 @@
       @click="onScrollToggleClick"
     />
 
+    <MobileCalendarDayTaskIndicators
+      v-if="showMobileCalendarDayTaskIndicators"
+      :items="mobileCalendarDayTaskIndicatorItems"
+      @select="onMobileCalendarIndicatorTaskClick"
+    />
+
     <!-- Floating Add button: appears in edit/preview or when panel is hidden -->
     <q-btn
       v-if="panelHidden || CC.task.active.mode.value !== 'add'"
@@ -614,10 +620,18 @@ import GroupManagementDialog from "src/modules/group/components/GroupManagementD
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
-import { formatDisplayDate, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
+import { formatDisplayDate, occursOnDay, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
+import { isExcludedFromCalendarTask } from "src/modules/task/utils/calendarTaskTypes";
+import { getCalendarTaskIndicatorLabel } from "src/modules/task/utils/calendarTaskIndicatorLabel";
+import { priorityColors, priorityTextColor } from "src/components/theme";
+import {
+  APP_HEADER_CONCEAL_REASON,
+  appHeaderConceal,
+} from "src/composables/useAppHeaderConceal";
 import TodoScheduleDayEditor from "src/modules/task/components/element/TodoScheduleDayEditor.vue";
 import TodoScheduleDescriptionField from "src/modules/task/components/element/TodoScheduleDescriptionField.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
+import MobileCalendarDayTaskIndicators from "src/components/time/MobileCalendarDayTaskIndicators.vue";
 import type { PlanningDayOverlay } from "src/modules/task/dayPlanning/dayPlanningTypes";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
@@ -782,7 +796,7 @@ const showTodoScheduleStdFooter = computed(() => {
   return !todoScheduleDayEditorExpanded.value;
 });
 
-const { showScrollToggle, scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
+const { visibleSection, showScrollToggle, scrollToggleIcon, scrollToggleLabelKey, onScrollToggleClick } =
   useMobileOrganiserScrollToggle({
     enabled: isStackedOrganiserLayout,
     daySectionRef: dayViewSectionRef,
@@ -830,6 +844,34 @@ async function onToggleFilesMode(): Promise<void> {
 
 async function onToggleNotesMode(): Promise<void> {
   await toggleAppNotesMode();
+}
+
+async function onMobileCalendarIndicatorTaskClick(payload: {
+  taskId: string;
+  eventTime: string | null;
+}) {
+  const day = CC.task.time.currentDate.value;
+  const task = (allTasks.value || []).find((t) => {
+    if (String(t.id) !== String(payload.taskId)) return false;
+    if (!occursOnDay(t, day)) return false;
+    const tTime = t.eventTime ? String(t.eventTime) : "";
+    if (payload.eventTime && tTime !== payload.eventTime) return false;
+    return true;
+  });
+  if (!task) return;
+
+  const activeId = CC.task.active.task.value?.id;
+  if (
+    activeId &&
+    String(activeId) === String(task.id) &&
+    !panelHidden.value &&
+    CC.task.active.mode.value === "preview"
+  ) {
+    panelHidden.value = true;
+    return;
+  }
+
+  await onTaskClicked(task, null);
 }
 
 async function onTaskClicked(task: any, rect?: DOMRect | null) {
@@ -1056,6 +1098,42 @@ const hiddenGroupSummary = createHiddenGroupSummary(
 // Calendar tasks only — media/files tasks live in a separate flat list.
 const allTasks = computed(() => CC.task.list.items());
 const mediaTasks = computed(() => mediaFlatTasks.value);
+
+const mobileCalendarDayTaskIndicatorItems = computed(() => {
+  const day = CC.task.time.currentDate.value;
+  return (allTasks.value || [])
+    .filter((t) => !isExcludedFromCalendarTask(t) && occursOnDay(t, day))
+    .map((t) => {
+      const name = String(t.name ?? "").trim();
+      const eventTime = t.eventTime ? String(t.eventTime) : "";
+      return {
+        key: `${t.id}-${eventTime || day}`,
+        taskId: String(t.id),
+        eventTime: eventTime || null,
+        label: getCalendarTaskIndicatorLabel(t),
+        title: name + (eventTime ? ` • ${eventTime}` : ""),
+        backgroundColor: priorityColors[String(t.priority)] || "#888888",
+        color: priorityTextColor(String(t.priority)),
+      };
+    });
+});
+
+const showMobileCalendarDayTaskIndicators = computed(
+  () =>
+    isStackedOrganiserLayout.value &&
+    !isAlternateListMode.value &&
+    !todoScheduleActive.value &&
+    visibleSection.value === "calendar" &&
+    mobileCalendarDayTaskIndicatorItems.value.length > 0,
+);
+
+watch(
+  showMobileCalendarDayTaskIndicators,
+  (show) => {
+    appHeaderConceal.syncReason(APP_HEADER_CONCEAL_REASON.MOBILE_CALENDAR_DAY_INDICATORS, show);
+  },
+  { immediate: true },
+);
 
 const activeGroupIdForMedia = computed(
   () => CC.group.active.activeGroup.value?.value ?? null,
@@ -1289,6 +1367,7 @@ async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void
 
 // Register cleanup synchronously during setup so lifecycle hook is valid
 onBeforeUnmount(() => {
+  appHeaderConceal.release(APP_HEADER_CONCEAL_REASON.MOBILE_CALENDAR_DAY_INDICATORS);
   window.removeEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   window.removeEventListener(MEDIA_VIEW_MODE_CHANGED_EVENT, onAppViewModeExternalChange);
   try {

@@ -20,6 +20,10 @@ import {
 } from 'src/modules/task/dayPlanning/dayPlanningUtils';
 import type { PlanningDayOverlay } from 'src/modules/task/dayPlanning/dayPlanningTypes';
 import { computeTaskNameFromDescription } from 'src/modules/task/utils/taskNameFromDescription';
+import {
+  APP_HEADER_CONCEAL_REASON,
+  appHeaderConceal,
+} from 'src/composables/useAppHeaderConceal';
 
 /** Sentinel id for scheduling a not-yet-saved task from the add form. */
 export const TODO_SCHEDULE_DRAFT_ID = '__draft__';
@@ -547,3 +551,11 @@ export function useTodoCalendarSchedule() {
 }
 
 export const todoCalendarSchedule = useTodoCalendarSchedule();
+
+watch(
+  () => todoCalendarSchedule.active.value,
+  (on) => {
+    appHeaderConceal.syncReason(APP_HEADER_CONCEAL_REASON.TODO_SCHEDULE, on);
+  },
+  { immediate: true },
+);

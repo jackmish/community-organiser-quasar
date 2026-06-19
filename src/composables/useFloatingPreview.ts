@@ -300,7 +300,7 @@ export function useFloatingPreview(opts?: {
         const lm = lastMouseDownTarget.value;
         if (lm && lm instanceof Element) {
           const opener = lm.closest(
-            '.list-add-btn, .add-task-btn, .floating-add-btn, .calendar-day-btn',
+            '.list-add-btn, .add-task-btn, .floating-add-btn, .calendar-day-btn, .mobile-calendar-day-indicators__chip',
           );
           if (opener) {
             lastMouseDownTarget.value = null;
