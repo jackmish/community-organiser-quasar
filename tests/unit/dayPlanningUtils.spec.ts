@@ -1,0 +1,77 @@
+import { describe, it, expect } from 'vitest';
+import {
+  buildPlanningDayOverlay,
+  getMostPessimisticStatus,
+  getTopPriorityNotes,
+  normalizePlanningDayEntry,
+  buildDayPlanningSchedule,
+  scheduleHasPlanningData,
+  scheduleHasPlanningContent,
+} from '../../src/modules/task/dayPlanning/dayPlanningUtils';
+import { formatPlanningNoteDisplayText } from '../../src/modules/task/dayPlanning/dayPlanningTypes';
+
+describe('dayPlanningUtils', () => {
+  it('picks most pessimistic status', () => {
+    const notes = [
+      { id: '1', tagId: '__default__', text: 'ok', status: 'probable' as const },
+      { id: '2', tagId: '__default__', text: 'hard', status: 'tricky' as const },
+      { id: '3', tagId: '__default__', text: 'no', status: 'important' as const },
+    ];
+    expect(getMostPessimisticStatus(notes)).toBe('important');
+    expect(getTopPriorityNotes(notes).map((n) => n.id)).toEqual(['3']);
+  });
+
+  it('returns all notes at top priority', () => {
+    const notes = [
+      { id: 'a', tagId: 't1', text: 'one', status: 'tricky' as const },
+      { id: 'b', tagId: 't2', text: 'two', status: 'tricky' as const },
+      { id: 'c', tagId: 't1', text: 'three', status: 'probable' as const },
+    ];
+    expect(getTopPriorityNotes(notes).map((n) => n.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('sorts all notes by priority for overlay badges', () => {
+    const entry = normalizePlanningDayEntry({
+      notes: [
+        { id: '1', tagId: '__default__', text: 'ok', status: 'probable' },
+        { id: '2', tagId: '__default__', text: 'hard', status: 'tricky' },
+        { id: '3', tagId: '__default__', text: 'no', status: 'important' },
+      ],
+    });
+    const overlay = buildPlanningDayOverlay(entry, []);
+    expect(overlay?.badges.map((b) => b.text)).toEqual(['no', 'hard', 'ok']);
+    expect(overlay?.statuses).toEqual(['important', 'tricky', 'probable']);
+  });
+
+  it('builds overlay with strikethrough for important', () => {
+    const entry = normalizePlanningDayEntry({
+      notes: [{ id: '1', tagId: '__default__', text: 'Must avoid', status: 'important' }],
+    });
+    const overlay = buildPlanningDayOverlay(entry, []);
+    expect(overlay?.strikethrough).toBe(true);
+    expect(overlay?.badges[0]?.text).toBe('Must avoid');
+    expect(overlay?.statuses).toEqual(['important']);
+  });
+
+  it('migrates legacy single note field', () => {
+    const entry = normalizePlanningDayEntry({ note: 'Legacy note' });
+    expect(entry.notes).toHaveLength(1);
+    expect(entry.notes[0]?.text).toBe('Legacy note');
+    expect(entry.notes[0]?.status).toBe('probable');
+  });
+
+  it('persists notes mode even without tags or day entries', () => {
+    const schedule = buildDayPlanningSchedule([], {}, { persistNotesMode: true });
+    expect(schedule).toEqual({ mode: 'notes', tags: [], days: {} });
+    expect(scheduleHasPlanningData(schedule)).toBe(true);
+    expect(scheduleHasPlanningContent(schedule)).toBe(false);
+  });
+});
+
+describe('formatPlanningNoteDisplayText', () => {
+  it('shows placeholder for empty note text without persisting it', () => {
+    expect(formatPlanningNoteDisplayText('')).toBe('---');
+    expect(formatPlanningNoteDisplayText('  ')).toBe('---');
+    expect(formatPlanningNoteDisplayText('real note')).toBe('real note');
+  });
+});

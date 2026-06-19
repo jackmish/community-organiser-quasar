@@ -174,6 +174,7 @@
                     @click="onDayClick($event, day)"
                     @contextmenu="handleDateSelect($event, day, true)"
                     :title="formatAppWeekday(parseDay(day), 'long')"
+                    :style="planningDayOutlineStyle(day)"
                     :class="[
                       'calendar-day-btn',
                       { 'first-day-of-month': isFirstDayOfMonth(day) },
@@ -193,8 +194,28 @@
                       { 'calendar-day-with-events': isDayWithEvents(day) },
                       { 'calendar-day-has-events': isDayHasEventsBadge(day) },
                       getScheduleDayClasses(day),
+                      {
+                        'calendar-day-planning-important':
+                          Boolean(getPlanningOverlay(day)?.strikethrough),
+                      },
                     ]"
                   >
+                    <div
+                      v-if="getPlanningOverlay(day)?.strikethrough"
+                      class="calendar-planning-x-mark"
+                      aria-hidden="true"
+                    />
+                    <div
+                      v-if="getPlanningOverlay(day)?.statuses?.length"
+                      class="calendar-planning-watermark"
+                      aria-hidden="true"
+                    >
+                      <q-icon
+                        :name="planningStatusIcon(getPlanningOverlay(day)!.statuses[0]!)"
+                        class="calendar-planning-watermark__icon"
+                        :style="{ color: planningStatusColor(getPlanningOverlay(day)!.statuses[0]!) }"
+                      />
+                    </div>
                     <div class="calendar-day-content">
                       <div class="calendar-top">
                         <div class="calendar-day-row">
@@ -212,6 +233,35 @@
                               ? getHoliday(day)?.name
                               : getHoliday(day)?.localName
                           }}
+                        </div>
+                        <div
+                          v-if="planningDayBadges(day).length"
+                          class="calendar-planning-notes"
+                        >
+                          <div
+                            v-for="(badge, bIdx) in planningDayBadges(day)"
+                            :key="`${day}-plan-badge-${bIdx}`"
+                            class="calendar-planning-notes__badge"
+                            :class="`calendar-planning-notes__badge--${badge.status}`"
+                            :style="{ borderColor: planningStatusColor(badge.status) }"
+                          >
+                            <q-icon
+                              :name="planningStatusIcon(badge.status)"
+                              size="12px"
+                              class="calendar-planning-notes__badge-icon"
+                              :style="{ color: planningStatusColor(badge.status) }"
+                            />
+                            <span
+                              class="calendar-planning-notes__badge-text"
+                              :class="{
+                                'calendar-planning-notes__badge-text--placeholder':
+                                  !badge.text?.trim(),
+                              }"
+                            >
+                              <template v-if="badge.tagLabel">{{ badge.tagLabel }}: </template
+                              >{{ formatPlanningNoteDisplayText(badge.text) }}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <!-- Render events for this day (including cyclic repeats) -->
@@ -365,6 +415,8 @@ import {
   resolveCalendarTheme,
 } from "../theme";
 import Watermark from "src/components/ui/Watermark.vue";
+import { PLANNING_NOTE_STATUS_COLORS, PLANNING_NOTE_STATUS_ICONS, formatPlanningNoteDisplayText } from "src/modules/task/dayPlanning/dayPlanningTypes";
+import type { PlanningDayOverlay, PlanningNoteStatus } from "src/modules/task/dayPlanning/dayPlanningTypes";
 
 const props = defineProps<{
   selectedDate?: string;
@@ -372,14 +424,43 @@ const props = defineProps<{
   tasks?: Array<any>;
   /** Day marks while scheduling a todo (possible / impossible). */
   scheduleDayMarks?: Record<string, { possible?: boolean; impossible?: boolean }>;
+  /** Planning note overlays — only while day-choice planning mode is active. */
+  planningDayOverlays?: Record<string, PlanningDayOverlay>;
 }>();
+
+function getPlanningOverlay(day: string) {
+  return props.planningDayOverlays?.[day] ?? null;
+}
+
+function planningStatusIcon(status: PlanningNoteStatus): string {
+  return PLANNING_NOTE_STATUS_ICONS[status] || 'help_outline';
+}
+
+function planningStatusColor(status: PlanningNoteStatus): string {
+  return PLANNING_NOTE_STATUS_COLORS[status] || '#1976d2';
+}
+
+function planningDayOutlineStyle(day: string): Record<string, string> {
+  const overlay = getPlanningOverlay(day);
+  if (!overlay) return {};
+  const status = overlay.statuses?.[0];
+  if (!status && !overlay.possible) return {};
+  const color = status ? planningStatusColor(status) : '#43a047';
+  return { boxShadow: `inset 0 0 0 8px ${color}` };
+}
+
+function planningDayBadges(day: string) {
+  return getPlanningOverlay(day)?.badges || [];
+}
 
 function getScheduleDayClasses(day: string) {
   const mark = props.scheduleDayMarks?.[day];
+  const overlay = getPlanningOverlay(day);
   if (!mark) return {};
   return {
-    'calendar-day-schedule-possible': Boolean(mark.possible),
+    'calendar-day-schedule-possible': Boolean(mark.possible) && !overlay?.statuses?.length,
     'calendar-day-schedule-impossible': Boolean(mark.impossible),
+    'calendar-day-planning-marked': Boolean(overlay?.statuses?.length || overlay?.possible),
   };
 }
 
@@ -1676,12 +1757,117 @@ function getRelativeDayLabelType(day: string): "today" | "tomorrow" | null {
     background-color: rgba(67, 160, 71, 0.18) !important;
   }
 
+  .calendar-day-btn.calendar-day-planning-marked {
+    background-color: rgba(255, 255, 255, 0.72) !important;
+  }
+
+  .calendar-planning-watermark {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    pointer-events: none;
+    z-index: 0;
+    line-height: 1;
+  }
+
+  .calendar-planning-watermark__icon {
+    font-size: clamp(2.4rem, 72%, 4.2rem) !important;
+    width: 1em;
+    height: 1em;
+    opacity: 0.5;
+  }
+
   .calendar-day-btn.calendar-day-schedule-impossible {
     .calendar-day-number,
     .calendar-day-badge__num {
       text-decoration: line-through;
       opacity: 0.55;
     }
+  }
+
+  .calendar-day-btn.calendar-day-planning-important {
+    .calendar-day-number,
+    .calendar-day-badge__num {
+      opacity: 0.85;
+    }
+  }
+
+  .calendar-planning-x-mark {
+    position: absolute;
+    inset: 5px;
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 142%;
+      height: 2px;
+      background: #c62828;
+      border-radius: 1px;
+      opacity: 0.92;
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  }
+
+  .calendar-planning-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 2px;
+    width: 100%;
+    text-align: left;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+  }
+
+  .calendar-planning-notes__badge {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 3px 5px;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: normal;
+    word-break: break-word;
+    color: rgba(0, 0, 0, 0.88);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  .calendar-planning-notes__badge-text {
+    flex: 1;
+    min-width: 0;
+    color: rgba(0, 0, 0, 0.9);
+  }
+
+  .calendar-planning-notes__badge-text--placeholder {
+    color: rgba(0, 0, 0, 0.45);
+    font-style: italic;
+    letter-spacing: 0.06em;
+  }
+
+  .calendar-planning-notes__badge-icon {
+    flex: 0 0 auto;
+    margin-top: 1px;
   }
 }
 </style>

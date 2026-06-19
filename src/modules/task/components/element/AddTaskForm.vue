@@ -27,7 +27,7 @@ import { useEventDateTime } from "src/composables/useEventDateTime";
 import { useReplenishDropdown } from "src/composables/useReplenishDropdown";
 import { todoCalendarSchedule } from "src/composables/useTodoCalendarSchedule";
 import { dayOfMonthFromYmdString } from "src/modules/task/utils/occursOnDay";
-import type { TodoMeetingSchedule, TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import type { DayPlanningSchedule, TodoMeetingSchedule, TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import { browseSpaceFolder } from "src/modules/space/spaceService";
 import {
@@ -276,6 +276,7 @@ type TaskType = {
   photo?: string;
   attachments?: TaskAttachment[];
   meetingSchedule?: TodoMeetingSchedule | null;
+  dayPlanning?: DayPlanningSchedule | null;
 };
 
 const localNewTask = ref<TaskType>({
@@ -548,7 +549,8 @@ function openTodoCalendarSchedule() {
       eventTime: localNewTask.value.eventTime,
       eventDate: localNewTask.value.eventDate,
       type_id: localNewTask.value.type_id,
-      meetingSchedule: localNewTask.value.meetingSchedule ?? null,
+      meetingSchedule: localNewTask.value.dayPlanning ?? localNewTask.value.meetingSchedule ?? null,
+      dayPlanning: localNewTask.value.dayPlanning ?? localNewTask.value.meetingSchedule ?? null,
       repeat: currentRepeat,
     });
   } else {
@@ -556,7 +558,8 @@ function openTodoCalendarSchedule() {
     todoCalendarSchedule.start({
       ...localNewTask.value,
       id: String(localNewTask.value.id),
-      meetingSchedule: localNewTask.value.meetingSchedule ?? null,
+      meetingSchedule: localNewTask.value.dayPlanning ?? localNewTask.value.meetingSchedule ?? null,
+      dayPlanning: localNewTask.value.dayPlanning ?? localNewTask.value.meetingSchedule ?? null,
       repeat: currentRepeat ?? props.initialTask?.repeat ?? null,
     } as TodoScheduleTask);
   }
@@ -566,14 +569,17 @@ function openTodoCalendarSchedule() {
 function applyDraftSchedule(detail: {
   date: string;
   eventTime: string;
+  dayPlanning?: DayPlanningSchedule | null;
   meetingSchedule?: TodoMeetingSchedule | null;
   repeat?: Record<string, unknown> | null;
 }) {
+  const planning = detail.dayPlanning ?? detail.meetingSchedule ?? null;
   localNewTask.value.eventDate = detail.date;
   localNewTask.value.eventTime = detail.eventTime || "";
   localNewTask.value.type_id = "TimeEvent";
   localNewTask.value.timeMode = "event";
-  localNewTask.value.meetingSchedule = detail.meetingSchedule ?? null;
+  localNewTask.value.dayPlanning = planning;
+  localNewTask.value.meetingSchedule = planning;
   syncRepeatFromPickedDate(detail.date);
   if (detail.repeat && typeof detail.repeat === "object") {
     loadRepeatFromTask({
@@ -1053,7 +1059,8 @@ watch(
         noteColor: val.noteColor || "#9e9e9e",
         photo: resolveTaskPhoto(val),
         attachments: resolveTaskAttachments(val),
-        meetingSchedule: val.meetingSchedule ?? null,
+        meetingSchedule: val.meetingSchedule ?? val.dayPlanning ?? null,
+        dayPlanning: val.dayPlanning ?? val.meetingSchedule ?? null,
         id: val.id,
       };
       // Load repeat state from the composable helper

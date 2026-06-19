@@ -52,6 +52,23 @@ export class TaskModel extends BaseModel {
   /** Files attached to a task. */
   attachments?: TaskAttachment[];
   /** Per-day meeting planning notes when scheduling with extended mode. */
+  /** Per-day planning data from calendar day-choice mode (tags + notes). */
+  dayPlanning?: {
+    mode: 'notes';
+    tags: Array<{ id: string; label: string }>;
+    days: Record<string, {
+      possible?: boolean;
+      impossible?: boolean;
+      notes?: Array<{
+        id: string;
+        tagId: string;
+        text: string;
+        status: 'important' | 'tricky' | 'inconvenient' | 'probable';
+      }>;
+      note?: string;
+    }>;
+  } | null;
+  /** @deprecated use dayPlanning */
   meetingSchedule?: {
     mode: 'notes';
     days: Record<string, { possible?: boolean; impossible?: boolean; note?: string }>;

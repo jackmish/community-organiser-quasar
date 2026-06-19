@@ -18,6 +18,7 @@ export type DayOrganiserPanelContext = {
   onLineExpanded: (...args: unknown[]) => void;
   getGroupName: (groupId?: string) => string;
   clearTaskToEdit: () => void;
+  enterTaskEdit: (task: unknown) => void;
   handleDeleteTask: (payload: unknown) => void | Promise<void>;
   handleUpdateTask: (task: unknown) => void | Promise<void>;
   handleAddTaskFromForm: (

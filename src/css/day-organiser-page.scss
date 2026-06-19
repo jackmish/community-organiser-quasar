@@ -40,6 +40,42 @@
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
 }
 
+.todo-schedule-footer--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.todo-schedule-footer--stacked .todo-schedule-footer__date,
+.todo-schedule-footer--stacked .todo-schedule-footer__time,
+.todo-schedule-footer--stacked .todo-schedule-footer__actions {
+  align-self: flex-start;
+}
+
+.todo-schedule-footer__mode-toggle--below {
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.day-organiser-calendar-sidebar {
+  position: relative;
+}
+
+.todo-schedule-planning-panel {
+  position: sticky;
+  top: 12px;
+  z-index: 12;
+  margin-bottom: 12px;
+  width: 100%;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.12));
+}
+
+.todo-schedule-planning-panel--footer {
+  position: static;
+  width: 100%;
+  margin-bottom: 0;
+}
+
 .todo-schedule-footer__mode-toggle {
   flex: 0 0 auto;
   display: inline-flex;
@@ -119,30 +155,6 @@
   flex-wrap: wrap;
   gap: 8px;
   flex: 0 0 auto;
-}
-
-.todo-schedule-day-editor {
-  flex: 1 1 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(25, 118, 210, 0.06);
-  border: 1px solid rgba(25, 118, 210, 0.18);
-}
-
-.todo-schedule-day-editor__title {
-  flex: 0 0 100%;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.78);
-}
-
-.todo-schedule-day-editor__note {
-  flex: 1 1 220px;
-  min-width: 180px;
 }
 
 $primary: #1976d2;

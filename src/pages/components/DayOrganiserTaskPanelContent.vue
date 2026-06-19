@@ -35,7 +35,7 @@
       :animating-lines="ctx.animatingLines.value"
       @line-collapsed="ctx.onLineCollapsed"
       @line-expanded="ctx.onLineExpanded"
-      @edit="() => { ctx.CC.task.active.mode.value = 'edit' }"
+      @edit="() => { const t = ctx.CC.task.active.task.value; if (t) ctx.enterTaskEdit(t); }"
       @close="ctx.clearTaskToEdit"
       @delete-task="ctx.handleDeleteTask"
       @update-task="(t) => ctx.handleUpdateTask(t)"

@@ -249,7 +249,7 @@
           </div>
           <div
             v-for="row in meetingScheduleRows"
-            :key="row.date"
+            :key="row.key"
             class="meeting-schedule-preview__row text-body2"
           >
             <span class="meeting-schedule-preview__date">{{ row.dateLabel }}</span>
@@ -267,8 +267,14 @@
                   : $text('task.todo.day_mark_impossible')
               }})
             </span>
-            <div v-if="row.note" class="meeting-schedule-preview__note text-grey-8">
-              {{ row.note }}
+            <div
+              v-for="(note, nIdx) in row.notes"
+              :key="`${row.key}-note-${nIdx}`"
+              class="meeting-schedule-preview__note text-grey-8"
+            >
+              <q-icon :name="note.icon" size="14px" class="q-mr-xs" />
+              <span v-if="note.tagLabel" class="meeting-schedule-preview__note-tag">{{ note.tagLabel }}: </span>
+              {{ note.text }}
             </div>
           </div>
         </div>
@@ -435,8 +441,16 @@ import CC from "src/CCAccess";
 import type { Task } from "src/modules/task/models/TaskModel";
 import {
   todoCalendarSchedule,
+  type DayPlanningSchedule,
   type TodoScheduleTask,
 } from "src/composables/useTodoCalendarSchedule";
+import {
+  PLANNING_NOTE_STATUS_ICONS,
+  formatPlanningNoteDisplayText,
+  type PlanningNoteStatus,
+  type PlanningTag,
+} from "src/modules/task/dayPlanning/dayPlanningTypes";
+import { normalizePlanningDayEntry, scheduleHasPlanningContent } from "src/modules/task/dayPlanning/dayPlanningUtils";
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
 import { MEDIA_TASK_TYPE } from "src/modules/media/mediaTaskTypes";
@@ -721,7 +735,8 @@ function onScheduleTodoClick() {
     eventDate: t.eventDate ?? t.date,
     date: t.date ?? t.eventDate,
     type_id: t.type_id,
-    meetingSchedule: t.meetingSchedule ?? null,
+    meetingSchedule: t.meetingSchedule ?? t.dayPlanning ?? null,
+    dayPlanning: t.dayPlanning ?? t.meetingSchedule ?? null,
     repeat: t.repeat ?? null,
   } as TodoScheduleTask);
   window.dispatchEvent(new Event("co21:todo-schedule-open"));
@@ -731,26 +746,47 @@ function onReviewMeetingScheduleClick() {
   onScheduleTodoClick();
 }
 
-const hasMeetingScheduleNotes = computed(() => {
-  const schedule = activeTask.value?.meetingSchedule;
-  if (schedule?.mode !== "notes" || !schedule.days) return false;
-  return Object.values(schedule.days).some(
-    (entry) => entry?.possible || entry?.impossible || String(entry?.note || "").trim(),
-  );
+const activeDayPlanning = computed((): DayPlanningSchedule | null | undefined => {
+  const t = activeTask.value;
+  return (t?.dayPlanning ?? t?.meetingSchedule) as DayPlanningSchedule | null | undefined;
 });
 
+const hasMeetingScheduleNotes = computed(() => scheduleHasPlanningContent(activeDayPlanning.value));
+
 const meetingScheduleRows = computed(() => {
-  const schedule = activeTask.value?.meetingSchedule;
+  const schedule = activeDayPlanning.value;
   if (!schedule?.days) return [];
-  return Object.entries(schedule.days)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, entry]) => ({
-      date,
-      dateLabel: formatDisplayDate(date),
-      mark: entry?.impossible ? ("impossible" as const) : entry?.possible ? ("possible" as const) : null,
-      note: String(entry?.note || "").trim(),
-    }))
-    .filter((row) => row.mark || row.note);
+  const tags: PlanningTag[] = schedule.tags || [];
+  const rows: Array<{
+    key: string;
+    dateLabel: string;
+    mark: "possible" | "impossible" | null;
+    notes: Array<{ text: string; status: PlanningNoteStatus; tagLabel: string; icon: string }>;
+  }> = [];
+
+  for (const [date, entry] of Object.entries(schedule.days).sort(([a], [b]) => a.localeCompare(b))) {
+    const normalized = normalizePlanningDayEntry(entry);
+    const mark = normalized.impossible
+      ? ("impossible" as const)
+      : normalized.possible
+        ? ("possible" as const)
+        : null;
+    const notes = normalized.notes.map((note) => ({
+      text: formatPlanningNoteDisplayText(note.text),
+      status: note.status,
+      tagLabel: tags.find((t) => t.id === note.tagId)?.label || "",
+      icon: PLANNING_NOTE_STATUS_ICONS[note.status],
+    }));
+    if (mark || notes.length) {
+      rows.push({
+        key: date,
+        dateLabel: formatDisplayDate(date),
+        mark,
+        notes,
+      });
+    }
+  }
+  return rows;
 });
 
 const displayDate = computed(() => {

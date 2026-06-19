@@ -259,7 +259,7 @@
             :animating-lines="animatingLines"
             @line-collapsed="onLineCollapsed"
             @line-expanded="onLineExpanded"
-            @edit="() => { CC.task.active.mode.value = 'edit'; panelHidden = false }"
+            @edit="() => enterTaskEdit(activeTask!)"
             @close="clearTaskToEdit"
             @delete-task="handleDeleteTask"
             @update-task="(t) => handleUpdateTask(t)"
@@ -295,11 +295,17 @@
             :selected-date="CC.task.time.currentDate.value"
             :tasks="allTasks"
             :schedule-day-marks="todoScheduleDayMarks"
+            :planning-day-overlays="todoPlanningDayOverlays"
             @update:selectedDate="onCalendarSelectedDate"
             @day-click="onCalendarDayClick"
           />
         </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-4 day-organiser-calendar-sidebar">
+          <TodoScheduleDayEditor
+            v-if="showTodoScheduleDayEditor && !isStackedOrganiserLayout"
+            class="todo-schedule-planning-panel"
+            :editing-day="todoSchedulePlanningDay"
+          />
           <div class="q-mb-md sidebar-time-meteo">
             <ClockPanel />
             <MeteoPanel />
@@ -464,8 +470,18 @@
       @click="panelHidden = false"
     />
 
-    <div v-if="todoScheduleActive" class="todo-schedule-footer">
+    <div
+      v-if="todoScheduleActive"
+      class="todo-schedule-footer"
+      :class="{ 'todo-schedule-footer--stacked': isStackedOrganiserLayout }"
+    >
+      <TodoScheduleDayEditor
+        v-if="showTodoScheduleDayEditor && isStackedOrganiserLayout"
+        class="todo-schedule-planning-panel todo-schedule-planning-panel--footer"
+        :editing-day="todoSchedulePlanningDay"
+      />
       <div
+        v-if="!isStackedOrganiserLayout"
         class="todo-schedule-footer__mode-toggle"
         role="radiogroup"
         :aria-label="$text('task.todo.pick_mode.group')"
@@ -478,43 +494,6 @@
           :label="opt.label"
           dense
           class="todo-schedule-mode-radio"
-        />
-      </div>
-      <div
-        v-if="todoSchedulePickMode === 'notes' && todoScheduleEditingDay"
-        class="todo-schedule-day-editor"
-      >
-        <div class="todo-schedule-day-editor__title">
-          {{ formatDisplayDate(todoScheduleEditingDay) }}
-        </div>
-        <q-checkbox
-          dense
-          :model-value="todoScheduleEditingDayPossible"
-          :label="$text('task.todo.day_possible')"
-          @update:model-value="onTodoScheduleDayPossible"
-        />
-        <q-checkbox
-          dense
-          :model-value="todoScheduleEditingDayImpossible"
-          :label="$text('task.todo.day_impossible')"
-          @update:model-value="onTodoScheduleDayImpossible"
-        />
-        <q-input
-          dense
-          outlined
-          type="textarea"
-          autogrow
-          class="todo-schedule-day-editor__note"
-          :model-value="todoScheduleEditingDayNote"
-          :label="$text('task.todo.day_note')"
-          @update:model-value="onTodoScheduleDayNote"
-        />
-        <q-btn
-          dense
-          unelevated
-          color="primary"
-          :label="$text('task.todo.use_as_meeting_day')"
-          @click="pickTodoScheduleDay(todoScheduleEditingDay)"
         />
       </div>
       <div
@@ -580,6 +559,22 @@
           />
         </template>
       </div>
+      <div
+        v-if="isStackedOrganiserLayout"
+        class="todo-schedule-footer__mode-toggle todo-schedule-footer__mode-toggle--below"
+        role="radiogroup"
+        :aria-label="$text('task.todo.pick_mode.group')"
+      >
+        <q-radio
+          v-for="opt in todoSchedulePickModeOptions"
+          :key="`stacked-${opt.value}`"
+          v-model="todoSchedulePickMode"
+          :val="opt.value"
+          :label="opt.label"
+          dense
+          class="todo-schedule-mode-radio"
+        />
+      </div>
     </div>
   </q-page>
 </template>
@@ -603,7 +598,9 @@ import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
 import { formatDisplayDate, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
+import TodoScheduleDayEditor from "src/modules/task/components/element/TodoScheduleDayEditor.vue";
 import CalendarView from "src/components/time/CalendarView.vue";
+import type { PlanningDayOverlay } from "src/modules/task/dayPlanning/dayPlanningTypes";
 import GroupSelectHeader from "src/modules/group/components/GroupSelectHeader.vue";
 import GroupTreeSelector from "src/modules/group/components/GroupTreeSelector.vue";
 import { useDayOrganiserView } from "src/composables/useDayOrganiserView";
@@ -621,7 +618,9 @@ import {
   readGroupBackgroundFields,
 } from "src/modules/group/utils/groupBackground";
 import { getContrastColor } from "src/utils/colorUtils";
-import { todoCalendarSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode } from "src/composables/useTodoCalendarSchedule";
+import { todoCalendarSchedule, type DayPlanningSchedule, type TodoMeetingSchedule, type TodoSchedulePickMode, type TodoScheduleTask } from "src/composables/useTodoCalendarSchedule";
+import { scheduleHasPlanningData } from "src/modules/task/dayPlanning/dayPlanningUtils";
+import type { Task } from "src/modules/task/models/TaskModel";
 import TasksListSmall from "src/modules/task/components/list/TasksListSmall.vue";
 import { loadConnectionsDevices } from "src/modules/storage/sync/connectionsDeviceStorage";
 import { runSyncWithPeer } from "src/modules/storage/sync/lanOrganiserSync";
@@ -692,15 +691,14 @@ const {
   scheduleHour: todoScheduleHour,
   scheduleMinute: todoScheduleMinute,
   hasPickedDate: todoScheduleHasPickedDate,
-  scheduleDayMarks: todoScheduleDayMarks,
   editingDay: todoScheduleEditingDay,
   cancel: cancelTodoScheduleState,
   pickDay: pickTodoScheduleDay,
   openDayEditor: openTodoScheduleDayEditor,
+  syncPlanningEditorDay: syncTodoSchedulePlanningEditor,
   setDayPossible: setTodoScheduleDayPossible,
   setDayImpossible: setTodoScheduleDayImpossible,
-  setDayNote: setTodoScheduleDayNote,
-  buildMeetingSchedule: buildTodoMeetingSchedule,
+  buildDayPlanning: buildTodoDayPlanning,
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
 
@@ -711,37 +709,38 @@ const todoSchedulePickMode = computed({
   },
 });
 
-const todoScheduleEditingDayPossible = computed(
-  () => Boolean(todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.possible),
-);
-const todoScheduleEditingDayImpossible = computed(
-  () => Boolean(todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.impossible),
-);
-const todoScheduleEditingDayNote = computed(
-  () => (todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.note) || "",
+const todoSchedulePlanningDay = computed(() => {
+  if (!todoScheduleActive.value || todoCalendarSchedule.pickMode.value !== "notes") return "";
+  const editing = todoScheduleEditingDay.value.trim();
+  if (editing) return editing;
+  const picked = todoSchedulePickedDate.value.trim();
+  if (picked) return picked;
+  const task = todoScheduleSourceTask.value;
+  return String(task?.eventDate || task?.date || "").trim();
+});
+
+const showTodoScheduleDayEditor = computed(
+  () => todoScheduleActive.value && todoSchedulePickMode.value === "notes" && Boolean(todoSchedulePlanningDay.value),
 );
 
-function onTodoScheduleDayPossible(value: boolean) {
-  if (!todoScheduleEditingDay.value) return;
-  setTodoScheduleDayPossible(todoScheduleEditingDay.value, value);
-}
+const todoScheduleDayMarks = computed(() => {
+  if (!todoScheduleActive.value || todoCalendarSchedule.pickMode.value !== "notes") return {};
+  return todoCalendarSchedule.scheduleDayMarks.value;
+});
 
-function onTodoScheduleDayImpossible(value: boolean) {
-  if (!todoScheduleEditingDay.value) return;
-  setTodoScheduleDayImpossible(todoScheduleEditingDay.value, value);
-}
-
-function onTodoScheduleDayNote(value: string | number | null) {
-  if (!todoScheduleEditingDay.value) return;
-  setTodoScheduleDayNote(todoScheduleEditingDay.value, String(value ?? ""));
-}
+const todoPlanningDayOverlays = computed((): Record<string, PlanningDayOverlay> => {
+  if (!todoScheduleActive.value || todoCalendarSchedule.pickMode.value !== "notes") return {};
+  return todoCalendarSchedule.planningDayOverlays.value;
+});
 
 watch(
   () => todoCalendarSchedule.pickMode.value,
   (mode) => {
     if (mode === "day") {
       todoScheduleEditingDay.value = "";
+      return;
     }
+    syncTodoSchedulePlanningEditor();
   },
 );
 
@@ -949,8 +948,9 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
 
       if (setSucceeded) {
         try {
-          CC.task.active.setMode("edit");
-          panelHidden.value = false;
+          const activeTask = CC.task.active.task.value;
+          if (activeTask) enterTaskEdit(activeTask);
+          else enterTaskEdit(candidate);
         } catch (e) {
           // ignore
         }
@@ -978,8 +978,7 @@ async function handleTaskContext(task: any, rect?: DOMRect | null) {
           const found = (all || []).find((t: any) => String(t.id) === String(id));
           if (found) {
             CC.task.active.setTask(found);
-            CC.task.active.setMode("edit");
-            panelHidden.value = false;
+            enterTaskEdit(found);
           }
         } catch (e) {
           void e;
@@ -1095,7 +1094,7 @@ const animatingLines = ref<number[]>([]);
 const { onLineCollapsed, onLineExpanded } = useLineEventHandlers();
 
 // task UI handlers moved to module
-const { setTaskToEdit, editTask, clearTaskToEdit, closeTaskPanel } = useTaskUiHandlers({
+const { setTaskToEdit, editTask: editTaskDefault, clearTaskToEdit, closeTaskPanel } = useTaskUiHandlers({
   activeTask: CC.task.active.task,
   activeMode: CC.task.active.mode,
   setActiveTask: (p: Parameters<typeof CC.task.active.setTask>[0]) =>
@@ -1104,6 +1103,71 @@ const { setTaskToEdit, editTask, clearTaskToEdit, closeTaskPanel } = useTaskUiHa
   currentDate: CC.task.time.currentDate,
   inlinePreview: isFilesMode,
 });
+
+const suppressPlannerOnNextEdit = ref(false);
+
+function toTodoScheduleTask(task: Task): TodoScheduleTask {
+  return {
+    id: String(task.id),
+    name: task.name,
+    eventTime: task.eventTime,
+    eventDate: task.eventDate ?? task.date,
+    date: task.date ?? task.eventDate,
+    type_id: task.type_id,
+    meetingSchedule: (task.meetingSchedule ?? task.dayPlanning ?? null) as DayPlanningSchedule | null,
+    dayPlanning: (task.dayPlanning ?? task.meetingSchedule ?? null) as DayPlanningSchedule | null,
+    repeat: task.repeat ?? null,
+  };
+}
+
+function taskUsesExtendedPlanning(task: Task | null | undefined): boolean {
+  if (!task) return false;
+  const planning = (task.dayPlanning ?? task.meetingSchedule) as DayPlanningSchedule | null | undefined;
+  return scheduleHasPlanningData(planning);
+}
+
+function openTodoPlannerForTask(task: Task) {
+  todoCalendarSchedule.start(toTodoScheduleTask(task));
+  onTodoScheduleOpen();
+}
+
+function enterTaskEdit(task: Task | null | undefined) {
+  if (!task) return;
+  if (!suppressPlannerOnNextEdit.value && taskUsesExtendedPlanning(task)) {
+    try {
+      CC.task.active.setTask(task);
+    } catch {
+      void 0;
+    }
+    try {
+      CC.task.active.setMode("preview");
+    } catch {
+      void 0;
+    }
+    openTodoPlannerForTask(task);
+    return;
+  }
+  suppressPlannerOnNextEdit.value = false;
+  editTaskDefault(task);
+}
+
+function editTask(task: Task) {
+  enterTaskEdit(task);
+}
+
+watch(
+  () => CC.task.active.mode.value,
+  (mode) => {
+    if (mode !== "edit" || suppressPlannerOnNextEdit.value || todoScheduleActive.value) return;
+    const task = CC.task.active.task.value;
+    if (!taskUsesExtendedPlanning(task)) return;
+    void nextTick(() => {
+      if (suppressPlannerOnNextEdit.value || todoScheduleActive.value) return;
+      if (CC.task.active.mode.value !== "edit") return;
+      enterTaskEdit(task);
+    });
+  },
+);
 
 // outer-scope handlers for window events (registered/assigned inside onMounted)
 let organiserReloadHandler: any = null;
@@ -1994,11 +2058,13 @@ function cancelTodoSchedule() {
 type TodoScheduleApplyDetail = {
   date: string;
   eventTime: string;
+  dayPlanning?: DayPlanningSchedule | null;
   meetingSchedule?: TodoMeetingSchedule | null;
   repeat?: Record<string, unknown>;
 };
 
 function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleApplyDetail) {
+  suppressPlannerOnNextEdit.value = true;
   try {
     const active = CC.task.active.task.value;
     if (active && task.id && String(active.id) === String(task.id)) {
@@ -2010,7 +2076,8 @@ function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleAppl
         eventDate: detail.date,
         eventTime: detail.eventTime,
         timeMode: "event",
-        meetingSchedule: detail.meetingSchedule ?? null,
+        dayPlanning: detail.dayPlanning ?? null,
+        meetingSchedule: detail.dayPlanning ?? detail.meetingSchedule ?? null,
         ...(detail.repeat != null ? { repeat: detail.repeat } : {}),
       };
     }
@@ -2038,6 +2105,9 @@ function applyTodoScheduleToEdit(task: { id?: string }, detail: TodoScheduleAppl
   } catch {
     void 0;
   }
+  void nextTick(() => {
+    suppressPlannerOnNextEdit.value = false;
+  });
 }
 
 async function confirmTodoSchedule(goToEdit: boolean) {
@@ -2045,8 +2115,11 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   const date = todoSchedulePickedDate.value.trim();
   if (!task || !date) return;
 
-  const meetingSchedule = buildTodoMeetingSchedule();
-  const scheduleExtras = meetingSchedule ? { meetingSchedule } : { meetingSchedule: null };
+  const dayPlanning = buildTodoDayPlanning();
+  const scheduleExtras =
+    todoSchedulePickMode.value === "notes" && dayPlanning
+      ? { dayPlanning, meetingSchedule: dayPlanning }
+      : { dayPlanning: null, meetingSchedule: null };
 
   const syncedRepeat = syncRepeatWithPickedDate(task.repeat, date);
   const repeatExtras = syncedRepeat != null ? { repeat: syncedRepeat } : {};
@@ -2054,6 +2127,7 @@ async function confirmTodoSchedule(goToEdit: boolean) {
   const detail: TodoScheduleApplyDetail = {
     date,
     eventTime: buildTodoScheduleEventTime(),
+    dayPlanning: scheduleExtras.dayPlanning,
     meetingSchedule: scheduleExtras.meetingSchedule,
     ...(repeatExtras.repeat != null ? { repeat: repeatExtras.repeat } : {}),
   };
@@ -2113,8 +2187,8 @@ async function confirmTodoSchedule(goToEdit: boolean) {
 }
 
 function onTodoScheduleOpen() {
-  if (!todoCalendarSchedule.hasMeetingNotesData()) {
-    todoCalendarSchedule.pickMode.value = "day";
+  if (todoCalendarSchedule.pickMode.value === "notes") {
+    syncTodoSchedulePlanningEditor();
   }
   scrollToCalendarSection();
   panelHidden.value = true;
@@ -2298,6 +2372,7 @@ provide(dayOrganiserPanelKey, {
   onLineExpanded,
   getGroupName,
   clearTaskToEdit,
+  enterTaskEdit: (task) => enterTaskEdit(task as Task),
   handleDeleteTask: (payload) => void handleDeleteTask(payload),
   handleUpdateTask: (task) => void handleUpdateTask(task),
   handleAddTaskFromForm: (taskPayload, opts) =>
