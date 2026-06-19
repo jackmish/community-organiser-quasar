@@ -42,23 +42,55 @@
 
 .todo-schedule-footer__mode-toggle {
   flex: 0 0 auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
 
-  .q-btn {
-    background: #f5f5f5 !important;
-    color: rgba(0, 0, 0, 0.72) !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    font-weight: 600;
-    font-size: 0.875rem;
-    padding: 6px 12px;
-    min-height: 34px;
+.todo-schedule-mode-radio {
+  margin: 0;
+
+  .q-radio__inner {
+    display: none;
   }
 
-  .q-btn.q-btn--active,
-  .q-btn.q-btn--active.q-btn--unelevated,
-  .q-btn.q-btn--active.q-btn--flat {
+  .q-radio__label {
+    margin-left: 0;
+    padding: 6px 12px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f5f5f5;
+    color: rgba(0, 0, 0, 0.72);
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .q-radio__label:hover {
+    background: #ececec;
+  }
+}
+
+.todo-schedule-mode-radio[aria-checked='true'],
+.todo-schedule-mode-radio.q-radio--truthy {
+  .q-radio__label {
     background-color: var(--q-primary, #1976d2) !important;
-    color: #fff !important;
     border-color: transparent !important;
+    color: #fff !important;
+  }
+
+  .q-radio__label:hover {
+    background-color: var(--q-primary, #1976d2) !important;
   }
 }
 

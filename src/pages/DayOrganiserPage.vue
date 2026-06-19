@@ -465,18 +465,21 @@
     />
 
     <div v-if="todoScheduleActive" class="todo-schedule-footer">
-      <q-btn-toggle
-        :key="todoScheduleSessionKey"
-        v-model="todoSchedulePickMode"
-        dense
-        inline
-        rounded
-        unelevated
-        mandatory
-        toggle-color="primary"
+      <div
         class="todo-schedule-footer__mode-toggle"
-        :options="todoSchedulePickModeOptions"
-      />
+        role="radiogroup"
+        :aria-label="$text('task.todo.pick_mode.group')"
+      >
+        <q-radio
+          v-for="opt in todoSchedulePickModeOptions"
+          :key="opt.value"
+          v-model="todoSchedulePickMode"
+          :val="opt.value"
+          :label="opt.label"
+          dense
+          class="todo-schedule-mode-radio"
+        />
+      </div>
       <div
         v-if="todoSchedulePickMode === 'notes' && todoScheduleEditingDay"
         class="todo-schedule-day-editor"
@@ -638,7 +641,7 @@ const { now, getTimeDifferenceDisplay, getTimeDiffClass } = useDayOrganiserView(
 
 // calendar handlers will be provided by createCalendarHandlers (instantiated after refs)
 
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide, toRef } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, provide } from "vue";
 import { useMobileOrganiserScrollToggle } from "src/composables/useMobileOrganiserScrollToggle";
 import { checkAndSync, startSyncScheduler, stopSyncScheduler } from "src/modules/user/calendarSyncService";
 import { $text } from "src/modules/lang";
@@ -691,7 +694,6 @@ const {
   hasPickedDate: todoScheduleHasPickedDate,
   scheduleDayMarks: todoScheduleDayMarks,
   editingDay: todoScheduleEditingDay,
-  sessionKey: todoScheduleSessionKey,
   cancel: cancelTodoScheduleState,
   pickDay: pickTodoScheduleDay,
   openDayEditor: openTodoScheduleDayEditor,
@@ -702,7 +704,12 @@ const {
   buildEventTime: buildTodoScheduleEventTime,
 } = todoCalendarSchedule;
 
-const todoSchedulePickMode = toRef(todoCalendarSchedule, "pickMode");
+const todoSchedulePickMode = computed({
+  get: () => todoCalendarSchedule.pickMode.value,
+  set: (value: TodoSchedulePickMode) => {
+    todoCalendarSchedule.pickMode.value = value;
+  },
+});
 
 const todoScheduleEditingDayPossible = computed(
   () => Boolean(todoScheduleEditingDay.value && todoCalendarSchedule.dayEntries.value[todoScheduleEditingDay.value]?.possible),
@@ -729,11 +736,14 @@ function onTodoScheduleDayNote(value: string | number | null) {
   setTodoScheduleDayNote(todoScheduleEditingDay.value, String(value ?? ""));
 }
 
-watch(todoSchedulePickMode, (mode) => {
-  if (mode === "day") {
-    todoScheduleEditingDay.value = "";
-  }
-});
+watch(
+  () => todoCalendarSchedule.pickMode.value,
+  (mode) => {
+    if (mode === "day") {
+      todoScheduleEditingDay.value = "";
+    }
+  },
+);
 
 const todoSchedulePickModeOptions = computed(() => [
   { label: $text("task.todo.pick_mode.day"), value: "day" as TodoSchedulePickMode },
@@ -2103,6 +2113,9 @@ async function confirmTodoSchedule(goToEdit: boolean) {
 }
 
 function onTodoScheduleOpen() {
+  if (!todoCalendarSchedule.hasMeetingNotesData()) {
+    todoCalendarSchedule.pickMode.value = "day";
+  }
   scrollToCalendarSection();
   panelHidden.value = true;
 }

@@ -99,6 +99,15 @@ function loadMeetingScheduleFromTask(task: TodoScheduleTask | null | undefined) 
   pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
 }
 
+function taskHasMeetingScheduleNotes(task: TodoScheduleTask | null | undefined): boolean {
+  const schedule = task?.meetingSchedule;
+  return Boolean(
+    schedule?.mode === 'notes' &&
+      schedule.days &&
+      Object.keys(schedule.days).length > 0,
+  );
+}
+
 /** Shared state: schedule a Todo via the main calendar (preview or edit). */
 export function useTodoCalendarSchedule() {
   const hasPickedDate = computed(() => Boolean(pickedDate.value.trim()));
@@ -203,7 +212,7 @@ export function useTodoCalendarSchedule() {
     scheduleMinute.value = null;
     sessionKey.value += 1;
     loadMeetingScheduleFromTask(task);
-    if (!task.meetingSchedule) {
+    if (!taskHasMeetingScheduleNotes(task)) {
       pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     }
     active.value = true;
@@ -218,7 +227,7 @@ export function useTodoCalendarSchedule() {
     scheduleMinute.value = null;
     sessionKey.value += 1;
     loadMeetingScheduleFromTask(sourceTask.value);
-    if (!task.meetingSchedule) {
+    if (!taskHasMeetingScheduleNotes(sourceTask.value)) {
       pickMode.value = DEFAULT_TODO_SCHEDULE_PICK_MODE;
     }
     active.value = true;
