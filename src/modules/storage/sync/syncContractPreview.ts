@@ -172,15 +172,7 @@ export function buildSyncContractSnapshot(
       const id = typeof g.id === 'string' || typeof g.id === 'number' ? String(g.id) : '';
       if (!id || !assignedGroupIds.has(id)) continue;
       const name = typeof g.name === 'string' && g.name ? g.name : id;
-      const entry: {
-        id: string;
-        name: string;
-        icon?: string;
-        color?: string;
-        textColor?: string;
-        parentId?: string | null;
-        taskCount?: number;
-      } = { id, name };
+      const entry: NonNullable<SyncContractSnapshot['groups']>[number] = { id, name };
       if (typeof g.icon === 'string' && g.icon) entry.icon = g.icon;
       if (typeof g.color === 'string' && g.color.trim()) entry.color = g.color.trim();
       const tc =
@@ -193,6 +185,15 @@ export function buildSyncContractSnapshot(
       const pid = g.parentId ?? g.parent_id;
       if (typeof pid === 'string' && pid) entry.parentId = pid;
       else entry.parentId = null;
+      if (typeof g.layoutColorize === 'boolean') entry.layoutColorize = g.layoutColorize;
+      if (typeof g.backgroundColorize === 'boolean') entry.backgroundColorize = g.backgroundColorize;
+      if (typeof g.calendarColorize === 'boolean') entry.calendarColorize = g.calendarColorize;
+      if (typeof g.shareSubgroups === 'boolean') entry.shareSubgroups = g.shareSubgroups;
+      if (typeof g.hideTasksFromParent === 'boolean') entry.hideTasksFromParent = g.hideTasksFromParent;
+      if (typeof g.shortcut === 'boolean') entry.shortcut = g.shortcut;
+      if (typeof g.backgroundImage === 'string' && g.backgroundImage.trim()) {
+        entry.backgroundImage = g.backgroundImage.trim();
+      }
       const taskCount = taskCountByGroup?.[id];
       if (typeof taskCount === 'number' && taskCount > 0) entry.taskCount = taskCount;
       groups.push(entry);
@@ -263,6 +264,14 @@ function snapshotsEqual(a: SyncContractSnapshot | null, b: SyncContractSnapshot)
     JSON.stringify(normalizeContractSnapshotForCompare(a)) ===
     JSON.stringify(normalizeContractSnapshotForCompare(b))
   );
+}
+
+export function contractSnapshotTermsEqual(
+  a: SyncContractSnapshot | null,
+  b: SyncContractSnapshot | null,
+): boolean {
+  if (!a || !b) return false;
+  return snapshotsEqual(a, b);
 }
 
 export function hasSnapshotChanges(

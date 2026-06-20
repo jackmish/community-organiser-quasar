@@ -1,5 +1,6 @@
 import { GroupModel, type Group } from 'src/modules/group/models/GroupModel';
 import { mergeGroupStyleFields, normalizeGroupStyleFields } from 'src/modules/group/utils/groupStyleUtils';
+import type { DayPlanningSchedule } from 'src/modules/task/dayPlanning/dayPlanningTypes';
 import type {
   LanSyncGroupDeletionPayload,
   LanSyncGroupPayload,
@@ -15,6 +16,32 @@ function tsMs(v: string | undefined): number {
   if (!v) return 0;
   const n = Date.parse(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function remoteGroupHasPresentationFields(r: LanSyncGroupPayload): boolean {
+  return (
+    r.color !== undefined ||
+    r.textColor !== undefined ||
+    r.icon !== undefined ||
+    r.backgroundImage !== undefined ||
+    r.layoutColorize !== undefined ||
+    r.backgroundColorize !== undefined ||
+    r.calendarColorize !== undefined ||
+    r.shareSubgroups !== undefined ||
+    r.hideTasksFromParent !== undefined ||
+    r.shortcut !== undefined
+  );
+}
+
+/** Keep enabled colorize/options when remote would downgrade true → false. */
+function mergeOptionalBool(
+  local: boolean | undefined,
+  remote: boolean | undefined,
+): boolean | undefined {
+  if (remote === true) return true;
+  if (local === true && remote === false) return true;
+  if (remote === false) return false;
+  return local;
 }
 
 /** Same id → one group; same name with different id → keep both (contract uses ids). */
@@ -52,31 +79,35 @@ export function mergeGroupsById(local: Group[], remote: LanSyncGroupPayload[]): 
     const remoteMs = tsMs(r.updatedAt);
     const localMs = tsMs(existing.updatedAt);
     if (remoteMs >= localMs) {
+      const remoteHasPresentation = remoteGroupHasPresentationFields(r);
       const mergedStyle = mergeGroupStyleFields(
         {
           ...(existing.color ? { color: existing.color } : {}),
           ...(existing.textColor ? { textColor: existing.textColor } : {}),
         },
-        {
-          ...(r.color ? { color: r.color } : {}),
-          ...(r.textColor ? { textColor: r.textColor } : {}),
-        },
+        remoteHasPresentation
+          ? {
+              ...(r.color ? { color: r.color } : {}),
+              ...(r.textColor ? { textColor: r.textColor } : {}),
+            }
+          : {},
       );
       Object.assign(existing, {
         name: r.name ?? existing.name,
         ...(mergedStyle.color ? { color: mergedStyle.color } : {}),
-        icon: r.icon !== undefined ? r.icon : existing.icon,
         ...(mergedStyle.textColor ? { textColor: mergedStyle.textColor } : {}),
+        ...(remoteHasPresentation && r.icon !== undefined ? { icon: r.icon } : {}),
         backgroundImage:
           r.backgroundImage !== undefined ? r.backgroundImage : existing.backgroundImage,
-        layoutColorize:
-          r.layoutColorize !== undefined ? r.layoutColorize : existing.layoutColorize,
-        backgroundColorize:
-          r.backgroundColorize !== undefined
-            ? r.backgroundColorize
-            : existing.backgroundColorize,
-        calendarColorize:
-          r.calendarColorize !== undefined ? r.calendarColorize : existing.calendarColorize,
+        layoutColorize: remoteHasPresentation
+          ? mergeOptionalBool(existing.layoutColorize, r.layoutColorize)
+          : existing.layoutColorize,
+        backgroundColorize: remoteHasPresentation
+          ? mergeOptionalBool(existing.backgroundColorize, r.backgroundColorize)
+          : existing.backgroundColorize,
+        calendarColorize: remoteHasPresentation
+          ? mergeOptionalBool(existing.calendarColorize, r.calendarColorize)
+          : existing.calendarColorize,
         parentId: r.parentId !== undefined ? (r.parentId ?? undefined) : existing.parentId,
         hideTasksFromParent:
           r.hideTasksFromParent !== undefined
@@ -290,6 +321,8 @@ const TASK_SYNC_PAYLOAD_KEYS = [
   'noteColor',
   'photo',
   'attachments',
+  'dayPlanning',
+  'meetingSchedule',
   'createdAt',
   'updatedAt',
 ] as const;
@@ -308,11 +341,47 @@ function taskIdString(v: unknown): string {
   return '';
 }
 
+function isDayPlanningSchedule(v: unknown): v is DayPlanningSchedule {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const o = v as Record<string, unknown>;
+  return o.mode === 'notes' && typeof o.days === 'object' && o.days !== null && !Array.isArray(o.days);
+}
+
+function cloneDayPlanningSchedule(v: unknown): DayPlanningSchedule | null {
+  if (!isDayPlanningSchedule(v)) return null;
+  try {
+    return JSON.parse(JSON.stringify(v)) as DayPlanningSchedule;
+  } catch {
+    return null;
+  }
+}
+
+function readTaskPlanningSchedule(raw: Record<string, unknown>): DayPlanningSchedule | null {
+  return cloneDayPlanningSchedule(raw.dayPlanning ?? raw.meetingSchedule);
+}
+
+function assignPlanningFieldsToPayload(
+  out: LanSyncTaskPayload,
+  raw: Record<string, unknown>,
+): void {
+  const planning = readTaskPlanningSchedule(raw);
+  if (planning) {
+    out.dayPlanning = planning;
+    out.meetingSchedule = planning;
+    return;
+  }
+  if (raw.dayPlanning === null || raw.meetingSchedule === null) {
+    out.dayPlanning = null;
+    out.meetingSchedule = null;
+  }
+}
+
 export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
   const raw = plainTaskFields(t);
   const out: LanSyncTaskPayload = { id: taskIdString(raw.id) || taskIdString(t.id) };
   for (const key of TASK_SYNC_PAYLOAD_KEYS) {
     if (key === 'id') continue;
+    if (key === 'dayPlanning' || key === 'meetingSchedule') continue;
     if (!(key in raw)) continue;
     const v = raw[key];
     if (v === undefined) continue;
@@ -332,5 +401,6 @@ export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
       (out as Record<string, unknown>)[key] = v;
     }
   }
+  assignPlanningFieldsToPayload(out, raw);
   return out;
 }

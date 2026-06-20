@@ -8,6 +8,7 @@ export const LAN_SYNC_ROTATING_TOKEN_ENABLED = false;
 export const LAN_SYNC_TOKEN_DISABLED = '';
 
 import type { SyncContractSnapshot } from 'src/modules/storage/sync/syncContractSettings';
+import type { DayPlanningSchedule } from 'src/modules/task/dayPlanning/dayPlanningTypes';
 
 export type LanSyncExchangeRequest = {
   /** Caller device id (must be a trusted / paired peer). */
@@ -82,6 +83,8 @@ export type LanSyncTaskPayload = {
   eventTime?: string;
   tags?: string[];
   repeat?: Record<string, unknown> | null;
+  dayPlanning?: DayPlanningSchedule | null;
+  meetingSchedule?: DayPlanningSchedule | null;
   timeMode?: string;
   timeOffsetDays?: number | null;
   color_set?: string | null;

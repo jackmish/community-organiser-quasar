@@ -1,8 +1,11 @@
 import logger from '../../../../utils/logger';
 import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
 import { isActiveSpaceSqliteStorage } from './ElectronAppdataAPI';
-import { loadGroupsFromGroupDirectory } from './groupFileLoader';
+import { loadGroupsFromGroupDirectory, getGroupFilename } from './groupFileLoader';
 import type { StorageBackend } from '../StorageBackend';
+import { shouldUseCapacitorStorage } from '../storagePlatform';
+import { capacitorStorage } from '../mobile/capacitorBackend';
+import { sanitizeGroupsForStorage } from '../groupStorageSanitize';
 // Re-export so existing callers that import OrganiserData from this module keep working.
 export type { OrganiserData } from '../StorageBackend';
 import type { OrganiserData } from '../StorageBackend';
@@ -183,6 +186,9 @@ class DayOrganiserStorage implements StorageBackend {
   }
 
   public async loadAllGroupsFromFiles(): Promise<any[]> {
+    if (shouldUseCapacitorStorage()) {
+      return capacitorStorage.loadAllGroups();
+    }
     if (
       typeof window !== 'undefined' &&
       window.electronAPI &&
@@ -234,9 +240,7 @@ class DayOrganiserStorage implements StorageBackend {
 
 export const storage = new DayOrganiserStorage();
 
-export function getGroupFilename(groupId: string): string {
-  return `group-${groupId}.json`;
-}
+export { getGroupFilename } from './groupFileLoader';
 
 export async function getGroupFilesDirectory(): Promise<string> {
   if (window.electronAPI) {
@@ -245,69 +249,12 @@ export async function getGroupFilesDirectory(): Promise<string> {
   return '';
 }
 
-function sanitizeJsonReplacer() {
-  const seen = new WeakSet<object>();
-  return function (k: string, v: unknown) {
-    if (typeof v === 'object' && v !== null) {
-      if (seen.has(v)) return undefined;
-      seen.add(v);
-    }
-    if (typeof v === 'function') return undefined;
-    if (k && k.startsWith('_')) return undefined;
-    return v;
-  };
-}
-
-function sanitizeJsonValue<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value, sanitizeJsonReplacer())) as T;
-}
-
-function prepareGroupForDisk(group: Record<string, unknown>): Record<string, unknown> {
-  const safeTasks = Array.isArray(group.tasks)
-    ? group.tasks.map((task: Record<string, unknown>) => {
-        const t = { ...task, groupId: group.id };
-        if ('_group' in t) delete t._group;
-        return t;
-      })
-    : undefined;
-  const safeMediaTasks = Array.isArray(group.mediaTasks)
-    ? group.mediaTasks.map((task: Record<string, unknown>) => {
-        const t = { ...task, groupId: group.id };
-        if ('_group' in t) delete t._group;
-        return t;
-      })
-    : undefined;
-  const groupToWrite = { ...group };
-  if (safeTasks !== undefined) groupToWrite.tasks = safeTasks;
-  if (safeMediaTasks !== undefined) groupToWrite.mediaTasks = safeMediaTasks;
-  return groupToWrite;
-}
-
-async function sanitizeGroupsForStorage(groups: unknown[]): Promise<Record<string, unknown>[]> {
-  const { prepareGroupBackgroundForDisk } = await import(
-    'src/modules/group/utils/groupBackgroundStorage'
-  );
-  const sanitized: Record<string, unknown>[] = [];
-  for (const group of groups) {
-    if (!group || typeof group !== 'object') continue;
-    const groupToWrite = prepareGroupForDisk(group as Record<string, unknown>);
-    try {
-      await prepareGroupBackgroundForDisk(
-        groupToWrite as {
-          id: string;
-          backgroundImage?: string | null;
-          background_image?: string | null;
-        },
-      );
-    } catch (err) {
-      logger.warn('[saveGroupsToFiles] group background persist failed', groupToWrite.id, err);
-    }
-    sanitized.push(sanitizeJsonValue(groupToWrite));
-  }
-  return sanitized;
-}
-
 export async function saveGroupsToFiles(groups: any[]): Promise<void> {
+  if (shouldUseCapacitorStorage()) {
+    await capacitorStorage.saveGroups(groups);
+    return;
+  }
+
   const sanitizedGroups = await sanitizeGroupsForStorage(groups);
 
   if (
@@ -340,7 +287,8 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
     try {
       localStorage.setItem('day-organiser-groups', JSON.stringify(sanitizedGroups, null, 2));
     } catch (e) {
-      // ignore storage errors
+      logger.error('[saveGroupsToFiles] localStorage save failed', e);
+      throw e;
     }
   } else {
     throw new Error('No supported storage method available.');
@@ -348,6 +296,9 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
 }
 
 export async function loadSettings(): Promise<any> {
+  if (shouldUseCapacitorStorage()) {
+    return capacitorStorage.loadSettings();
+  }
   if (
     window.electronAPI &&
     (await isActiveSpaceSqliteStorage()) &&
@@ -395,6 +346,10 @@ export async function loadSettings(): Promise<any> {
 }
 
 export async function saveSettings(settings: any): Promise<void> {
+  if (shouldUseCapacitorStorage()) {
+    await capacitorStorage.saveSettings(settings || {});
+    return;
+  }
   if (
     window.electronAPI &&
     (await isActiveSpaceSqliteStorage()) &&
@@ -427,7 +382,8 @@ export async function saveSettings(settings: any): Promise<void> {
     try {
       localStorage.setItem('day-organiser-settings', JSON.stringify(settings));
     } catch (e) {
-      // ignore
+      logger.error('[saveSettings] localStorage save failed', e);
+      throw e;
     }
   }
 }
@@ -462,6 +418,10 @@ export async function setSetting(key: string, value: any): Promise<void> {
 }
 
 export async function deleteGroupFile(groupId: string): Promise<void> {
+  if (shouldUseCapacitorStorage()) {
+    await capacitorStorage.deleteGroup(groupId);
+    return;
+  }
   if (
     window.electronAPI &&
     (await isActiveSpaceSqliteStorage()) &&

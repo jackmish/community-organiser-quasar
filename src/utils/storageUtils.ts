@@ -1,10 +1,9 @@
-import { app } from 'src/services/appService';
+import logger from 'src/utils/logger';
 
+/** Persist organiser data — uses CC.storage directly so errors are not swallowed by app(). */
 export async function saveData(): Promise<void> {
-  const s = app('storage');
-  if (!s) return;
-  // app proxy wraps methods and errors — simply call saveData
-  await s.saveData();
+  const { default: CC } = await import('src/CCAccess');
+  await CC.storage.saveData();
 }
 
 export default { saveData };

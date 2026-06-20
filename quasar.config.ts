@@ -13,11 +13,13 @@ export default defineConfig((ctx) => {
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
+      'nativeStorageMigration',
       'spaceAuth',
       'workspaceGate',
       'deviceId',
       'ownDeviceNameSeed',
       'pinia',
+      'nativeStoragePersistence',
       'locale',
       'co21LanServer',
       'co21LanDebug',
@@ -184,6 +186,7 @@ export default defineConfig((ctx) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-capacitor-apps/configuring-capacitor
     capacitor: {
       hideSplashscreen: true,
+      appName: 'CO21 - Community Organiser',
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/configuring-electron

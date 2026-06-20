@@ -14,6 +14,7 @@ import { $text } from 'src/modules/lang';
 import { SYNC_BASELINE_RESTORE_EVENT } from 'src/modules/storage/sync/syncContractUi';
 import {
   loadActiveContractForSync,
+  loadLastContractSnapshot,
   saveSyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import {
@@ -135,17 +136,31 @@ export function useSyncContractInDialog(
     void refreshPendingSend();
   }
 
+  const onContractSigned = (): void => {
+    void (async () => {
+      const last = await loadLastContractSnapshot();
+      if (last) {
+        sync.captureBaselineFrom(devices.value, roleProfiles.value, last);
+      } else {
+        await captureBaseline();
+      }
+      await refreshPendingSend();
+    })();
+  };
+
   const onPendingChanged = () => void refreshPendingSend();
 
   onMounted(() => {
     void refreshPendingSend();
     window.addEventListener(PENDING_ACTIONS_CHANGED_EVENT, onPendingChanged);
     window.addEventListener(SYNC_BASELINE_RESTORE_EVENT, onBaselineRestore);
+    window.addEventListener('co21:sync-contract-signed', onContractSigned);
   });
 
   onBeforeUnmount(() => {
     window.removeEventListener(PENDING_ACTIONS_CHANGED_EVENT, onPendingChanged);
     window.removeEventListener(SYNC_BASELINE_RESTORE_EVENT, onBaselineRestore);
+    window.removeEventListener('co21:sync-contract-signed', onContractSigned);
   });
 
   return {

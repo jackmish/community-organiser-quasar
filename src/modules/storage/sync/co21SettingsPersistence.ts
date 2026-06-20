@@ -1,9 +1,18 @@
 import { Capacitor } from '@capacitor/core';
 import logger from 'src/utils/logger';
+import {
+  readCapacitorJsonFile,
+  writeCapacitorJsonFile,
+} from 'src/modules/storage/backend/mobile/capacitorAppDataFiles';
+import {
+  readNativeCo21SettingsFromPreferences,
+  writeNativeCo21SettingsToPreferences,
+} from 'src/modules/storage/backend/mobile/capacitorNativePreferences';
 
 export type Co21SettingsJson = Record<string, unknown>;
 
 /** Mirrors on-disk `co21/settings.json` when Electron API is unavailable (Android/iOS). */
+const CO21_SETTINGS_PATH = 'co21/settings.json';
 const CO21_SETTINGS_LOCAL_KEY = 'co21-settings.json';
 
 function electronApi(): Record<string, unknown> | null {
@@ -77,6 +86,37 @@ async function writeCo21SettingsToElectronFile(payload: Co21SettingsJson): Promi
   }
 }
 
+async function readCo21SettingsFromCapacitorFile(): Promise<Co21SettingsJson | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  try {
+    const fromPrefs = await readNativeCo21SettingsFromPreferences();
+    if (Object.keys(fromPrefs).length > 0) return fromPrefs;
+
+    const data = await readCapacitorJsonFile(CO21_SETTINGS_PATH);
+    if (data === null) return {};
+    return data && typeof data === 'object' ? (data as Co21SettingsJson) : {};
+  } catch (e) {
+    logger.warn('[co21Settings] Capacitor read failed', e);
+    return null;
+  }
+}
+
+async function writeCo21SettingsToCapacitorFile(payload: Co21SettingsJson): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  try {
+    await writeNativeCo21SettingsToPreferences(payload);
+    try {
+      await writeCapacitorJsonFile(CO21_SETTINGS_PATH, payload);
+    } catch (fileErr) {
+      logger.warn('[co21Settings] file write failed (Preferences saved)', fileErr);
+    }
+    return true;
+  } catch (e) {
+    logger.error('[co21Settings] Capacitor write failed', e);
+    return false;
+  }
+}
+
 function readCo21SettingsFromLocalStorage(): Co21SettingsJson {
   if (typeof localStorage === 'undefined') return {};
   try {
@@ -101,11 +141,15 @@ function writeCo21SettingsToLocalStorage(payload: Co21SettingsJson): boolean {
   }
 }
 
-/** Load full `co21/settings.json` blob (Electron file, else native localStorage). */
+/** Load full `co21/settings.json` blob (Electron file, else Capacitor file, else localStorage on web). */
 export async function readCo21SettingsBlob(): Promise<Co21SettingsJson> {
   const fromFile = await readCo21SettingsFromElectronFile();
   if (fromFile !== null) return fromFile;
-  if (Capacitor.isNativePlatform() || typeof localStorage !== 'undefined') {
+  if (Capacitor.isNativePlatform()) {
+    const fromCapacitor = await readCo21SettingsFromCapacitorFile();
+    return fromCapacitor ?? {};
+  }
+  if (typeof localStorage !== 'undefined') {
     return readCo21SettingsFromLocalStorage();
   }
   return {};
@@ -128,7 +172,10 @@ async function persistCo21SettingsPayload(payload: Co21SettingsJson): Promise<bo
   if (electronApi()) {
     return wroteFile;
   }
-  if (Capacitor.isNativePlatform() || typeof localStorage !== 'undefined') {
+  if (Capacitor.isNativePlatform()) {
+    return writeCo21SettingsToCapacitorFile(payload);
+  }
+  if (typeof localStorage !== 'undefined') {
     return writeCo21SettingsToLocalStorage(payload);
   }
   return false;

@@ -156,7 +156,19 @@ export async function findSendContractAction(): Promise<SyncPendingAction | null
   return list.find((a) => a.kind === 'send_contract') ?? null;
 }
 
-let promotionInProgress = false;
+/** When accept POST fails, first successful LAN exchange still promotes the outgoing contract. */
+export async function maybeFinalizeOutgoingContractAfterExchange(
+  sessionToken: string | undefined,
+): Promise<boolean> {
+  const token = (sessionToken || '').trim();
+  if (!token) return false;
+  const outgoing = await resolveOutgoingPendingContract();
+  if (!outgoing?.syncSessionToken || outgoing.syncSessionToken.trim() !== token) {
+    return false;
+  }
+  const { promoted } = await finalizeAcceptedOutgoingContract();
+  return promoted;
+}
 
 async function resolveOutgoingPendingContract(): Promise<SyncContractPending | null> {
   const outgoing = await loadPendingOutgoingContract();
@@ -164,6 +176,8 @@ async function resolveOutgoingPendingContract(): Promise<SyncContractPending | n
   const action = await findSendContractAction();
   return action?.pending?.snapshot ? action.pending : null;
 }
+
+let promotionInProgress = false;
 
 /**
  * Peer accepted (explicit POST or first successful exchange): promote outgoing

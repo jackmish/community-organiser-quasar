@@ -31,6 +31,13 @@ export type SyncContractSnapshot = {
     textColor?: string;
     parentId?: string | null;
     taskCount?: number;
+    layoutColorize?: boolean;
+    backgroundColorize?: boolean;
+    calendarColorize?: boolean;
+    shareSubgroups?: boolean;
+    hideTasksFromParent?: boolean;
+    shortcut?: boolean;
+    backgroundImage?: string;
   }>;
 };
 

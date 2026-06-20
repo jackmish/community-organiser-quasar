@@ -484,6 +484,13 @@ export async function handleLanSyncExchangeRequest(
     await pruneGroupDeletionTombstones(outbound.deletedGroups.map((d) => d.id));
   }
 
+  try {
+    const { maybeFinalizeOutgoingContractAfterExchange } = await import('./syncPendingActions');
+    await maybeFinalizeOutgoingContractAfterExchange(req.token);
+  } catch {
+    void 0;
+  }
+
   return syncExchangeResponse({
     ok: true,
     nextToken,
@@ -643,6 +650,12 @@ export async function runSyncWithPeer(opts: {
     ];
     await pruneTaskDeletionsAfterExchange();
     if (prunedGroupIds.length) await pruneGroupDeletionTombstones(prunedGroupIds);
+    try {
+      const { maybeFinalizeOutgoingContractAfterExchange } = await import('./syncPendingActions');
+      await maybeFinalizeOutgoingContractAfterExchange(reqBody.token);
+    } catch {
+      void 0;
+    }
     return true;
   } catch (e) {
     logger.error('[lanOrganiserSync] runSyncWithPeer failed', e);

@@ -2,6 +2,11 @@ import logger from 'src/utils/logger';
 import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
 
 /** `group-<id>.json` in storage/group (case-insensitive extension on Windows). */
+export function getGroupFilename(groupId: string): string {
+  return `group-${groupId}.json`;
+}
+
+/** `group-<id>.json` in storage/group (case-insensitive extension on Windows). */
 export function isGroupJsonFilename(file: string): boolean {
   const name = String(file || '').trim();
   if (!name) return false;

@@ -1,155 +1,144 @@
 /**
- * CapacitorBackend — persistence layer for Capacitor (iOS / Android) builds.
- *
- * Status: STUB — all methods are outlined with TODOs.
- *         Implement when the mobile Capacitor target is ready.
- *
- * Capacitor provides two main storage primitives:
- *  - @capacitor/filesystem  — read/write files in the app sandbox (like Electron's fs)
- *  - @capacitor/preferences — key/value store backed by SharedPreferences (Android)
- *                             or UserDefaults (iOS); analogous to localStorage
- *
- * Recommended approach:
- *  - Groups → individual JSON files via Filesystem API  (mirrors ElectronBackend)
- *  - Settings → Preferences API (simple key/value, survives app updates)
- *
- * Installation (when ready):
- *   npm install @capacitor/filesystem @capacitor/preferences
- *   npx cap sync
+ * CapacitorBackend — persistence for Android / iOS (app sandbox files).
  */
 
 import type { StorageBackend, OrganiserData } from '../StorageBackend';
 import type { Group } from '../../../group/models/GroupModel';
 import logger from '../../../../utils/logger';
+import { sanitizeGroupsForStorage } from '../groupStorageSanitize';
+import {
+  getGroupFilename,
+  isGroupJsonFilename,
+  normalizeGroupFromDisk,
+  parseGroupJsonText,
+} from '../electron/groupFileLoader';
+import {
+  deleteCapacitorDataFile,
+  ensureCapacitorDataDir,
+  getCapacitorDataUri,
+  listCapacitorDirNames,
+  readCapacitorJsonFile,
+  readCapacitorTextFile,
+  writeCapacitorJsonFile,
+  writeCapacitorTextFile,
+} from './capacitorAppDataFiles';
+import {
+  readNativeGroupsFromPreferences,
+  writeNativeGroupsToPreferences,
+  readNativeOrganiserSettingsFromPreferences,
+  writeNativeOrganiserSettingsToPreferences,
+} from './capacitorNativePreferences';
 
-// TODO: uncomment when @capacitor/filesystem and @capacitor/preferences are installed
-// import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-// import { Preferences } from '@capacitor/preferences';
-
-/** Sub-directory within the app's data folder where group files are stored. */
 const GROUP_SUBDIR = 'storage/group';
-
-/** Key used in Preferences for the settings blob. */
-const SETTINGS_KEY = 'day-organiser-settings';
+const SETTINGS_PATH = 'storage/settings.json';
 
 export class CapacitorBackend implements StorageBackend {
   readonly name = 'capacitor';
 
-  /**
-   * Returns true when running inside a Capacitor WebView context.
-   * `window.Capacitor` is injected by the Capacitor bridge.
-   */
   isAvailable(): boolean {
-    // TODO: verify this detection works on both Android and iOS.
-    return typeof window !== 'undefined' && !!(window as any).Capacitor;
+    return true;
   }
 
-  // ── Groups ─────────────────────────────────────────────────────────────────
-
   async loadAllGroups(): Promise<Group[]> {
-    // TODO: implement using Filesystem.readdir / Filesystem.readFile
-    //
-    // Rough steps:
-    //   1. const { files } = await Filesystem.readdir({
-    //        path: GROUP_SUBDIR,
-    //        directory: Directory.Data,
-    //      });
-    //   2. Filter for files matching /^group-.+\.json$/
-    //   3. For each file: read → JSON.parse → push to groups[]
-    //   4. Return groups
-    //
-    // Handle ENOENT (directory not yet created) by returning [].
-    logger.warn('[CapacitorBackend] loadAllGroups not implemented');
-    return [];
+    try {
+      await ensureCapacitorDataDir(GROUP_SUBDIR);
+      const files = await listCapacitorDirNames(GROUP_SUBDIR);
+      const groups: Group[] = [];
+      for (const filename of files) {
+        if (!isGroupJsonFilename(filename)) continue;
+        const path = `${GROUP_SUBDIR}/${filename}`;
+        try {
+          const text = await readCapacitorTextFile(path);
+          const parsed = parseGroupJsonText(text ?? '');
+          const row = normalizeGroupFromDisk(parsed, filename);
+          if (row) groups.push(row as unknown as Group);
+        } catch (err) {
+          logger.error('[CapacitorBackend] read group failed', path, err);
+        }
+      }
+      if (groups.length) {
+        logger.info('[CapacitorBackend] loaded groups from files', groups.length);
+        return groups;
+      }
+
+      const fromPrefs = await readNativeGroupsFromPreferences();
+      if (fromPrefs.length) {
+        logger.info('[CapacitorBackend] loaded groups from Preferences', fromPrefs.length);
+        return fromPrefs as unknown as Group[];
+      }
+
+      logger.debug('[CapacitorBackend] no groups on disk or Preferences');
+      return [];
+    } catch (err) {
+      logger.error('[CapacitorBackend] loadAllGroups failed', err);
+      const fromPrefs = await readNativeGroupsFromPreferences();
+      return fromPrefs as unknown as Group[];
+    }
   }
 
   async saveGroups(groups: Group[]): Promise<void> {
-    // TODO: implement using Filesystem.writeFile
-    //
-    // Rough steps:
-    //   1. Ensure GROUP_SUBDIR exists (mkdir -p equivalent via Filesystem)
-    //   2. For each group, build filename `group-${group.id}.json`
-    //   3. Filesystem.writeFile({ path, data: JSON.stringify(group, safeReplacer, 2),
-    //        directory: Directory.Data, encoding: Encoding.UTF8 })
-    //
-    // See electronBackend.saveGroupsToFiles for the safe JSON serialiser
-    // (it strips underscore-prefixed keys and circular refs).
-    logger.warn('[CapacitorBackend] saveGroups not implemented');
+    const sanitizedGroups = await sanitizeGroupsForStorage(groups);
+    await writeNativeGroupsToPreferences(sanitizedGroups);
+    await ensureCapacitorDataDir(GROUP_SUBDIR);
+    for (const groupToWrite of sanitizedGroups) {
+      const groupId = typeof groupToWrite.id === 'string' ? groupToWrite.id : '';
+      if (!groupId) continue;
+      const path = `${GROUP_SUBDIR}/${getGroupFilename(groupId)}`;
+      try {
+        await writeCapacitorTextFile(path, JSON.stringify(groupToWrite, null, 2));
+      } catch (err) {
+        logger.error('[CapacitorBackend] write group file failed (Preferences saved)', path, err);
+      }
+    }
+    logger.info('[CapacitorBackend] saved groups', sanitizedGroups.length);
   }
 
   async deleteGroup(groupId: string): Promise<void> {
-    // TODO: implement using Filesystem.deleteFile
-    //
-    //   const path = `${GROUP_SUBDIR}/group-${groupId}.json`;
-    //   await Filesystem.deleteFile({ path, directory: Directory.Data });
-    //
-    // Swallow ENOENT so deleting a non-existent group is a no-op.
-    logger.warn('[CapacitorBackend] deleteGroup not implemented');
+    const path = `${GROUP_SUBDIR}/${getGroupFilename(groupId)}`;
+    await deleteCapacitorDataFile(path);
   }
 
-  // ── Settings ───────────────────────────────────────────────────────────────
-
-  async loadSettings(): Promise<Record<string, any>> {
-    // TODO: implement using Preferences.get
-    //
-    //   const { value } = await Preferences.get({ key: SETTINGS_KEY });
-    //   return value ? JSON.parse(value) : {};
-    //
-    // Alternatively, store settings as a JSON file via Filesystem so that
-    // export/import picks them up automatically (same as ElectronBackend).
-    logger.warn('[CapacitorBackend] loadSettings not implemented');
-    return {};
-  }
-
-  async saveSettings(settings: Record<string, any>): Promise<void> {
-    // TODO: implement using Preferences.set
-    //
-    //   await Preferences.set({ key: SETTINGS_KEY, value: JSON.stringify(settings) });
-    logger.warn('[CapacitorBackend] saveSettings not implemented');
-  }
-
-  async getSetting(key: string, defaultValue: any = undefined): Promise<any> {
-    // TODO: load settings blob and return settings[key] ?? defaultValue
-    // Can delegate to: const s = await this.loadSettings(); return s[key] ?? defaultValue;
+  async loadSettings(): Promise<Record<string, unknown>> {
     try {
-      const s = await this.loadSettings();
-      return Object.prototype.hasOwnProperty.call(s, key) ? s[key] : defaultValue;
-    } catch {
-      return defaultValue;
+      const data = await readCapacitorJsonFile(SETTINGS_PATH);
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data as Record<string, unknown>;
+      }
+      const fromPrefs = await readNativeOrganiserSettingsFromPreferences();
+      return fromPrefs;
+    } catch (err) {
+      logger.error('[CapacitorBackend] loadSettings failed', err);
+      return readNativeOrganiserSettingsFromPreferences();
     }
   }
 
-  async setSetting(key: string, value: any): Promise<void> {
-    // TODO: load → merge → save
-    // const s = await this.loadSettings(); s[key] = value; await this.saveSettings(s);
+  async saveSettings(settings: Record<string, unknown>): Promise<void> {
+    const payload = settings ?? {};
+    await writeNativeOrganiserSettingsToPreferences(payload);
     try {
-      const s = await this.loadSettings();
-      s[key] = value;
-      await this.saveSettings(s);
-    } catch (e) {
-      logger.error('[CapacitorBackend] setSetting failed', e);
+      await writeCapacitorJsonFile(SETTINGS_PATH, payload);
+    } catch (err) {
+      logger.error('[CapacitorBackend] saveSettings file failed (Preferences saved)', err);
     }
   }
 
-  // ── Import / Export ────────────────────────────────────────────────────────
+  async getSetting(key: string, defaultValue: unknown = undefined): Promise<unknown> {
+    const s = await this.loadSettings();
+    return Object.prototype.hasOwnProperty.call(s, key) ? s[key] : defaultValue;
+  }
+
+  async setSetting(key: string, value: unknown): Promise<void> {
+    const s = await this.loadSettings();
+    s[key] = value;
+    await this.saveSettings(s);
+  }
 
   async importFromFile(file: File): Promise<OrganiserData> {
-    // TODO: Capacitor doesn't have direct file picker access on all platforms.
-    //
-    // Options:
-    //  A) Use the standard browser File API (works in Capacitor WebView too) —
-    //     copy the logic from ElectronBackend.importFromFile (FileReader + fflate).
-    //  B) Use @capacitor/filesystem with a URI returned by a native file picker
-    //     plugin (e.g. capacitor-community/file-picker).
-    //
-    // For now, fall back to the browser FileReader path used in the web build.
-    //
-    // Fallback copyed from ElectronBackend (browser path only):
     return new Promise<OrganiserData>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          resolve(JSON.parse(e.target?.result as string));
+          resolve(JSON.parse(e.target?.result as string) as OrganiserData);
         } catch {
           reject(new Error('Invalid JSON file'));
         }
@@ -160,27 +149,21 @@ export class CapacitorBackend implements StorageBackend {
   }
 
   exportToFile(data: OrganiserData): void {
-    // TODO: implement a native share / save dialog.
-    //
-    // Options:
-    //  A) Browser download link — works in Capacitor WebView but saves to Downloads,
-    //     not the most native UX.
-    //  B) Write to a temp file via Filesystem, then trigger Share via @capacitor/share:
-    //       await Filesystem.writeFile({ path: 'export.json', data: JSON.stringify(data), ... });
-    //       const { uri } = await Filesystem.getUri({ path: 'export.json', directory: ... });
-    //       await Share.share({ files: [uri] });
-    logger.warn('[CapacitorBackend] exportToFile not implemented', data);
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'co21-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      logger.warn('[CapacitorBackend] exportToFile failed', err);
+    }
   }
 
-  // ── Diagnostics ────────────────────────────────────────────────────────────
-
   async getStoragePath(): Promise<string> {
-    // TODO: return the resolved URI for the data directory so users can see
-    // where files are stored (useful in a debug / about screen).
-    //
-    //   const { uri } = await Filesystem.getUri({ path: GROUP_SUBDIR, directory: Directory.Data });
-    //   return uri;
-    return GROUP_SUBDIR;
+    return getCapacitorDataUri(GROUP_SUBDIR);
   }
 }
 

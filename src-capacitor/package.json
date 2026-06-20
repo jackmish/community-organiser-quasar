@@ -1,13 +1,15 @@
 {
-  "name": "community-organiser-quasar",
+  "name": "CO21 - Community Organiser",
   "version": "0.5.1",
   "description": "Organise small organisations like your child's kindergarten society, small accounting, less stressfull automated reminders, family life or just own matters",
   "author": "Jacek Miszczuk",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^8.0.0",
-    "@capacitor/app": "^7.0.0",
+    "@capacitor/app": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
     "@capacitor-mlkit/barcode-scanning": "^8.1.0",
     "co21-lan-server": "file:../co21-lan-server"
   },

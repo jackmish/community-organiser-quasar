@@ -11,8 +11,11 @@ import type { SyncContractSnapshot } from './syncContractSettings';
 import {
   loadLastContractSnapshot,
   loadPendingIncomingContract,
+  savePendingIncomingContract,
   type SyncContractPending,
 } from './syncContractSettings';
+import { contractSnapshotTermsEqual } from './syncContractPreview';
+import { notifyProposerContractAccepted } from './syncContractAccept';
 import {
   loadConnectedDevices,
   loadOwnDeviceMeta,
@@ -98,7 +101,12 @@ export async function loadIncomingBannerState(): Promise<{
 }> {
   const incoming = await loadPendingIncomingContract();
   if (!incoming) return { pending: null, showBanner: false };
-  // Always surface peer contracts in the header (local outgoing queue is separate).
+  const last = await loadLastContractSnapshot();
+  if (last && contractSnapshotTermsEqual(last, incoming.snapshot)) {
+    await savePendingIncomingContract(null);
+    void notifyProposerContractAccepted(incoming).catch(() => false);
+    return { pending: null, showBanner: false };
+  }
   return { pending: incoming, showBanner: true };
 }
 

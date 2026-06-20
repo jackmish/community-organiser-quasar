@@ -39,6 +39,7 @@ export type StoragePort = { kind: 'group'; data: GroupDeps } | { kind: 'time'; d
 
 export class StorageController {
   isLoading = ref(false);
+  private dataLoaded = false;
   private group: GroupDeps | undefined;
   private time: TimeDeps | undefined;
 
@@ -56,6 +57,14 @@ export class StorageController {
     this.isLoading.value = true;
     logger.debug('StorageController.loadData called');
     try {
+      const { shouldUseCapacitorStorage } = await import('./backend/storagePlatform');
+      if (shouldUseCapacitorStorage()) {
+        const { migrateLegacyWebStorageToCapacitorFiles } = await import(
+          './backend/mobile/capacitorStorageMigration'
+        );
+        await migrateLegacyWebStorageToCapacitorFiles();
+      }
+
       let data: any;
       if (isPresentationModeActive()) {
         logger.debug('StorageController.loadData: loading sampleData (presentation/test mode)');
@@ -189,6 +198,7 @@ export class StorageController {
       logger.error('StorageController.loadData failed', err);
       throw err;
     } finally {
+      this.dataLoaded = true;
       this.isLoading.value = false;
     }
   }
@@ -196,6 +206,10 @@ export class StorageController {
   async saveData(data?: any) {
     if (isPresentationModeActive()) {
       logger.debug('StorageController.saveData: blocked in presentation/test mode');
+      return;
+    }
+    if (!this.dataLoaded) {
+      logger.debug('StorageController.saveData: skipped before initial load');
       return;
     }
     try {
@@ -209,6 +223,19 @@ export class StorageController {
 
         const existingGroups =
           this.group && this.group.list && this.group.list.all ? this.group.list.all.value : [];
+
+        const { shouldUseCapacitorStorage } = await import('./backend/storagePlatform');
+        if (shouldUseCapacitorStorage() && (!existingGroups || existingGroups.length === 0)) {
+          const { capacitorStorage } = await import('./backend/mobile/capacitorBackend');
+          const onDisk = await capacitorStorage.loadAllGroups();
+          if (onDisk.length > 0) {
+            logger.warn(
+              '[StorageController] saveData skipped: memory empty but disk still has groups',
+            );
+            return;
+          }
+        }
+
         taskService.migrateMediaTasksFromDays();
         const groups = attachTasksToGroupsForSave(
           existingGroups || [],

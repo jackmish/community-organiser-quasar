@@ -1,6 +1,6 @@
 {
   "appId": "community.organiser",
-  "appName": "Community Organiser",
+  "appName": "CO21 - Community Organiser",
   "webDir": "www",
   "plugins": {
     "CapacitorHttp": {

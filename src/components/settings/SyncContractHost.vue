@@ -47,6 +47,7 @@ import {
   loadPendingIncomingContract,
   savePendingIncomingContract,
   savePendingOutgoingContract,
+  loadLastContractSnapshot,
   DEFAULT_SYNC_INTERVAL_SECONDS,
   DEFAULT_SYNC_DUPLICATE_RESOLUTION,
   MIN_SYNC_INTERVAL_SECONDS,
@@ -56,6 +57,7 @@ import {
   type SyncDuplicateResolution,
 } from 'src/modules/storage/sync/syncContractSettings';
 import type { SyncContractPreview } from 'src/modules/storage/sync/syncContractPreview';
+import { contractSnapshotTermsEqual } from 'src/modules/storage/sync/syncContractPreview';
 import {
   cancelPendingAction,
   dispatchPendingActionsChanged,
@@ -153,6 +155,14 @@ async function persistIncomingFromLan(raw: unknown): Promise<void> {
   const pending = pendingFromLanDetail(raw as Record<string, unknown>);
   if (!pending) {
     logger.warn('[SyncContractHost] invalid incoming contract payload', raw);
+    return;
+  }
+  const last = await loadLastContractSnapshot();
+  if (last && contractSnapshotTermsEqual(last, pending.snapshot)) {
+    logger.info('[SyncContractHost] duplicate contract — terms already signed');
+    await savePendingIncomingContract(null);
+    void notifyProposerContractAccepted(pending).catch(() => false);
+    dispatchSyncContractIncoming();
     return;
   }
   await ensureProposerInConnections(pending);

@@ -40,7 +40,20 @@ export function mergeGroupStyleFields(
   existing: { color?: string; textColor?: string },
   incoming: { color?: string; textColor?: string },
 ): { color?: string; textColor?: string } {
-  const color = normHex(incoming.color) ?? normHex(existing.color);
-  const textColor = normHex(incoming.textColor) ?? normHex(existing.textColor);
+  const incomingColor = normHex(incoming.color);
+  const existingColor = normHex(existing.color);
+  const incomingText = normHex(incoming.textColor);
+  const existingText = normHex(existing.textColor);
+
+  // Do not let a sparse/default remote payload wipe a customised local palette.
+  const incomingColorIsDefault =
+    !incomingColor ||
+    incomingColor === '#fff' ||
+    incomingColor === '#ffffff' ||
+    incomingColor === GROUP_DEFAULT_BACKGROUND.toLowerCase();
+  const color =
+    incomingColorIsDefault && existingColor ? existingColor : (incomingColor ?? existingColor);
+
+  const textColor = incomingText ?? existingText;
   return normalizeGroupStyleFields({ color, textColor });
 }
