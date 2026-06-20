@@ -18,6 +18,10 @@
 
         <q-separator class="q-my-md debug-tools-dialog__sep" />
 
+        <AppLoadTimingsPanel />
+
+        <q-separator class="q-my-md debug-tools-dialog__sep" />
+
         <div class="debug-tools-dialog__repair">
           <div class="text-subtitle2 q-mb-sm">Data repair</div>
           <q-btn
@@ -67,6 +71,7 @@ import CC from 'src/CCAccess';
 import { fixInvalidDatesInDays } from 'src/utils/dateUtils';
 import { saveData } from 'src/utils/storageUtils';
 import LanDebugLogPanel from './LanDebugLogPanel.vue';
+import AppLoadTimingsPanel from './AppLoadTimingsPanel.vue';
 import { setLanDebugForceCapture, type LanDebugEntry } from 'src/modules/lan/lanDebugLog';
 import { clearMediaThumbnailCache } from 'src/modules/media/mediaFolderService';
 import { $text } from 'src/modules/lang';

@@ -1,11 +1,13 @@
 import { boot } from 'quasar/wrappers';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { runLoadPhase } from 'src/composables/appLoadProgress';
 import { saveData } from 'src/utils/storageUtils';
 import logger from 'src/utils/logger';
 
 /** Flush organiser data when Android/iOS sends the app to background. */
 export default boot(async () => {
+  await runLoadPhase('app_services', async () => {
   if (!Capacitor.isNativePlatform()) return;
 
   const flush = () => {
@@ -27,4 +29,5 @@ export default boot(async () => {
       if (document.visibilityState === 'hidden') flush();
     });
   }
+  });
 });

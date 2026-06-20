@@ -2,13 +2,8 @@
   <q-page class="q-pa-md">
     <!-- top selector removed; groups shown in the header -->
 
-    <!-- Loading State -->
-    <div
-      v-if="!organiserReady || (CC.storage.isLoading && CC.storage.isLoading.value)"
-      class="text-center q-pa-lg"
-    >
-      <q-spinner color="primary" size="3em" />
-    </div>
+    <!-- Loading handled by AppLoadProgressScreen overlay in App.vue -->
+    <div v-if="!organiserReady || (CC.storage.isLoading && CC.storage.isLoading.value)" />
     <!-- Single TaskPreview instance: when `previewFloating` is true it will be positioned
          near the clicked task by applying an inline fixed-position style; otherwise it
          stays inside the fixed-right-panel as before. This avoids rendering two copies. -->
@@ -695,6 +690,11 @@ import type { ConnectedDevice } from "src/modules/storage/sync/deviceRoleAssignm
 import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
 
 import { createHiddenGroupSummary } from "src/modules/task/helpers/hiddenGroupSummary";
+import {
+  beginLoadRun,
+  finishLoadRun,
+  runLoadPhase,
+} from "src/composables/appLoadProgress";
 import type { Group } from "src/modules/group/models/GroupModel";
 import FirstRunDialog from "../components/settings/FirstRunDialog.vue";
 import {
@@ -2607,52 +2607,59 @@ useDayRollover({
 onMounted(async () => {
   window.addEventListener("co21:todo-schedule-open", onTodoScheduleOpen);
   window.addEventListener(MEDIA_VIEW_MODE_CHANGED_EVENT, onAppViewModeExternalChange);
-  await refreshAppViewModes();
-  appViewModeReady.value = true;
+  beginLoadRun();
   try {
-    await CC.storage.loadData();
+    await runLoadPhase("view_modes", async () => {
+      await refreshAppViewModes();
+      appViewModeReady.value = true;
+    });
+    await runLoadPhase("organiser_data", () => CC.storage.loadData());
     if ((CC.group.list.all.value || []).length === 0) {
-      try {
-        const { reloadOrganiserFromDisk } = await import(
-          "src/modules/storage/organiserDiskReload"
-        );
-        const recovered = await reloadOrganiserFromDisk();
-        if (recovered.groups > 0) {
-          logger.info(
-            "[DayOrganiser] recovered groups from disk",
-            recovered.groups,
-            "days",
-            recovered.days,
+      await runLoadPhase("disk_recovery", async () => {
+        try {
+          const { reloadOrganiserFromDisk } = await import(
+            "src/modules/storage/organiserDiskReload"
           );
+          const recovered = await reloadOrganiserFromDisk();
+          if (recovered.groups > 0) {
+            logger.info(
+              "[DayOrganiser] recovered groups from disk",
+              recovered.groups,
+              "days",
+              recovered.days,
+            );
+          }
+        } catch (e) {
+          logger.error("[DayOrganiser] disk recovery failed", e);
+        }
+      });
+    }
+    await runLoadPhase("organiser_finalize", async () => {
+      try {
+        CC.task.refreshFlatListFromDays();
+      } catch (e) {
+        void e;
+      }
+      try {
+        const todayStr = todayString();
+        const curStr = String(CC.task.time.currentDate?.value || "");
+        if (!curStr || curStr < todayStr) {
+          try {
+            CC.task.time.setCurrentDate(todayStr);
+          } catch (e) {
+            void e;
+          }
         }
       } catch (e) {
-        logger.error("[DayOrganiser] disk recovery failed", e);
+        void e;
       }
-    }
-    try {
-      CC.task.refreshFlatListFromDays();
-    } catch (e) {
-      void e;
-    }
-    // Ensure the app starts on today's date if stored date is older or missing
-    try {
-      const todayStr = todayString();
-      const curStr = String(CC.task.time.currentDate?.value || "");
-      if (!curStr || curStr < todayStr) {
-        try {
-          CC.task.time.setCurrentDate(todayStr);
-        } catch (e) {
-          void e;
-        }
-      }
-    } catch (e) {
-      void e;
-    }
-    reloadKey.value += 1;
+      reloadKey.value += 1;
+    });
   } catch (error) {
     logger.error("Failed to load data on mount:", error);
   } finally {
     organiserReady.value = true;
+    finishLoadRun(true);
     scheduleBackgroundLanSyncAfterDisplay();
     triggerCalendarSync();
     startSyncScheduler();

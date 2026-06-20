@@ -4,18 +4,21 @@ import { createPinia } from 'pinia';
 import { loadPluginsFromManifest } from 'src/plugins/pluginLoader';
 import { registerPlugins, getPiniaPlugins } from 'src/plugins/pluginRegistry';
 import { CCReg } from 'src/CCAccess';
+import { runLoadPhase } from 'src/composables/appLoadProgress';
 
 export default boot(async ({ app }) => {
-  // Load plugins from manifest — resolves IDs to bundled modules
-  const plugins = await loadPluginsFromManifest();
-  registerPlugins(plugins);
+  await runLoadPhase('core_init', async () => {
+    // Load plugins from manifest — resolves IDs to bundled modules
+    const plugins = await loadPluginsFromManifest();
+    registerPlugins(plugins);
 
-  const pinia = createPinia();
+    const pinia = createPinia();
 
-  // Wire Pinia plugins before initApi() so they are active when stores are first created
-  getPiniaPlugins().forEach((p) => pinia.use(p));
+    // Wire Pinia plugins before initApi() so they are active when stores are first created
+    getPiniaPlugins().forEach((p) => pinia.use(p));
 
-  app.use(pinia);
-  // Eagerly construct all registered controllers and wire storage ports + lifecycle hooks.
-  CCReg.boot();
+    app.use(pinia);
+    // Eagerly construct all registered controllers and wire storage ports + lifecycle hooks.
+    CCReg.boot();
+  });
 });
