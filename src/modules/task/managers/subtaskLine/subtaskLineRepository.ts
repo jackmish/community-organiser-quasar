@@ -17,7 +17,9 @@ export class SubtaskLineRepository {
     }>
   >;
   // Internal state
-  private activeTask: Ref<Task | null>;
+  private readonly taskManager: TaskRepository;
+  private readonly fallbackActiveTask = ref(null) as Ref<Task | null>;
+  private stopActiveTaskWatch?: () => void;
   private lastRawLines = ref<string[]>([] as string[]);
   private lastLineUids = ref<string[]>([] as string[]);
   private uidCounter = 1;
@@ -47,27 +49,9 @@ export class SubtaskLineRepository {
       // fall back to undefined state/opts
     }
 
-    if (
-      stateOrActiveTask &&
-      typeof stateOrActiveTask === 'object' &&
-      'activeTask' in stateOrActiveTask
-    ) {
-      this.activeTask = stateOrActiveTask.activeTask;
-    } else if (stateOrActiveTask) {
-      this.activeTask = stateOrActiveTask as Ref<Task | null>;
-    } else {
-      this.activeTask = ref(null) as Ref<Task | null>;
-    }
-
+    this.taskManager = taskManager;
     this.parsedLines = ref([]) as typeof this.parsedLines;
-
-    watch(
-      () => this.activeTask.value && this.activeTask.value.description,
-      (d) => {
-        this.parsedLines.value = this.computeParsedLines(String(d || ''));
-      },
-      { immediate: true },
-    );
+    this.watchActiveTaskDescription();
 
     try {
       if (stateOrActiveTask && typeof stateOrActiveTask === 'object') {
@@ -76,6 +60,42 @@ export class SubtaskLineRepository {
     } catch (e) {
       // ignore
     }
+  }
+
+  /** Re-bind when `timeProvider.state.activeTask` is wired after singleton init. */
+  rebindActiveTaskWatch() {
+    this.watchActiveTaskDescription();
+  }
+
+  private resolveActiveTaskRef(): Ref<Task | null> {
+    try {
+      const state = this.taskManager?.timeProvider?.state;
+      if (state && typeof state === 'object' && 'activeTask' in state && state.activeTask) {
+        return state.activeTask as Ref<Task | null>;
+      }
+      if (state && typeof state === 'object' && 'value' in state && !('activeTask' in state)) {
+        return state as Ref<Task | null>;
+      }
+    } catch {
+      // ignore
+    }
+    return this.fallbackActiveTask;
+  }
+
+  private get activeTask(): Ref<Task | null> {
+    return this.resolveActiveTaskRef();
+  }
+
+  private watchActiveTaskDescription() {
+    this.stopActiveTaskWatch?.();
+    const activeRef = this.resolveActiveTaskRef();
+    this.stopActiveTaskWatch = watch(
+      () => activeRef.value?.description ?? '',
+      (d) => {
+        this.parsedLines.value = this.computeParsedLines(String(d || ''));
+      },
+      { immediate: true },
+    );
   }
 
   private escapeHtml(s = '') {

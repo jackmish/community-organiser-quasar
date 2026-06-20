@@ -28,6 +28,7 @@ class TaskController implements Controllable {
   constructor() {
     this.taskRepo.timeProvider = { time: this.time, state: { activeTask: this.taskRef } };
     this.taskRepo.setTime(this.time);
+    this.taskRepo.managers.subtaskLine.rebindActiveTaskWatch();
   }
 
   /** Expose the time slice to StorageController via the CC registry. */

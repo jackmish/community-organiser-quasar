@@ -178,6 +178,7 @@ const emit = defineEmits<{
   (e: "task-context", task: any, rect?: DOMRect | null): void;
   (e: "delete-task", id: string): void;
   (e: "add-task"): void;
+  (e: "layout-complete"): void;
 }>();
 
 const groups = CC.group.list.all;
@@ -374,14 +375,15 @@ const taskListRef = ref<HTMLElement | null>(null);
 const masonryLayoutTrigger = computed(() => [
   mergedTasks.value.length,
   listSizeVariant.value,
-  props.selectedTaskId,
-  props.highlightedTaskId,
 ]);
 
 useTaskListMasonry(taskListRef, masonryLayoutTrigger, {
   columnWidth: 400,
   gapX: 10,
   gapY: 8,
+  onLayoutComplete: () => {
+    emit("layout-complete");
+  },
 });
 
 watch(mergedTasks, (list) => {

@@ -1,4 +1,9 @@
 import { nextTick, onBeforeUnmount, onMounted, watch, type Ref } from 'vue';
+import {
+  buildMasonryPlacements,
+  computeGridMetrics,
+  type MasonryItemMeasure,
+} from './taskListMasonryLayout';
 
 export const TASK_LIST_MASONRY_ITEM_CLASS = 'task-list-masonry-item';
 
@@ -6,14 +11,8 @@ export type TaskListMasonryOptions = {
   columnWidth?: number;
   gapX?: number;
   gapY?: number;
-};
-
-type ItemMeasure = {
-  item: HTMLElement;
-  height: number;
-  width: number;
-  hasSubtasks: boolean;
-  spanAll: boolean;
+  /** Fired after items are repositioned (e.g. re-anchor floating task preview). */
+  onLayoutComplete?: () => void;
 };
 
 function shouldSpanAllColumns(item: HTMLElement, cols: number): boolean {
@@ -35,23 +34,42 @@ function resetItemLayout(item: HTMLElement) {
   item.style.width = '';
 }
 
-function columnHeight(colHeights: number[], index: number): number {
-  return colHeights[index] ?? 0;
+function masonryItemId(item: HTMLElement, index: number): string {
+  return item.dataset.masonryId || `masonry-item-${index}`;
 }
 
-function shortestColumnIndex(colHeights: number[]): number {
-  let col = 0;
-  for (let i = 1; i < colHeights.length; i++) {
-    if (columnHeight(colHeights, i) < columnHeight(colHeights, col)) {
-      col = i;
+function measureItems(
+  items: HTMLElement[],
+  cols: number,
+  slotWidth: number,
+): MasonryItemMeasure[] {
+  return items.map((item, index) => ({
+    id: masonryItemId(item, index),
+    height: item.offsetHeight,
+    width: item.offsetWidth,
+    hasSubtasks: item.querySelector('.subtask-chip-list') !== null,
+    spanAll: shouldSpanAllColumns(item, cols),
+  }));
+}
+
+function applyPlacements(
+  items: HTMLElement[],
+  measures: MasonryItemMeasure[],
+  placements: ReturnType<typeof buildMasonryPlacements>['placements'],
+): void {
+  const byId = new Map(measures.map((m, index) => [m.id, items[index] as HTMLElement]));
+
+  for (const placement of placements) {
+    const item = byId.get(placement.id);
+    if (!item) continue;
+    item.style.position = 'absolute';
+    item.style.left = `${placement.left}px`;
+    item.style.top = `${placement.top}px`;
+    if (placement.width != null) {
+      item.style.width = `${placement.width}px`;
+    } else {
+      item.style.width = '';
     }
-  }
-  return col;
-}
-
-function fillColumnHeights(colHeights: number[], value: number): void {
-  for (let i = 0; i < colHeights.length; i++) {
-    colHeights[i] = value;
   }
 }
 
@@ -79,11 +97,18 @@ export function useTaskListMasonry(
     if (!container) return;
 
     const items = listItems(container);
+    items.forEach((item, index) => {
+      item.dataset.masonryId = masonryItemId(item, index);
+    });
+
     if (!items.length) {
       resetContainerLayout(container);
+      options.onLayoutComplete?.();
       return;
     }
 
+    // Measure in normal flow before applying absolute positions so task-card
+    // bounding rects stay valid for floating preview anchoring.
     items.forEach(resetItemLayout);
     resetContainerLayout(container);
     container.style.position = 'relative';
@@ -91,57 +116,26 @@ export function useTaskListMasonry(
     const containerWidth = container.clientWidth;
     if (containerWidth <= 0) return;
 
-    const cols = Math.max(1, Math.floor((containerWidth + gapX) / (columnWidth + gapX)));
-    const slotWidth = cols === 1 ? Math.min(containerWidth, columnWidth) : columnWidth;
-    const gridWidth = cols * slotWidth + (cols - 1) * gapX;
-    const offsetX = Math.max(0, (containerWidth - gridWidth) / 2);
+    const { cols, slotWidth, gridWidth, offsetX } = computeGridMetrics(
+      containerWidth,
+      columnWidth,
+      gapX,
+    );
 
-    items.forEach((item) => {
-      item.style.position = 'absolute';
-      item.style.left = '0';
-      item.style.top = '0';
-      if (item.querySelector('.subtask-chip-list')) {
-        item.style.width = `${slotWidth}px`;
-      }
-    });
+    const measures = measureItems(items, cols, slotWidth);
+    const { placements, containerHeight } = buildMasonryPlacements(
+      measures,
+      cols,
+      slotWidth,
+      gridWidth,
+      offsetX,
+      gapX,
+      gapY,
+    );
 
-    const measurements: ItemMeasure[] = items.map((item) => ({
-      item,
-      height: item.offsetHeight,
-      width: item.offsetWidth,
-      hasSubtasks: item.querySelector('.subtask-chip-list') !== null,
-      spanAll: shouldSpanAllColumns(item, cols),
-    }));
-
-    const colHeights = new Array<number>(cols).fill(0);
-
-    measurements.forEach(({ item, height, width, hasSubtasks, spanAll }) => {
-      if (spanAll) {
-        const top = Math.max(...colHeights);
-        item.style.left = `${offsetX}px`;
-        item.style.top = `${top}px`;
-        item.style.width = `${gridWidth}px`;
-        const bottom = top + height + gapY;
-        fillColumnHeights(colHeights, bottom);
-        return;
-      }
-
-      const col = shortestColumnIndex(colHeights);
-
-      const slotLeft = offsetX + col * (slotWidth + gapX);
-      const innerOffset = hasSubtasks ? 0 : Math.max(0, (slotWidth - width) / 2);
-      const top = columnHeight(colHeights, col);
-
-      item.style.left = `${slotLeft + innerOffset}px`;
-      item.style.top = `${top}px`;
-      if (hasSubtasks) {
-        item.style.width = `${slotWidth}px`;
-      }
-
-      colHeights[col] = top + height + gapY;
-    });
-
-    container.style.height = `${Math.max(...colHeights, 0)}px`;
+    applyPlacements(items, measures, placements);
+    container.style.height = `${containerHeight}px`;
+    options.onLayoutComplete?.();
   }
 
   function scheduleLayout() {

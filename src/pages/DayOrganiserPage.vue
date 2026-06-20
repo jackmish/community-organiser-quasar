@@ -204,6 +204,7 @@
               :replenish-tasks="isNotesMode ? [] : replenishTasks"
               :selected-task-id="selectedTaskId"
               :highlighted-task-id="highlightedTaskId"
+              @layout-complete="reanchorFloatingTaskPreview"
               @task-click="onTaskClicked"
               @task-context="handleTaskContext"
               @edit-task="editTask"
@@ -2017,6 +2018,20 @@ const {
     panelHidden.value = true;
   },
 });
+
+function reanchorFloatingTaskPreview() {
+  try {
+    if (!previewFloating.value) return;
+    const task = CC.task.active.task.value;
+    const taskId = task?.id;
+    if (taskId == null || taskId === "") return;
+    const el = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (!(el instanceof Element)) return;
+    setPreviewFloating(el.getBoundingClientRect(), { forceBelow: true });
+  } catch (e) {
+    void e;
+  }
+}
 
 // Ensure `.fixed-content` receives the `floating` class when previewFloating changes.
 // This is a defensive fallback for cases where template reactivity or scoped styles

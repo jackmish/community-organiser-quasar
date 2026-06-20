@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { ref } from 'vue';
 import { SubtaskLineRepository } from '../../src/modules/task/managers/subtaskLine/subtaskLineRepository';
 
 function makeManager(activeTask = { value: null as any }) {
@@ -20,6 +21,21 @@ function makeManager(activeTask = { value: null as any }) {
 function makeTask(description: string) {
   return { id: '1', name: 'Task', description, date: '2026-04-04', updatedAt: '' } as any;
 }
+
+describe('SubtaskLineRepository.parsedLines', () => {
+  it('parses subtasks when activeTask is wired after construct', () => {
+    const manager = { timeProvider: undefined, updateTask: vi.fn() } as any;
+    const repo = new SubtaskLineRepository(manager);
+
+    expect(repo.parsedLines.value).toEqual([]);
+
+    const activeTask = ref(makeTask('- [ ] one\n- [ ] two'));
+    manager.timeProvider = { state: { activeTask } };
+    repo.rebindActiveTaskWatch();
+
+    expect(repo.parsedLines.value.filter((line) => line.type === 'list')).toHaveLength(2);
+  });
+});
 
 describe('SubtaskLineRepository.remove', () => {
   it('removes the line at the given index', async () => {
