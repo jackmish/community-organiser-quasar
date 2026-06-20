@@ -390,10 +390,11 @@ function logIfUnrecognized(item: any) {
 
 <style scoped>
 .task-list {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
-  gap: 8px 10px !important; /* row-gap 8px, column-gap 2px */
-  align-items: start;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px 10px !important;
   padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;

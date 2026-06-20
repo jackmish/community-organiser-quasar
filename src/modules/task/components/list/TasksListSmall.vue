@@ -1,11 +1,12 @@
 <template>
   <div class="tasks-list-wrapper">
     <slot name="header" />
-    <div class="task-list">
+    <div ref="taskListRef" class="task-list">
       <template v-if="mergedTasks.length > 0">
         <template v-for="(item, index) in mergedTasks" :key="item.id">
           <template v-if="item.__isReplenish">
             <ReplenishmentList
+              class="task-list-masonry-item"
               :replenish-tasks="item._items"
               :size="'small'"
               @toggle-status="$emit('toggle-status', $event)"
@@ -16,7 +17,7 @@
           <template v-else-if="item.__isGroup">
             <q-card
               flat
-              class="q-pa-sm"
+              class="q-pa-sm task-list-masonry-item"
               :style="getGroupContainerStyle(item._items.length)"
             >
               <div class="row items-center" style="gap: 8px">
@@ -57,7 +58,7 @@
           </template>
 
           <template v-else-if="item instanceof Task">
-            <div class="grouped-item card" :style="{ position: 'relative' }">
+            <div class="grouped-item card task-list-masonry-item">
               <div v-if="isNewGroup(index, item)" class="group-label">
                 <GroupButton
                   :group="getGroupObj(groupIdOf(item))"
@@ -98,10 +99,11 @@
 
           <HiddenGroupItem
             v-else-if="item.__isHiddenGroup"
+            class="task-list-masonry-item"
             :group="item._group"
             @select="selectHiddenGroup"
           />
-          <div v-else class="unrecognized-item">
+          <div v-else class="unrecognized-item task-list-masonry-item">
             {{ $text("error.unrecognized_item") }}
           </div>
         </template>
@@ -143,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useQuasar } from "quasar";
 import { Task } from "src/modules/task/models/TaskModel";
 import ReplenishmentList from "../list/ReplenishmentList.vue";
@@ -154,6 +156,7 @@ import CC from "src/CCAccess";
 import { $text } from "src/modules/lang";
 import { resolveTaskListSizeVariant } from "src/components/theme";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
+import { useTaskListMasonry } from "src/composables/useTaskListMasonry";
 
 const $q = useQuasar();
 
@@ -367,6 +370,20 @@ const nonReplenishCount = computed(() =>
  */
 const listSizeVariant = computed(() => resolveTaskListSizeVariant(nonReplenishCount.value));
 
+const taskListRef = ref<HTMLElement | null>(null);
+const masonryLayoutTrigger = computed(() => [
+  mergedTasks.value.length,
+  listSizeVariant.value,
+  props.selectedTaskId,
+  props.highlightedTaskId,
+]);
+
+useTaskListMasonry(taskListRef, masonryLayoutTrigger, {
+  columnWidth: 400,
+  gapX: 10,
+  gapY: 8,
+});
+
 watch(mergedTasks, (list) => {
   try {
     (list || []).forEach((it: any) => logIfUnrecognized(it));
@@ -475,11 +492,8 @@ function logIfUnrecognized(item: any) {
 
 <style scoped>
 .task-list {
-  display: flex !important;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 8px 10px !important;
+  position: relative;
+  width: 100%;
   padding: 0 16px 8px 16px;
   box-sizing: border-box;
   padding-bottom: 15px;
@@ -489,9 +503,18 @@ function logIfUnrecognized(item: any) {
   position: relative;
 }
 
-.task-list > .grouped-item,
-.task-list > .q-card {
-  width: fit-content;
+.task-list-masonry-item {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.task-list > .grouped-item:not(:has(.subtask-chip-list)) {
+  width: max-content;
+  max-width: 100%;
+}
+
+.task-list > .grouped-item:has(.subtask-chip-list) {
+  width: 400px;
   max-width: 100%;
 }
 
@@ -525,6 +548,11 @@ function logIfUnrecognized(item: any) {
 /* Group label/divider styles copied from ReplenishmentList for inline grouping */
 .grouped-item {
   position: relative;
+  box-sizing: border-box;
+}
+
+.grouped-item:has(.group-label) {
+  padding-top: 24px;
 }
 .group-task-stack {
   margin-top: 8px;

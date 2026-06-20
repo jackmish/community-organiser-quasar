@@ -59,25 +59,24 @@ const undoneLines = computed(() =>
 
 .subtask-mini-item {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 4px;
   font-size: 11px;
   color: rgba(0, 0, 0, 0.62);
   line-height: 1.3;
-  overflow: hidden;
 }
 
 .subtask-mini-icon {
   flex-shrink: 0;
   opacity: 0.55;
   position: relative;
-  top: 1px;
+  top: 2px;
 }
 
 .subtask-mini-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .subtask-chip-list {
@@ -89,12 +88,16 @@ const undoneLines = computed(() =>
   align-items: flex-start;
   justify-content: flex-start;
   gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .subtask-chip {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   max-width: 100%;
+  min-width: 0;
   min-height: 30px;
   padding: 5px 11px;
   border-radius: 8px;
@@ -103,7 +106,7 @@ const undoneLines = computed(() =>
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   color: rgba(0, 0, 0, 0.88);
   cursor: pointer;
   pointer-events: none;
@@ -112,9 +115,9 @@ const undoneLines = computed(() =>
 
 .subtask-chip-text {
   display: block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>

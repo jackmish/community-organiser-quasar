@@ -401,6 +401,24 @@ const getBoundingRect = (): DOMRect | null => {
   min-width: min-content;
 }
 
+.task-card.q-item:has(.subtask-chip-list) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.task-card:has(.subtask-chip-list) .q-item__section,
+.task-card:has(.subtask-chip-list) .title-row {
+  width: 100%;
+}
+
+.task-card:has(.subtask-chip-list) .title-row > div {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .task-card .q-item__section {
   flex: 0 1 auto;
   min-width: 0;
