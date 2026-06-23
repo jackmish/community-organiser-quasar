@@ -1,5 +1,10 @@
+import { shallowRef } from 'vue';
 import logger from 'src/utils/logger';
 import { getCountryCode, getLanguage } from 'src/modules/lang';
+import {
+  lanDebugNote,
+} from 'src/modules/lan/lanDebugLog';
+import { LanHttpError, lanHttpRequest } from 'src/modules/lan/lanHttp';
 import { loadMeteoSyncEnabled, loadMeteoLocation } from './meteoSyncSettings';
 
 export const OPEN_METEO_FORECAST_API = 'https://api.open-meteo.com/v1/forecast';
@@ -76,26 +81,74 @@ const DEFAULT_METEO_LOCATION: MeteoLocation = {
   name: 'New York',
 };
 
-function xhrGetJson<T>(url: string, timeoutMs = 8000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.timeout = timeoutMs;
-    xhr.open('GET', url);
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText) as T);
-        } catch {
-          reject(new Error('Failed to parse JSON'));
-        }
-      } else {
-        reject(new Error(`HTTP error! status: ${xhr.status}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.ontimeout = () => reject(new Error('Request timeout'));
-    xhr.send();
-  });
+export type MeteoDebugSource =
+  | 'idle'
+  | 'disabled'
+  | 'network'
+  | 'fresh-cache'
+  | 'stale-cache'
+  | 'failed';
+
+export type MeteoDebugState = {
+  updatedAt: number;
+  syncEnabled: boolean;
+  deviceDate: string;
+  lastSource: MeteoDebugSource;
+  lastFetchAt: number | null;
+  cacheFetchedAt: number | null;
+  cacheFirstDay: string | null;
+  cacheAgeMin: number | null;
+  locationName: string | null;
+  lastError: string | null;
+  lastHttpStatus: number | null;
+};
+
+export const meteoDebugState = shallowRef<MeteoDebugState>({
+  updatedAt: 0,
+  syncEnabled: false,
+  deviceDate: '',
+  lastSource: 'idle',
+  lastFetchAt: null,
+  cacheFetchedAt: null,
+  cacheFirstDay: null,
+  cacheAgeMin: null,
+  locationName: null,
+  lastError: null,
+  lastHttpStatus: null,
+});
+
+function updateMeteoDebugState(patch: Partial<MeteoDebugState>): void {
+  meteoDebugState.value = {
+    ...meteoDebugState.value,
+    updatedAt: Date.now(),
+    ...patch,
+  };
+}
+
+function formatHttpError(status: number, body: string, fallback: string): string {
+  const detail = body.trim().slice(0, 240);
+  if (status > 0 && detail) return `HTTP ${status}: ${detail}`;
+  if (status > 0) return `HTTP error! status: ${status}`;
+  return fallback;
+}
+
+async function httpGetJson<T>(url: string, timeoutMs = 8000): Promise<T> {
+  try {
+    const res = await lanHttpRequest({ url, method: 'GET', timeoutMs });
+    if (!res.ok) {
+      throw new Error(formatHttpError(res.status, res.body, `HTTP error! status: ${res.status}`));
+    }
+    try {
+      return JSON.parse(res.body) as T;
+    } catch {
+      throw new Error('Failed to parse JSON');
+    }
+  } catch (e: unknown) {
+    if (e instanceof LanHttpError) {
+      throw new Error(formatHttpError(e.status, e.body, e.message || 'Network error'));
+    }
+    throw e instanceof Error ? e : new Error(String(e));
+  }
 }
 
 function countryFallbackLocation(): MeteoLocation {
@@ -155,6 +208,7 @@ async function saveMeteoCache(snapshot: MeteoSnapshot): Promise<void> {
 
 function isCacheFresh(snapshot: MeteoSnapshot | null, location: MeteoLocation | null): boolean {
   if (!snapshot?.fetchedAt || !snapshot.days?.length) return false;
+  if (!meteoSnapshotCoversToday(snapshot)) return false;
   if (snapshot.days.length < FORECAST_DAY_COUNT) return false;
   if (!snapshot.days.every(dayHasHour24)) return false;
   if (snapshotNeedsEveningHours(snapshot)) return false;
@@ -171,6 +225,27 @@ function localDateKey(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+export function meteoTodayDateKey(): string {
+  return localDateKey(new Date());
+}
+
+export function meteoSnapshotCoversToday(snapshot: MeteoSnapshot | null): boolean {
+  if (!snapshot?.days?.length) return false;
+  return snapshot.days[0]!.date === meteoTodayDateKey();
+}
+
+function cacheAgeMinutes(fetchedAt: number | null | undefined): number | null {
+  if (!fetchedAt) return null;
+  return Math.round((Date.now() - fetchedAt) / 60_000);
+}
+
+function debugSnapshotSummary(snapshot: MeteoSnapshot | null): string {
+  if (!snapshot) return 'no cache';
+  const age = cacheAgeMinutes(snapshot.fetchedAt);
+  const firstDay = snapshot.days[0]?.date ?? '?';
+  return `firstDay=${firstDay} fetchedAt=${age != null ? `${age}m ago` : 'unknown'}`;
 }
 
 function parseHourFromIso(iso: string): number {
@@ -303,7 +378,7 @@ async function resolveLocationName(latitude: number, longitude: number): Promise
     const url =
       `${OPEN_METEO_GEOCODING_API}/reverse?latitude=${latitude}` +
       `&longitude=${longitude}&language=${encodeURIComponent(lang)}&count=1`;
-    const data = await xhrGetJson<{ results?: Array<{ name?: string; admin1?: string }> }>(url);
+    const data = await httpGetJson<{ results?: Array<{ name?: string; admin1?: string }> }>(url);
     const hit = data.results?.[0];
     if (!hit?.name) return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
     return hit.admin1 ? `${hit.name}, ${hit.admin1}` : hit.name;
@@ -366,7 +441,7 @@ export async function searchMeteoCities(query: string): Promise<MeteoLocation[]>
     const url =
       `${OPEN_METEO_GEOCODING_API}/search?name=${encodeURIComponent(q)}` +
       `&count=8&language=${encodeURIComponent(lang)}`;
-    const data = await xhrGetJson<{
+    const data = await httpGetJson<{
       results?: Array<{
         name: string;
         latitude: number;
@@ -394,7 +469,7 @@ async function fetchForecast(location: MeteoLocation): Promise<MeteoSnapshot> {
     '&hourly=temperature_2m,precipitation_probability,weather_code' +
     `&forecast_days=${FORECAST_DAY_COUNT + 1}` +
     '&wind_speed_unit=ms&timezone=auto';
-  const data = await xhrGetJson<{
+  const data = await httpGetJson<{
     current?: {
       temperature_2m?: number;
       apparent_temperature?: number;
@@ -459,24 +534,134 @@ export function meteoSnapshotNeedsEveningRefetch(snapshot: MeteoSnapshot | null)
 }
 
 export async function refreshMeteoData(force = false): Promise<MeteoSnapshot | null> {
+  const deviceDate = meteoTodayDateKey();
   const enabled = await loadMeteoSyncEnabled();
-  if (!enabled) return null;
+  if (!enabled) {
+    updateMeteoDebugState({
+      syncEnabled: false,
+      deviceDate,
+      lastSource: 'disabled',
+      locationName: null,
+      lastError: null,
+      lastHttpStatus: null,
+    });
+    return null;
+  }
 
   const location = await resolveLocation();
+  const cached = await loadMeteoCache();
+  const cacheSummary = debugSnapshotSummary(cached);
 
   if (!force) {
-    const cached = await loadMeteoCache();
-    if (isCacheFresh(cached, location)) return cached;
+    if (isCacheFresh(cached, location)) {
+      lanDebugNote('Meteo cache hit', `${cacheSummary} · deviceDate=${deviceDate}`);
+      updateMeteoDebugState({
+        syncEnabled: true,
+        deviceDate,
+        lastSource: 'fresh-cache',
+        lastFetchAt: cached!.fetchedAt,
+        cacheFetchedAt: cached!.fetchedAt,
+        cacheFirstDay: cached!.days[0]?.date ?? null,
+        cacheAgeMin: cacheAgeMinutes(cached!.fetchedAt),
+        locationName: location.name,
+        lastError: null,
+        lastHttpStatus: null,
+      });
+      return cached;
+    }
+    if (cached && !meteoSnapshotCoversToday(cached)) {
+      lanDebugNote(
+        'Meteo cache stale (date)',
+        `${cacheSummary} · deviceDate=${deviceDate} — refetching`,
+      );
+    }
   }
 
   try {
+    lanDebugNote(
+      force ? 'Meteo fetch (forced)' : 'Meteo fetch',
+      `${location.name} · deviceDate=${deviceDate}`,
+    );
     const snapshot = await fetchForecast(location);
     await saveMeteoCache(snapshot);
+    updateMeteoDebugState({
+      syncEnabled: true,
+      deviceDate,
+      lastSource: 'network',
+      lastFetchAt: snapshot.fetchedAt,
+      cacheFetchedAt: snapshot.fetchedAt,
+      cacheFirstDay: snapshot.days[0]?.date ?? null,
+      cacheAgeMin: 0,
+      locationName: location.name,
+      lastError: null,
+      lastHttpStatus: 200,
+    });
     return snapshot;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const statusMatch = /status:\s*(\d+)/i.exec(message);
+    const httpStatus = statusMatch ? Number(statusMatch[1]) : null;
     logger.warn('Failed to fetch meteo forecast:', error);
-    const cached = await loadMeteoCache();
-    if (cached && isCacheFresh(cached, location)) return cached;
-    return cached;
+    lanDebugNote('Meteo fetch failed', `${message} · ${cacheSummary} · deviceDate=${deviceDate}`);
+    if (cached && isCacheFresh(cached, location)) {
+      updateMeteoDebugState({
+        syncEnabled: true,
+        deviceDate,
+        lastSource: 'fresh-cache',
+        lastFetchAt: cached.fetchedAt,
+        cacheFetchedAt: cached.fetchedAt,
+        cacheFirstDay: cached.days[0]?.date ?? null,
+        cacheAgeMin: cacheAgeMinutes(cached.fetchedAt),
+        locationName: location.name,
+        lastError: message,
+        lastHttpStatus: httpStatus,
+      });
+      return cached;
+    }
+    if (cached && meteoSnapshotCoversToday(cached)) {
+      lanDebugNote('Meteo stale cache fallback', `${cacheSummary} after fetch error`);
+      updateMeteoDebugState({
+        syncEnabled: true,
+        deviceDate,
+        lastSource: 'stale-cache',
+        lastFetchAt: cached.fetchedAt,
+        cacheFetchedAt: cached.fetchedAt,
+        cacheFirstDay: cached.days[0]?.date ?? null,
+        cacheAgeMin: cacheAgeMinutes(cached.fetchedAt),
+        locationName: location.name,
+        lastError: message,
+        lastHttpStatus: httpStatus,
+      });
+      return cached;
+    }
+    updateMeteoDebugState({
+      syncEnabled: true,
+      deviceDate,
+      lastSource: 'failed',
+      lastFetchAt: null,
+      cacheFetchedAt: cached?.fetchedAt ?? null,
+      cacheFirstDay: cached?.days[0]?.date ?? null,
+      cacheAgeMin: cacheAgeMinutes(cached?.fetchedAt),
+      locationName: location.name,
+      lastError: message,
+      lastHttpStatus: httpStatus,
+    });
+    return null;
+  }
+}
+
+export async function clearMeteoCache(): Promise<void> {
+  try {
+    if (isElectron) {
+      const filePath = await getCacheFilePath();
+      if (filePath && (await (window as any).electronAPI.fileExists(filePath))) {
+        await (window as any).electronAPI.deleteFile(filePath);
+      }
+    } else {
+      localStorage.removeItem('meteo_cache');
+    }
+    lanDebugNote('Meteo cache cleared', `deviceDate=${meteoTodayDateKey()}`);
+  } catch (error) {
+    logger.error('Failed to clear meteo cache:', error);
   }
 }

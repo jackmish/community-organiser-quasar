@@ -551,10 +551,12 @@ function logIfUnrecognized(item: any) {
 .grouped-item {
   position: relative;
   box-sizing: border-box;
+  overflow: visible;
 }
 
 .grouped-item:has(.group-label) {
-  padding-top: 24px;
+  margin-top: 22px;
+  padding-top: 0;
 }
 .group-task-stack {
   margin-top: 8px;
@@ -565,19 +567,30 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-  top: -20px;
+  top: -22px;
   left: 8px;
   z-index: 1;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
   box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.4);
-  background-color: none !important;
   border-radius: 8px;
-  @media screen and (max-width: 767px) {
-    top: -16px;
-  }
+}
+.group-label :deep(> div) {
+  display: inline-block;
+  width: max-content;
+}
+.group-label :deep(.group-button),
+.group-label :deep(.q-btn__content) {
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+.group-label :deep(.label-text) {
+  white-space: nowrap;
 }
 .group-divider {
   position: absolute;
-  top: -6px;
+  top: -4px;
   left: -8px;
   right: -8px;
   height: 1px;

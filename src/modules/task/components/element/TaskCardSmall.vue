@@ -494,7 +494,7 @@ const getBoundingRect = (): DOMRect | null => {
   position: relative;
 }
 .title-row > div {
-  min-width: 0;
+  min-width: min-content;
   display: flex;
   flex-direction: column;
   padding-right: 0;
@@ -508,8 +508,12 @@ const getBoundingRect = (): DOMRect | null => {
   align-items: flex-start;
 }
 .title-text {
-  min-width: 0;
+  min-width: min-content;
+  flex: 0 1 auto;
   display: block;
+}
+.title-text:not(.title-text--todo) {
+  flex-shrink: 0;
 }
 .title-text q-item-label {
   padding: 0;
@@ -611,7 +615,7 @@ const getBoundingRect = (): DOMRect | null => {
   max-height: calc(2 * 1.25em + 4px) !important;
 }
 .title-text q-item-label strong {
-  display: block !important;
+  display: inline !important;
 }
 .title-ellipsis,
 .task-card .title-ellipsis,

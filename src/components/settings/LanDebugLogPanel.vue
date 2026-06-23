@@ -1,61 +1,72 @@
 <template>
-  <div class="lan-debug-log debug-tools-surface" :class="{ 'lan-debug-log--mobile': mobile }">
-    <div
-      class="lan-debug-log__toolbar"
-      :class="mobile ? 'column items-stretch q-gutter-y-sm' : 'row items-center q-gutter-sm'"
-    >
-      <div class="text-subtitle2" :class="{ 'text-center': mobile }">LAN connection log</div>
-      <q-space v-if="!mobile" />
-      <div
-        :class="
-          mobile ? 'column items-stretch q-gutter-y-xs' : 'row items-center q-gutter-xs no-wrap'
-        "
-      >
-        <q-chip
-          dense
-          :size="mobile ? 'md' : 'sm'"
-          color="grey-8"
-          text-color="white"
-          class="lan-debug-log__platform-chip"
+  <q-expansion-item
+    expand-separator
+    header-class="lan-debug-log__section-header text-weight-medium"
+    class="lan-debug-log debug-tools-surface"
+    :class="{ 'lan-debug-log--mobile': mobile }"
+  >
+    <template #header>
+      <q-item-section avatar>
+        <q-icon name="router" />
+      </q-item-section>
+      <q-item-section class="lan-debug-log__header-main">
+        <q-item-label class="text-subtitle2">LAN connection log</q-item-label>
+        <q-item-label caption class="lan-debug-log__section-caption">
+          {{ sectionCaption }}
+        </q-item-label>
+      </q-item-section>
+      <q-item-section side class="lan-debug-log__header-actions">
+        <div
+          class="row items-center q-gutter-xs no-wrap"
+          @click.stop
         >
-          {{ platformHint }}
-        </q-chip>
-        <q-btn
-          flat
-          :dense="!mobile"
-          icon="troubleshoot"
-          label="Diagnose"
-          class="lan-debug-log__clear-btn"
-          :loading="diagnosing"
-          @click="onDiagnose"
-        />
-        <q-btn
-          flat
-          :dense="!mobile"
-          icon="delete_sweep"
-          label="Clear"
-          class="lan-debug-log__clear-btn"
-          @click="clearLanDebugLog"
-        />
+          <q-chip
+            dense
+            :size="mobile ? 'md' : 'sm'"
+            color="grey-8"
+            text-color="white"
+            class="lan-debug-log__platform-chip"
+          >
+            {{ platformHint }}
+          </q-chip>
+          <q-btn
+            flat
+            :dense="!mobile"
+            icon="troubleshoot"
+            label="Diagnose"
+            class="lan-debug-log__clear-btn"
+            :loading="diagnosing"
+            @click="onDiagnose"
+          />
+          <q-btn
+            flat
+            :dense="!mobile"
+            icon="delete_sweep"
+            label="Clear"
+            class="lan-debug-log__clear-btn"
+            @click="clearLanDebugLog"
+          />
+        </div>
+      </q-item-section>
+    </template>
+
+    <div class="lan-debug-log__inner q-pt-xs">
+      <div class="text-caption q-mb-xs lan-debug-log__status">
+        {{ buildInfo }}
       </div>
-    </div>
 
-    <div class="text-caption q-mb-xs lan-debug-log__status">
-      {{ buildInfo }}
-    </div>
+      <div v-if="!displayItems.length" class="text-caption text-grey q-mt-sm">
+        No LAN requests yet. Pair, Check a device, or sync — HTTP calls appear here.
+        If capture shows <strong>off</strong>, rebuild with <code>npm run android</code>.
+      </div>
 
-    <div v-if="!displayItems.length" class="text-caption text-grey q-mt-sm">
-      No LAN requests yet. Pair, Check a device, or sync — HTTP calls appear here.
-      If capture shows <strong>off</strong>, rebuild with <code>npm run android</code>.
-    </div>
-
-    <q-list
-      v-else
-      bordered
-      separator
-      class="lan-debug-log__list rounded-borders q-mt-sm"
-      :class="{ 'lan-debug-log__list--mobile': mobile }"
-    >
+      <q-list
+        v-else
+        bordered
+        separator
+        class="lan-debug-log__list rounded-borders q-mt-sm"
+        :class="{ 'lan-debug-log__list--mobile': mobile }"
+      >
       <template v-for="item in displayItems" :key="item.type === 'single' ? item.entry.id : item.key">
         <!-- Grouped exchange entries -->
         <q-expansion-item
@@ -223,7 +234,8 @@
         </q-expansion-item>
       </template>
     </q-list>
-  </div>
+    </div>
+  </q-expansion-item>
 </template>
 
 <script setup lang="ts">
@@ -303,6 +315,20 @@ const displayItems = computed<DisplayItem[]>(() => {
 const platformHint = lanDebugPlatformHint();
 const buildInfo = computed(() => getLanDebugBuildInfo());
 const diagnosing = ref(false);
+
+const sectionCaption = computed(() => {
+  const entries = lanDebugEntries.value;
+  const count = entries.length;
+  const failed = entries.filter((e) => e.ok === false || !!e.error).length;
+  const parts: string[] = [];
+  if (!count) {
+    parts.push('No entries yet');
+  } else {
+    parts.push(`${count} ${count === 1 ? 'entry' : 'entries'}`);
+    if (failed) parts.push(`${failed} failed`);
+  }
+  return parts.join(' · ');
+});
 
 async function onDiagnose(): Promise<void> {
   diagnosing.value = true;
@@ -398,8 +424,24 @@ function groupHeaderClass(item: DisplayItem & { type: 'group' }): string {
   word-break: break-word;
 }
 
-.lan-debug-log__toolbar {
-  width: 100%;
+.lan-debug-log__section-caption {
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.lan-debug-log__header-actions {
+  flex-shrink: 0;
+  padding-left: 4px;
+}
+
+.lan-debug-log--mobile .lan-debug-log__header-actions .row {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.lan-debug-log__inner {
+  padding: 0 4px 4px;
 }
 
 .lan-debug-log__platform-chip {

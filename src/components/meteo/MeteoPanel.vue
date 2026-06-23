@@ -196,6 +196,8 @@ import {
   describeWeatherCode,
   refreshMeteoData,
   meteoSnapshotNeedsEveningRefetch,
+  meteoSnapshotCoversToday,
+  meteoTodayDateKey,
   resolveDeviceMeteoLocation,
   searchMeteoCities,
   locationCityName,
@@ -223,6 +225,8 @@ const searchLoading = ref(false);
 const locationSaving = ref(false);
 const gpsLoading = ref(false);
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
+let dayCheckTimer: ReturnType<typeof setInterval> | null = null;
+let lastMeteoDayKey = meteoTodayDateKey();
 let citySearchToken = 0;
 
 const citySearchHint = computed(() =>
@@ -441,6 +445,9 @@ async function loadForecast(force = false): Promise<void> {
   error.value = false;
   try {
     let data = await refreshMeteoData(force);
+    if (data && !force && !meteoSnapshotCoversToday(data)) {
+      data = await refreshMeteoData(true);
+    }
     if (data && !force && meteoSnapshotNeedsEveningRefetch(data)) {
       data = await refreshMeteoData(true);
     }
@@ -547,6 +554,13 @@ onMounted(async () => {
     refreshTimer = setInterval(() => {
       if (meteoEnabled.value) void loadForecast(false);
     }, 30 * 60 * 1000);
+    dayCheckTimer = setInterval(() => {
+      if (!meteoEnabled.value) return;
+      const today = meteoTodayDateKey();
+      if (today === lastMeteoDayKey) return;
+      lastMeteoDayKey = today;
+      void loadForecast(true);
+    }, 60 * 1000);
   }
   window.addEventListener(METEO_SYNC_CHANGED_EVENT, onMeteoSyncChanged as EventListener);
   window.addEventListener(METEO_LOCATION_CHANGED_EVENT, onMeteoLocationChanged as EventListener);
@@ -554,6 +568,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (refreshTimer) clearInterval(refreshTimer);
+  if (dayCheckTimer) clearInterval(dayCheckTimer);
   window.removeEventListener(METEO_SYNC_CHANGED_EVENT, onMeteoSyncChanged as EventListener);
   window.removeEventListener(METEO_LOCATION_CHANGED_EVENT, onMeteoLocationChanged as EventListener);
 });
