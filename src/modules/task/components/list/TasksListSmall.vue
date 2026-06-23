@@ -553,11 +553,6 @@ function logIfUnrecognized(item: any) {
   box-sizing: border-box;
   overflow: visible;
 }
-
-.grouped-item:has(.group-label) {
-  margin-top: 22px;
-  padding-top: 0;
-}
 .group-task-stack {
   margin-top: 8px;
   display: flex;
@@ -567,7 +562,7 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-  top: -22px;
+  top: -20px;
   left: 8px;
   z-index: 1;
   width: max-content;
@@ -590,7 +585,7 @@ function logIfUnrecognized(item: any) {
 }
 .group-divider {
   position: absolute;
-  top: -4px;
+  top: -6px;
   left: -8px;
   right: -8px;
   height: 1px;
