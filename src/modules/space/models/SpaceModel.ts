@@ -7,7 +7,9 @@ export type SpaceStorageMode = 'files' | 'sqlite';
 
 export const DEFAULT_SPACE_STORAGE_MODE: SpaceStorageMode = 'files';
 
-export const CO21_SQLITE_DB_FILENAME = 'co21.db';
+import { CO21_SQLITE_DB_FILENAME } from 'src/modules/storage/appDataPaths';
+
+export { CO21_SQLITE_DB_FILENAME };
 
 /** One switchable data context (folder + isolated settings). */
 export interface SpaceEntry {

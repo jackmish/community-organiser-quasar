@@ -1,9 +1,10 @@
 import logger from 'src/utils/logger';
+import { APP_DATA_PATH_SEGMENTS } from 'src/modules/storage/appDataPaths';
 
 /** Stored in group JSON instead of inline data URLs. */
 export const GROUP_BG_REF_PREFIX = 'group-bg:';
 
-const GROUP_BG_ROOT_SEGMENTS = ['storage', 'group-backgrounds'] as const;
+const GROUP_BG_ROOT_SEGMENTS = APP_DATA_PATH_SEGMENTS.groupBackgrounds;
 
 function electronApi() {
   return typeof window !== 'undefined' ? window.electronAPI : undefined;
@@ -114,7 +115,7 @@ export async function purgeGroupBackgroundFilesForGroup(groupId: string): Promis
 }
 
 /**
- * Write image bytes to appdata (`storage/group-backgrounds/{groupId}/`) and return ref.
+ * Write image bytes to appdata (`workspace/group-backgrounds/{groupId}/`) and return ref.
  */
 export async function persistGroupBackgroundImage(
   groupId: string,

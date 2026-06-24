@@ -1,12 +1,13 @@
 import logger from 'src/utils/logger';
 import type { ElectronAppdataAPI } from './ElectronAppdataAPI';
+import { APP_DATA_PATH_SEGMENTS, joinPathSegments } from '../../appDataPaths';
 
-/** `group-<id>.json` in storage/group (case-insensitive extension on Windows). */
+/** `group-<id>.json` in workspace/group (case-insensitive extension on Windows). */
 export function getGroupFilename(groupId: string): string {
   return `group-${groupId}.json`;
 }
 
-/** `group-<id>.json` in storage/group (case-insensitive extension on Windows). */
+/** `group-<id>.json` in workspace/group (case-insensitive extension on Windows). */
 export function isGroupJsonFilename(file: string): boolean {
   const name = String(file || '').trim();
   if (!name) return false;
@@ -88,12 +89,12 @@ async function readGroupFile(
   return normalizeGroupFromDisk(parsed as Record<string, unknown>, filename);
 }
 
-/** Load all group-*.json files from storage/group under app userData. */
+/** Load all group-*.json files from workspace/group under app userData. */
 export async function loadGroupsFromGroupDirectory(
   api: ElectronAppdataAPI,
 ): Promise<Record<string, unknown>[]> {
   const appDataDir = await api.getAppDataPath();
-  const groupDir = api.joinPath(appDataDir, 'storage', 'group');
+  const groupDir = joinPathSegments(api.joinPath, appDataDir, APP_DATA_PATH_SEGMENTS.group);
   await api.ensureDir(groupDir);
   const files = await api.readDir(groupDir);
   const groups: Record<string, unknown>[] = [];

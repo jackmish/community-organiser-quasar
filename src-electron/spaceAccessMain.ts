@@ -1,35 +1,44 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { app } from 'electron';
 import { createHash } from 'node:crypto';
 import type { SpaceAccessFile, SpaceAccessStatus } from '../src/modules/space/spaceAccessModel';
+import {
+  APP_DATA_PATH_SEGMENTS,
+  LEGACY_CO21_DIR,
+} from '../src/modules/storage/appDataPaths';
 import {
   loadSpaceRegistrySnapshot,
   resolveActiveDataPath,
   resolveActiveSpaceContext,
   resolveDataPathForSpace,
 } from './spaceRegistryMain';
+import { getCo21ProfileRoot } from './electronProfilePaths';
 
 const ACCESS_FILE = 'space-access.json';
 const DEVICE_ACCESS_FILE = 'device-space-access.json';
-const LEGACY_ACCESS_FILE = path.join('co21', ACCESS_FILE);
+const LEGACY_ACCESS_FILE = path.join(LEGACY_CO21_DIR, ACCESS_FILE);
 
 function hashPassword(plain: string): string {
   return createHash('sha256').update(plain, 'utf8').digest('hex');
 }
 
 function resolveLocalDeviceKey(): string {
-  const seed = `${os.hostname()}|${app.getPath('userData')}`;
+  const seed = `${os.hostname()}|${getCo21ProfileRoot()}`;
   return createHash('sha256').update(seed, 'utf8').digest('hex').slice(0, 16);
 }
 
 function canonicalAccessFilePath(dataPath: string): string {
-  return path.join(dataPath, 'co21', 'access', DEVICE_ACCESS_FILE);
+  return path.join(dataPath, ...APP_DATA_PATH_SEGMENTS.co21Access, DEVICE_ACCESS_FILE);
 }
 
 function hashedAccessFilePath(dataPath: string): string {
-  return path.join(dataPath, 'co21', 'access', resolveLocalDeviceKey(), ACCESS_FILE);
+  return path.join(
+    dataPath,
+    ...APP_DATA_PATH_SEGMENTS.co21Access,
+    resolveLocalDeviceKey(),
+    ACCESS_FILE,
+  );
 }
 
 function legacyAccessFilePath(dataPath: string): string {
@@ -66,15 +75,22 @@ function readAccessFileAt(filePath: string): SpaceAccessFile | null {
   }
 }
 
+function listAccessRoots(dataPath: string): string[] {
+  return [
+    path.join(dataPath, ...APP_DATA_PATH_SEGMENTS.co21Access),
+    path.join(dataPath, ...APP_DATA_PATH_SEGMENTS.legacyCo21Access),
+  ];
+}
+
 function listAccessCandidatePaths(dataPath: string): string[] {
   const paths = [
     canonicalAccessFilePath(dataPath),
     hashedAccessFilePath(dataPath),
     legacyAccessFilePath(dataPath),
   ];
-  const accessRoot = path.join(dataPath, 'co21', 'access');
-  try {
-    if (fs.existsSync(accessRoot)) {
+  for (const accessRoot of listAccessRoots(dataPath)) {
+    try {
+      if (!fs.existsSync(accessRoot)) continue;
       for (const entry of fs.readdirSync(accessRoot, { withFileTypes: true })) {
         if (entry.isDirectory()) {
           paths.push(path.join(accessRoot, entry.name, ACCESS_FILE));
@@ -82,9 +98,9 @@ function listAccessCandidatePaths(dataPath: string): string[] {
           paths.push(path.join(accessRoot, entry.name));
         }
       }
+    } catch {
+      void 0;
     }
-  } catch {
-    void 0;
   }
   return [...new Set(paths)];
 }
@@ -170,70 +186,54 @@ export function getAllSpacesAccessStatus(): Record<string, SpaceAccessStatus> {
 export function verifyActiveSpacePassword(plain: string): boolean {
   const dataPath = resolveActiveDataPath();
   const record = readSimpleAccessRecord(dataPath);
-  if (!record?.file.enabled || !record.file.passwordHash) return true;
-  if (!plain) return false;
-  return hashPassword(plain) === record.file.passwordHash;
+  if (!record?.file.passwordHash) return false;
+  return record.file.passwordHash === hashPassword(plain);
+}
+
+function activeSpaceName(): string {
+  const snapshot = loadSpaceRegistrySnapshot();
+  const active = snapshot.registry.spaces.find((s) => s.id === snapshot.registry.activeSpaceId);
+  return active?.name?.trim() || 'Space';
 }
 
 export function setActiveSpaceAccessPassword(
-  newPassword: string,
+  password: string,
   currentPassword?: string,
 ): SpaceAccessStatus {
   const dataPath = resolveActiveDataPath();
-  const record = readSimpleAccessRecord(dataPath);
-  if (record?.file.passwordHash) {
+  const spaceName = activeSpaceName();
+  const existing = readSimpleAccessRecord(dataPath);
+  if (existing?.file.passwordHash) {
     const current = currentPassword ?? '';
-    if (hashPassword(current) !== record.file.passwordHash) {
+    if (existing.file.passwordHash !== hashPassword(current)) {
       throw new Error('Current password is incorrect');
     }
   }
-  const trimmed = newPassword.trim();
-  if (!trimmed) throw new Error('Password is required');
+  const now = new Date().toISOString();
   writeAccessFile(dataPath, {
     enabled: true,
     method: 'password',
-    passwordHash: hashPassword(trimmed),
-    updatedAt: new Date().toISOString(),
+    passwordHash: hashPassword(password),
+    updatedAt: now,
   });
-  return getActiveSpaceAccessStatus();
+  return statusFromDataPath(dataPath, spaceName);
 }
 
-/** Toggle simple password auth on/off without affecting other auth methods. */
 export function setSimpleSpaceAccessEnabled(enabled: boolean): SpaceAccessStatus {
   const dataPath = resolveActiveDataPath();
-  const snapshot = loadSpaceRegistrySnapshot();
-  const active = snapshot.registry.spaces.find((s) => s.id === snapshot.registry.activeSpaceId);
-  const spaceName = active?.name?.trim() || 'Space';
-
-  if (!enabled) {
-    const record = readSimpleAccessRecord(dataPath);
-    if (!record?.file.passwordHash) {
-      deleteAccessFile(dataPath);
-      return statusFromDataPath(dataPath, spaceName);
-    }
-    writeAccessFile(dataPath, {
-      enabled: false,
-      method: 'password',
-      passwordHash: record.file.passwordHash,
-      updatedAt: new Date().toISOString(),
-    });
+  const spaceName = activeSpaceName();
+  const existing = readSimpleAccessRecord(dataPath);
+  if (!existing?.file.passwordHash) {
     return statusFromDataPath(dataPath, spaceName);
   }
-
-  const record = readSimpleAccessRecord(dataPath);
-  if (!record?.file.passwordHash) {
-    throw new Error('Set a password first');
-  }
   writeAccessFile(dataPath, {
-    enabled: true,
-    method: 'password',
-    passwordHash: record.file.passwordHash,
+    ...existing.file,
+    enabled,
     updatedAt: new Date().toISOString(),
   });
   return statusFromDataPath(dataPath, spaceName);
 }
 
-/** @deprecated Use setSimpleSpaceAccessEnabled(false) — kept for IPC compatibility. */
-export function disableActiveSpaceAccess(_currentPassword?: string): SpaceAccessStatus {
+export function disableActiveSpaceAccess(): SpaceAccessStatus {
   return setSimpleSpaceAccessEnabled(false);
 }

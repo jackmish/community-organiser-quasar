@@ -1,5 +1,11 @@
 import logger from 'src/utils/logger';
 import {
+  APP_DATA_PATH_SEGMENTS,
+  holidaysCacheFileName,
+  joinPathSegments,
+  legacyHolidaysCacheFileName,
+} from 'src/modules/storage/appDataPaths';
+import {
   detectAndSetLocale,
   getCountryCode,
   getLanguage,
@@ -32,11 +38,13 @@ async function getHolidaysFilePath(
 ): Promise<string | null> {
   if (!isElectron) return null;
 
-  const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(
+  const api = (window as any).electronAPI;
+  const appDataPath = await api.getAppDataPath();
+  return joinPathSegments(
+    api.joinPath,
     appDataPath,
-    'holidays',
-    `holidays_${countryCode}_${displayLang}_${year}.json`,
+    APP_DATA_PATH_SEGMENTS.pluginHolidays,
+    holidaysCacheFileName(countryCode, displayLang, year),
   );
 }
 
@@ -57,24 +65,36 @@ async function loadHolidaysFromCache(
       if (exists) {
         data = await (window as any).electronAPI.readJsonFile(filePath);
       } else {
-        const appDataPath = await (window as any).electronAPI.getAppDataPath();
-        const legacyPath = (window as any).electronAPI.joinPath(
-          appDataPath,
-          'holidays',
-          `holidays_${countryCode}_${year}.json`,
-        );
-        const legacyExists = await (window as any).electronAPI.fileExists(legacyPath);
-        if (legacyExists) {
+        const api = (window as any).electronAPI;
+        const appDataPath = await api.getAppDataPath();
+        const legacyPaths = [
+          joinPathSegments(
+            api.joinPath,
+            appDataPath,
+            APP_DATA_PATH_SEGMENTS.legacyHolidays,
+            legacyHolidaysCacheFileName(countryCode, year),
+          ),
+          joinPathSegments(
+            api.joinPath,
+            appDataPath,
+            APP_DATA_PATH_SEGMENTS.legacyHolidays,
+            holidaysCacheFileName(countryCode, displayLang, year),
+          ),
+        ];
+        for (const legacyPath of legacyPaths) {
+          const legacyExists = await api.fileExists(legacyPath);
+          if (!legacyExists) continue;
           try {
-            data = await (window as any).electronAPI.readJsonFile(legacyPath);
+            data = await api.readJsonFile(legacyPath);
             const safe = JSON.parse(JSON.stringify(data));
-            await (window as any).electronAPI.ensureDir(
-              (window as any).electronAPI.joinPath(appDataPath, 'holidays'),
+            await api.ensureDir(
+              joinPathSegments(api.joinPath, appDataPath, APP_DATA_PATH_SEGMENTS.pluginHolidays),
             );
-            await (window as any).electronAPI.writeJsonFile(filePath, safe);
+            await api.writeJsonFile(filePath, safe);
             exists = true;
+            break;
           } catch {
-            // ignore and treat as not found
+            // try next legacy path
           }
         }
       }
@@ -151,11 +171,13 @@ async function saveHolidaysToCache(
       const filePath = await getHolidaysFilePath(year, countryCode, displayLang);
       if (!filePath) return;
 
-      const dirPath = (window as any).electronAPI.joinPath(
-        await (window as any).electronAPI.getAppDataPath(),
-        'holidays',
+      const api = (window as any).electronAPI;
+      const dirPath = joinPathSegments(
+        api.joinPath,
+        await api.getAppDataPath(),
+        APP_DATA_PATH_SEGMENTS.pluginHolidays,
       );
-      await (window as any).electronAPI.ensureDir(dirPath);
+      await api.ensureDir(dirPath);
 
       const safe = JSON.parse(JSON.stringify(cache));
       await (window as any).electronAPI.writeJsonFile(filePath, safe);

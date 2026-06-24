@@ -26,6 +26,7 @@ import {
 import { sortLanIPv4Addresses } from '../src/modules/lan/lanNetwork';
 import { startCo21MdnsAdvertise, stopCo21MdnsAdvertise } from './lanMdns';
 import { resolveActiveDataPath, resolveActiveSpaceContext } from './spaceRegistryMain';
+import { APP_DATA_PATH_SEGMENTS } from '../src/modules/storage/appDataPaths';
 import {
   loadCo21SettingsFromSqlite,
   saveCo21SettingsToSqlite,
@@ -75,7 +76,7 @@ let trustedContractLanKeys = new Set<string>();
 let lanServerActiveContract: Record<string, unknown> | null = null;
 
 function activeCo21SettingsFile(): string {
-  return path.join(resolveActiveDataPath(), 'co21', 'settings.json');
+  return path.join(resolveActiveDataPath(), ...APP_DATA_PATH_SEGMENTS.co21SettingsFile);
 }
 
 async function readCo21SettingsFile(): Promise<Record<string, unknown>> {

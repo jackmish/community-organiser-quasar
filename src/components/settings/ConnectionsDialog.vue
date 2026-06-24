@@ -334,6 +334,7 @@ import {
   saveOwnDeviceNameSetting,
   type ConnectedDevice,
 } from 'src/modules/storage/sync/deviceRoleAssignment';
+import { APP_DATA_PATH_SEGMENTS, joinPathSegments } from 'src/modules/storage/appDataPaths';
 import { getSuggestedHostDeviceLabel } from 'src/modules/storage/sync/hostDeviceLabel';
 import type { RoleProfileData } from 'src/modules/storage/sync/RoleProfileModel';
 import { loadRoleProfiles } from 'src/modules/storage/sync/roleProfileSettings';
@@ -1103,7 +1104,7 @@ async function performAutoBackup() {
       autoBackupStatus.value = 'no app path';
       return;
     }
-    const backupsDir = api.joinPath(appPath, 'co21', 'backups');
+    const backupsDir = joinPathSegments(api.joinPath, appPath, APP_DATA_PATH_SEGMENTS.co21Backups);
     await api.ensureDir(backupsDir);
     const prefix = ownDeviceName.value ? normalizePrefix(ownDeviceName.value) : 'co21-backup';
     const name = `${prefix}-auto-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;

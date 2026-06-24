@@ -61,11 +61,13 @@ import {
 } from './spaceSqliteMain';
 import { registerMediaFolderIpc, registerMediaFileProtocol, registerMediaFileProtocolSchemes } from './mediaFolderMain';
 import { registerMediaThumbIpc, registerMediaThumbProtocol, registerMediaThumbProtocolSchemes, flushMediaThumbMetaTouches } from './mediaThumbMain';
+import { configureElectronProfilePaths } from './electronProfilePaths';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.setName('CO21 - Community Organiser');
+configureElectronProfilePaths();
 registerMediaThumbProtocolSchemes();
 registerMediaFileProtocolSchemes();
 // Read package.json version (best-effort). Keep this simple and cast where needed.

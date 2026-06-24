@@ -2,27 +2,41 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import logger from 'src/utils/logger';
-import {
-  CO21_SQLITE_DB_FILENAME,
-  type SpaceMigrateResult,
-} from '../src/modules/space/models/SpaceModel';
+import { APP_DATA_PATH_SEGMENTS, CO21_SQLITE_DB_FILENAME } from '../src/modules/storage/appDataPaths';
+import type { SpaceMigrateResult } from '../src/modules/space/models/SpaceModel';
 
 const dbByDataPath = new Map<string, Database.Database>();
 
-export function sqliteDbPathForDataRoot(dataPath: string): string {
+function legacySqliteDbPathForDataRoot(dataPath: string): string {
   return path.join(dataPath, CO21_SQLITE_DB_FILENAME);
 }
 
+export function sqliteDbPathForDataRoot(dataPath: string): string {
+  return path.join(dataPath, ...APP_DATA_PATH_SEGMENTS.sqlite, CO21_SQLITE_DB_FILENAME);
+}
+
 export function sqliteDbExists(dataPath: string): boolean {
-  return fs.existsSync(sqliteDbPathForDataRoot(dataPath));
+  return (
+    fs.existsSync(sqliteDbPathForDataRoot(dataPath)) ||
+    fs.existsSync(legacySqliteDbPathForDataRoot(dataPath))
+  );
+}
+
+function resolveSqliteDbPathForOpen(dataPath: string): string {
+  const canonical = sqliteDbPathForDataRoot(dataPath);
+  if (fs.existsSync(canonical)) return canonical;
+  const legacy = legacySqliteDbPathForDataRoot(dataPath);
+  if (fs.existsSync(legacy)) return legacy;
+  return canonical;
 }
 
 function openDb(dataPath: string): Database.Database {
   const key = path.resolve(dataPath);
   const existing = dbByDataPath.get(key);
   if (existing) return existing;
-  fs.mkdirSync(key, { recursive: true });
-  const db = new Database(sqliteDbPathForDataRoot(key));
+  const dbPath = resolveSqliteDbPathForOpen(key);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   initSchema(db);
@@ -93,7 +107,7 @@ export function migrateFilesToSqlite(dataPath: string): SpaceMigrateResult {
   `);
 
   let groupCount = 0;
-  const groupDir = path.join(root, 'storage', 'group');
+  const groupDir = path.join(root, ...APP_DATA_PATH_SEGMENTS.group);
   if (fs.existsSync(groupDir)) {
     for (const file of fs.readdirSync(groupDir)) {
       if (!isGroupJsonFilename(file)) continue;
@@ -114,7 +128,9 @@ export function migrateFilesToSqlite(dataPath: string): SpaceMigrateResult {
   }
 
   let settingsKeyCount = 0;
-  const settingsParsed = readJsonFileIfExists(path.join(root, 'storage', 'settings.json'));
+  const settingsParsed = readJsonFileIfExists(
+    path.join(root, ...APP_DATA_PATH_SEGMENTS.organiserSettingsFile),
+  );
   if (settingsParsed && typeof settingsParsed === 'object' && !Array.isArray(settingsParsed)) {
     for (const [key, value] of Object.entries(settingsParsed as Record<string, unknown>)) {
       upsertSetting.run({ key, value: JSON.stringify(value ?? null) });
@@ -123,8 +139,18 @@ export function migrateFilesToSqlite(dataPath: string): SpaceMigrateResult {
   }
 
   let co21SettingsImported = false;
-  const co21Parsed = readJsonFileIfExists(path.join(root, 'co21', 'settings.json'));
-  if (co21Parsed && typeof co21Parsed === 'object' && !Array.isArray(co21Parsed)) {
+  const co21Parsed = readJsonFileIfExists(
+    path.join(root, ...APP_DATA_PATH_SEGMENTS.co21SettingsFile),
+  );
+  if (!co21Parsed || typeof co21Parsed !== 'object' || Array.isArray(co21Parsed)) {
+    const legacyCo21 = readJsonFileIfExists(
+      path.join(root, ...APP_DATA_PATH_SEGMENTS.legacyCo21SettingsFile),
+    );
+    if (legacyCo21 && typeof legacyCo21 === 'object' && !Array.isArray(legacyCo21)) {
+      upsertCo21.run({ payload: JSON.stringify(legacyCo21) });
+      co21SettingsImported = true;
+    }
+  } else {
     upsertCo21.run({ payload: JSON.stringify(co21Parsed) });
     co21SettingsImported = true;
   }

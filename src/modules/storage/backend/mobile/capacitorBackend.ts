@@ -29,8 +29,10 @@ import {
   writeNativeOrganiserSettingsToPreferences,
 } from './capacitorNativePreferences';
 
-const GROUP_SUBDIR = 'storage/group';
-const SETTINGS_PATH = 'storage/settings.json';
+import { APP_DATA_PATH_SEGMENTS } from '../../appDataPaths';
+
+const GROUP_SUBDIR = APP_DATA_PATH_SEGMENTS.group.join('/');
+const SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.organiserSettingsFile.join('/');
 
 export class CapacitorBackend implements StorageBackend {
   readonly name = 'capacitor';

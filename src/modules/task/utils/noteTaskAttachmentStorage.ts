@@ -1,7 +1,6 @@
 import { revealMediaPath } from 'src/modules/media/mediaFolderService';
+import { APP_DATA_PATH_SEGMENTS, joinPathSegments } from 'src/modules/storage/appDataPaths';
 import logger from 'src/utils/logger';
-
-const NOTE_ATTACHMENT_ROOT_SEGMENTS = ['storage', 'note-attachments'] as const;
 
 function electronApi() {
   return typeof window !== 'undefined' ? window.electronAPI : undefined;
@@ -51,7 +50,7 @@ async function attachmentsRoot(): Promise<string | null> {
   const api = electronApi();
   if (!api?.getAppDataPath || !api.joinPath || !api.ensureDir) return null;
   const appData = await api.getAppDataPath();
-  const dir = api.joinPath(appData, ...NOTE_ATTACHMENT_ROOT_SEGMENTS);
+  const dir = joinPathSegments(api.joinPath, appData, APP_DATA_PATH_SEGMENTS.attachments);
   await api.ensureDir(dir);
   return dir;
 }

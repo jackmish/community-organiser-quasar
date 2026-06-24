@@ -7,6 +7,7 @@ import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { resolveInsideRoot } from './mediaFolderMain';
 import { resolveActiveDataPath } from './spaceRegistryMain';
+import { APP_DATA_PATH_SEGMENTS } from '../src/modules/storage/appDataPaths';
 
 /** Bump folder name when thumb spec / algorithm changes (old cache left for TTL sweep). */
 export const MEDIA_THUMB_CACHE_VERSION = 'v1';
@@ -98,7 +99,11 @@ function thumbRelPaths(hash: string): { imageRel: string; metaRel: string } {
 }
 
 function thumbCacheRoot(appDataPath: string): string {
-  return path.join(appDataPath, 'cache', 'media-thumbs');
+  return path.join(appDataPath, ...APP_DATA_PATH_SEGMENTS.mediaThumbs);
+}
+
+function legacyThumbCacheRoot(appDataPath: string): string {
+  return path.join(appDataPath, ...APP_DATA_PATH_SEGMENTS.legacyMediaThumbs);
 }
 
 function thumbAbsPaths(appDataPath: string, hash: string): { imagePath: string; metaPath: string } {
@@ -123,11 +128,14 @@ function resolveCachedThumbPath(imageRel: string): string | null {
   if (!rel || rel.includes('..')) return null;
 
   const appDataPath = resolveActiveDataPath();
-  const root = path.resolve(thumbCacheRoot(appDataPath));
-  const filePath = path.resolve(path.join(root, rel));
-  const relCheck = path.relative(root, filePath);
-  if (relCheck.startsWith('..') || path.isAbsolute(relCheck)) return null;
-  return filePath;
+  for (const rootCandidate of [thumbCacheRoot(appDataPath), legacyThumbCacheRoot(appDataPath)]) {
+    const root = path.resolve(rootCandidate);
+    const filePath = path.resolve(path.join(root, rel));
+    const relCheck = path.relative(root, filePath);
+    if (relCheck.startsWith('..') || path.isAbsolute(relCheck)) continue;
+    return filePath;
+  }
+  return null;
 }
 
 export function registerMediaThumbProtocolSchemes(): void {

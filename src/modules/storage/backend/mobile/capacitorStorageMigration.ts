@@ -14,12 +14,15 @@ import {
   writeNativeOrganiserSettingsToPreferences,
 } from './capacitorNativePreferences';
 
-const GROUP_SUBDIR = 'storage/group';
+import { APP_DATA_PATH_SEGMENTS } from '../../appDataPaths';
+
+const GROUP_SUBDIR = APP_DATA_PATH_SEGMENTS.group.join('/');
 const LEGACY_GROUPS_KEY = 'day-organiser-groups';
 const LEGACY_SETTINGS_KEY = 'day-organiser-settings';
-const CO21_SETTINGS_PATH = 'co21/settings.json';
+const CO21_SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.co21SettingsFile.join('/');
+const LEGACY_CO21_SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.legacyCo21SettingsFile.join('/');
 const LEGACY_CO21_SETTINGS_KEY = 'co21-settings.json';
-const MIGRATION_FLAG_PATH = 'storage/.migrated-from-web-storage';
+const MIGRATION_FLAG_PATH = 'workspace/.migrated-from-web-storage';
 
 function readLocalStorageJson(key: string): unknown {
   if (typeof localStorage === 'undefined') return null;
@@ -95,7 +98,10 @@ export async function migrateLegacyWebStorageToCapacitorFiles(): Promise<void> {
 
     const existingCo21 = await readCapacitorJsonFile(CO21_SETTINGS_PATH);
     if (!existingCo21) {
-      const legacyCo21 = readLocalStorageJson(LEGACY_CO21_SETTINGS_KEY);
+      const legacyFileCo21 = await readCapacitorJsonFile(LEGACY_CO21_SETTINGS_PATH);
+      const legacyCo21 =
+        legacyFileCo21 ??
+        readLocalStorageJson(LEGACY_CO21_SETTINGS_KEY);
       if (legacyCo21 && typeof legacyCo21 === 'object') {
         await writeNativeCo21SettingsToPreferences(legacyCo21 as Record<string, unknown>);
         await writeCapacitorJsonFile(CO21_SETTINGS_PATH, legacyCo21);
@@ -104,12 +110,17 @@ export async function migrateLegacyWebStorageToCapacitorFiles(): Promise<void> {
       }
     }
 
-    const existingOrganiserSettings = await readCapacitorJsonFile('storage/settings.json');
+    const existingOrganiserSettings = await readCapacitorJsonFile(
+      APP_DATA_PATH_SEGMENTS.organiserSettingsFile.join('/'),
+    );
     if (!existingOrganiserSettings) {
       const legacySettings = readLocalStorageJson(LEGACY_SETTINGS_KEY);
       if (legacySettings && typeof legacySettings === 'object') {
         await writeNativeOrganiserSettingsToPreferences(legacySettings as Record<string, unknown>);
-        await writeCapacitorJsonFile('storage/settings.json', legacySettings);
+        await writeCapacitorJsonFile(
+          APP_DATA_PATH_SEGMENTS.organiserSettingsFile.join('/'),
+          legacySettings,
+        );
         migrated = true;
         logger.info('[capacitorStorageMigration] imported organiser settings from localStorage');
       }

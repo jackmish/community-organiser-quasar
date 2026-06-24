@@ -3,7 +3,6 @@ import path from 'path';
 import { app } from 'electron';
 import { randomUUID } from 'node:crypto';
 import {
-  CO21_SQLITE_DB_FILENAME,
   SYSTEM_SPACE_ID,
   createDefaultSpaceRegistry,
   createSystemSpaceEntry,
@@ -22,12 +21,16 @@ import {
   sqliteDbExists,
   sqliteDbPathForDataRoot,
 } from './spaceSqliteMain';
+import { migrateDataLayoutIfNeeded } from './dataLayoutMigration';
+import { getCo21ProfileRoot } from './electronProfilePaths';
+import { APP_DATA_PATH_SEGMENTS, CO21_CONFIG_DIR } from '../src/modules/storage/appDataPaths';
 
-const REGISTRY_DIR = 'co21';
 const REGISTRY_FILE = 'spaces-registry.json';
 
+const REGISTRY_DIR = CO21_CONFIG_DIR;
+
 export function getDefaultUserDataPath(): string {
-  return app.getPath('userData');
+  return getCo21ProfileRoot();
 }
 
 export function getGlobalRegistryFilePath(): string {
@@ -124,10 +127,10 @@ function dirHasGroupJsonFiles(dirPath: string): boolean {
 export function looksLikeCo21Workspace(dataPath: string): boolean {
   const root = path.resolve(String(dataPath || '').trim());
   if (!root || !fs.existsSync(root)) return false;
-  if (fs.existsSync(path.join(root, CO21_SQLITE_DB_FILENAME))) return true;
-  if (dirHasGroupJsonFiles(path.join(root, 'storage', 'group'))) return true;
-  if (fs.existsSync(path.join(root, 'co21', 'settings.json'))) return true;
-  if (fs.existsSync(path.join(root, 'storage', 'settings.json'))) return true;
+  if (sqliteDbExists(root)) return true;
+  if (dirHasGroupJsonFiles(path.join(root, ...APP_DATA_PATH_SEGMENTS.group))) return true;
+  if (fs.existsSync(path.join(root, ...APP_DATA_PATH_SEGMENTS.co21SettingsFile))) return true;
+  if (fs.existsSync(path.join(root, ...APP_DATA_PATH_SEGMENTS.organiserSettingsFile))) return true;
   return false;
 }
 
@@ -238,9 +241,12 @@ export function resolveActiveSpaceContext(): {
 export function resolveActiveDataPath(registry?: SpaceRegistry): string {
   const reg = registry ?? readRegistrySync();
   const active = reg.spaces.find((s) => s.id === reg.activeSpaceId);
-  if (!active || isSystemSpace(active)) return getDefaultUserDataPath();
-  const customPath = active.dataPath?.trim();
-  return customPath || getDefaultUserDataPath();
+  const dataPath =
+    !active || isSystemSpace(active)
+      ? getDefaultUserDataPath()
+      : active.dataPath?.trim() || getDefaultUserDataPath();
+  migrateDataLayoutIfNeeded(dataPath);
+  return dataPath;
 }
 
 /** On a fresh app launch: open default space when set and healthy, otherwise keep last accessed. */

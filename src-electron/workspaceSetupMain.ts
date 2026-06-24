@@ -10,6 +10,7 @@ import {
   type WorkspaceCreateMode,
 } from '../src/modules/space/models/workspaceSetupModel';
 import type { SpaceEntry } from '../src/modules/space/models/SpaceModel';
+import { APP_DATA_PATH_SEGMENTS } from '../src/modules/storage/appDataPaths';
 import { createCustomSpace } from './spaceRegistryMain';
 
 const IMAGE_FILE_EXTENSIONS = new Set([
@@ -160,7 +161,7 @@ function writeBootstrapGroupFile(
     mediaTasks,
   };
 
-  const groupDir = path.join(workspaceDataPath, 'storage', 'group');
+  const groupDir = path.join(workspaceDataPath, ...APP_DATA_PATH_SEGMENTS.group);
   fs.mkdirSync(groupDir, { recursive: true });
   const filePath = path.join(groupDir, `group-${groupId}.json`);
   fs.writeFileSync(filePath, JSON.stringify(groupRecord, null, 2), 'utf8');

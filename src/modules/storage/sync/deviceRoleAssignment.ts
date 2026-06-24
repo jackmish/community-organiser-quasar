@@ -1,5 +1,9 @@
 import logger from 'src/utils/logger';
 import {
+  APP_DATA_PATH_SEGMENTS,
+  joinPathSegments,
+} from 'src/modules/storage/appDataPaths';
+import {
   readCo21SettingsBlob,
   writeCo21SettingsBlob,
   type Co21SettingsJson,
@@ -562,9 +566,11 @@ async function migrateLegacyDevicesFromStorageSettings(
 
   try {
     const appPath = await (api.getAppDataPath as () => Promise<string>)();
-    const legacyFile = (api.joinPath as (a: string, b: string) => string)(
-      (api.joinPath as (a: string, b: string) => string)(appPath, 'storage'),
-      'settings.json',
+    const joinPath = api.joinPath as (...parts: string[]) => string;
+    const legacyFile = joinPathSegments(
+      joinPath,
+      appPath,
+      APP_DATA_PATH_SEGMENTS.legacyOrganiserSettingsFile,
     );
     if (typeof api.fileExists === 'function') {
       const exists = await (api.fileExists as (p: string) => Promise<boolean>)(legacyFile);
@@ -589,12 +595,12 @@ async function migrateLegacyDevicesFromStorageSettings(
       const parsed = legacyRows.map((d) => parseConnectedDevice(d));
       patch.devices = parsed.map(toDeviceJson);
       migrated = true;
-      logger.info('[deviceRegistry] migrating paired devices from storage/settings.json');
+      logger.info('[deviceRegistry] migrating paired devices from legacy organiser settings');
     }
     if (legacyName && !hasStoredName) {
       patch.ownDeviceName = legacyName;
       migrated = true;
-      logger.info('[deviceRegistry] migrating ownDeviceName from storage/settings.json');
+      logger.info('[deviceRegistry] migrating ownDeviceName from legacy organiser settings');
     }
     if (!migrated) return data;
 

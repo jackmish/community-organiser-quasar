@@ -1,6 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 import logger from 'src/utils/logger';
 import {
+  APP_DATA_PATH_SEGMENTS,
+  joinPathSegments,
+} from 'src/modules/storage/appDataPaths';
+import {
   readCapacitorJsonFile,
   writeCapacitorJsonFile,
 } from 'src/modules/storage/backend/mobile/capacitorAppDataFiles';
@@ -11,8 +15,8 @@ import {
 
 export type Co21SettingsJson = Record<string, unknown>;
 
-/** Mirrors on-disk `co21/settings.json` when Electron API is unavailable (Android/iOS). */
-const CO21_SETTINGS_PATH = 'co21/settings.json';
+/** Mirrors on-disk `co21-config/settings.json` when Electron API is unavailable (Android/iOS). */
+const CO21_SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.co21SettingsFile.join('/');
 const CO21_SETTINGS_LOCAL_KEY = 'co21-settings.json';
 
 function electronApi(): Record<string, unknown> | null {
@@ -39,13 +43,20 @@ async function readCo21SettingsFromElectronFile(): Promise<Co21SettingsJson | nu
       }
     }
     const appPath = await (api.getAppDataPath as () => Promise<string>)();
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(
-      settingsDir,
-      'settings.json',
-    );
-    const exists = await (api.fileExists as (p: string) => Promise<boolean>)(settingsFile);
-    if (!exists) return {};
+    const joinPath = api.joinPath as (...parts: string[]) => string;
+    const settingsFile = joinPathSegments(joinPath, appPath, APP_DATA_PATH_SEGMENTS.co21SettingsFile);
+    let exists = await (api.fileExists as (p: string) => Promise<boolean>)(settingsFile);
+    if (!exists) {
+      const legacyFile = joinPathSegments(
+        joinPath,
+        appPath,
+        APP_DATA_PATH_SEGMENTS.legacyCo21SettingsFile,
+      );
+      exists = await (api.fileExists as (p: string) => Promise<boolean>)(legacyFile);
+      if (!exists) return {};
+      const data = await (api.readJsonFile as (p: string) => Promise<unknown>)(legacyFile);
+      return data && typeof data === 'object' ? (data as Co21SettingsJson) : {};
+    }
     const data = await (api.readJsonFile as (p: string) => Promise<unknown>)(settingsFile);
     return data && typeof data === 'object' ? (data as Co21SettingsJson) : {};
   } catch (e) {
@@ -72,11 +83,9 @@ async function writeCo21SettingsToElectronFile(payload: Co21SettingsJson): Promi
       }
     }
     const appPath = await (api.getAppDataPath as () => Promise<string>)();
-    const settingsDir = (api.joinPath as (a: string, b: string) => string)(appPath, 'co21');
-    const settingsFile = (api.joinPath as (a: string, b: string) => string)(
-      settingsDir,
-      'settings.json',
-    );
+    const joinPath = api.joinPath as (...parts: string[]) => string;
+    const settingsDir = joinPathSegments(joinPath, appPath, APP_DATA_PATH_SEGMENTS.co21Config);
+    const settingsFile = joinPathSegments(joinPath, appPath, APP_DATA_PATH_SEGMENTS.co21SettingsFile);
     await (api.ensureDir as (p: string) => Promise<void>)(settingsDir);
     await (api.writeJsonFile as (p: string, d: unknown) => Promise<void>)(settingsFile, payload);
     return true;

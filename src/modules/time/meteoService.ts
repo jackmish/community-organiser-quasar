@@ -6,6 +6,11 @@ import {
 } from 'src/modules/lan/lanDebugLog';
 import { LanHttpError, lanHttpRequest } from 'src/modules/lan/lanHttp';
 import { loadMeteoSyncEnabled, loadMeteoLocation } from './meteoSyncSettings';
+import {
+  APP_DATA_PATH_SEGMENTS,
+  METEO_CACHE_FILENAME,
+  joinPathSegments,
+} from 'src/modules/storage/appDataPaths';
 
 export const OPEN_METEO_FORECAST_API = 'https://api.open-meteo.com/v1/forecast';
 export const OPEN_METEO_GEOCODING_API = 'https://geocoding-api.open-meteo.com/v1';
@@ -158,8 +163,26 @@ function countryFallbackLocation(): MeteoLocation {
 
 async function getCacheFilePath(): Promise<string | null> {
   if (!isElectron) return null;
-  const appDataPath = await (window as any).electronAPI.getAppDataPath();
-  return (window as any).electronAPI.joinPath(appDataPath, 'meteo', 'meteo_cache.json');
+  const api = (window as any).electronAPI;
+  const appDataPath = await api.getAppDataPath();
+  return joinPathSegments(
+    api.joinPath,
+    appDataPath,
+    APP_DATA_PATH_SEGMENTS.pluginMeteo,
+    METEO_CACHE_FILENAME,
+  );
+}
+
+async function getLegacyCacheFilePath(): Promise<string | null> {
+  if (!isElectron) return null;
+  const api = (window as any).electronAPI;
+  const appDataPath = await api.getAppDataPath();
+  return joinPathSegments(
+    api.joinPath,
+    appDataPath,
+    APP_DATA_PATH_SEGMENTS.legacyMeteo,
+    METEO_CACHE_FILENAME,
+  );
 }
 
 async function loadMeteoCache(): Promise<MeteoSnapshot | null> {
@@ -168,9 +191,18 @@ async function loadMeteoCache(): Promise<MeteoSnapshot | null> {
     if (isElectron) {
       const filePath = await getCacheFilePath();
       if (!filePath) return null;
-      const exists = await (window as any).electronAPI.fileExists(filePath);
-      if (!exists) return null;
-      payload = (await (window as any).electronAPI.readJsonFile(filePath)) as MeteoCachePayload;
+      const api = (window as any).electronAPI;
+      const exists = await api.fileExists(filePath);
+      if (!exists) {
+        const legacyPath = await getLegacyCacheFilePath();
+        if (legacyPath && (await api.fileExists(legacyPath))) {
+          payload = (await api.readJsonFile(legacyPath)) as MeteoCachePayload;
+        } else {
+          return null;
+        }
+      } else {
+        payload = (await api.readJsonFile(filePath)) as MeteoCachePayload;
+      }
     } else {
       const raw = localStorage.getItem('meteo_cache');
       if (!raw) return null;
@@ -191,11 +223,13 @@ async function saveMeteoCache(snapshot: MeteoSnapshot): Promise<void> {
     if (isElectron) {
       const filePath = await getCacheFilePath();
       if (!filePath) return;
-      const dirPath = (window as any).electronAPI.joinPath(
-        await (window as any).electronAPI.getAppDataPath(),
-        'meteo',
+      const api = (window as any).electronAPI;
+      const dirPath = joinPathSegments(
+        api.joinPath,
+        await api.getAppDataPath(),
+        APP_DATA_PATH_SEGMENTS.pluginMeteo,
       );
-      await (window as any).electronAPI.ensureDir(dirPath);
+      await api.ensureDir(dirPath);
       const safe = JSON.parse(JSON.stringify(payload));
       await (window as any).electronAPI.writeJsonFile(filePath, safe);
     } else {

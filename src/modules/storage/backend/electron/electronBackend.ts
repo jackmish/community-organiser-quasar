@@ -6,6 +6,10 @@ import type { StorageBackend } from '../StorageBackend';
 import { shouldUseCapacitorStorage } from '../storagePlatform';
 import { capacitorStorage } from '../mobile/capacitorBackend';
 import { sanitizeGroupsForStorage } from '../groupStorageSanitize';
+import {
+  APP_DATA_PATH_SEGMENTS,
+  joinPathSegments,
+} from '../../appDataPaths';
 // Re-export so existing callers that import OrganiserData from this module keep working.
 export type { OrganiserData } from '../StorageBackend';
 import type { OrganiserData } from '../StorageBackend';
@@ -271,7 +275,11 @@ export async function saveGroupsToFiles(groups: any[]): Promise<void> {
       const groupId = typeof groupToWrite.id === 'string' ? groupToWrite.id : '';
       if (!groupId) continue;
       const filename = getGroupFilename(groupId);
-      const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
+      const groupDir = joinPathSegments(
+        window.electronAPI.joinPath,
+        appDataDir,
+        APP_DATA_PATH_SEGMENTS.group,
+      );
       await window.electronAPI.ensureDir(groupDir);
 
       const filePath = window.electronAPI.joinPath(groupDir, filename);
@@ -318,16 +326,33 @@ export async function loadSettings(): Promise<any> {
     window.electronAPI.readJsonFile
   ) {
     const appDataDir = await window.electronAPI.getAppDataPath();
-    const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
+    const settingsPath = joinPathSegments(
+      window.electronAPI.joinPath,
+      appDataDir,
+      APP_DATA_PATH_SEGMENTS.organiserSettingsFile,
+    );
     try {
-      await window.electronAPI.ensureDir(settingsDir);
+      await window.electronAPI.ensureDir(
+        joinPathSegments(window.electronAPI.joinPath, appDataDir, APP_DATA_PATH_SEGMENTS.workspace),
+      );
     } catch (e) {
       void e;
     }
-    const settingsPath = window.electronAPI.joinPath(settingsDir, 'settings.json');
     try {
-      const exists = await window.electronAPI.fileExists(settingsPath);
-      if (!exists) return {};
+      let exists = await window.electronAPI.fileExists(settingsPath);
+      if (!exists) {
+        const legacyPath = joinPathSegments(
+          window.electronAPI.joinPath,
+          appDataDir,
+          APP_DATA_PATH_SEGMENTS.legacyOrganiserSettingsFile,
+        );
+        exists = await window.electronAPI.fileExists(legacyPath);
+        if (exists) {
+          const data = await window.electronAPI.readJsonFile(legacyPath);
+          return data || {};
+        }
+        return {};
+      }
       const data = await window.electronAPI.readJsonFile(settingsPath);
       return data || {};
     } catch (err) {
@@ -365,13 +390,18 @@ export async function saveSettings(settings: any): Promise<void> {
     window.electronAPI.writeJsonFile
   ) {
     const appDataDir = await window.electronAPI.getAppDataPath();
-    const settingsDir = window.electronAPI.joinPath(appDataDir, 'storage');
+    const settingsPath = joinPathSegments(
+      window.electronAPI.joinPath,
+      appDataDir,
+      APP_DATA_PATH_SEGMENTS.organiserSettingsFile,
+    );
     try {
-      await window.electronAPI.ensureDir(settingsDir);
+      await window.electronAPI.ensureDir(
+        joinPathSegments(window.electronAPI.joinPath, appDataDir, APP_DATA_PATH_SEGMENTS.workspace),
+      );
     } catch (e) {
       void e;
     }
-    const settingsPath = window.electronAPI.joinPath(settingsDir, 'settings.json');
     try {
       await window.electronAPI.writeJsonFile(settingsPath, settings);
     } catch (err) {
@@ -432,7 +462,11 @@ export async function deleteGroupFile(groupId: string): Promise<void> {
   }
   if (window.electronAPI && window.electronAPI.joinPath && window.electronAPI.deleteFile) {
     const appDataDir = await window.electronAPI.getAppDataPath();
-    const groupDir = window.electronAPI.joinPath(appDataDir, 'storage', 'group');
+    const groupDir = joinPathSegments(
+      window.electronAPI.joinPath,
+      appDataDir,
+      APP_DATA_PATH_SEGMENTS.group,
+    );
     const filename = getGroupFilename(groupId);
     const filePath = window.electronAPI.joinPath(groupDir, filename);
     try {
