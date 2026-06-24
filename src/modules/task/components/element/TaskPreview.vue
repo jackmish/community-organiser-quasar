@@ -47,7 +47,7 @@
             round
             unelevated
             color="primary"
-            icon="event"
+            icon="edit_calendar"
             class="todo-schedule-calendar-btn"
             :title="$text('task.todo.schedule_on_calendar')"
             @click.stop="onScheduleTodoClick"

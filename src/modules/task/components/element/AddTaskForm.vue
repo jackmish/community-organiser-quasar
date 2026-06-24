@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, watch, toRef, onMounted, onUnmounted } from "vue";
-import { $text, getLanguage, hasText } from "src/modules/lang";
+import { $text, getLanguage } from "src/modules/lang";
 import type { Group } from "src/modules/group/models/GroupModel";
 import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
@@ -535,6 +535,7 @@ const showTodoCalendarBtn = computed(() => {
   return false;
 });
 const showPriorityLabel = computed(() => $q.screen.gt.sm);
+const showTodoScheduleLabel = computed(() => $q.screen.gt.sm);
 
 function openTodoCalendarSchedule() {
   const currentRepeat =
@@ -851,11 +852,6 @@ const descriptionLabel = computed(() => {
   if (typeId === "Todo") return $text("task.form.description_label_todo");
   if (typeId === "NoteLater") return $text("task.form.description_label_note");
   return $text("label.description");
-});
-
-const taskTypeHint = computed(() => {
-  const key = `task.type.hint.${localNewTask.value.type_id}`;
-  return hasText(key) ? $text(key) : "";
 });
 
 const typeOptions = computed(() => {
@@ -2422,9 +2418,11 @@ function onSubmit(event: Event) {
                         size="sm"
                         align="left"
                         color="primary"
-                        icon="event"
+                        icon="edit_calendar"
                         class="full-width todo-schedule-inline-btn"
-                        :label="$text('task.todo.schedule_on_calendar')"
+                        :class="{ 'todo-schedule-inline-btn--icon-only': !showTodoScheduleLabel }"
+                        :label="showTodoScheduleLabel ? $text('task.todo.schedule_on_calendar') : undefined"
+                        :aria-label="$text('task.todo.schedule_on_calendar')"
                         @click="openTodoCalendarSchedule"
                       />
                       <q-btn
@@ -2453,12 +2451,6 @@ function onSubmit(event: Event) {
                               : undefined,
                         }"
                       />
-                    </div>
-                    <div
-                      v-if="taskTypeHint"
-                      class="text-caption text-grey-7 q-mt-sm"
-                    >
-                      {{ taskTypeHint }}
                     </div>
                   </q-card>
                 </div>
@@ -2736,6 +2728,10 @@ function onSubmit(event: Event) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.todo-schedule-inline-btn--icon-only :deep(.q-btn__content) {
+  justify-content: center !important;
+  padding: 4px !important;
 }
 .todo-schedule-type-glued.type-btn {
   border-top-left-radius: 0 !important;
