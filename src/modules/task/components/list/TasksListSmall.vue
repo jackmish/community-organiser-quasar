@@ -562,7 +562,7 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-    top: -26px;
+    top: -17px;
     left: 0px;
   z-index: 1;
   width: max-content;

@@ -145,7 +145,7 @@ export class StorageController {
               taskService.setMediaTasks(ingested.mediaTasks);
               taskService.migrateMediaTasksFromDays();
               const loaded = taskService.buildFlatTasksList(this.time.days?.value || finalDays || {});
-              taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
+              taskService.setFlatList(loaded);
               try {
                 logger.debug(
                   'StorageController.loadData: time.days populated, days=',

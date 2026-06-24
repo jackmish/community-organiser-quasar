@@ -43,7 +43,7 @@ export async function reloadOrganiserFromDisk(): Promise<{ groups: number; days:
   taskService.migrateMediaTasksFromDays();
   try {
     const loaded = taskService.buildFlatTasksList(days);
-    taskService.flatTasks.value.splice(0, taskService.flatTasks.value.length, ...loaded);
+    taskService.setFlatList(loaded);
   } catch (e) {
     void e;
   }

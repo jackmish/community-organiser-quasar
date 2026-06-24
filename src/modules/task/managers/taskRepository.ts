@@ -1,4 +1,5 @@
-import { getCycleType, occursOnDay } from '../utils/occursOnDay';
+import { getCycleType } from '../utils/occursOnDay';
+import { taskOccurrenceIndex } from '../utils/taskOccurrenceIndex';
 import { isMediaTaskTypeId } from 'src/modules/media/mediaTaskTypes';
 import { isExcludedFromCalendarTask } from '../utils/calendarTaskTypes';
 import { ref } from 'vue';
@@ -39,6 +40,8 @@ export class TaskRepository {
   // â”€â”€ Per-instance state (was module-level globals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   /** Reactive flat list of calendar tasks — mirrors `days` in sorted order. */
   readonly flatTasksRef = ref<Task[]>([]);
+  /** Bumps when the flat list or occurrence index is rebuilt (for UI caches). */
+  readonly taskListGeneration = ref(0);
   /** Reactive flat list of media/files tasks — not tied to day buckets. */
   readonly mediaTasksRef = ref<Task[]>([]);
 
@@ -57,6 +60,44 @@ export class TaskRepository {
     } catch (e) {
       return this._daysMap || {};
     }
+  }
+
+  private rebuildOccurrenceIndex(): void {
+    try {
+      taskOccurrenceIndex.rebuild(this.flatTasksRef.value, Object.keys(this.getDays()), this.getDays());
+      this.taskListGeneration.value++;
+    } catch {
+      void 0;
+    }
+  }
+
+  setFlatList(tasks: Task[]): void {
+    this.flatTasksRef.value.splice(0, this.flatTasksRef.value.length, ...tasks);
+    this.rebuildOccurrenceIndex();
+  }
+
+  taskOccursOnDay(task: Task, day: string): boolean {
+    return taskOccurrenceIndex.taskOccursOnDay(task, day);
+  }
+
+  getOccurrenceCandidatesForDay(day: string): Task[] {
+    return taskOccurrenceIndex.getOccurrencesForDay(day);
+  }
+
+  getIndexedTodoTasks(): Task[] {
+    return taskOccurrenceIndex.getTodoTasks();
+  }
+
+  getIndexedPrepTasksForToday(): Task[] {
+    return taskOccurrenceIndex.getPrepTasksForToday();
+  }
+
+  getTaskById(id: string): Task | undefined {
+    return taskOccurrenceIndex.getTaskById(id);
+  }
+
+  getOccurrenceIdSetForDay(day: string): ReadonlySet<string> {
+    return taskOccurrenceIndex.getOccurrenceIdSet(day);
   }
 
   // â”€â”€ Constructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -107,7 +148,7 @@ export class TaskRepository {
 
     try {
       const newList = this.listFromDays(this.getDays());
-      this.flatTasksRef.value.splice(0, this.flatTasksRef.value.length, ...newList);
+      this.setFlatList(newList);
     } catch (e) {
       // ignore
     }
@@ -166,7 +207,7 @@ export class TaskRepository {
     }
     try {
       const newList = this.listFromDays(this.getDays());
-      this.flatTasksRef.value.splice(0, this.flatTasksRef.value.length, ...newList);
+      this.setFlatList(newList);
     } catch (e) {
       // ignore
     }
@@ -296,6 +337,7 @@ export class TaskRepository {
           } catch (e) {
             // ignore
           }
+          this.rebuildOccurrenceIndex();
         } catch (e) {
           // ignore
         }
@@ -338,6 +380,7 @@ export class TaskRepository {
           if (String(this.flatTasksRef.value[i]?.id) === String(taskId))
             this.flatTasksRef.value.splice(i, 1);
         }
+        this.rebuildOccurrenceIndex();
       }
     } catch (e) {
       // ignore
@@ -397,6 +440,7 @@ export class TaskRepository {
     try {
       const fi = this.flatTasksRef.value.findIndex((t: any) => String(t.id) === String(task.id));
       if (fi !== -1) this.flatTasksRef.value[fi] = task;
+      this.rebuildOccurrenceIndex();
     } catch (e) {
       // ignore
     }
@@ -421,6 +465,7 @@ export class TaskRepository {
                 (t: any) => String(t.id) === String(task.id),
               );
               if (fi !== -1) this.flatTasksRef.value[fi] = task;
+              this.rebuildOccurrenceIndex();
             } catch (e) {
               // ignore
             }
@@ -531,17 +576,15 @@ export class TaskRepository {
       ) as Task[];
       const all = this.getFlatList() || [];
       const result: Task[] = [...dayTasks];
-      for (const t of all) {
+      for (const t of this.getOccurrenceCandidatesForDay(day)) {
         try {
           if (isMediaTaskTypeId(taskTypeId(t))) continue;
           if (Number(t.status_id) === 0) continue;
           if (isExcludedFromCalendarTask(t)) continue;
-          if (occursOnDay(t, day)) {
-            if (!result.some((existing) => String(existing.id) === String(t.id))) {
-              const clone: any = { ...t, eventDate: day };
-              clone.__isCyclicInstance = true;
-              result.push(clone as Task);
-            }
+          if (!result.some((existing) => String(existing.id) === String(t.id))) {
+            const clone: any = { ...t, eventDate: day };
+            clone.__isCyclicInstance = true;
+            result.push(clone as Task);
           }
         } catch (e) {
           // ignore per-task failures
@@ -727,6 +770,9 @@ export const getTasksByPriority = (p: Task['priority']): Task[] => _singleton.ge
 export const getIncompleteTasks = (): Task[] => _singleton.getIncompleteTasks();
 export const buildFlatTasksList = (daysArg?: Record<string, any>): Task[] =>
   _singleton.buildFlatTasksList(daysArg);
+export const setFlatList = (tasks: Task[]): void => _singleton.setFlatList(tasks);
+export const taskOccursOnDayIndexed = (task: Task, day: string): boolean =>
+  _singleton.taskOccursOnDay(task, day);
 export const applyActiveSelection = (
   activeTaskRef: Ref<Task | null>,
   activeModeRef: Ref<'add' | 'edit' | 'preview'>,

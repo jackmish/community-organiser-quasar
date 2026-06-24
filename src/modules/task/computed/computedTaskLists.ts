@@ -26,17 +26,55 @@ export function createTaskComputed(args: {
 
   // Derive helpers from provided APIs (prefer task/group). Provide
   // minimal safe fallbacks so this module remains usable in tests.
-  const getTasksInRange: ((from: string, to: string) => Task[]) | undefined = task?.list
-    ? (from: string, to: string) => task.list.inRange(from, to)
-    : undefined;
-
   const parseYmdLocal = task?.helpers?.parseYmdLocal ?? parseYmdLocalDefault;
   const getTimeOffsetDaysForTask =
     task?.helpers?.getTimeOffsetDaysForTask ?? getTimeOffsetDaysDefault;
 
   const getCycleType = task?.helpers?.getCycleType ?? utilGetCycleType;
-  const occursOnDay = task?.helpers?.occursOnDay ?? utilOccursOnDay;
   const getRepeatDays = task?.helpers?.getRepeatDays ?? utilGetRepeatDays;
+  const getOccurrencesForDay: (day: string) => Task[] = task?.list?.occurrencesForDay
+    ? (day: string) => task.list.occurrencesForDay(day)
+    : (day: string) => (allTasks.value || []).filter((t) => utilOccursOnDay(t, day));
+  const getIndexedTodos: () => Task[] = task?.list?.todos
+    ? () => task.list.todos()
+    : () => (allTasks.value || []).filter((t) => t.type_id === 'Todo');
+  const getPrepTasksForToday: () => Task[] = task?.list?.prepTasksForToday
+    ? () => task.list.prepTasksForToday()
+    : () => {
+        const todayStr = todayString();
+        const flat = allTasks.value || [];
+        return flat.filter((t) => {
+          if (t.type_id === 'Replenish') return false;
+          const mode = (t as any).timeMode || 'event';
+          if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
+          if (mode !== 'prepare' && mode !== 'expiration') return false;
+          const ev = (t.date || t.eventDate) as string | undefined | null;
+          if (!ev) return false;
+          const evDate = parseYmdLocal(ev);
+          const todayDate = parseYmdLocal(todayStr);
+          if (!evDate || !todayDate) return false;
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const diffDays = Math.floor((evDate.getTime() - todayDate.getTime()) / msPerDay);
+          const offset = getTimeOffsetDaysForTask(t);
+          if (mode === 'prepare') return diffDays >= 0 && diffDays <= offset;
+          return diffDays <= offset;
+        });
+      };
+  const resolveTaskById = (id: string | number | undefined): Task | undefined => {
+    if (id == null) return undefined;
+    if (task?.list?.taskById) return task.list.taskById(String(id));
+    return (allTasks.value || []).find((x) => String(x.id) === String(id));
+  };
+  const getOccurrenceIdsForDay = (day: string): ReadonlySet<string> => {
+    if (task?.taskRepo?.getOccurrenceIdSetForDay) {
+      return task.taskRepo.getOccurrenceIdSetForDay(day);
+    }
+    const ids = new Set<string>();
+    for (const t of allTasks.value || []) {
+      if (t.id != null && utilOccursOnDay(t, day)) ids.add(String(t.id));
+    }
+    return ids;
+  };
 
   function taskGroupId(task: { groupId?: string; group_id?: string } | null | undefined): string {
     return String(task?.groupId ?? (task as any)?.group_id ?? '');
@@ -78,91 +116,64 @@ export function createTaskComputed(args: {
 
   const sortedTasks = computed(() => {
     let tasksToSort = currentDayData.value.tasks.slice();
+    const listedIds = new Set<string | number>();
+    const listedSeries = new Set<string>();
+    for (const t of tasksToSort) {
+      if (t.id != null) listedIds.add(t.id);
+      const sk = cyclicSeriesKey(t);
+      if (sk) listedSeries.add(sk);
+    }
 
     try {
-      if (typeof getTasksInRange === 'function') {
-        const all = getTasksInRange('1970-01-01', '9999-12-31');
-        const todoExtras = all.filter((t) => t.type_id === 'Todo');
-        for (const t of todoExtras) {
-          if (!tasksToSort.some((existing) => existing.id === t.id)) {
-            tasksToSort.push(t);
-          }
+      for (const t of getIndexedTodos()) {
+        if (t.id != null && !listedIds.has(t.id)) {
+          tasksToSort.push(t);
+          listedIds.add(t.id);
         }
-        try {
-          const todayStr = todayString();
-          if (currentDate.value === todayStr) {
-            const prepExtras = all.filter((t) => {
-              if (t.type_id === 'Replenish') return false;
-              const mode = (t as any).timeMode || 'event';
-              if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
-              if (mode !== 'prepare' && mode !== 'expiration') return false;
-              const ev = (t.date || t.eventDate) as string | undefined | null;
-              if (!ev) return false;
-              const evDate = parseYmdLocal(ev);
-              const todayDate = parseYmdLocal(todayStr);
-              if (!evDate || !todayDate) return false;
-              const msPerDay = 1000 * 60 * 60 * 24;
-              const diffDays = Math.floor((evDate.getTime() - todayDate.getTime()) / msPerDay);
-              const offset = getTimeOffsetDaysForTask(t);
-              if (mode === 'prepare') {
-                return diffDays >= 0 && diffDays <= offset;
-              }
-              return diffDays <= offset;
-            });
-            for (const t of prepExtras) {
-              if (!tasksToSort.some((existing) => existing.id === t.id)) tasksToSort.push(t);
-            }
+      }
+      const todayStr = todayString();
+      if (currentDate.value === todayStr) {
+        for (const t of getPrepTasksForToday()) {
+          if (t.id != null && !listedIds.has(t.id)) {
+            tasksToSort.push(t);
+            listedIds.add(t.id);
           }
-        } catch (e) {
-          // ignore
         }
       }
     } catch (err) {
       logger.warn('Failed to include Todo extras for today', err);
     }
 
-    // use `isVisibleForActive` from outer scope
-    // (defined above so it adapts both 1-arg and 3-arg helpers)
-
     try {
       const dayStr = currentDate.value;
-      const isCyclicNotOccurring = (task: any) => {
-        const cycle = getCycleType(task);
-        if (!cycle) return false;
-        try {
-          const occurs = occursOnDay(task, dayStr);
-          return !occurs;
-        } catch (err) {
-          return false;
-        }
-      };
-
-      tasksToSort = tasksToSort.filter((t) => !isCyclicNotOccurring(t));
+      const occurringIds = getOccurrenceIdsForDay(dayStr);
+      tasksToSort = tasksToSort.filter((t) => {
+        const cycle = getCycleType(t);
+        if (!cycle) return true;
+        return t.id != null && occurringIds.has(String(t.id));
+      });
     } catch (e) {
       // ignore
     }
 
     try {
-      const full = allTasks.value || [];
       const day = currentDate.value;
+      const candidates = getOccurrencesForDay(day);
 
-      for (const t of full) {
+      for (const t of candidates) {
         if (Number(t.status_id) === 0) continue;
         if (isMediaTaskTypeId(String(t.type_id || ''))) continue;
         if (t.type_id === 'Replenish') continue;
         if (isNoteTaskType(t)) continue;
-        if (occursOnDay(t, day)) {
-          const seriesKey = cyclicSeriesKey(t);
-          const alreadyListed =
-            tasksToSort.some((existing) => existing.id === t.id) ||
-            (seriesKey != null &&
-              tasksToSort.some((existing) => cyclicSeriesKey(existing) === seriesKey));
-          if (!alreadyListed) {
-            // Ensure display and helpers use the occurrence date (not the seed date)
-            const clone: any = { ...t, eventDate: day, date: day };
-            clone.__isCyclicInstance = true;
-            if (isVisibleForActive(taskGroupId(clone))) tasksToSort.push(clone);
-          }
+        if (t.id != null && listedIds.has(t.id)) continue;
+        const seriesKey = cyclicSeriesKey(t);
+        if (seriesKey != null && listedSeries.has(seriesKey)) continue;
+        const clone: any = { ...t, eventDate: day, date: day };
+        clone.__isCyclicInstance = true;
+        if (isVisibleForActive(taskGroupId(clone))) {
+          tasksToSort.push(clone);
+          if (clone.id != null) listedIds.add(clone.id);
+          if (seriesKey) listedSeries.add(seriesKey);
         }
       }
       tasksToSort = tasksToSort.filter((task) => isVisibleForActive(taskGroupId(task)));
@@ -216,7 +227,7 @@ export function createTaskComputed(args: {
     const day = currentDate.value;
     const done = sortedTasks.value.filter((t) => {
       try {
-        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+        const base = resolveTaskById(t.id) || t;
         const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
         if (mode === 'prepare') return false;
         if (Number(t.status_id) === 0) return true;
@@ -274,7 +285,7 @@ export function createTaskComputed(args: {
     if (t.type_id === 'Replenish') return false;
     if (isNoteTaskType(t)) return false;
     try {
-      const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+      const base = resolveTaskById(t.id) || t;
       const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';
       if (Number(t.status_id) === 0 && mode !== 'prepare') return false;
     } catch (e) {
@@ -283,7 +294,7 @@ export function createTaskComputed(args: {
     try {
       const cycle = getCycleType(t);
       if (cycle) {
-        const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
+        const base = resolveTaskById(t.id) || t;
         const hist = (base as any).history || [];
         if (
           Array.isArray(hist) &&

@@ -73,7 +73,7 @@ class TaskController implements Controllable {
       this.taskRepo.migrateMediaTasksFromDays();
       const days = this.time?.days?.value ?? {};
       const newList = this.taskRepo.listFromDays(days);
-      this.taskRepo.flatTasksRef.value.splice(0, this.taskRepo.flatTasksRef.value.length, ...newList);
+      this.taskRepo.setFlatList(newList);
     } catch {
       void 0;
     }

@@ -400,7 +400,6 @@ import { useLongPress } from "src/composables/useLongPress";
 import { useQuasar } from "quasar";
 import CC from "src/CCAccess";
 import {
-  occursOnDay,
   parseYmdLocal,
   formatMonthButtonLabel,
 } from "src/modules/task/utils/occursOnDay";
@@ -1642,19 +1641,45 @@ function isWeekend(day: string) {
   return dayOfWeek === 0 || dayOfWeek === 6; // Sunday (0) or Saturday (6)
 }
 
-// Determine whether a given task occurs on the provided day string (yyyy-MM-dd).
-// Use shared occursOnDay helper from utils
+// Cached per-day event lists — rebuilt only when the tasks source changes.
+const eventsByDayCache = new Map<string, any[]>();
+let eventsCacheTasksRef: unknown = null;
+
+watch(
+  () => [props.tasks, CC.task?.taskRepo?.taskListGeneration?.value ?? 0] as const,
+  ([tasks]) => {
+    if (tasks !== eventsCacheTasksRef) {
+      eventsByDayCache.clear();
+      eventsCacheTasksRef = tasks ?? null;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => CC.task?.taskRepo?.taskListGeneration?.value ?? 0,
+  () => {
+    eventsByDayCache.clear();
+  },
+);
 
 function getEventsForDay(day: string) {
   if (!props.tasks || !props.tasks.length) return [];
-  // Return a shallow copy of matching tasks and attach the occurrence `date` so
-  // callers (preview/edit) receive the specific instance date for cyclic events.
-  return props.tasks
-    .filter((t: any) => {
-      if (isExcludedFromCalendarTask(t)) return false;
-      return occursOnDay(t, day);
-    })
+  if (eventsByDayCache.has(day)) return eventsByDayCache.get(day)!;
+
+  const source =
+    CC.task?.list && typeof CC.task.list.occurrencesForDay === "function"
+      ? CC.task.list.occurrencesForDay(day)
+      : props.tasks.filter((t: any) => {
+          if (isExcludedFromCalendarTask(t)) return false;
+          return CC.task?.list?.occursOnDay?.(t, day) ?? false;
+        });
+
+  const result = source
+    .filter((t: any) => !isExcludedFromCalendarTask(t))
     .map((t: any) => ({ ...t, date: day }));
+  eventsByDayCache.set(day, result);
+  return result;
 }
 
 function isDayDateOnly(day: string): boolean {

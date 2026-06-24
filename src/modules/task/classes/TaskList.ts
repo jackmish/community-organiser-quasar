@@ -31,6 +31,26 @@ export class TaskList extends Collection<Task> {
     return this.taskRepo.getTasksForDay(String(d || ''));
   }
 
+  occursOnDay(task: Task, day: string): boolean {
+    return this.taskRepo.taskOccursOnDay(task, day);
+  }
+
+  occurrencesForDay(day: string): Task[] {
+    return this.taskRepo.getOccurrenceCandidatesForDay(day);
+  }
+
+  todos(): Task[] {
+    return this.taskRepo.getIndexedTodoTasks();
+  }
+
+  prepTasksForToday(): Task[] {
+    return this.taskRepo.getIndexedPrepTasksForToday();
+  }
+
+  taskById(id: string): Task | undefined {
+    return this.taskRepo.getTaskById(id);
+  }
+
   mediaItems(): Task[] {
     return this.taskRepo.getMediaFlatList();
   }

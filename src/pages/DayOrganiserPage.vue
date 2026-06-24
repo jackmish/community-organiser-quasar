@@ -616,7 +616,7 @@ import GroupManagementDialog from "src/modules/group/components/GroupManagementD
 import GroupEditDialog from "src/modules/group/components/GroupEditDialog.vue";
 import JoinMemberDialog from "src/components/settings/JoinMemberDialog.vue";
 
-import { formatDisplayDate, occursOnDay, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
+import { formatDisplayDate, parseYmdLocal, syncRepeatWithPickedDate } from "src/modules/task/utils/occursOnDay";
 import { isExcludedFromCalendarTask } from "src/modules/task/utils/calendarTaskTypes";
 import { getCalendarTaskIndicatorLabel } from "src/modules/task/utils/calendarTaskIndicatorLabel";
 import { priorityColors, priorityTextColor } from "src/components/theme";
@@ -864,7 +864,7 @@ async function onMobileCalendarIndicatorTaskClick(payload: {
   const day = CC.task.time.currentDate.value;
   const task = (allTasks.value || []).find((t) => {
     if (String(t.id) !== String(payload.taskId)) return false;
-    if (!occursOnDay(t, day)) return false;
+    if (!CC.task.list.occursOnDay(t, day)) return false;
     const tTime = t.eventTime ? String(t.eventTime) : "";
     if (payload.eventTime && tTime !== payload.eventTime) return false;
     return true;
@@ -1112,8 +1112,9 @@ const mediaTasks = computed(() => mediaFlatTasks.value);
 
 const mobileCalendarDayTaskIndicatorItems = computed(() => {
   const day = CC.task.time.currentDate.value;
-  return (allTasks.value || [])
-    .filter((t) => !isExcludedFromCalendarTask(t) && occursOnDay(t, day))
+  return CC.task.list
+    .occurrencesForDay(day)
+    .filter((t) => !isExcludedFromCalendarTask(t))
     .map((t) => {
       const name = String(t.name ?? "").trim();
       const eventTime = t.eventTime ? String(t.eventTime) : "";
@@ -1431,12 +1432,16 @@ function triggerCalendarSync() {
   try {
     const cur = CC.task.time.currentDate?.value;
     if (!cur) return;
-    const d = new Date(cur);
-    const from = new Date(d);
-    from.setMonth(from.getMonth() - 3);
-    const to = new Date(d);
-    to.setMonth(to.getMonth() + 3);
-    const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+    const d = parseYmdLocal(cur) || new Date(cur);
+    // Month-aligned window so day-to-day navigation does not change the sync range.
+    const from = new Date(d.getFullYear(), d.getMonth() - 3, 1);
+    const to = new Date(d.getFullYear(), d.getMonth() + 4, 0);
+    const fmt = (dt: Date) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const day = String(dt.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
     void checkAndSync(fmt(from), fmt(to));
   } catch {
     void 0;
@@ -1479,14 +1484,10 @@ watch(
             }
 
             // Determine if the selected date has any tasks
-            const all =
-              CC.task.list && typeof CC.task.list.items === "function"
-                ? CC.task.list.items()
-                : [];
-            const tasksOnDate = (all || []).filter((t: any) => {
-              const d = t?.date || t?.eventDate || null;
-              return d === newDate;
-            });
+            const tasksOnDate = CC.task.list.occurrencesForDay(newDate);
+            const hasTasksOnDate =
+              tasksOnDate.length > 0 ||
+              (CC.task.time.days.value?.[newDate]?.tasks?.length ?? 0) > 0;
 
             const activeTask = CC.task.active.task.value;
             const addTypeId = addFormDefaultTypeId.value;
@@ -1494,7 +1495,7 @@ watch(
             // If there are no tasks on the new date, or the currently active task doesn't belong
             // to the new date, clear selection and switch to creation mode.
             if (
-              !tasksOnDate.length ||
+              !hasTasksOnDate ||
               (activeTask &&
                 String(activeTask?.date || activeTask?.eventDate) !== String(newDate))
             ) {
