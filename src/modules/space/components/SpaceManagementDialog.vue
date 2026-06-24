@@ -630,12 +630,12 @@ function openActiveSpaceServices(): void {
 
 function storageModeOptionsFor(space: SpaceEntry) {
   return [
-    { label: $text('space.mode_files'), value: 'files' as const },
     {
       label: $text('space.mode_sqlite'),
       value: 'sqlite' as const,
       disable: !space.sqliteMigratedAt,
     },
+    { label: $text('space.mode_files'), value: 'files' as const },
   ];
 }
 

@@ -5,7 +5,11 @@ export type SpaceType = 'system' | 'custom';
 /** How structured data is persisted inside the space folder. */
 export type SpaceStorageMode = 'files' | 'sqlite';
 
+/** Fallback when registry entries omit storageMode (legacy). */
 export const DEFAULT_SPACE_STORAGE_MODE: SpaceStorageMode = 'files';
+
+/** Storage mode assigned to newly created custom workspaces. */
+export const DEFAULT_NEW_WORKSPACE_STORAGE_MODE: SpaceStorageMode = 'sqlite';
 
 import { CO21_SQLITE_DB_FILENAME } from 'src/modules/storage/appDataPaths';
 
@@ -83,5 +87,7 @@ export function isSystemSpace(space: SpaceEntry): boolean {
 }
 
 export function normalizeSpaceStorageMode(value: unknown): SpaceStorageMode {
-  return value === 'sqlite' ? 'sqlite' : DEFAULT_SPACE_STORAGE_MODE;
+  if (value === 'sqlite') return 'sqlite';
+  if (value === 'files') return 'files';
+  return DEFAULT_SPACE_STORAGE_MODE;
 }

@@ -6,6 +6,7 @@ import {
   SYSTEM_SPACE_ID,
   createDefaultSpaceRegistry,
   createSystemSpaceEntry,
+  DEFAULT_NEW_WORKSPACE_STORAGE_MODE,
   DEFAULT_SPACE_STORAGE_MODE,
   isSystemSpace,
   normalizeSpaceStorageMode,
@@ -350,7 +351,32 @@ export function setDefaultSpaceId(spaceId: string | null): SpaceRegistry {
   return registry;
 }
 
-export function createCustomSpace(name: string, dataPath: string): SpaceEntry {
+export type CreateCustomSpaceOptions = {
+  /** When true, SQLite is initialized after bootstrap files are written (see bootstrapNewWorkspaceSqlite). */
+  deferSqliteBootstrap?: boolean;
+};
+
+function bootstrapSqliteForWorkspace(dataPath: string): void {
+  migrateFilesToSqlite(dataPath);
+}
+
+export function bootstrapNewWorkspaceSqlite(spaceId: string): SpaceEntry {
+  const registry = readRegistrySync();
+  const space = getSpaceById(spaceId, registry);
+  if (!space || isSystemSpace(space)) throw new Error('Unknown space');
+  if (space.storageMode !== 'sqlite') return space;
+  const dataPath = resolveDataPathForSpace(space);
+  bootstrapSqliteForWorkspace(dataPath);
+  space.sqliteMigratedAt = new Date().toISOString();
+  writeRegistrySync(registry);
+  return space;
+}
+
+export function createCustomSpace(
+  name: string,
+  dataPath: string,
+  options?: CreateCustomSpaceOptions,
+): SpaceEntry {
   const trimmedName = name.trim();
   const trimmedPath = path.resolve(dataPath.trim());
   if (!trimmedName) throw new Error('Space name is required');
@@ -362,6 +388,10 @@ export function createCustomSpace(name: string, dataPath: string): SpaceEntry {
   fs.mkdirSync(trimmedPath, { recursive: true });
 
   const entry = buildCustomSpaceEntry(trimmedName, trimmedPath);
+  if (entry.storageMode === 'sqlite' && !options?.deferSqliteBootstrap) {
+    bootstrapSqliteForWorkspace(trimmedPath);
+    entry.sqliteMigratedAt = entry.createdAt;
+  }
   registry.spaces.push(entry);
   writeRegistrySync(registry);
   return entry;
@@ -479,7 +509,7 @@ function buildCustomSpaceEntry(trimmedName: string, trimmedPath: string): SpaceE
     name: trimmedName,
     type: 'custom',
     dataPath: trimmedPath,
-    storageMode: DEFAULT_SPACE_STORAGE_MODE,
+    storageMode: DEFAULT_NEW_WORKSPACE_STORAGE_MODE,
     sqliteMigratedAt: null,
     createdAt: new Date().toISOString(),
   };

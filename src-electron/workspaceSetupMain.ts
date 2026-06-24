@@ -11,7 +11,7 @@ import {
 } from '../src/modules/space/models/workspaceSetupModel';
 import type { SpaceEntry } from '../src/modules/space/models/SpaceModel';
 import { APP_DATA_PATH_SEGMENTS } from '../src/modules/storage/appDataPaths';
-import { createCustomSpace } from './spaceRegistryMain';
+import { bootstrapNewWorkspaceSqlite, createCustomSpace } from './spaceRegistryMain';
 
 const IMAGE_FILE_EXTENSIONS = new Set([
   '.jpg',
@@ -223,7 +223,9 @@ export function createCustomSpaceWithSetup(
     }
   }
 
-  const entry = createCustomSpace(trimmedName, workspaceDataPath);
+  const entry = createCustomSpace(trimmedName, workspaceDataPath, {
+    deferSqliteBootstrap: mode !== 'blank',
+  });
 
   if (mode === 'blank') {
     return entry;
@@ -231,5 +233,5 @@ export function createCustomSpaceWithSetup(
 
   const managedFolders = buildManagedFolders(mode, payload.folderPath, trimmedName);
   writeBootstrapGroupFile(workspaceDataPath, trimmedName, managedFolders);
-  return entry;
+  return bootstrapNewWorkspaceSqlite(entry.id);
 }
