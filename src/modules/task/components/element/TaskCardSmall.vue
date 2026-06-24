@@ -1,15 +1,14 @@
 <template>
   <q-item
-    class="q-pa-sm task-card"
+    class="task-card"
     :class="{
-      'bg-grey-2': Number(item.status_id) === 0,
       'selected-task': selectedTaskId === item.id,
       'task-card--created-highlight':
         props.highlightedTaskId != null &&
         String(props.highlightedTaskId) === String(item.id),
     }"
     :data-task-id="item.id"
-    :style="itemStyle(item)"
+    :style="cardShellStyle(item)"
     :active="selectedTaskId === item.id"
     clickable
     @pointerdown="() => startLongPress(item)"
@@ -19,11 +18,21 @@
     @click="handleTaskClick($event)"
     @contextmenu.stop.prevent="() => emit('task-context', item.value, getBoundingRect())"
   >
-    <q-icon
-      v-if="typeIcons[item.type_id || item.type]"
-      :name="typeIcons[item.type_id || item.type]"
-      class="type-watermark"
-    />
+    <div
+      class="task-card-face q-pa-sm"
+      :class="{ 'bg-grey-2': Number(item.status_id) === 0 }"
+      :style="itemFaceStyle(item)"
+    >
+      <div
+        v-if="typeIcons[item.type_id || item.type]"
+        class="type-watermark-clip"
+        aria-hidden="true"
+      >
+        <q-icon
+          :name="typeIcons[item.type_id || item.type]"
+          class="type-watermark type-watermark--sharp"
+        />
+      </div>
 
     <q-item-section v-if="noteAttachmentCount(item) > 0" side>
       <NoteTaskAttachmentThumb
@@ -136,6 +145,7 @@
         />
       </div>
     </q-item-section>
+    </div>
   </q-item>
 </template>
 
@@ -364,6 +374,20 @@ const itemStyle = (task: any) => {
   } as Record<string, string>;
 };
 
+const itemFaceStyle = (task: any) => {
+  const style = itemStyle(task);
+  return {
+    backgroundColor: style.backgroundColor,
+    color: style.color,
+  };
+};
+
+const cardShellStyle = (task: any) => {
+  const style = itemStyle(task);
+  if (!style.boxShadow) return {};
+  return { boxShadow: style.boxShadow };
+};
+
 const handleTaskClick = (evt: Event) => {
   if (longPressTriggered.value) {
     longPressTriggered.value = false;
@@ -414,14 +438,29 @@ const getBoundingRect = (): DOMRect | null => {
 /* Moved task-card related styles here from TasksListSmall.vue */
 .task-card {
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
   position: relative;
   overflow: visible;
   width: fit-content;
   max-width: min(100%, 420px);
   min-height: min-content;
+  padding: 0;
+}
+
+.task-card-face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+  min-width: min-content;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 
 .task-card.q-item {
@@ -434,6 +473,12 @@ const getBoundingRect = (): DOMRect | null => {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+}
+
+.task-card:has(.subtask-chip-list) .task-card-face {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .task-card:has(.subtask-chip-list) .q-item__section,
@@ -486,20 +531,31 @@ const getBoundingRect = (): DOMRect | null => {
   /* line-height: 1; */
 }
 
+.type-watermark-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .type-watermark {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -35%) rotate(-10deg);
-  font-size: 120px;
-  opacity: 0.18;
   pointer-events: none;
   color: currentColor;
-  z-index: 0;
+}
+
+.type-watermark--sharp {
+  font-size: 120px;
+  opacity: 0.18;
 }
 
 .title-row,
-.q-item-section {
+.task-card-face > .q-item-section {
   position: relative;
   z-index: 1;
 }
