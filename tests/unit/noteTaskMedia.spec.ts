@@ -4,6 +4,7 @@ import {
   countTaskAttachments,
   firstImageTaskAttachment,
   isLongNoteDescription,
+  noteTaskListCaption,
   shouldShowNoteGraphicHero,
 } from '../../src/modules/task/utils/noteTaskMedia';
 
@@ -47,5 +48,16 @@ describe('noteTaskMedia', () => {
     };
     expect(countTaskAttachments(task)).toBe(2);
     expect(firstImageTaskAttachment(task)?.name).toBe('scan.png');
+  });
+
+  it('formats note creation timestamp for list caption', () => {
+    const task = {
+      type_id: 'NoteLater',
+      createdAt: '2026-06-23T14:05:00.000Z',
+    };
+    expect(noteTaskListCaption(task)).toMatch(/23/);
+    expect(noteTaskListCaption(task)).toMatch(/06/);
+    expect(noteTaskListCaption(task)).toMatch(/2026/);
+    expect(noteTaskListCaption({ type_id: 'Todo', createdAt: task.createdAt })).toBe('');
   });
 });

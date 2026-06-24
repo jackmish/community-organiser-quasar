@@ -1,4 +1,5 @@
 import type { TaskAttachment } from 'src/modules/task/models/TaskModel';
+import { getLocale } from 'src/modules/lang';
 import { isNoteTaskType } from './calendarTaskTypes';
 
 export type NoteTaskMediaSource =
@@ -53,6 +54,33 @@ export function firstImageTaskAttachment(task: NoteTaskMediaSource): TaskAttachm
     if (isImageDataUrl(att.dataUrl)) return att;
   }
   return null;
+}
+
+type NoteCreatedAtSource = NoteTaskMediaSource & {
+  createdAt?: string;
+  created_at?: string;
+};
+
+/** Creation timestamp for note list cards (date + hour:minute, no relative labels). */
+export function formatNoteTaskCreatedAt(task: NoteCreatedAtSource | null | undefined): string {
+  if (!task) return '';
+  const raw = task.createdAt ?? task.created_at;
+  if (!raw) return '';
+  const d = new Date(String(raw));
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(getLocale(), {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
+export function noteTaskListCaption(task: NoteCreatedAtSource | null | undefined): string {
+  if (!isNoteTaskType(task)) return '';
+  return formatNoteTaskCreatedAt(task);
 }
 
 export function isImageDataUrl(dataUrl: string): boolean {

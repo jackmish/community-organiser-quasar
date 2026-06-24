@@ -36,82 +36,92 @@
     <q-item-section class="title-row">
       <div style="flex: 1 1 auto">
         <div class="title-main" :class="{ 'title-main--todo': isTodoListCard(item) }">
-          <div class="title-text" :class="{ 'title-text--todo': isTodoListCard(item) }">
-            <q-item-label
-              :class="[
-                {
-                  'text-strike':
-                    Number(item.status_id) === 0 && item.timeMode !== 'prepare',
-                },
-                isTodoListCard(item) ? 'todo-list-title' : 'title-ellipsis',
-              ]"
-            >
-              <span
-                v-if="item.priority === 'high' || item.priority === 'critical'"
-                class="priority-inline"
-                :title="item.priority"
-                :style="{
-                  backgroundColor: priorityColor(item.priority),
-                  color: priorityTextColor(item.priority),
-                }"
+          <div class="title-stack">
+            <div class="title-text" :class="{ 'title-text--todo': isTodoListCard(item) }">
+              <q-item-label
+                :class="[
+                  {
+                    'text-strike':
+                      Number(item.status_id) === 0 && item.timeMode !== 'prepare',
+                  },
+                  isTodoListCard(item) ? 'todo-list-title' : 'title-ellipsis',
+                ]"
               >
-                <q-icon
-                  :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
-                  size="12px"
-                />
-              </span>
-              <strong v-if="!isTodoListCard(item)">
-                {{ getDisplayName(item) }}
-                <span class="star-count" v-if="countStarredUndone(item) > 0">
+                <span
+                  v-if="item.priority === 'high' || item.priority === 'critical'"
+                  class="priority-inline"
+                  :title="item.priority"
+                  :style="{
+                    backgroundColor: priorityColor(item.priority),
+                    color: priorityTextColor(item.priority),
+                  }"
+                >
                   <q-icon
-                    v-for="n in countStarredUndone(item)"
-                    :key="`s-${item.id}-${n}`"
-                    :name="highlightIcon"
-                    color="amber"
-                    size="14px"
-                  />
-                </span>
-                <span v-if="countTodoSubtasks(item).total > 0">
-                  ({{ countTodoSubtasks(item).done }}/{{
-                    countTodoSubtasks(item).total
-                  }})&nbsp;
-                </span>
-              </strong>
-              <span v-else class="todo-list-title-text">
-                {{ getDisplayName(item) }}
-                <span class="star-count" v-if="countStarredUndone(item) > 0">
-                  <q-icon
-                    v-for="n in countStarredUndone(item)"
-                    :key="`s-${item.id}-${n}`"
-                    :name="highlightIcon"
-                    color="amber"
+                    :name="themePriorityDefinitions[item.priority]?.icon || 'label'"
                     size="12px"
                   />
                 </span>
-              </span>
+                <strong v-if="!isTodoListCard(item)">
+                  {{ getDisplayName(item) }}
+                  <span class="star-count" v-if="countStarredUndone(item) > 0">
+                    <q-icon
+                      v-for="n in countStarredUndone(item)"
+                      :key="`s-${item.id}-${n}`"
+                      :name="highlightIcon"
+                      color="amber"
+                      size="14px"
+                    />
+                  </span>
+                  <span v-if="countTodoSubtasks(item).total > 0">
+                    ({{ countTodoSubtasks(item).done }}/{{
+                      countTodoSubtasks(item).total
+                    }})&nbsp;
+                  </span>
+                </strong>
+                <span v-else class="todo-list-title-text">
+                  {{ getDisplayName(item) }}
+                  <span class="star-count" v-if="countStarredUndone(item) > 0">
+                    <q-icon
+                      v-for="n in countStarredUndone(item)"
+                      :key="`s-${item.id}-${n}`"
+                      :name="highlightIcon"
+                      color="amber"
+                      size="12px"
+                    />
+                  </span>
+                </span>
+              </q-item-label>
+            </div>
+            <q-item-label
+              v-if="noteTaskListCaption(item)"
+              caption
+              class="task-desc note-task-created-at"
+            >
+              {{ noteTaskListCaption(item) }}
+            </q-item-label>
+            <q-item-label
+              v-else-if="
+                !isTodoType(item) &&
+                !isNoteTaskType(item) &&
+                (item.type === 'event' ||
+                  item.type_id === 'TimeEvent' ||
+                  item.type === 'TimeEvent' ||
+                  item.timeMode === 'event') &&
+                getEventHoursDisplay(item)
+              "
+              caption
+              :class="[
+                'task-desc',
+                {
+                  'has-date': hasDate(item),
+                  'prepare-desc': item.timeMode === 'prepare',
+                  'expiration-desc': item.timeMode === 'expiration',
+                },
+              ]"
+            >
+              <span style="white-space: pre-line">{{ getEventHoursDisplay(item) }}</span>
             </q-item-label>
           </div>
-          <q-item-label
-            v-if="
-              !isTodoType(item) &&
-              (item.type === 'event' ||
-                item.type_id === 'TimeEvent' ||
-                item.type === 'TimeEvent' ||
-                item.timeMode === 'event') &&
-              getEventHoursDisplay(item)
-            "
-            caption
-            :class="[
-              'task-desc',
-              {
-                'has-date': hasDate(item),
-                'prepare-desc': item.timeMode === 'prepare',
-                'expiration-desc': item.timeMode === 'expiration',
-              },
-            ]"
-          >
-            <span style="white-space: pre-line">{{ getEventHoursDisplay(item) }}</span>
-          </q-item-label>
         </div>
         <TaskSubtaskMiniList
           v-if="showTodoSubtaskChips(item)"
@@ -147,7 +157,8 @@ import { countTodoSubtasks, countStarredUndone, parseUndoneSubtasks } from "src/
 import { isMediaTaskTypeId, isTodoLikeTaskTypeId } from "src/modules/media/mediaTaskTypes";
 import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
-import { countTaskAttachments } from "src/modules/task/utils/noteTaskMedia";
+import { countTaskAttachments, noteTaskListCaption } from "src/modules/task/utils/noteTaskMedia";
+import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
@@ -410,10 +421,12 @@ const getBoundingRect = (): DOMRect | null => {
   overflow: visible;
   width: fit-content;
   max-width: min(100%, 420px);
+  min-height: min-content;
 }
 
 .task-card.q-item {
   min-width: min-content;
+  align-items: flex-start;
 }
 
 .task-card.q-item:has(.subtask-chip-list) {
@@ -509,22 +522,31 @@ const getBoundingRect = (): DOMRect | null => {
   position: relative;
 }
 .title-row > div {
-  min-width: min-content;
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   padding-right: 0;
 }
+.title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
 .title-main {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-start;
+  width: 100%;
+  min-width: 0;
 }
 .title-text {
-  min-width: min-content;
-  flex: 0 1 auto;
+  min-width: 0;
+  width: 100%;
+  flex: 0 0 auto;
   display: block;
 }
 .title-text:not(.title-text--todo) {
@@ -550,7 +572,8 @@ const getBoundingRect = (): DOMRect | null => {
 .title-text q-item-label strong {
   line-height: 1.05;
 }
-.title-row q-item-label {
+.title-row .title-text q-item-label.title-ellipsis,
+.title-row .title-text q-item-label.todo-list-title {
   white-space: normal !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -559,11 +582,17 @@ const getBoundingRect = (): DOMRect | null => {
   -webkit-line-clamp: 2 !important;
 }
 .task-desc {
-  display: block;
+  display: block !important;
   line-height: 1.3 !important;
   margin: 0 !important;
   padding-top: 0 !important;
   color: inherit;
+  width: 100%;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  white-space: nowrap;
 }
 .prepare-desc {
   font-size: 11px !important;
@@ -572,6 +601,12 @@ const getBoundingRect = (): DOMRect | null => {
 .expiration-desc {
   font-size: 11px !important;
   line-height: 1.2 !important;
+}
+.note-task-created-at {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.25 !important;
+  opacity: 0.88;
 }
 .task-checkbox {
   display: inline-flex !important;
