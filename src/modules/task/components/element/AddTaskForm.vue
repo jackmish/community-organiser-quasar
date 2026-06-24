@@ -85,7 +85,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  /** When true, show Note type only (notes view). */
+  /** When true, notes list view is active (all calendar types still available in the form). */
   notesMode: {
     type: Boolean,
     default: false,
@@ -101,6 +101,7 @@ const emit = defineEmits([
   "delete-task",
   "toggle-status",
   "edit-task",
+  "view-mode-change",
 ]);
 
 // Robust active group label: supports either a plain object or a Ref-like object
@@ -916,11 +917,18 @@ const typeOptions = computed(() => {
       },
     ];
   }
-  if (props.notesMode) {
-    return calendarTypeOptions.filter((opt) => opt.value === "NoteLater");
-  }
-  return calendarTypeOptions.filter((opt) => opt.value !== "NoteLater");
+  return calendarTypeOptions;
 });
+
+function onTypeOptionClick(typeId: string) {
+  localNewTask.value.type_id = typeId;
+  if (props.mediaMode) return;
+  if (typeId === "NoteLater" && !props.notesMode) {
+    emit("view-mode-change", "notes");
+  } else if (typeId !== "NoteLater" && props.notesMode) {
+    emit("view-mode-change", "calendar");
+  }
+}
 
 // ── Date/time logic (extracted to composable) ─────────────────────────────────
 const {
@@ -2445,7 +2453,7 @@ function onSubmit(event: Event) {
                         }"
                         :outline="localNewTask.type_id !== opt.value"
                         :unelevated="localNewTask.type_id === opt.value"
-                        @click="localNewTask.type_id = opt.value"
+                        @click="onTypeOptionClick(opt.value)"
                         :style="{
                           backgroundColor:
                             localNewTask.type_id === opt.value

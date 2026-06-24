@@ -5,6 +5,7 @@
       {
         'fixed-preview': props.fixed === true,
         'task-preview--folder-fill': showMediaFolderBrowser && props.fixed !== true,
+        'task-preview--note-graphic': showNoteGraphicHero,
       },
     ]"
     :style="previewCardStyle"
@@ -103,7 +104,7 @@
           <q-btn dense flat icon="content_copy" @click="copyStyledTask" />
         </div>
       </div>
-      <div :class="{ 'task-preview__body': showMediaFolderBrowser && props.fixed !== true }">
+      <div :class="{ 'task-preview__body': isPreviewBodyFill }">
         <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">
           <div class="text-caption text-grey-7 preview-datetime">
             <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{
@@ -284,7 +285,89 @@
           @add="addQuickSubtask"
         />
 
-        <div v-if="!isInlineMediaFolderPreview">
+        <div
+          v-if="showNoteGraphicHero && noteGraphicHero"
+          class="note-preview-graphic"
+        >
+          <div class="note-preview-graphic__canvas">
+            <q-img
+              :src="noteGraphicHero.dataUrl"
+              :alt="noteGraphicHero.name"
+              fit="contain"
+              class="note-preview-graphic__img"
+            />
+          </div>
+          <div class="note-preview-graphic__footer row items-center no-wrap">
+            <div class="note-preview-graphic__name text-body2 ellipsis col">
+              {{
+                noteGraphicHero.kind === "photo"
+                  ? $text("task.note.photo")
+                  : noteGraphicHero.name
+              }}
+            </div>
+            <q-btn
+              flat
+              dense
+              color="negative"
+              icon="link_off"
+              :label="$text('task.note.unlink')"
+              @click.stop="unlinkNoteGraphic"
+            />
+          </div>
+          <div
+            v-if="hasNoteDescriptionContent"
+            class="note-preview-graphic__desc text-body2 q-mt-sm"
+            v-html="renderedDescription"
+          />
+        </div>
+
+        <div
+          v-else-if="isNoteTask && hasNoteMedia"
+          class="note-preview-media q-mb-md"
+        >
+          <div v-if="notePhoto" class="note-preview-media__photo q-mb-sm">
+            <q-img
+              :src="notePhoto"
+              ratio="16/9"
+              fit="contain"
+              class="note-preview-media__photo-img"
+            />
+            <div class="row items-center justify-end q-mt-xs">
+              <q-btn
+                flat
+                dense
+                color="negative"
+                icon="link_off"
+                :label="$text('task.note.unlink')"
+                @click.stop="unlinkNotePhoto"
+              />
+            </div>
+          </div>
+          <q-list v-if="noteAttachments.length" dense bordered class="note-preview-media__list">
+            <q-item v-for="(att, idx) in noteAttachments" :key="`${att.name}-${idx}`">
+              <q-item-section avatar>
+                <q-avatar v-if="isImageDataUrl(att.dataUrl)" square size="40px">
+                  <img :src="att.dataUrl" :alt="att.name" />
+                </q-avatar>
+                <q-icon v-else name="attach_file" size="28px" />
+              </q-item-section>
+              <q-item-section class="ellipsis">{{ att.name }}</q-item-section>
+              <q-item-section side>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="link_off"
+                  color="negative"
+                  :aria-label="$text('task.note.unlink')"
+                  @click.stop="unlinkNoteAttachment(idx)"
+                />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </div>
+
+        <div v-if="!isInlineMediaFolderPreview && !showNoteGraphicHero">
           <div v-for="(line, idx) in parsedLines" :key="line.uid">
             <div v-if="line.type === 'list'">
               <div
@@ -455,6 +538,15 @@ import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
 import { MEDIA_TASK_TYPE } from "src/modules/media/mediaTaskTypes";
 import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
+import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
+import {
+  collectNoteGraphicItems,
+  isImageDataUrl,
+  resolveTaskAttachments,
+  resolveTaskPhoto,
+  shouldShowNoteGraphicHero,
+  stripTitleFromDescription,
+} from "src/modules/task/utils/noteTaskMedia";
 
 const props = defineProps<{
   task: Task;
@@ -705,6 +797,64 @@ const showMediaFolderMissing = computed(
   () => (isMediaFilesTask.value || isMediaGalleryTask.value) && !mediaRootFolder.value,
 );
 
+const isNoteTask = computed(() => isNoteTaskType(activeTask.value));
+const notePhoto = computed(() => resolveTaskPhoto(activeTask.value));
+const noteAttachments = computed(() => resolveTaskAttachments(activeTask.value));
+const noteGraphicHero = computed(() => collectNoteGraphicItems(activeTask.value)[0] ?? null);
+const showNoteGraphicHero = computed(() => shouldShowNoteGraphicHero(activeTask.value));
+const hasNoteMedia = computed(
+  () => Boolean(notePhoto.value || noteAttachments.value.length),
+);
+const noteDescriptionPlain = computed(() =>
+  stripTitleFromDescription(
+    String(activeTask.value?.description || ""),
+    String(activeTask.value?.name || ""),
+  ).trim(),
+);
+const hasNoteDescriptionContent = computed(() => noteDescriptionPlain.value.length > 0);
+const isPreviewBodyFill = computed(
+  () =>
+    (showMediaFolderBrowser.value && props.fixed !== true) || showNoteGraphicHero.value,
+);
+
+async function persistNoteMediaUpdate(updates: Record<string, unknown>) {
+  const task = activeTask.value;
+  if (!task?.id) return;
+  const date =
+    (task.date || task.eventDate || CC.task.time.currentDate.value || "").trim();
+  if (!date) return;
+  try {
+    await CC.task.update(date, String(task.id), updates);
+    const updated =
+      CC.task.list.items().find((t) => String(t.id) === String(task.id)) ?? null;
+    if (updated) activeTask.value = updated;
+  } catch (e) {
+    logger.error("Failed to update note media", e);
+  }
+}
+
+async function unlinkNoteGraphic() {
+  const item = noteGraphicHero.value;
+  if (!item) return;
+  if (item.kind === "photo") {
+    await persistNoteMediaUpdate({ photo: "" });
+    return;
+  }
+  if (item.kind === "attachment" && item.attachmentIndex != null) {
+    const next = noteAttachments.value.filter((_, i) => i !== item.attachmentIndex);
+    await persistNoteMediaUpdate({ attachments: next });
+  }
+}
+
+async function unlinkNotePhoto() {
+  await persistNoteMediaUpdate({ photo: "" });
+}
+
+async function unlinkNoteAttachment(index: number) {
+  const next = noteAttachments.value.filter((_, i) => i !== index);
+  await persistNoteMediaUpdate({ attachments: next });
+}
+
 async function toggleMediaTaskBrowseMode(): Promise<void> {
   const task = activeTask.value;
   if (!task?.id || !isMediaFolderTask.value) return;
@@ -831,9 +981,7 @@ function stripTitleFrom(text = "", title = "") {
 }
 
 const renderedDescription = computed(() => {
-  const d = props.task?.description || "";
-  // If the description begins with the title, strip that prefix for preview clarity
-  const stripped = stripTitleFrom(d, props.task?.name || "");
+  const stripped = noteDescriptionPlain.value;
   let escaped = escapeHtml(stripped);
   escaped = escaped.replace(/\[x\]/gi, "✅");
   escaped = escaped.replace(/\n/g, "<br/>");
@@ -1073,6 +1221,63 @@ function buildHtmlFromParsed(
 </style>
 
 <style scoped>
+.task-preview--note-graphic .task-preview__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-preview-graphic {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-preview-graphic__canvas {
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: min(68vh, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.note-preview-graphic__img {
+  width: 100%;
+  height: 100%;
+  max-height: min(68vh, 560px);
+}
+
+.note-preview-graphic__footer {
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.note-preview-graphic__name {
+  min-width: 0;
+}
+
+.note-preview-graphic__desc {
+  white-space: pre-wrap;
+  line-height: 1.35;
+}
+
+.note-preview-media__photo-img {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.note-preview-media__list {
+  max-width: 100%;
+}
+
 .shrinking {
   /* marker class for JS-driven collapse; JS handles explicit height/padding/margin animation */
   overflow: hidden;

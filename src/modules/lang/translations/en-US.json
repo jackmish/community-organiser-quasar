@@ -69,6 +69,7 @@
   "task.note.take_photo": "Take photo",
   "task.note.attach_files": "Attach files",
   "task.note.icon_and_color": "Icon and color",
+  "task.note.unlink": "Unlink",
   "date.select_date": "Select a date",
   "date.relative.this_weekday": "this {weekday}",
   "date.relative.next_weekday": "next {weekday}",

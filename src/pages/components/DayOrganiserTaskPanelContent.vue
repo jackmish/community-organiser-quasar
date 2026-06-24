@@ -67,6 +67,7 @@
         @cancel-edit="() => ctx.clearTaskToEdit()"
         @calendar-date-select="ctx.handleCalendarDateSelect"
         @filter-parent-tasks="ctx.filterParentTasks"
+        @view-mode-change="(mode) => ctx.onAddFormViewModeChange(mode)"
       />
     </div>
   </div>

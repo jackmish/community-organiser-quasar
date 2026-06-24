@@ -822,6 +822,7 @@ const {
   isAlternateListMode,
   toggleFilesMode: toggleAppFilesMode,
   toggleNotesMode: toggleAppNotesMode,
+  setViewMode: setAppViewMode,
   refreshModes: refreshAppViewModes,
   onExternalChange: onAppViewModeExternalChange,
 } = useAppViewMode(mergeSourceGroup);
@@ -845,6 +846,15 @@ async function onToggleFilesMode(): Promise<void> {
 
 async function onToggleNotesMode(): Promise<void> {
   await toggleAppNotesMode();
+}
+
+async function onAddFormViewModeChange(mode: "calendar" | "notes"): Promise<void> {
+  if (!appViewModeReady.value) return;
+  if (mode === "notes" && !isNotesMode.value) {
+    await setAppViewMode("notes");
+  } else if (mode === "calendar" && isNotesMode.value) {
+    await setAppViewMode("calendar");
+  }
 }
 
 async function onMobileCalendarIndicatorTaskClick(payload: {
@@ -2075,7 +2085,7 @@ function defaultAddTypeForCalendarDate(date: string): AddFormDefaultTypeId {
   return "TimeEvent";
 }
 
-watch([isFilesMode, isNotesMode], () => {
+watch(isFilesMode, () => {
   addFormDefaultTypeId.value = defaultAddTypeForView();
   if (!appViewModeReady.value) return;
   clearTaskToEdit();
@@ -2084,6 +2094,10 @@ watch([isFilesMode, isNotesMode], () => {
   } catch (e) {
     void e;
   }
+});
+
+watch(isNotesMode, () => {
+  addFormDefaultTypeId.value = defaultAddTypeForView();
 });
 
 const isAddButtonAnchored = computed(() => {
@@ -2548,6 +2562,7 @@ provide(dayOrganiserPanelKey, {
   addFormDefaultTypeId,
   isFilesMode,
   isNotesMode,
+  onAddFormViewModeChange,
   CC,
 } as DayOrganiserPanelContext);
 

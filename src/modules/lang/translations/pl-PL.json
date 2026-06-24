@@ -69,6 +69,7 @@
   "task.note.take_photo": "Zrób zdjęcie",
   "task.note.attach_files": "Dołącz pliki",
   "task.note.icon_and_color": "Ikona i kolor",
+  "task.note.unlink": "Odłącz",
   "date.select_date": "Wybierz datę",
   "date.relative.this_weekday": "w ten {weekday}",
   "date.relative.next_weekday": "w przyszłą {weekday}",

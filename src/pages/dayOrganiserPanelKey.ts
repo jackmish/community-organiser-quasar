@@ -32,8 +32,10 @@ export type DayOrganiserPanelContext = {
   addFormDefaultTypeId: Ref<AddFormDefaultTypeId>;
   /** When true, add form shows Files/Gallery/Link types instead of calendar types. */
   isFilesMode: Ref<boolean>;
-  /** When true, add form shows Note type only and note list is active. */
+  /** When true, notes list view is active. */
   isNotesMode: Ref<boolean>;
+  /** Switch calendar ↔ notes when the user picks a task type in the add form. */
+  onAddFormViewModeChange: (mode: "calendar" | "notes") => void | Promise<void>;
   CC: typeof CCAccess;
 };
 
