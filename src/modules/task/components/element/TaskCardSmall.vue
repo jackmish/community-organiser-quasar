@@ -25,6 +25,14 @@
       class="type-watermark"
     />
 
+    <q-item-section v-if="noteAttachmentCount(item) > 0" side>
+      <NoteTaskAttachmentThumb
+        :task="item"
+        :group-id="noteAttachmentGroupId(item)"
+        :task-id="String(item.id)"
+      />
+    </q-item-section>
+
     <q-item-section class="title-row">
       <div style="flex: 1 1 auto">
         <div class="title-main" :class="{ 'title-main--todo': isTodoListCard(item) }">
@@ -124,6 +132,7 @@
 <script setup lang="ts">
 import { ref, toRef } from "vue";
 import TaskSubtaskMiniList from "./TaskSubtaskMiniList.vue";
+import NoteTaskAttachmentThumb from "./NoteTaskAttachmentThumb.vue";
 import { useLongPress } from "src/composables/useLongPress";
 import CC from "src/CCAccess";
 import {
@@ -138,6 +147,7 @@ import { countTodoSubtasks, countStarredUndone, parseUndoneSubtasks } from "src/
 import { isMediaTaskTypeId, isTodoLikeTaskTypeId } from "src/modules/media/mediaTaskTypes";
 import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
+import { countTaskAttachments } from "src/modules/task/utils/noteTaskMedia";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
@@ -171,6 +181,11 @@ const typeColors: Record<string, string> = {
 };
 
 const item = toRef(props, "item") as any;
+
+const noteAttachmentCount = (task: any) => countTaskAttachments(task);
+
+const noteAttachmentGroupId = (task: any) =>
+  String(task?.groupId || task?._group?.id || "ungrouped");
 
 const getDisplayName = (task: any) => {
   if (!task) return "";

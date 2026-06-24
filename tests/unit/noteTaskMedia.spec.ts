@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   collectNoteGraphicItems,
+  countTaskAttachments,
+  firstImageTaskAttachment,
   isLongNoteDescription,
   shouldShowNoteGraphicHero,
 } from '../../src/modules/task/utils/noteTaskMedia';
@@ -34,5 +36,16 @@ describe('noteTaskMedia', () => {
 
   it('treats multi-line descriptions as long', () => {
     expect(isLongNoteDescription('one\ntwo\nthree')).toBe(true);
+  });
+
+  it('counts attachments and finds the first image', () => {
+    const task = {
+      attachments: [
+        { name: 'doc.pdf', dataUrl: 'data:application/pdf;base64,abc' },
+        { name: 'scan.png', dataUrl: 'data:image/png;base64,abc' },
+      ],
+    };
+    expect(countTaskAttachments(task)).toBe(2);
+    expect(firstImageTaskAttachment(task)?.name).toBe('scan.png');
   });
 });

@@ -44,6 +44,17 @@ export function resolveTaskAttachments(task: NoteTaskMediaSource): TaskAttachmen
   return raw.filter(isTaskAttachment);
 }
 
+export function countTaskAttachments(task: NoteTaskMediaSource): number {
+  return resolveTaskAttachments(task).length;
+}
+
+export function firstImageTaskAttachment(task: NoteTaskMediaSource): TaskAttachment | null {
+  for (const att of resolveTaskAttachments(task)) {
+    if (isImageDataUrl(att.dataUrl)) return att;
+  }
+  return null;
+}
+
 export function isImageDataUrl(dataUrl: string): boolean {
   return dataUrl.startsWith('data:image/');
 }

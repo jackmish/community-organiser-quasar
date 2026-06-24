@@ -377,19 +377,34 @@
               />
             </div>
           </div>
-          <q-list v-if="noteAttachments.length" dense bordered class="note-preview-media__list">
+          <div
+            v-if="noteAttachments.length"
+            class="note-preview-media__summary q-mb-sm row items-center no-wrap q-gutter-sm"
+          >
+            <NoteTaskAttachmentThumb
+              :task="activeTask"
+              :group-id="noteMediaGroupId"
+              :task-id="String(activeTask?.id || '')"
+              clickable
+              @click="openNoteAttachmentsSummaryPreview"
+              @thumb-loaded="onNoteAttachmentThumbLoaded"
+            />
+            <div v-if="noteAttachments.length === 1" class="note-preview-media__summary-name ellipsis">
+              {{ noteAttachments[0]?.name }}
+            </div>
+          </div>
+          <q-list
+            v-if="noteAttachments.length > 1"
+            dense
+            bordered
+            class="note-preview-media__list"
+          >
             <q-item
               v-for="(att, idx) in noteAttachments"
               :key="`${att.name}-${idx}`"
               :clickable="isImageDataUrl(att.dataUrl)"
               @click="isImageDataUrl(att.dataUrl) && openNoteAttachmentPreview(idx)"
             >
-              <q-item-section avatar>
-                <q-avatar v-if="isImageDataUrl(att.dataUrl)" square size="40px">
-                  <img :src="att.dataUrl" :alt="att.name" />
-                </q-avatar>
-                <q-icon v-else name="attach_file" size="28px" />
-              </q-item-section>
               <q-item-section class="ellipsis">{{ att.name }}</q-item-section>
               <q-item-section side>
                 <div class="row items-center no-wrap q-gutter-xs">
@@ -416,6 +431,29 @@
               </q-item-section>
             </q-item>
           </q-list>
+          <div
+            v-else-if="noteAttachments.length === 1"
+            class="row items-center justify-end q-gutter-xs"
+          >
+            <q-btn
+              flat
+              dense
+              round
+              icon="folder_open"
+              color="primary"
+              :title="$text('task.note.open_folder')"
+              :aria-label="$text('task.note.open_folder')"
+              @click.stop="void revealNoteAttachmentFolder(0)"
+            />
+            <q-btn
+              flat
+              dense
+              color="negative"
+              icon="link_off"
+              :label="$text('task.note.unlink')"
+              @click.stop="unlinkNoteAttachment(0)"
+            />
+          </div>
         </div>
 
         <div v-if="!isInlineMediaFolderPreview && !showNoteGraphicHero">
@@ -597,6 +635,7 @@ import {
 } from "src/modules/task/dayPlanning/dayPlanningTypes";
 import { normalizePlanningDayEntry, scheduleHasPlanningContent } from "src/modules/task/dayPlanning/dayPlanningUtils";
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
+import NoteTaskAttachmentThumb from "./NoteTaskAttachmentThumb.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
 import MediaGalleryPreviewDialog from "src/modules/media/components/MediaGalleryPreviewDialog.vue";
 import type { DirectGalleryPreviewEntry } from "src/modules/media/mediaGalleryPreviewTypes";
@@ -605,6 +644,7 @@ import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
 import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
 import {
   collectNoteGraphicItems,
+  firstImageTaskAttachment,
   isImageDataUrl,
   resolveTaskAttachments,
   resolveTaskPhoto,
@@ -868,6 +908,9 @@ const showMediaFolderMissing = computed(
 const isNoteTask = computed(() => isNoteTaskType(activeTask.value));
 const notePhoto = computed(() => resolveTaskPhoto(activeTask.value));
 const noteAttachments = computed(() => resolveTaskAttachments(activeTask.value));
+const noteMediaGroupId = computed(() =>
+  String(activeTask.value?.groupId || "ungrouped"),
+);
 const noteGraphicHero = computed(() => collectNoteGraphicItems(activeTask.value)[0] ?? null);
 const showNoteGraphicHero = computed(() => shouldShowNoteGraphicHero(activeTask.value));
 const hasNoteMedia = computed(
@@ -963,6 +1006,34 @@ function openNoteAttachmentPreview(index: number) {
     kind: "attachment",
     attachmentIndex: index,
   });
+}
+
+function openNoteAttachmentsSummaryPreview() {
+  const firstImage = firstImageTaskAttachment(activeTask.value);
+  if (firstImage) {
+    const index = noteAttachments.value.indexOf(firstImage);
+    if (index >= 0) {
+      openNoteAttachmentPreview(index);
+      return;
+    }
+  }
+  if (noteAttachments.value.length === 1) {
+    openNoteAttachmentPreview(0);
+  }
+}
+
+async function onNoteAttachmentThumbLoaded(payload: {
+  url: string;
+  filePath?: string;
+}): Promise<void> {
+  if (!payload.filePath) return;
+  const firstImage = firstImageTaskAttachment(activeTask.value);
+  if (!firstImage || firstImage.filePath === payload.filePath) return;
+  const index = noteAttachments.value.findIndex((att) => att === firstImage);
+  if (index < 0) return;
+  const next = [...noteAttachments.value];
+  next[index] = { ...firstImage, filePath: payload.filePath };
+  await persistNoteMediaUpdate({ attachments: next });
 }
 
 function onNoteGraphicPreviewOpenChange(open: boolean) {
@@ -1466,6 +1537,11 @@ function buildHtmlFromParsed(
 
 .note-preview-media__photo-img--clickable {
   cursor: zoom-in;
+}
+
+.note-preview-media__summary-name {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .note-preview-media__list {
