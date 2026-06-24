@@ -6,6 +6,8 @@ export type TaskDuration = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type TaskAttachment = {
   name: string;
   dataUrl: string;
+  /** Materialized path under app data (desktop). */
+  filePath?: string;
 };
 
 export class TaskModel extends BaseModel {

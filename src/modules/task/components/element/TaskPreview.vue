@@ -289,7 +289,15 @@
           v-if="showNoteGraphicHero && noteGraphicHero"
           class="note-preview-graphic"
         >
-          <div class="note-preview-graphic__canvas">
+          <div
+            class="note-preview-graphic__canvas note-preview-graphic__canvas--clickable"
+            role="button"
+            tabindex="0"
+            :title="$text('files.gallery_preview_open')"
+            @click="openNoteGraphicPreview(noteGraphicHero)"
+            @keydown.enter.prevent="openNoteGraphicPreview(noteGraphicHero)"
+            @keydown.space.prevent="openNoteGraphicPreview(noteGraphicHero)"
+          >
             <q-img
               :src="noteGraphicHero.dataUrl"
               :alt="noteGraphicHero.name"
@@ -305,6 +313,16 @@
                   : noteGraphicHero.name
               }}
             </div>
+            <q-btn
+              flat
+              dense
+              round
+              icon="folder_open"
+              color="primary"
+              :title="$text('task.note.open_folder')"
+              :aria-label="$text('task.note.open_folder')"
+              @click.stop="void revealNoteGraphicItem(noteGraphicHero)"
+            />
             <q-btn
               flat
               dense
@@ -330,9 +348,25 @@
               :src="notePhoto"
               ratio="16/9"
               fit="contain"
-              class="note-preview-media__photo-img"
+              class="note-preview-media__photo-img note-preview-media__photo-img--clickable"
+              role="button"
+              tabindex="0"
+              :title="$text('files.gallery_preview_open')"
+              @click="openNotePhotoPreview"
+              @keydown.enter.prevent="openNotePhotoPreview"
+              @keydown.space.prevent="openNotePhotoPreview"
             />
-            <div class="row items-center justify-end q-mt-xs">
+            <div class="row items-center justify-end q-mt-xs q-gutter-xs">
+              <q-btn
+                flat
+                dense
+                round
+                icon="folder_open"
+                color="primary"
+                :title="$text('task.note.open_folder')"
+                :aria-label="$text('task.note.open_folder')"
+                @click.stop="void revealNotePhotoFolder()"
+              />
               <q-btn
                 flat
                 dense
@@ -344,7 +378,12 @@
             </div>
           </div>
           <q-list v-if="noteAttachments.length" dense bordered class="note-preview-media__list">
-            <q-item v-for="(att, idx) in noteAttachments" :key="`${att.name}-${idx}`">
+            <q-item
+              v-for="(att, idx) in noteAttachments"
+              :key="`${att.name}-${idx}`"
+              :clickable="isImageDataUrl(att.dataUrl)"
+              @click="isImageDataUrl(att.dataUrl) && openNoteAttachmentPreview(idx)"
+            >
               <q-item-section avatar>
                 <q-avatar v-if="isImageDataUrl(att.dataUrl)" square size="40px">
                   <img :src="att.dataUrl" :alt="att.name" />
@@ -353,15 +392,27 @@
               </q-item-section>
               <q-item-section class="ellipsis">{{ att.name }}</q-item-section>
               <q-item-section side>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="link_off"
-                  color="negative"
-                  :aria-label="$text('task.note.unlink')"
-                  @click.stop="unlinkNoteAttachment(idx)"
-                />
+                <div class="row items-center no-wrap q-gutter-xs">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="folder_open"
+                    color="primary"
+                    :title="$text('task.note.open_folder')"
+                    :aria-label="$text('task.note.open_folder')"
+                    @click.stop="void revealNoteAttachmentFolder(idx)"
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="link_off"
+                    color="negative"
+                    :aria-label="$text('task.note.unlink')"
+                    @click.stop="unlinkNoteAttachment(idx)"
+                  />
+                </div>
               </q-item-section>
             </q-item>
           </q-list>
@@ -501,10 +552,21 @@
       </div>
     </q-card-section>
   </q-card>
+
+  <MediaGalleryPreviewDialog
+    v-if="noteGraphicPreviewEntries.length"
+    :open="noteGraphicPreviewOpen"
+    :direct-entries="noteGraphicPreviewEntries"
+    :direct-entry="noteGraphicPreviewEntry"
+    @update:open="onNoteGraphicPreviewOpenChange"
+    @update:direct-entry="noteGraphicPreviewEntry = $event"
+    @error="onNoteGraphicPreviewError"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, toRaw, ref, nextTick, watch, onBeforeUnmount } from "vue";
+import { useQuasar } from "quasar";
 import { $text } from "src/modules/lang";
 import type { ComponentPublicInstance } from "vue";
 import logger from "src/utils/logger";
@@ -536,6 +598,8 @@ import {
 import { normalizePlanningDayEntry, scheduleHasPlanningContent } from "src/modules/task/dayPlanning/dayPlanningUtils";
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
+import MediaGalleryPreviewDialog from "src/modules/media/components/MediaGalleryPreviewDialog.vue";
+import type { DirectGalleryPreviewEntry } from "src/modules/media/mediaGalleryPreviewTypes";
 import { MEDIA_TASK_TYPE } from "src/modules/media/mediaTaskTypes";
 import { mediaFlatTasks } from "src/modules/task/managers/taskRepository";
 import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
@@ -546,7 +610,11 @@ import {
   resolveTaskPhoto,
   shouldShowNoteGraphicHero,
   stripTitleFromDescription,
+  type NoteGraphicItem,
 } from "src/modules/task/utils/noteTaskMedia";
+import { revealNoteAttachmentFile } from "src/modules/task/utils/noteTaskAttachmentStorage";
+
+const $q = useQuasar();
 
 const props = defineProps<{
   task: Task;
@@ -812,6 +880,14 @@ const noteDescriptionPlain = computed(() =>
   ).trim(),
 );
 const hasNoteDescriptionContent = computed(() => noteDescriptionPlain.value.length > 0);
+const noteGraphicPreviewOpen = ref(false);
+const noteGraphicPreviewEntry = ref<DirectGalleryPreviewEntry | null>(null);
+const noteGraphicPreviewEntries = computed((): DirectGalleryPreviewEntry[] =>
+  collectNoteGraphicItems(activeTask.value).map((item) => ({
+    name: noteGraphicDisplayName(item),
+    imageUrl: item.dataUrl,
+  })),
+);
 const isPreviewBodyFill = computed(
   () =>
     (showMediaFolderBrowser.value && props.fixed !== true) || showNoteGraphicHero.value,
@@ -853,6 +929,116 @@ async function unlinkNotePhoto() {
 async function unlinkNoteAttachment(index: number) {
   const next = noteAttachments.value.filter((_, i) => i !== index);
   await persistNoteMediaUpdate({ attachments: next });
+}
+
+function noteGraphicDisplayName(item: NoteGraphicItem): string {
+  return item.kind === "photo" ? $text("task.note.photo") : item.name;
+}
+
+function noteGraphicStorageName(item: NoteGraphicItem): string {
+  return item.kind === "photo" ? "photo" : item.name;
+}
+
+function openNoteGraphicPreview(item: NoteGraphicItem | null | undefined) {
+  if (!item || !isImageDataUrl(item.dataUrl)) return;
+  noteGraphicPreviewEntry.value = {
+    name: noteGraphicDisplayName(item),
+    imageUrl: item.dataUrl,
+  };
+  noteGraphicPreviewOpen.value = true;
+}
+
+function openNotePhotoPreview() {
+  const photo = notePhoto.value;
+  if (!photo || !isImageDataUrl(photo)) return;
+  openNoteGraphicPreview({ name: "Photo", dataUrl: photo, kind: "photo" });
+}
+
+function openNoteAttachmentPreview(index: number) {
+  const att = noteAttachments.value[index];
+  if (!att || !isImageDataUrl(att.dataUrl)) return;
+  openNoteGraphicPreview({
+    name: att.name,
+    dataUrl: att.dataUrl,
+    kind: "attachment",
+    attachmentIndex: index,
+  });
+}
+
+function onNoteGraphicPreviewOpenChange(open: boolean) {
+  noteGraphicPreviewOpen.value = open;
+  if (!open) noteGraphicPreviewEntry.value = null;
+}
+
+function onNoteGraphicPreviewError(message: string) {
+  $q.notify({ type: "negative", message });
+}
+
+async function revealNoteGraphicItem(item: NoteGraphicItem) {
+  const task = activeTask.value;
+  if (!task?.id) return;
+  const existingFilePath =
+    item.kind === "attachment" && item.attachmentIndex != null
+      ? noteAttachments.value[item.attachmentIndex]?.filePath
+      : undefined;
+  const result = await revealNoteAttachmentFile({
+    groupId: String(task.groupId || "ungrouped"),
+    taskId: String(task.id),
+    name: noteGraphicStorageName(item),
+    dataUrl: item.dataUrl,
+    ...(existingFilePath ? { existingFilePath } : {}),
+  });
+  if (!result.ok) {
+    $q.notify({
+      type: "negative",
+      message: result.error || $text("task.note.open_folder"),
+    });
+    return;
+  }
+  if (
+    item.kind === "attachment" &&
+    item.attachmentIndex != null &&
+    result.filePath &&
+    noteAttachments.value[item.attachmentIndex]?.filePath !== result.filePath
+  ) {
+    const next = [...noteAttachments.value];
+    const current = next[item.attachmentIndex];
+    if (current) {
+      next[item.attachmentIndex] = { ...current, filePath: result.filePath };
+      await persistNoteMediaUpdate({ attachments: next });
+    }
+  }
+}
+
+async function revealNotePhotoFolder() {
+  const photo = notePhoto.value;
+  if (!photo) return;
+  await revealNoteGraphicItem({ name: "Photo", dataUrl: photo, kind: "photo" });
+}
+
+async function revealNoteAttachmentFolder(index: number) {
+  const att = noteAttachments.value[index];
+  const task = activeTask.value;
+  if (!att || !task?.id) return;
+  const result = await revealNoteAttachmentFile({
+    groupId: String(task.groupId || "ungrouped"),
+    taskId: String(task.id),
+    name: att.name,
+    dataUrl: att.dataUrl,
+    ...(att.filePath ? { existingFilePath: att.filePath } : {}),
+  });
+  if (!result.ok) {
+    $q.notify({
+      type: "negative",
+      message: result.error || $text("task.note.open_folder"),
+    });
+    return;
+  }
+  if (result.filePath && att.filePath !== result.filePath) {
+    const next = [...noteAttachments.value];
+    next[index] = { ...att, filePath: result.filePath };
+    await persistNoteMediaUpdate({ attachments: next });
+  }
 }
 
 async function toggleMediaTaskBrowseMode(): Promise<void> {
@@ -1248,6 +1434,10 @@ function buildHtmlFromParsed(
   overflow: hidden;
 }
 
+.note-preview-graphic__canvas--clickable {
+  cursor: zoom-in;
+}
+
 .note-preview-graphic__img {
   width: 100%;
   height: 100%;
@@ -1272,6 +1462,10 @@ function buildHtmlFromParsed(
   max-width: 100%;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.note-preview-media__photo-img--clickable {
+  cursor: zoom-in;
 }
 
 .note-preview-media__list {

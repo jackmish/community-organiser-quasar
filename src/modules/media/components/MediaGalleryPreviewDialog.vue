@@ -16,7 +16,7 @@
             :src="imageUrl"
             class="media-gallery-preview__image"
             :class="{ 'media-gallery-preview__image--loading': loading }"
-            :alt="entry?.name || ''"
+            :alt="displayName"
             @error="onImageError"
             @click.stop
           />
@@ -54,7 +54,7 @@
 
         <div class="media-gallery-preview__header">
           <div class="media-gallery-preview__title ellipsis">
-            {{ entry?.name }}
+            {{ displayName }}
             <span v-if="positionLabel" class="media-gallery-preview__position">{{ positionLabel }}</span>
           </div>
           <q-btn
@@ -68,7 +68,7 @@
           />
         </div>
         <MediaGalleryTagActions
-          v-if="entry && rootPath"
+          v-if="!useDirectUrls && entry && rootPath"
           :root-path="rootPath"
           :file-path="entry.path"
           :tags="tags"
@@ -87,19 +87,32 @@ import { $text } from 'src/modules/lang';
 import { getMediaFullImageUrl, type MediaFolderEntry } from '../mediaFolderService';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
 import type { MediaGalleryTagDefinition } from '../mediaGalleryTagModel';
+import type { DirectGalleryPreviewEntry } from '../mediaGalleryPreviewTypes';
 
-const props = defineProps<{
-  open: boolean;
-  rootPath: string;
-  entry: MediaFolderEntry | null;
-  entries?: MediaFolderEntry[];
-  tags: MediaGalleryTagDefinition[];
-  fallbackThumbUrl?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    rootPath?: string;
+    entry?: MediaFolderEntry | null;
+    entries?: MediaFolderEntry[];
+    tags?: MediaGalleryTagDefinition[];
+    fallbackThumbUrl?: string;
+    directEntries?: DirectGalleryPreviewEntry[];
+    directEntry?: DirectGalleryPreviewEntry | null;
+  }>(),
+  {
+    rootPath: '',
+    entry: null,
+    tags: () => [],
+    directEntries: () => [],
+    directEntry: null,
+  },
+);
 
 const emit = defineEmits<{
   'update:open': [value: boolean];
   'update:entry': [entry: MediaFolderEntry];
+  'update:directEntry': [entry: DirectGalleryPreviewEntry];
   moved: [];
   error: [message: string];
 }>();
@@ -108,13 +121,33 @@ const imageUrl = ref('');
 const loading = ref(false);
 let loadGen = 0;
 
+const useDirectUrls = computed(() => (props.directEntries?.length ?? 0) > 0);
+
+const displayName = computed(() => {
+  if (useDirectUrls.value) return props.directEntry?.name || '';
+  return props.entry?.name || '';
+});
+
+function directEntryKey(item: DirectGalleryPreviewEntry): string {
+  return `${item.name}\0${item.imageUrl}`;
+}
+
 const currentIndex = computed(() => {
+  if (useDirectUrls.value) {
+    const entry = props.directEntry;
+    if (!entry) return -1;
+    const key = directEntryKey(entry);
+    return props.directEntries?.findIndex((item) => directEntryKey(item) === key) ?? -1;
+  }
   const entry = props.entry;
   if (!entry) return -1;
   return props.entries?.findIndex((item) => item.path === entry.path) ?? -1;
 });
 
-const totalCount = computed(() => props.entries?.length ?? 0);
+const totalCount = computed(() => {
+  if (useDirectUrls.value) return props.directEntries?.length ?? 0;
+  return props.entries?.length ?? 0;
+});
 
 const hasMultiple = computed(() => totalCount.value > 1);
 
@@ -126,12 +159,24 @@ const nextLoopHint = computed(
 
 const positionLabel = computed(() => {
   const idx = currentIndex.value;
-  const total = props.entries?.length ?? 0;
+  const total = totalCount.value;
   if (idx < 0 || total <= 1) return '';
   return `${idx + 1} / ${total}`;
 });
 
 async function loadFullImage(): Promise<void> {
+  if (useDirectUrls.value) {
+    const entry = props.directEntry;
+    if (!props.open || !entry?.imageUrl) {
+      imageUrl.value = '';
+      loading.value = false;
+      return;
+    }
+    loading.value = false;
+    imageUrl.value = entry.imageUrl;
+    return;
+  }
+
   const entry = props.entry;
   const root = String(props.rootPath || '').trim();
   if (!props.open || !entry || !root) {
@@ -164,6 +209,17 @@ function onImageError(): void {
 }
 
 function goPrev(): void {
+  if (useDirectUrls.value) {
+    const list = props.directEntries;
+    const total = list?.length ?? 0;
+    if (!list || total <= 1) return;
+    const idx = currentIndex.value;
+    if (idx < 0) return;
+    const nextIdx = idx === 0 ? total - 1 : idx - 1;
+    const next = list[nextIdx];
+    if (next) emit('update:directEntry', next);
+    return;
+  }
   const list = props.entries;
   const total = list?.length ?? 0;
   if (!list || total <= 1) return;
@@ -175,6 +231,17 @@ function goPrev(): void {
 }
 
 function goNext(): void {
+  if (useDirectUrls.value) {
+    const list = props.directEntries;
+    const total = list?.length ?? 0;
+    if (!list || total <= 1) return;
+    const idx = currentIndex.value;
+    if (idx < 0) return;
+    const nextIdx = idx === total - 1 ? 0 : idx + 1;
+    const next = list[nextIdx];
+    if (next) emit('update:directEntry', next);
+    return;
+  }
   const list = props.entries;
   const total = list?.length ?? 0;
   if (!list || total <= 1) return;
@@ -199,7 +266,16 @@ function onPreviewKeydown(event: KeyboardEvent): void {
 }
 
 watch(
-  () => [props.open, props.entry?.path, props.rootPath, props.fallbackThumbUrl] as const,
+  () =>
+    [
+      props.open,
+      props.entry?.path,
+      props.rootPath,
+      props.fallbackThumbUrl,
+      props.directEntry?.imageUrl,
+      props.directEntry?.name,
+      props.directEntries,
+    ] as const,
   () => {
     void loadFullImage();
   },
