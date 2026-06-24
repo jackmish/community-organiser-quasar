@@ -16,7 +16,11 @@
           {{ $text('space.desktop_only') }}
         </q-banner>
 
-        <template v-else>
+        <q-banner v-if="isAppDataSpacesMode" dense rounded class="bg-blue-1 text-dark q-mb-md">
+          {{ $text('space.app_data_hint') }}
+        </q-banner>
+
+        <template v-if="available">
           <div class="row q-col-gutter-sm q-mb-md">
             <div class="col-12 col-sm-auto">
               <q-btn
@@ -27,7 +31,7 @@
                 @click="openCreateForm"
               />
             </div>
-            <div class="col-12 col-sm-auto">
+            <div v-if="!isAppDataSpacesMode" class="col-12 col-sm-auto">
               <q-btn
                 outline
                 color="primary"
@@ -44,14 +48,18 @@
               <q-card-section>
                 <div class="text-subtitle2 q-mb-sm">{{ $text('space.create_new') }}</div>
                 <q-option-group
+                  v-if="!isAppDataSpacesMode"
                   v-model="createMode"
                   :options="createModeOptions"
                   type="radio"
                   inline
                   class="space-create-mode-options q-mb-sm"
                 />
-                <p class="space-create-mode-hint text-body2 q-mb-md">
+                <p v-if="!isAppDataSpacesMode" class="space-create-mode-hint text-body2 q-mb-md">
                   {{ createModeHint }}
+                </p>
+                <p v-else class="space-create-mode-hint text-body2 q-mb-md">
+                  {{ $text('space.app_data_create_hint') }}
                 </p>
                 <q-input
                   v-model="createName"
@@ -61,7 +69,7 @@
                   class="q-mb-sm"
                   @keyup.enter="submitCreate"
                 />
-                <div class="row q-col-gutter-sm items-start">
+                <div v-if="!isAppDataSpacesMode" class="row q-col-gutter-sm items-start">
                   <div class="col">
                     <q-input
                       v-model="createPath"
@@ -84,7 +92,7 @@
                   </div>
                 </div>
                 <q-input
-                  v-if="createMode !== 'blank' && workspacePathPreview"
+                  v-if="!isAppDataSpacesMode && createMode !== 'blank' && workspacePathPreview"
                   :model-value="workspacePathPreview"
                   dense
                   outlined
@@ -100,7 +108,7 @@
                   color="primary"
                   :label="$text('action.create')"
                   :loading="creating"
-                  :disable="!createName.trim() || !createPath.trim()"
+                  :disable="!createName.trim() || (!isAppDataSpacesMode && !createPath.trim())"
                   @click="submitCreate"
                 />
               </q-card-actions>
@@ -343,7 +351,7 @@
                   </div>
                   <div class="row items-center no-wrap q-gutter-xs flex-wrap justify-end">
                   <q-btn
-                    v-if="!isSystemSpace(space) && hasSpaceIssue(space.id)"
+                    v-if="!isAppDataSpacesMode && !isSystemSpace(space) && hasSpaceIssue(space.id)"
                     flat
                     dense
                     color="warning"
@@ -361,7 +369,7 @@
                     @click="openRemoveConfirm(space)"
                   />
                   <q-btn
-                    v-if="canMoveSpace(space)"
+                    v-if="!isAppDataSpacesMode && canMoveSpace(space)"
                     flat
                     dense
                     color="primary"
@@ -380,7 +388,7 @@
                     @click="openActiveSpaceServices"
                   />
                   <q-btn
-                    v-if="canShowSpaceSensitiveDetails(space)"
+                    v-if="!isAppDataSpacesMode && canShowSpaceSensitiveDetails(space)"
                     flat
                     dense
                     round
@@ -494,6 +502,7 @@ import {
 import type { OpenSpacesDialogMode } from 'src/modules/space/spaceUi';
 import type { SpaceAccessStatus } from 'src/modules/space/spaceAccessModel';
 import RemoveWorkspaceConfirmDialog from 'src/modules/space/components/RemoveWorkspaceConfirmDialog.vue';
+import { shouldUseCapacitorStorage } from 'src/modules/storage/backend/storagePlatform';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -521,6 +530,7 @@ watch(
 watch(dialogVisible, (v) => emit('update:modelValue', v));
 
 const available = ref(isSpaceManagementAvailable());
+const isAppDataSpacesMode = shouldUseCapacitorStorage();
 const spaces = ref<SpaceEntry[]>([]);
 const activeSpaceId = ref(SYSTEM_SPACE_ID);
 const defaultSpaceId = ref<string | null>(null);
@@ -685,7 +695,13 @@ function displayName(space: SpaceEntry): string {
 
 function spaceCaption(space: SpaceEntry): string {
   if (isSystemSpace(space)) {
-    return $text('space.system_user_desc').replace('{path}', defaultUserDataPath.value || '—');
+    const root = isAppDataSpacesMode
+      ? $text('space.app_data_root')
+      : defaultUserDataPath.value || '—';
+    return $text('space.system_user_desc').replace('{path}', root);
+  }
+  if (isAppDataSpacesMode && space.dataPath) {
+    return $text('space.app_data_workspace_path').replace('{path}', space.dataPath);
   }
   return space.dataPath || '—';
 }
@@ -801,7 +817,10 @@ function applyInitialMode(): void {
   locateThenSwitch.value = !!props.switchAfterRegister;
   const mode = props.initialMode ?? null;
   if (mode === 'create') openCreateForm();
-  else if (mode === 'locate') openLocateForm();
+  else if (mode === 'locate') {
+    if (isAppDataSpacesMode) openCreateForm();
+    else openLocateForm();
+  }
   else if (mode === 'relocate' && props.relocateSpaceId) {
     openRelocateForm(props.relocateSpaceId);
   }
@@ -828,13 +847,14 @@ async function pickMoveFolder(): Promise<void> {
 }
 
 async function submitCreate(): Promise<void> {
-  if (!createName.value.trim() || !createPath.value.trim()) return;
+  if (!createName.value.trim()) return;
+  if (!isAppDataSpacesMode && !createPath.value.trim()) return;
   creating.value = true;
   try {
     const trimmedName = createName.value.trim();
     const trimmedPath = createPath.value.trim();
-    if (createMode.value === 'blank') {
-      await createCustomSpace(trimmedName, trimmedPath);
+    if (isAppDataSpacesMode || createMode.value === 'blank') {
+      await createCustomSpace(trimmedName, isAppDataSpacesMode ? '' : trimmedPath);
       appNotify('positive', $text('space.created_ok'));
       cancelForm();
       await refresh();

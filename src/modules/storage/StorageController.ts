@@ -62,7 +62,11 @@ export class StorageController {
         const { migrateLegacyWebStorageToCapacitorFiles } = await import(
           './backend/mobile/capacitorStorageMigration'
         );
+        const { ensureCapacitorSqliteMigrated } = await import(
+          './backend/mobile/capacitorSqliteMigration'
+        );
         await migrateLegacyWebStorageToCapacitorFiles();
+        await ensureCapacitorSqliteMigrated();
       }
 
       let data: any;

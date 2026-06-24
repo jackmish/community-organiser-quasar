@@ -1,10 +1,23 @@
 /**
- * CapacitorBackend — persistence for Android / iOS (app sandbox files).
+ * CapacitorBackend — persistence for Android / iOS.
+ * Uses SQLite by default per active workspace; legacy JSON is migrated on first boot.
  */
 
 import type { StorageBackend, OrganiserData } from '../StorageBackend';
 import type { Group } from '../../../group/models/GroupModel';
 import logger from '../../../../utils/logger';
+import { APP_DATA_PATH_SEGMENTS, sqliteDbPathSegments } from '../../appDataPaths';
+import { joinCapacitorWorkspacePath } from 'src/modules/space/capacitorSpacePaths';
+import { getActiveCapacitorWorkspaceRoot } from 'src/modules/space/capacitorSpaceRegistry';
+import { ensureCapacitorSqliteMigrated } from './capacitorSqliteMigration';
+import {
+  deleteGroupFromCapacitorSqlite,
+  isCapacitorSqliteReady,
+  loadAppSettingsFromCapacitorSqlite,
+  loadGroupsFromCapacitorSqlite,
+  saveAppSettingsToCapacitorSqlite,
+  saveGroupsToCapacitorSqlite,
+} from './capacitorSqliteService';
 import { sanitizeGroupsForStorage } from '../groupStorageSanitize';
 import {
   getGroupFilename,
@@ -19,7 +32,6 @@ import {
   listCapacitorDirNames,
   readCapacitorJsonFile,
   readCapacitorTextFile,
-  writeCapacitorJsonFile,
   writeCapacitorTextFile,
 } from './capacitorAppDataFiles';
 import {
@@ -29,10 +41,85 @@ import {
   writeNativeOrganiserSettingsToPreferences,
 } from './capacitorNativePreferences';
 
-import { APP_DATA_PATH_SEGMENTS } from '../../appDataPaths';
+let migrationEnsured = false;
 
-const GROUP_SUBDIR = APP_DATA_PATH_SEGMENTS.group.join('/');
-const SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.organiserSettingsFile.join('/');
+async function workspaceRoot(): Promise<string> {
+  return getActiveCapacitorWorkspaceRoot();
+}
+
+async function groupSubdir(): Promise<string> {
+  const root = await workspaceRoot();
+  return joinCapacitorWorkspacePath(root, ...APP_DATA_PATH_SEGMENTS.group);
+}
+
+async function settingsPath(): Promise<string> {
+  const root = await workspaceRoot();
+  return joinCapacitorWorkspacePath(root, ...APP_DATA_PATH_SEGMENTS.organiserSettingsFile);
+}
+
+async function ensureReady(): Promise<boolean> {
+  if (!migrationEnsured) {
+    await ensureCapacitorSqliteMigrated();
+    migrationEnsured = true;
+  }
+  return isCapacitorSqliteReady();
+}
+
+async function loadLegacyGroups(): Promise<Group[]> {
+  const groupDir = await groupSubdir();
+  const ws = await workspaceRoot();
+  try {
+    await ensureCapacitorDataDir(groupDir);
+    const files = await listCapacitorDirNames(groupDir);
+    const groups: Group[] = [];
+    for (const filename of files) {
+      if (!isGroupJsonFilename(filename)) continue;
+      const path = `${groupDir}/${filename}`;
+      try {
+        const text = await readCapacitorTextFile(path);
+        const parsed = parseGroupJsonText(text ?? '');
+        const row = normalizeGroupFromDisk(parsed, filename);
+        if (row) groups.push(row as unknown as Group);
+      } catch (err) {
+        logger.error('[CapacitorBackend] read group failed', path, err);
+      }
+    }
+    if (groups.length) return groups;
+    if (!ws) {
+      const fromPrefs = await readNativeGroupsFromPreferences();
+      return fromPrefs as unknown as Group[];
+    }
+    return [];
+  } catch (err) {
+    logger.error('[CapacitorBackend] loadLegacyGroups failed', err);
+    if (!ws) {
+      const fromPrefs = await readNativeGroupsFromPreferences();
+      return fromPrefs as unknown as Group[];
+    }
+    return [];
+  }
+}
+
+async function loadLegacySettings(): Promise<Record<string, unknown>> {
+  const path = await settingsPath();
+  const ws = await workspaceRoot();
+  try {
+    const data = await readCapacitorJsonFile(path);
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      return data as Record<string, unknown>;
+    }
+    if (!ws) {
+      return readNativeOrganiserSettingsFromPreferences();
+    }
+    return {};
+  } catch (err) {
+    logger.error('[CapacitorBackend] loadLegacySettings failed', err);
+    if (!ws) {
+      return readNativeOrganiserSettingsFromPreferences();
+    }
+    return {};
+  }
+}
 
 export class CapacitorBackend implements StorageBackend {
   readonly name = 'capacitor';
@@ -42,85 +129,74 @@ export class CapacitorBackend implements StorageBackend {
   }
 
   async loadAllGroups(): Promise<Group[]> {
-    try {
-      await ensureCapacitorDataDir(GROUP_SUBDIR);
-      const files = await listCapacitorDirNames(GROUP_SUBDIR);
-      const groups: Group[] = [];
-      for (const filename of files) {
-        if (!isGroupJsonFilename(filename)) continue;
-        const path = `${GROUP_SUBDIR}/${filename}`;
-        try {
-          const text = await readCapacitorTextFile(path);
-          const parsed = parseGroupJsonText(text ?? '');
-          const row = normalizeGroupFromDisk(parsed, filename);
-          if (row) groups.push(row as unknown as Group);
-        } catch (err) {
-          logger.error('[CapacitorBackend] read group failed', path, err);
-        }
-      }
-      if (groups.length) {
-        logger.info('[CapacitorBackend] loaded groups from files', groups.length);
-        return groups;
-      }
-
-      const fromPrefs = await readNativeGroupsFromPreferences();
-      if (fromPrefs.length) {
-        logger.info('[CapacitorBackend] loaded groups from Preferences', fromPrefs.length);
-        return fromPrefs as unknown as Group[];
-      }
-
-      logger.debug('[CapacitorBackend] no groups on disk or Preferences');
-      return [];
-    } catch (err) {
-      logger.error('[CapacitorBackend] loadAllGroups failed', err);
-      const fromPrefs = await readNativeGroupsFromPreferences();
-      return fromPrefs as unknown as Group[];
+    if (await ensureReady()) {
+      const groups = await loadGroupsFromCapacitorSqlite();
+      logger.info('[CapacitorBackend] loaded groups from SQLite', groups.length);
+      return groups as unknown as Group[];
     }
+    return loadLegacyGroups();
   }
 
   async saveGroups(groups: Group[]): Promise<void> {
     const sanitizedGroups = await sanitizeGroupsForStorage(groups);
-    await writeNativeGroupsToPreferences(sanitizedGroups);
-    await ensureCapacitorDataDir(GROUP_SUBDIR);
+    if (await ensureReady()) {
+      await saveGroupsToCapacitorSqlite(sanitizedGroups);
+      logger.info('[CapacitorBackend] saved groups to SQLite', sanitizedGroups.length);
+      return;
+    }
+
+    const groupDir = await groupSubdir();
+    const ws = await workspaceRoot();
+    if (!ws) {
+      await writeNativeGroupsToPreferences(sanitizedGroups);
+    }
+    await ensureCapacitorDataDir(groupDir);
     for (const groupToWrite of sanitizedGroups) {
       const groupId = typeof groupToWrite.id === 'string' ? groupToWrite.id : '';
       if (!groupId) continue;
-      const path = `${GROUP_SUBDIR}/${getGroupFilename(groupId)}`;
+      const path = `${groupDir}/${getGroupFilename(groupId)}`;
       try {
         await writeCapacitorTextFile(path, JSON.stringify(groupToWrite, null, 2));
       } catch (err) {
-        logger.error('[CapacitorBackend] write group file failed (Preferences saved)', path, err);
+        logger.error('[CapacitorBackend] write group file failed', path, err);
       }
     }
-    logger.info('[CapacitorBackend] saved groups', sanitizedGroups.length);
+    logger.info('[CapacitorBackend] saved groups (legacy)', sanitizedGroups.length);
   }
 
   async deleteGroup(groupId: string): Promise<void> {
-    const path = `${GROUP_SUBDIR}/${getGroupFilename(groupId)}`;
+    if (await ensureReady()) {
+      await deleteGroupFromCapacitorSqlite(groupId);
+      return;
+    }
+    const groupDir = await groupSubdir();
+    const path = `${groupDir}/${getGroupFilename(groupId)}`;
     await deleteCapacitorDataFile(path);
   }
 
   async loadSettings(): Promise<Record<string, unknown>> {
-    try {
-      const data = await readCapacitorJsonFile(SETTINGS_PATH);
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        return data as Record<string, unknown>;
-      }
-      const fromPrefs = await readNativeOrganiserSettingsFromPreferences();
-      return fromPrefs;
-    } catch (err) {
-      logger.error('[CapacitorBackend] loadSettings failed', err);
-      return readNativeOrganiserSettingsFromPreferences();
+    if (await ensureReady()) {
+      return loadAppSettingsFromCapacitorSqlite();
     }
+    return loadLegacySettings();
   }
 
   async saveSettings(settings: Record<string, unknown>): Promise<void> {
     const payload = settings ?? {};
-    await writeNativeOrganiserSettingsToPreferences(payload);
+    if (await ensureReady()) {
+      await saveAppSettingsToCapacitorSqlite(payload);
+      return;
+    }
+    const path = await settingsPath();
+    const ws = await workspaceRoot();
+    if (!ws) {
+      await writeNativeOrganiserSettingsToPreferences(payload);
+    }
     try {
-      await writeCapacitorJsonFile(SETTINGS_PATH, payload);
+      const { writeCapacitorJsonFile } = await import('./capacitorAppDataFiles');
+      await writeCapacitorJsonFile(path, payload);
     } catch (err) {
-      logger.error('[CapacitorBackend] saveSettings file failed (Preferences saved)', err);
+      logger.error('[CapacitorBackend] saveSettings file failed', err);
     }
   }
 
@@ -165,7 +241,11 @@ export class CapacitorBackend implements StorageBackend {
   }
 
   async getStoragePath(): Promise<string> {
-    return getCapacitorDataUri(GROUP_SUBDIR);
+    const root = await workspaceRoot();
+    if (await ensureReady()) {
+      return getCapacitorDataUri(joinCapacitorWorkspacePath(root, ...sqliteDbPathSegments()));
+    }
+    return getCapacitorDataUri(await groupSubdir());
   }
 }
 

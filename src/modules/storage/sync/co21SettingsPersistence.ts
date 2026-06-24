@@ -8,6 +8,8 @@ import {
   readCapacitorJsonFile,
   writeCapacitorJsonFile,
 } from 'src/modules/storage/backend/mobile/capacitorAppDataFiles';
+import { joinCapacitorWorkspacePath } from 'src/modules/space/capacitorSpacePaths';
+import { getActiveCapacitorWorkspaceRoot } from 'src/modules/space/capacitorSpaceRegistry';
 import {
   readNativeCo21SettingsFromPreferences,
   writeNativeCo21SettingsToPreferences,
@@ -16,8 +18,12 @@ import {
 export type Co21SettingsJson = Record<string, unknown>;
 
 /** Mirrors on-disk `co21-config/settings.json` when Electron API is unavailable (Android/iOS). */
-const CO21_SETTINGS_PATH = APP_DATA_PATH_SEGMENTS.co21SettingsFile.join('/');
 const CO21_SETTINGS_LOCAL_KEY = 'co21-settings.json';
+
+async function co21SettingsPathForActiveWorkspace(): Promise<string> {
+  const root = await getActiveCapacitorWorkspaceRoot();
+  return joinCapacitorWorkspacePath(root, ...APP_DATA_PATH_SEGMENTS.co21SettingsFile);
+}
 
 function electronApi(): Record<string, unknown> | null {
   const api = (window as unknown as { electronAPI?: Record<string, unknown> }).electronAPI;
@@ -98,10 +104,22 @@ async function writeCo21SettingsToElectronFile(payload: Co21SettingsJson): Promi
 async function readCo21SettingsFromCapacitorFile(): Promise<Co21SettingsJson | null> {
   if (!Capacitor.isNativePlatform()) return null;
   try {
+    const { isCapacitorSqliteReady, loadCo21SettingsFromCapacitorSqlite } = await import(
+      'src/modules/storage/backend/mobile/capacitorSqliteService'
+    );
+    const { ensureCapacitorSqliteMigrated } = await import(
+      'src/modules/storage/backend/mobile/capacitorSqliteMigration'
+    );
+    await ensureCapacitorSqliteMigrated();
+    if (await isCapacitorSqliteReady()) {
+      return loadCo21SettingsFromCapacitorSqlite();
+    }
+
     const fromPrefs = await readNativeCo21SettingsFromPreferences();
     if (Object.keys(fromPrefs).length > 0) return fromPrefs;
 
-    const data = await readCapacitorJsonFile(CO21_SETTINGS_PATH);
+    const settingsPath = await co21SettingsPathForActiveWorkspace();
+    const data = await readCapacitorJsonFile(settingsPath);
     if (data === null) return {};
     return data && typeof data === 'object' ? (data as Co21SettingsJson) : {};
   } catch (e) {
@@ -113,9 +131,22 @@ async function readCo21SettingsFromCapacitorFile(): Promise<Co21SettingsJson | n
 async function writeCo21SettingsToCapacitorFile(payload: Co21SettingsJson): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
   try {
+    const { isCapacitorSqliteReady, saveCo21SettingsToCapacitorSqlite } = await import(
+      'src/modules/storage/backend/mobile/capacitorSqliteService'
+    );
+    const { ensureCapacitorSqliteMigrated } = await import(
+      'src/modules/storage/backend/mobile/capacitorSqliteMigration'
+    );
+    await ensureCapacitorSqliteMigrated();
+    if (await isCapacitorSqliteReady()) {
+      await saveCo21SettingsToCapacitorSqlite(payload);
+      return true;
+    }
+
     await writeNativeCo21SettingsToPreferences(payload);
     try {
-      await writeCapacitorJsonFile(CO21_SETTINGS_PATH, payload);
+      const settingsPath = await co21SettingsPathForActiveWorkspace();
+      await writeCapacitorJsonFile(settingsPath, payload);
     } catch (fileErr) {
       logger.warn('[co21Settings] file write failed (Preferences saved)', fileErr);
     }

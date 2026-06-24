@@ -126,3 +126,16 @@ export async function getCapacitorDataUri(relativePath: string): Promise<string>
     return relativePath;
   }
 }
+
+export async function capacitorPathExists(relativePath: string): Promise<boolean> {
+  if (!relativePath.trim()) return true;
+  try {
+    await Filesystem.stat({
+      path: relativePath,
+      directory: Directory.Data,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}

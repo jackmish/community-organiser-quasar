@@ -6,6 +6,19 @@ import type {
   SpaceStorageMode,
 } from './models/SpaceModel';
 import type { WorkspaceCreateMode } from './models/workspaceSetupModel';
+import { shouldUseCapacitorStorage } from 'src/modules/storage/backend/storagePlatform';
+import {
+  createCapacitorCustomSpace,
+  loadCapacitorSpaceRegistrySnapshot,
+  migrateCapacitorSpaceToSqlite,
+  reloadCapacitorAppForSpaceChanges,
+  removeCapacitorWorkspace,
+  setCapacitorDefaultSpace,
+  setCapacitorSpaceStorageMode,
+  skipCapacitorBrokenActiveWorkspace,
+  switchCapacitorAwayFromBrokenWorkspace,
+  switchCapacitorSpaceAndReload,
+} from './capacitorSpaceRegistry';
 
 type SpaceOkResult<T> = { ok: true } & T;
 type SpaceErrResult = { ok: false; error: string };
@@ -69,17 +82,28 @@ function spaceApi(): SpaceElectronAPI | null {
   return api;
 }
 
+function useCapacitorSpaces(): boolean {
+  return shouldUseCapacitorStorage();
+}
+
 export function isSpaceManagementAvailable(): boolean {
-  return spaceApi() !== null;
+  return spaceApi() !== null || useCapacitorSpaces();
 }
 
 export async function loadSpaceRegistrySnapshot(): Promise<SpaceRegistrySnapshot | null> {
   const api = spaceApi();
-  if (!api) return null;
-  return api.getRegistry();
+  if (api) return api.getRegistry();
+  if (useCapacitorSpaces()) return loadCapacitorSpaceRegistrySnapshot();
+  return null;
 }
 
 export async function createCustomSpace(name: string, dataPath: string): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    if (dataPath.trim()) {
+      throw new Error('Custom folder paths are not supported in the mobile app');
+    }
+    return createCapacitorCustomSpace(name);
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.createSpace({ name, dataPath });
@@ -91,6 +115,12 @@ export async function createWorkspaceWithSetup(
   name: string,
   payload: { mode: WorkspaceCreateMode; folderPath: string },
 ): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    if (payload.mode !== 'blank') {
+      throw new Error('Only blank workspaces are supported in the mobile app');
+    }
+    return createCapacitorCustomSpace(name);
+  }
   const api = spaceApi();
   if (!api?.createWithSetup) {
     throw new Error('Space management is only available in the desktop app');
@@ -104,6 +134,9 @@ export async function registerExistingCustomSpace(
   name: string,
   dataPath: string,
 ): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    throw new Error('Locating external folders is not supported in the mobile app');
+  }
   const api = spaceApi();
   if (!api?.registerExistingSpace) {
     throw new Error('Space management is only available in the desktop app');
@@ -117,6 +150,9 @@ export async function relocateCustomSpaceFolder(
   spaceId: string,
   dataPath: string,
 ): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    throw new Error('Relocating workspaces is not supported in the mobile app');
+  }
   const api = spaceApi();
   if (!api?.relocateSpacePath) {
     throw new Error('Space management is only available in the desktop app');
@@ -132,6 +168,9 @@ export async function moveCustomSpaceFolder(
   spaceId: string,
   dataPath: string,
 ): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    throw new Error('Moving workspaces is not supported in the mobile app');
+  }
   const api = spaceApi();
   if (!api?.moveSpaceFolder) {
     throw new Error('Space management is only available in the desktop app');
@@ -142,6 +181,10 @@ export async function moveCustomSpaceFolder(
 }
 
 export async function skipBrokenActiveWorkspace(): Promise<void> {
+  if (useCapacitorSpaces()) {
+    await skipCapacitorBrokenActiveWorkspace();
+    return;
+  }
   const api = spaceApi();
   if (!api?.skipBrokenActiveSpace) {
     throw new Error('Space management is only available in the desktop app');
@@ -151,6 +194,10 @@ export async function skipBrokenActiveWorkspace(): Promise<void> {
 }
 
 export async function switchSpaceAndRestart(spaceId: string): Promise<void> {
+  if (useCapacitorSpaces()) {
+    await switchCapacitorSpaceAndReload(spaceId);
+    return;
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.switchAndRestart(spaceId);
@@ -161,6 +208,10 @@ export async function switchAwayFromBrokenWorkspaceAndRestart(
   targetSpaceId: string,
   brokenSpaceId: string,
 ): Promise<void> {
+  if (useCapacitorSpaces()) {
+    await switchCapacitorAwayFromBrokenWorkspace(targetSpaceId, brokenSpaceId);
+    return;
+  }
   const api = spaceApi();
   if (!api?.switchFromBroken) {
     throw new Error('Space management is only available in the desktop app');
@@ -173,6 +224,10 @@ export async function removeWorkspaceFromRegistry(
   spaceId: string,
   options: { deleteProjectFolder?: boolean } = {},
 ): Promise<void> {
+  if (useCapacitorSpaces()) {
+    await removeCapacitorWorkspace(spaceId, options);
+    return;
+  }
   const api = spaceApi();
   if (!api?.removeFromRegistry) {
     throw new Error('Space management is only available in the desktop app');
@@ -188,6 +243,9 @@ export async function setSpaceStorageMode(
   spaceId: string,
   mode: SpaceStorageMode,
 ): Promise<SpaceEntry> {
+  if (useCapacitorSpaces()) {
+    return setCapacitorSpaceStorageMode(spaceId, mode);
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.setStorageMode({ spaceId, mode });
@@ -198,6 +256,9 @@ export async function setSpaceStorageMode(
 export async function migrateSpaceToSqlite(
   spaceId: string,
 ): Promise<{ space: SpaceEntry; result: SpaceMigrateResult }> {
+  if (useCapacitorSpaces()) {
+    return migrateCapacitorSpaceToSqlite(spaceId);
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.migrateToSqlite(spaceId);
@@ -206,6 +267,10 @@ export async function migrateSpaceToSqlite(
 }
 
 export async function restartAppForSpaceChanges(): Promise<void> {
+  if (useCapacitorSpaces()) {
+    await reloadCapacitorAppForSpaceChanges();
+    return;
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.restartApp();
@@ -213,6 +278,7 @@ export async function restartAppForSpaceChanges(): Promise<void> {
 }
 
 export async function browseSpaceFolder(): Promise<string | null> {
+  if (useCapacitorSpaces()) return null;
   const api = (window as unknown as { electronAPI?: { showOpenFolder?: () => Promise<string | null> } })
     .electronAPI;
   if (!api || typeof api.showOpenFolder !== 'function') return null;
@@ -220,6 +286,9 @@ export async function browseSpaceFolder(): Promise<string | null> {
 }
 
 export async function setDefaultSpace(spaceId: string | null): Promise<string | null> {
+  if (useCapacitorSpaces()) {
+    return setCapacitorDefaultSpace(spaceId);
+  }
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.setDefaultSpace(spaceId);
@@ -228,6 +297,7 @@ export async function setDefaultSpace(spaceId: string | null): Promise<string | 
 }
 
 export async function openSpaceFolder(folderPath: string): Promise<void> {
+  if (useCapacitorSpaces()) return;
   const api = spaceApi();
   if (!api) throw new Error('Space management is only available in the desktop app');
   const result = await api.openFolder(folderPath);
