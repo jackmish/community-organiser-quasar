@@ -562,7 +562,7 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-    top: -17px;
+    top: -26px;
     left: 0px;
   z-index: 1;
   width: max-content;
@@ -570,6 +570,10 @@ function logIfUnrecognized(item: any) {
   white-space: nowrap;
   box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.4);
   border-radius: 8px;
+  @media(max-width:767px)
+  {
+    top: -17px;
+  }
 }
 .group-label :deep(> div) {
   display: inline-block;
