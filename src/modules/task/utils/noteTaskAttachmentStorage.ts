@@ -1,4 +1,4 @@
-import { revealMediaPath } from 'src/modules/media/mediaFolderService';
+import { openMediaPath, revealMediaPath } from 'src/modules/media/mediaFolderService';
 import { APP_DATA_PATH_SEGMENTS, joinPathSegments } from 'src/modules/storage/appDataPaths';
 import logger from 'src/utils/logger';
 
@@ -120,6 +120,25 @@ export async function revealNoteAttachmentFile(
   const revealed = await revealMediaPath(materialized.filePath);
   if (!revealed.ok) {
     return { ok: false, error: revealed.error || 'Could not open folder', filePath: materialized.filePath };
+  }
+  return { ok: true, filePath: materialized.filePath };
+}
+
+/** Materialize if needed, then open with the system default application. */
+export async function openNoteAttachmentFile(
+  payload: MaterializeNoteAttachmentPayload,
+): Promise<{ ok: boolean; error?: string; filePath?: string }> {
+  const materialized = await materializeNoteAttachmentFile(payload);
+  if (!materialized.ok) {
+    return { ok: false, error: materialized.error };
+  }
+  const opened = await openMediaPath(materialized.filePath);
+  if (!opened.ok) {
+    return {
+      ok: false,
+      error: opened.error || 'Could not open file',
+      filePath: materialized.filePath,
+    };
   }
   return { ok: true, filePath: materialized.filePath };
 }

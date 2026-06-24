@@ -377,37 +377,70 @@
               />
             </div>
           </div>
-          <div
-            v-if="noteAttachments.length"
-            class="note-preview-media__summary q-mb-sm row items-center no-wrap q-gutter-sm"
-          >
-            <NoteTaskAttachmentThumb
-              :task="activeTask"
-              :group-id="noteMediaGroupId"
-              :task-id="String(activeTask?.id || '')"
-              clickable
-              @click="openNoteAttachmentsSummaryPreview"
-              @thumb-loaded="onNoteAttachmentThumbLoaded"
-            />
-            <div v-if="noteAttachments.length === 1" class="note-preview-media__summary-name ellipsis">
-              {{ noteAttachments[0]?.name }}
-            </div>
-          </div>
-          <q-list
-            v-if="noteAttachments.length > 1"
-            dense
-            bordered
-            class="note-preview-media__list"
-          >
-            <q-item
-              v-for="(att, idx) in noteAttachments"
-              :key="`${att.name}-${idx}`"
-              :clickable="isImageDataUrl(att.dataUrl)"
-              @click="isImageDataUrl(att.dataUrl) && openNoteAttachmentPreview(idx)"
+          <div v-if="noteAttachments.length" class="note-preview-media__attachments">
+            <div
+              v-if="noteAttachments.length === 1"
+              class="note-preview-media__summary"
             >
-              <q-item-section class="ellipsis">{{ att.name }}</q-item-section>
-              <q-item-section side>
-                <div class="row items-center no-wrap q-gutter-xs">
+              <NoteTaskAttachmentThumb
+                v-if="isImageDataUrl(noteAttachments[0]?.dataUrl || '')"
+                :task="activeTask"
+                :group-id="noteMediaGroupId"
+                :task-id="String(activeTask?.id || '')"
+                clickable
+                @click="onNoteAttachmentsSummaryClick"
+                @thumb-loaded="onNoteAttachmentThumbLoaded"
+              />
+              <div
+                class="note-preview-media__file-row"
+                @click="onNoteAttachmentClick(0)"
+              >
+                  <div class="note-preview-media__file-name">
+                    {{ noteAttachments[0]?.name }}
+                  </div>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="folder_open"
+                    color="primary"
+                    :title="$text('task.note.open_folder')"
+                    :aria-label="$text('task.note.open_folder')"
+                    @click.stop="void revealNoteAttachmentFolder(0)"
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="link_off"
+                    color="negative"
+                    :title="$text('task.note.unlink')"
+                    :aria-label="$text('task.note.unlink')"
+                    @click.stop="unlinkNoteAttachment(0)"
+                  />
+              </div>
+            </div>
+            <template v-else>
+              <div class="note-preview-media__summary q-mb-sm">
+                <NoteTaskAttachmentThumb
+                  :task="activeTask"
+                  :group-id="noteMediaGroupId"
+                  :task-id="String(activeTask?.id || '')"
+                  clickable
+                  @click="onNoteAttachmentsSummaryClick"
+                  @thumb-loaded="onNoteAttachmentThumbLoaded"
+                />
+              </div>
+              <div class="note-preview-media__rows">
+                <div
+                  v-for="(att, idx) in noteAttachments"
+                  :key="`${att.name}-${idx}`"
+                  class="note-preview-media__file-row"
+                  @click="onNoteAttachmentClick(idx)"
+                >
+                  <div class="note-preview-media__file-name">
+                    {{ att.name }}
+                  </div>
                   <q-btn
                     flat
                     dense
@@ -424,35 +457,13 @@
                     round
                     icon="link_off"
                     color="negative"
+                    :title="$text('task.note.unlink')"
                     :aria-label="$text('task.note.unlink')"
                     @click.stop="unlinkNoteAttachment(idx)"
                   />
                 </div>
-              </q-item-section>
-            </q-item>
-          </q-list>
-          <div
-            v-else-if="noteAttachments.length === 1"
-            class="row items-center justify-end q-gutter-xs"
-          >
-            <q-btn
-              flat
-              dense
-              round
-              icon="folder_open"
-              color="primary"
-              :title="$text('task.note.open_folder')"
-              :aria-label="$text('task.note.open_folder')"
-              @click.stop="void revealNoteAttachmentFolder(0)"
-            />
-            <q-btn
-              flat
-              dense
-              color="negative"
-              icon="link_off"
-              :label="$text('task.note.unlink')"
-              @click.stop="unlinkNoteAttachment(0)"
-            />
+              </div>
+            </template>
           </div>
         </div>
 
@@ -652,7 +663,7 @@ import {
   stripTitleFromDescription,
   type NoteGraphicItem,
 } from "src/modules/task/utils/noteTaskMedia";
-import { revealNoteAttachmentFile } from "src/modules/task/utils/noteTaskAttachmentStorage";
+import { openNoteAttachmentFile, revealNoteAttachmentFile } from "src/modules/task/utils/noteTaskAttachmentStorage";
 
 const $q = useQuasar();
 
@@ -1008,7 +1019,54 @@ function openNoteAttachmentPreview(index: number) {
   });
 }
 
-function openNoteAttachmentsSummaryPreview() {
+function noteAttachmentOpenPayload(index: number) {
+  const att = noteAttachments.value[index];
+  const task = activeTask.value;
+  if (!att || !task?.id) return null;
+  return {
+    groupId: noteMediaGroupId.value,
+    taskId: String(task.id),
+    name: att.name,
+    dataUrl: att.dataUrl,
+    ...(att.filePath ? { existingFilePath: att.filePath } : {}),
+  };
+}
+
+async function persistAttachmentFilePathIfNeeded(index: number, filePath: string) {
+  const att = noteAttachments.value[index];
+  if (!att || att.filePath === filePath) return;
+  const next = [...noteAttachments.value];
+  next[index] = { ...att, filePath };
+  await persistNoteMediaUpdate({ attachments: next });
+}
+
+async function openNoteAttachmentWithSystem(index: number) {
+  const payload = noteAttachmentOpenPayload(index);
+  if (!payload) return;
+  const result = await openNoteAttachmentFile(payload);
+  if (!result.ok) {
+    $q.notify({
+      type: "negative",
+      message: result.error || $text("files.open_file"),
+    });
+    return;
+  }
+  if (result.filePath) {
+    await persistAttachmentFilePathIfNeeded(index, result.filePath);
+  }
+}
+
+function onNoteAttachmentClick(index: number) {
+  const att = noteAttachments.value[index];
+  if (!att) return;
+  if (isImageDataUrl(att.dataUrl)) {
+    openNoteAttachmentPreview(index);
+    return;
+  }
+  void openNoteAttachmentWithSystem(index);
+}
+
+function onNoteAttachmentsSummaryClick() {
   const firstImage = firstImageTaskAttachment(activeTask.value);
   if (firstImage) {
     const index = noteAttachments.value.indexOf(firstImage);
@@ -1017,8 +1075,8 @@ function openNoteAttachmentsSummaryPreview() {
       return;
     }
   }
-  if (noteAttachments.value.length === 1) {
-    openNoteAttachmentPreview(0);
+  if (noteAttachments.value.length >= 1) {
+    onNoteAttachmentClick(0);
   }
 }
 
@@ -1539,13 +1597,60 @@ function buildHtmlFromParsed(
   cursor: zoom-in;
 }
 
-.note-preview-media__summary-name {
-  min-width: 0;
-  flex: 1 1 auto;
+.note-preview-media__attachments {
+  width: fit-content;
+  max-width: none;
 }
 
-.note-preview-media__list {
-  max-width: 100%;
+.note-preview-media__summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: none;
+}
+
+.note-preview-media__rows {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  width: fit-content;
+  max-width: none;
+}
+
+.note-preview-media__file-row {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(25, 118, 210, 0.08);
+  border: 1px solid rgba(25, 118, 210, 0.18);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.note-preview-media__file-row:hover {
+  background: rgba(25, 118, 210, 0.12);
+  border-color: rgba(25, 118, 210, 0.28);
+}
+
+.note-preview-media__file-name {
+  flex: 0 0 auto;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.note-preview-media__file-name:hover {
+  text-decoration: underline;
 }
 
 .shrinking {
