@@ -430,8 +430,8 @@ function logIfUnrecognized(item: any) {
 }
 .group-label {
   position: absolute;
-  top: -20px;
-  left: 8px;
+     top: -22px;
+    left: -30px;
   z-index: 1;
   box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.4);
 }
