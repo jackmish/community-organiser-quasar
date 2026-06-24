@@ -627,6 +627,7 @@ function onDraftScheduleApplied(ev: Event) {
 onMounted(() => {
   window.addEventListener("co21:todo-schedule-draft-applied", onDraftScheduleApplied);
   adjustDescriptionHeight();
+  void detectCameraAvailability();
 });
 
 const noteModeOptions = computed(() => [
@@ -675,9 +676,42 @@ onUnmounted(() => {
   window.removeEventListener("co21:todo-schedule-draft-applied", onDraftScheduleApplied);
 });
 
-const noteIconMenu = ref(false);
+const noteAppearanceDialog = ref(false);
+const hasCamera = ref(false);
 const photoInput = ref<HTMLInputElement | null>(null);
 const attachmentInput = ref<HTMLInputElement | null>(null);
+
+async function detectCameraAvailability() {
+  try {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      hasCamera.value = false;
+      return;
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    hasCamera.value = devices.some((device) => device.kind === "videoinput");
+  } catch {
+    hasCamera.value = false;
+  }
+}
+
+const showNoteAppearanceBtn = computed(
+  () => isNoteLater.value && localNewTask.value.noteMode === "note",
+);
+
+const showTaskMediaActions = computed(() => {
+  if (props.mediaMode) return false;
+  const typeId = localNewTask.value.type_id || "";
+  if (typeId === "NoteLater") {
+    return localNewTask.value.noteMode === "note";
+  }
+  return typeId === "TimeEvent" || typeId === "Todo" || typeId === "Replenish";
+});
+
+const showTaskMediaPreviews = computed(
+  () =>
+    showTaskMediaActions.value &&
+    Boolean(localNewTask.value.photo || localNewTask.value.attachments?.length),
+);
 
 function triggerPhotoCapture() {
   photoInput.value?.click();
@@ -1579,6 +1613,21 @@ function onSubmit(event: Event) {
         </div>
       </div>
       <q-form @submit="onSubmit" class="q-gutter-md">
+        <input
+          ref="photoInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style="display: none"
+          @change="onPhotoSelected"
+        />
+        <input
+          ref="attachmentInput"
+          type="file"
+          multiple
+          style="display: none"
+          @change="onAttachmentsSelected"
+        />
         <div
           v-if="showSharedFolderPicker"
           class="row q-col-gutter-sm items-center"
@@ -2006,136 +2055,6 @@ function onSubmit(event: Event) {
                           class="col"
                           @update:model-value="(val) => updateTaskField('description', val)"
                         />
-
-                        <div class="q-mt-md">
-                          <div class="text-caption text-grey-7 q-mb-xs">
-                            {{ $text("task.note.photo") }}
-                          </div>
-                          <input
-                            ref="photoInput"
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            style="display: none"
-                            @change="onPhotoSelected"
-                          />
-                          <input
-                            ref="attachmentInput"
-                            type="file"
-                            multiple
-                            style="display: none"
-                            @change="onAttachmentsSelected"
-                          />
-                          <div class="row items-center" style="gap: 8px; flex-wrap: wrap">
-                            <q-btn
-                              outline
-                              color="primary"
-                              icon="photo_camera"
-                              :label="$text('task.note.take_photo')"
-                              @click="triggerPhotoCapture"
-                            />
-                            <q-btn
-                              outline
-                              color="primary"
-                              icon="attach_file"
-                              :label="$text('task.note.attach_files')"
-                              @click="triggerAttachFiles"
-                            />
-                            <q-btn
-                              v-if="localNewTask.photo"
-                              flat
-                              color="negative"
-                              icon="close"
-                              :label="$text('action.clear')"
-                              @click="clearPhoto"
-                            />
-                          </div>
-                          <q-img
-                            v-if="localNewTask.photo"
-                            :src="localNewTask.photo"
-                            class="q-mt-sm note-photo-preview"
-                            ratio="16/9"
-                            fit="contain"
-                          />
-                          <q-list
-                            v-if="localNewTask.attachments?.length"
-                            dense
-                            bordered
-                            class="q-mt-sm note-attachments-list"
-                          >
-                            <q-item
-                              v-for="(att, idx) in localNewTask.attachments"
-                              :key="`${att.name}-${idx}`"
-                            >
-                              <q-item-section avatar>
-                                <q-avatar v-if="isImageAttachment(att.dataUrl)" square size="40px">
-                                  <img :src="att.dataUrl" :alt="att.name" />
-                                </q-avatar>
-                                <q-icon v-else name="attach_file" size="28px" />
-                              </q-item-section>
-                              <q-item-section>{{ att.name }}</q-item-section>
-                              <q-item-section side>
-                                <q-btn
-                                  flat
-                                  dense
-                                  round
-                                  icon="close"
-                                  :aria-label="$text('action.remove')"
-                                  @click="removeAttachment(idx)"
-                                />
-                              </q-item-section>
-                            </q-item>
-                          </q-list>
-                        </div>
-
-                        <div class="q-mt-md">
-                          <div class="text-caption text-grey-7 q-mb-xs">
-                            {{ $text("task.note.icon_and_color") }}
-                          </div>
-                          <div class="row items-center" style="gap: 12px; flex-wrap: wrap">
-                            <q-btn
-                              round
-                              unelevated
-                              :style="{
-                                backgroundColor: localNewTask.noteColor || '#9e9e9e',
-                                color: getContrastColor(localNewTask.noteColor || '#9e9e9e'),
-                              }"
-                              :icon="localNewTask.noteIcon || 'description'"
-                              @click="noteIconMenu = true"
-                            />
-                            <q-menu v-model="noteIconMenu">
-                              <q-list dense style="min-width: 220px; max-height: 280px; overflow-y: auto">
-                                <q-item
-                                  v-for="icon in noteIconOptions"
-                                  :key="icon"
-                                  clickable
-                                  v-close-popup
-                                  @click="localNewTask.noteIcon = icon"
-                                >
-                                  <q-item-section avatar>
-                                    <q-icon :name="icon" />
-                                  </q-item-section>
-                                  <q-item-section>{{ icon }}</q-item-section>
-                                </q-item>
-                              </q-list>
-                            </q-menu>
-                            <div class="row items-center" style="gap: 6px; flex-wrap: wrap">
-                              <div
-                                v-for="color in noteColorOptions"
-                                :key="color"
-                                class="color-swatch note-color-swatch"
-                                :style="{
-                                  background: color,
-                                  border:
-                                    color === localNewTask.noteColor
-                                      ? '2px solid #000'
-                                      : '1px solid rgba(0,0,0,0.12)',
-                                }"
-                                @click="localNewTask.noteColor = color"
-                              />
-                            </div>
-                          </div>
-                        </div>
                       </template>
 
                       <q-card
@@ -2330,9 +2249,88 @@ function onSubmit(event: Event) {
                       </div>
                     </div>
                   </div>
+                  <div
+                    v-if="showTaskMediaPreviews"
+                    class="task-media-previews q-mt-sm"
+                  >
+                    <q-btn
+                      v-if="localNewTask.photo"
+                      flat
+                      dense
+                      color="negative"
+                      icon="close"
+                      class="q-mb-xs"
+                      :label="$text('action.clear')"
+                      @click="clearPhoto"
+                    />
+                    <q-img
+                      v-if="localNewTask.photo"
+                      :src="localNewTask.photo"
+                      class="note-photo-preview"
+                      ratio="16/9"
+                      fit="contain"
+                    />
+                    <q-list
+                      v-if="localNewTask.attachments?.length"
+                      dense
+                      bordered
+                      class="q-mt-sm note-attachments-list"
+                    >
+                      <q-item
+                        v-for="(att, idx) in localNewTask.attachments"
+                        :key="`${att.name}-${idx}`"
+                      >
+                        <q-item-section avatar>
+                          <q-avatar v-if="isImageAttachment(att.dataUrl)" square size="40px">
+                            <img :src="att.dataUrl" :alt="att.name" />
+                          </q-avatar>
+                          <q-icon v-else name="attach_file" size="28px" />
+                        </q-item-section>
+                        <q-item-section>{{ att.name }}</q-item-section>
+                        <q-item-section side>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="close"
+                            :aria-label="$text('action.remove')"
+                            @click="removeAttachment(idx)"
+                          />
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </div>
                   <div class="row" style="gap: 12px; align-items: center">
                     <div class="col-auto">
-                      <div class="row items-center" style="gap: 12px">
+                      <div class="row items-center" style="gap: 8px">
+                        <q-btn
+                          v-if="showTaskMediaActions"
+                          unelevated
+                          class="form-toolbar-btn form-toolbar-btn--attach"
+                          icon="attach_file"
+                          :aria-label="$text('task.note.attach_files')"
+                          @click="triggerAttachFiles"
+                        />
+                        <q-btn
+                          v-if="showTaskMediaActions && hasCamera"
+                          unelevated
+                          class="form-toolbar-btn form-toolbar-btn--photo"
+                          icon="photo_camera"
+                          :aria-label="$text('task.note.take_photo')"
+                          @click="triggerPhotoCapture"
+                        />
+                        <q-btn
+                          v-if="showNoteAppearanceBtn"
+                          unelevated
+                          class="form-toolbar-btn form-toolbar-btn--appearance"
+                          :style="{
+                            backgroundColor: localNewTask.noteColor || '#9e9e9e',
+                            color: getContrastColor(localNewTask.noteColor || '#9e9e9e'),
+                          }"
+                          :icon="localNewTask.noteIcon || 'description'"
+                          :aria-label="$text('task.note.icon_and_color')"
+                          @click="noteAppearanceDialog = true"
+                        />
                         <q-btn
                           type="submit"
                           unelevated
@@ -2461,6 +2459,46 @@ function onSubmit(event: Event) {
           </div>
         </div>
       </q-form>
+
+      <q-dialog v-model="noteAppearanceDialog">
+        <q-card class="note-appearance-dialog">
+          <q-card-section class="text-subtitle2">
+            {{ $text("task.note.icon_and_color") }}
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <div class="note-icon-grid">
+              <q-btn
+                v-for="icon in noteIconOptions"
+                :key="icon"
+                flat
+                round
+                dense
+                :icon="icon"
+                :color="localNewTask.noteIcon === icon ? 'primary' : 'grey-7'"
+                @click="localNewTask.noteIcon = icon"
+              />
+            </div>
+            <div class="row items-center q-mt-md note-color-row">
+              <div
+                v-for="color in noteColorOptions"
+                :key="color"
+                class="color-swatch note-color-swatch"
+                :style="{
+                  background: color,
+                  border:
+                    color === localNewTask.noteColor
+                      ? '2px solid #000'
+                      : '1px solid rgba(0,0,0,0.12)',
+                }"
+                @click="localNewTask.noteColor = color"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn v-close-popup flat :label="$text('action.close')" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </q-card-section>
   </q-card>
 </template>
@@ -2652,6 +2690,41 @@ function onSubmit(event: Event) {
   max-width: 320px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.12);
+}
+.task-media-previews {
+  width: 100%;
+}
+.form-toolbar-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  padding: 0 !important;
+  border-radius: 8px;
+}
+.form-toolbar-btn :deep(.q-icon) {
+  font-size: 24px;
+}
+.form-toolbar-btn--attach {
+  background: #5c6bc0 !important;
+  color: #fff !important;
+}
+.form-toolbar-btn--photo {
+  background: #43a047 !important;
+  color: #fff !important;
+}
+.note-appearance-dialog {
+  min-width: 280px;
+  max-width: 92vw;
+}
+.note-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 4px;
+}
+.note-color-row {
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .note-attachments-list {
   max-width: 420px;
