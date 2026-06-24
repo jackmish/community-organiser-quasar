@@ -85,6 +85,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** When true, show Note type only (notes view). */
+  notesMode: {
+    type: Boolean,
+    default: false,
+  },
 });
 const emit = defineEmits([
   "add-task",
@@ -911,7 +916,10 @@ const typeOptions = computed(() => {
       },
     ];
   }
-  return calendarTypeOptions;
+  if (props.notesMode) {
+    return calendarTypeOptions.filter((opt) => opt.value === "NoteLater");
+  }
+  return calendarTypeOptions.filter((opt) => opt.value !== "NoteLater");
 });
 
 // ── Date/time logic (extracted to composable) ─────────────────────────────────

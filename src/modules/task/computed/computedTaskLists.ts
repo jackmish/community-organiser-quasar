@@ -13,6 +13,7 @@ import {
 import type { Ref } from 'vue';
 import type { Task } from 'src/modules/task/models/TaskModel';
 import { isMediaTaskTypeId } from 'src/modules/media/mediaTaskTypes';
+import { isNoteTaskType } from '../utils/calendarTaskTypes';
 
 export function createTaskComputed(args: {
   currentDayData: Ref<{ tasks: Task[] }>;
@@ -149,6 +150,7 @@ export function createTaskComputed(args: {
         if (Number(t.status_id) === 0) continue;
         if (isMediaTaskTypeId(String(t.type_id || ''))) continue;
         if (t.type_id === 'Replenish') continue;
+        if (isNoteTaskType(t)) continue;
         if (occursOnDay(t, day)) {
           const seriesKey = cyclicSeriesKey(t);
           const alreadyListed =
@@ -270,6 +272,7 @@ export function createTaskComputed(args: {
    */
   function isActiveForDay(t: Task, day: string): boolean {
     if (t.type_id === 'Replenish') return false;
+    if (isNoteTaskType(t)) return false;
     try {
       const base = (allTasks.value || []).find((x: any) => x.id === t.id) || t;
       const mode = (t && t.timeMode) || (base && base.timeMode) || 'event';

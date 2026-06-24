@@ -1625,7 +1625,7 @@ const {
   group: CC.group,
 });
 
-const NOTE_TASK_TYPE_ID = "NoteLater";
+import { NOTE_TASK_TYPE_ID } from "src/modules/task/utils/calendarTaskTypes";
 
 const noteListTasks = computed(() => {
   try {
@@ -1671,7 +1671,9 @@ const displayTasksWithoutTime = computed(() =>
 );
 
 const displayTaskListCount = computed(() =>
-  isNotesMode.value ? noteListTasks.value.length : sortedTasks.value.length,
+  isNotesMode.value
+    ? noteListTasks.value.length
+    : tasksWithTime.value.length + tasksWithoutTime.value.length,
 );
 
 // group options, activeGroupOptions and groupTree are provided by createTaskComputed
@@ -2545,6 +2547,7 @@ provide(dayOrganiserPanelKey, {
   filterParentTasks,
   addFormDefaultTypeId,
   isFilesMode,
+  isNotesMode,
   CC,
 } as DayOrganiserPanelContext);
 
