@@ -10,7 +10,7 @@
       @update:model-value="onDialogToggle"
     >
       <div class="media-gallery-preview" @click="close">
-        <div ref="stageEl" class="media-gallery-preview__stage" @click.stop="close">
+        <div ref="stageEl" class="media-gallery-preview__stage" @click.stop="onStageClick">
           <img
             v-if="imageUrl"
             ref="imageEl"
@@ -34,11 +34,11 @@
             :select-mode="faceRecognitionSelectMode"
             :annotations="faceRecognitionAnnotations"
             :known-names="faceRecognitionKnownNames"
-            :highlighted-label="faceRecognitionHighlightedLabel"
             :stage-el="stageEl"
             :image-el="imageEl"
             @add="onFaceAnnotationAdded"
             @cancel-select="onFaceSelectCancel"
+            @remove="removeFaceAnnotation($event)"
           />
         </div>
 
@@ -92,12 +92,7 @@
               <MediaFaceRecognitionPanel
                 v-if="faceRecognitionEnabled"
                 :select-mode="faceRecognitionSelectMode"
-                :annotations="faceRecognitionAnnotations"
-                :known-names="faceRecognitionKnownNames"
-                :highlighted-label="faceRecognitionHighlightedLabel"
                 @toggle-select="toggleFaceRecognitionSelectMode()"
-                @highlight="highlightFaceLabel($event)"
-                @remove="removeFaceAnnotation($event)"
               />
             </div>
           </div>
@@ -194,12 +189,10 @@ const {
   selectMode: faceRecognitionSelectMode,
   annotations: faceRecognitionAnnotations,
   knownNames: faceRecognitionKnownNames,
-  highlightedLabel: faceRecognitionHighlightedLabel,
   toggleEnabled: toggleFaceRecognitionEnabled,
   toggleSelectMode: toggleFaceRecognitionSelectMode,
   addAnnotation: addFaceAnnotation,
   removeAnnotation: removeFaceAnnotation,
-  highlightLabel: highlightFaceLabel,
 } = useMediaFaceRecognition(imageAnnotationKey);
 
 const displayName = computed(() => {
@@ -400,6 +393,11 @@ function onFaceAnnotationAdded(rect: FaceAnnotationRect): void {
 
 function onFaceSelectCancel(): void {
   faceRecognitionSelectMode.value = false;
+}
+
+function onStageClick(): void {
+  if (faceRecognitionSelectMode.value) return;
+  close();
 }
 </script>
 

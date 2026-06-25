@@ -6,7 +6,9 @@
     :class="{
       'media-face-overlay--select': selectMode,
       'media-face-overlay--idle': !selectMode,
+      'media-face-overlay--naming': !!pendingRect,
     }"
+    @click.stop="onOverlayClick"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -16,14 +18,30 @@
       v-for="rect in annotations"
       :key="rect.id"
       class="media-face-overlay__box"
-      :class="{
-        'media-face-overlay__box--highlight': isHighlighted(rect),
-        'media-face-overlay__box--dim': highlightedLabel && !isHighlighted(rect),
-      }"
+      :class="{ 'media-face-overlay__box--hover': hoveredId === rect.id }"
       :style="boxStyle(rect)"
+      @mouseenter="hoveredId = rect.id"
+      @mouseleave="hoveredId = ''"
       @click.stop
     >
-      <span v-if="rect.label" class="media-face-overlay__label">{{ rect.label }}</span>
+      <div
+        v-if="rect.label || hoveredId === rect.id"
+        class="media-face-overlay__label-row"
+      >
+        <span class="media-face-overlay__label">
+          {{ rect.label || $text('files.face_unnamed') }}
+        </span>
+        <button
+          v-if="hoveredId === rect.id"
+          type="button"
+          class="media-face-overlay__remove"
+          :aria-label="$text('action.delete')"
+          :title="$text('action.delete')"
+          @click.stop="emit('remove', rect.id)"
+        >
+          <q-icon name="close" size="16px" />
+        </button>
+      </div>
     </div>
 
     <div
@@ -34,8 +52,14 @@
 
     <div
       v-if="pendingRect"
-      class="media-face-overlay__name-layer"
+      class="media-face-overlay__box media-face-overlay__box--pending"
       :style="screenStyle(pendingRect)"
+    />
+
+    <div
+      v-if="pendingRect"
+      class="media-face-overlay__name-anchor"
+      :style="nameCardStyle"
       @click.stop
       @pointerdown.stop
     >
@@ -53,7 +77,7 @@
           @keydown.enter.prevent="confirmPending"
           @keydown.escape.prevent="cancelPending"
         />
-        <div v-if="nameFocused && nameHints.length" class="media-face-overlay__hints">
+        <div v-if="nameHints.length" class="media-face-overlay__hints">
           <button
             v-for="hint in nameHints"
             :key="hint"
@@ -64,7 +88,7 @@
             {{ hint }}
           </button>
         </div>
-        <div v-if="nameFocused" class="media-face-overlay__name-actions">
+        <div class="media-face-overlay__name-actions">
           <q-btn
             flat
             dense
@@ -98,9 +122,12 @@ import { computed, nextTick, onUnmounted, ref, watch, type CSSProperties } from 
 import { $text } from 'src/modules/lang';
 import {
   computeImageDisplayMetrics,
+  computeNameCardPosition,
+  isPointInImageDisplay,
   normalizedRectToScreen,
-  pointInImageMetrics,
+  screenRectFromStageDrag,
   screenRectToNormalized,
+  stagePointFromClient,
   type ImageDisplayMetrics,
   type ScreenRect,
 } from '../faceAnnotationGeometry';
@@ -112,7 +139,6 @@ const props = defineProps<{
   selectMode: boolean;
   annotations: FaceAnnotationRect[];
   knownNames: string[];
-  highlightedLabel: string;
   stageEl: HTMLElement | null;
   imageEl: HTMLImageElement | null;
 }>();
@@ -120,6 +146,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   add: [rect: FaceAnnotationRect];
   cancelSelect: [];
+  remove: [id: string];
 }>();
 
 const overlayEl = ref<HTMLElement | null>(null);
@@ -131,10 +158,26 @@ const nameFocused = ref(false);
 const nameInputRef = ref<{ focus: () => void } | null>(null);
 const dragStart = ref<{ x: number; y: number } | null>(null);
 const activePointerId = ref<number | null>(null);
+const hoveredId = ref('');
+let suppressClickAfterDrag = false;
 
 let resizeObserver: ResizeObserver | null = null;
 
 const nameHints = computed(() => filterPersonNameHints(pendingName.value, props.knownNames));
+
+const nameCardStyle = computed((): CSSProperties => {
+  const rect = pendingRect.value;
+  const m = metrics.value;
+  const stage = props.stageEl;
+  if (!rect || !m || !stage) return { display: 'none' };
+
+  const stageRect = stage.getBoundingClientRect();
+  const pos = computeNameCardPosition(rect, m, stageRect.width, stageRect.height);
+  return {
+    left: `${pos.x}px`,
+    top: `${pos.y}px`,
+  };
+});
 
 function refreshMetrics(): void {
   const stage = props.stageEl;
@@ -195,11 +238,6 @@ watch(
   },
 );
 
-function isHighlighted(rect: FaceAnnotationRect): boolean {
-  if (!props.highlightedLabel) return false;
-  return rect.label.localeCompare(props.highlightedLabel, undefined, { sensitivity: 'base' }) === 0;
-}
-
 function boxStyle(rect: FaceAnnotationRect): CSSProperties {
   const m = metrics.value;
   if (!m) return {};
@@ -215,17 +253,17 @@ function screenStyle(rect: ScreenRect): CSSProperties {
   };
 }
 
-function localPoint(event: PointerEvent): { x: number; y: number } | null {
+function stagePoint(event: PointerEvent): { x: number; y: number } | null {
   const stage = props.stageEl;
-  const m = metrics.value;
-  if (!stage || !m) return null;
-  return pointInImageMetrics(event.clientX, event.clientY, stage.getBoundingClientRect(), m);
+  if (!stage) return null;
+  return stagePointFromClient(event.clientX, event.clientY, stage.getBoundingClientRect());
 }
 
 function onPointerDown(event: PointerEvent): void {
   if (!props.selectMode || pendingRect.value) return;
-  const point = localPoint(event);
-  if (!point) return;
+  const m = metrics.value;
+  const point = stagePoint(event);
+  if (!m || !point || !isPointInImageDisplay(point.x, point.y, m)) return;
   event.preventDefault();
   event.stopPropagation();
   activePointerId.value = event.pointerId;
@@ -236,19 +274,23 @@ function onPointerDown(event: PointerEvent): void {
 
 function onPointerMove(event: PointerEvent): void {
   if (activePointerId.value !== event.pointerId || !dragStart.value) return;
-  const point = localPoint(event);
-  if (!point) return;
-  const start = dragStart.value;
-  draftRect.value = {
-    x: Math.min(start.x, point.x),
-    y: Math.min(start.y, point.y),
-    width: Math.abs(point.x - start.x),
-    height: Math.abs(point.y - start.y),
-  };
+  const m = metrics.value;
+  const point = stagePoint(event);
+  if (!m || !point) return;
+  draftRect.value = screenRectFromStageDrag(dragStart.value, point, m);
+}
+
+function onOverlayClick(event: MouseEvent): void {
+  event.stopPropagation();
+  if (suppressClickAfterDrag) {
+    suppressClickAfterDrag = false;
+  }
 }
 
 function onPointerUp(event: PointerEvent): void {
   if (activePointerId.value !== event.pointerId) return;
+  event.preventDefault();
+  event.stopPropagation();
   overlayEl.value?.releasePointerCapture(event.pointerId);
   activePointerId.value = null;
   dragStart.value = null;
@@ -257,9 +299,10 @@ function onPointerUp(event: PointerEvent): void {
   draftRect.value = null;
   if (!draft || draft.width < 12 || draft.height < 12) return;
 
+  suppressClickAfterDrag = true;
   pendingRect.value = draft;
   pendingName.value = '';
-  nameFocused.value = false;
+  nameFocused.value = true;
   void nextTick(() => nameInputRef.value?.focus());
 }
 
@@ -318,40 +361,60 @@ function cancelPending(): void {
   pointer-events: none;
 }
 
-.media-face-overlay--select {
+.media-face-overlay--select,
+.media-face-overlay--naming {
   pointer-events: auto;
   cursor: crosshair;
+}
+
+.media-face-overlay--naming {
+  cursor: default;
+}
+
+.media-face-overlay--idle .media-face-overlay__box {
+  pointer-events: auto;
+  cursor: default;
 }
 
 .media-face-overlay__box {
   position: absolute;
   box-sizing: border-box;
   border: 2px solid rgba(120, 220, 255, 0.95);
-  background: rgba(80, 180, 255, 0.12);
+  background: transparent;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
-  transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.media-face-overlay__box--hover {
+  border-color: rgba(255, 214, 102, 0.98);
 }
 
 .media-face-overlay__box--draft {
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
-.media-face-overlay__box--highlight {
-  border-color: rgba(255, 214, 102, 0.98);
-  background: rgba(255, 214, 102, 0.2);
+.media-face-overlay__box--pending {
+  border-color: rgba(255, 193, 7, 0.98);
+  border-width: 3px;
+  background: transparent;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
 }
 
-.media-face-overlay__box--dim {
-  opacity: 0.35;
-}
-
-.media-face-overlay__label {
+.media-face-overlay__label-row {
   position: absolute;
   left: 0;
   bottom: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
   margin-bottom: 4px;
-  max-width: 220px;
+  pointer-events: auto;
+}
+
+.media-face-overlay__label {
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.72);
@@ -362,25 +425,43 @@ function cancelPending(): void {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
 }
 
-.media-face-overlay__name-layer {
+.media-face-overlay__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(198, 40, 40, 0.92);
+  color: #fff;
+  cursor: pointer;
+}
+
+.media-face-overlay__remove:hover {
+  background: rgba(229, 57, 53, 1);
+}
+
+.media-face-overlay__name-anchor {
   position: absolute;
+  z-index: 4;
+  width: 280px;
   pointer-events: auto;
 }
 
 .media-face-overlay__name-card {
-  position: absolute;
-  left: 0;
-  top: 0;
-  min-width: min(240px, 100%);
-  max-width: 280px;
-  padding: 8px;
-  border-radius: 8px;
-  background: rgba(12, 18, 28, 0.72);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  position: relative;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(12, 18, 28, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
 }
 
 .media-face-overlay__name-input {
