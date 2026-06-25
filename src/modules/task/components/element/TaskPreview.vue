@@ -1605,7 +1605,8 @@ function buildHtmlFromParsed(
 <style scoped>
 .task-preview {
   position: relative;
-  overflow: visible;
+  overflow: unset;
+  overflow-y: unset;
 }
 
 .task-preview__section {

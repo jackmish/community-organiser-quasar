@@ -379,7 +379,7 @@ $hidden-bg: #f2f2f2;
     margin-bottom: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .task-preview__section {
@@ -406,7 +406,7 @@ $hidden-bg: #f2f2f2;
     margin-bottom: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 }
 
@@ -635,6 +635,114 @@ $hidden-bg: #f2f2f2;
   }
 }
 
+/* Mobile task panel shell (day-organiser-task-panel-dialog, lt.md). */
+.day-organiser-task-panel-dialog {
+  .q-dialog__inner {
+    overflow: visible;
+  }
+
+  /* Quasar sets overflow:auto on `.q-dialog__inner > div` — clips the group bar above the card. */
+  .q-dialog__inner > .fixed-right-panel.fixed-right-panel--mobile-dialog {
+    overflow: visible !important;
+  }
+}
+
+.fixed-right-panel.fixed-right-panel--mobile-dialog {
+  position: relative;
+  width: 100%;
+  max-height: 92vh;
+  overflow: visible !important;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-top: 36px;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+
+  .fixed-content {
+    position: relative;
+    width: 100%;
+    max-height: none;
+    overflow: visible !important;
+    box-sizing: border-box;
+
+    > .panel-close-btn {
+      top: 0px !important;
+      right: 0px !important;
+      transform: none !important;
+      border-radius: 0px !important;
+      border-bottom-left-radius: 12px !important;
+    }
+
+    > .task-preview {
+      max-height: none !important;
+      overflow: visible !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      border-radius: 0 !important;
+
+      > .task-preview__section {
+        max-height: calc(100vh - 44px);
+        overflow-y: auto !important;
+        overflow-x: visible !important;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .task-preview-group-bar {
+        top: -21px !important;
+        left: -20px !important;
+
+        .group-select-chip {
+          border-radius: 0px !important;
+          border-bottom-right-radius: 12px !important;
+        }
+      }
+    }
+
+    > .floating-preview-wrapper {
+      max-height: none !important;
+      overflow: visible !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+
+      > .add-task-card > .q-card__section {
+        max-height: calc(100vh - 44px);
+        overflow-y: auto !important;
+        overflow-x: visible !important;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      > .add-task-card {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: 0 !important;
+      }
+
+      .add-task-group-bar {
+        top: -16px !important;
+        left: -20px !important;
+
+        .group-select-chip {
+          border-radius: 0px !important;
+          border-bottom-right-radius: 12px !important;
+        }
+      }
+    }
+
+    &.floating {
+      position: relative !important;
+      top: unset !important;
+      left: unset !important;
+      right: unset !important;
+      bottom: unset !important;
+      width: 100% !important;
+      transform: none !important;
+    }
+  }
+}
+
 @media (max-width: 767px) {
   .replenish-column {
     min-width: 0;
@@ -719,97 +827,6 @@ $hidden-bg: #f2f2f2;
       background: transparent !important;
       color: inherit !important;
       -webkit-text-fill-color: inherit !important;
-    }
-  }
-
-  .fixed-right-panel--mobile-dialog {
-    position: relative;
-    width: 100%;
-    max-height: 92vh;
-    overflow: visible;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    padding-top: 36px;
-    padding-left: 0;
-    padding-right: 0;
-    box-sizing: border-box;
-
-    .fixed-content {
-      position: relative;
-      width: 100%;
-      max-height: none;
-      overflow: visible !important;
-      box-sizing: border-box;
-
-      > .panel-close-btn {
-        top: 0px !important;
-        right: 0px !important;
-        transform: none !important;
-        border-radius: 0px !important;
-        border-bottom-left-radius: 12px !important;
-      }
-
-      > .task-preview {
-        max-height: calc(100vh - 44px);
-        overflow-y: auto !important;
-        overflow-x: visible !important;
-        -webkit-overflow-scrolling: touch;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        border-radius: 0 !important;
-
-        .task-preview-group-bar {
-          top: -16px !important;
-          left: -20px !important;
-
-          .group-select-chip {
-            border-radius: 0px !important;
-            border-bottom-right-radius: 12px !important;
-          }
-        }
-      }
-
-      > .floating-preview-wrapper {
-        max-height: none !important;
-        overflow: visible !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-
-        > .add-task-card > .q-card__section {
-          max-height: calc(100vh - 44px);
-          overflow-y: auto !important;
-          overflow-x: visible !important;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        > .add-task-card {
-          margin-left: 0 !important;
-          margin-right: 0 !important;
-          border-radius: 0 !important;
-        }
-
-        .add-task-group-bar {
-          top: -16px !important;
-          left: -20px !important;
-
-          .group-select-chip {
-            border-radius: 0px !important;
-            border-bottom-right-radius: 12px !important;
-          }
-        }
-      }
-
-      &.floating {
-        position: relative !important;
-        top: unset !important;
-        left: unset !important;
-        right: unset !important;
-        bottom: unset !important;
-        width: 100% !important;
-        transform: none !important;
-      }
     }
   }
 

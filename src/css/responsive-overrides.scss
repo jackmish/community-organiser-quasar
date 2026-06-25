@@ -14,9 +14,13 @@
     z-index: 999999999 !important;
   }
 
+  .fixed-right-panel.fixed-right-panel--mobile-dialog {
+    overflow: visible !important;
+  }
+
   /* Ensure the inner content still scrolls comfortably on short viewports */
   .fixed-right-panel .fixed-content {
     max-height: calc(100vh - 64px) !important;
-    overflow-y: auto !important;
+    overflow: visible !important;
   }
 }
