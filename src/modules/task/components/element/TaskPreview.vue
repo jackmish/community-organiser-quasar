@@ -10,11 +10,159 @@
     ]"
     :style="previewCardStyle"
   >
+    <div class="add-task-group-bar task-preview-group-bar">
+      <div class="group-bar-inner">
+        <div style="display: inline-block; margin-left: 8px">
+          <q-chip
+            size="md"
+            class="q-pointer group-select-chip"
+            clickable
+            :style="getGroupChipStyle(activeGroupId)"
+            @click.stop="groupMenu = true"
+          >
+            <q-icon
+              :name="getGroupIcon(activeGroupId)"
+              :style="{ color: getGroupTextColor(activeGroupId) }"
+              class="q-mr-xs"
+            />
+            {{
+              getGroupName(activeGroupId) ||
+              groupName ||
+              $text("group.none")
+            }}
+          </q-chip>
+          <q-menu
+            v-model="groupMenu"
+            anchor="bottom right"
+            self="top right"
+            class="group-menu"
+          >
+            <q-list dense separator>
+              <q-item clickable dense @click="selectGroup(null)">
+                <q-item-section
+                  side
+                  style="
+                    width: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <q-icon name="clear" />
+                </q-item-section>
+                <q-item-section>
+                  <div style="font-weight: 600">{{ $text("group.none") }}</div>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item
+                v-for="g in groups || []"
+                :key="g.id"
+                clickable
+                dense
+                @click="selectGroup(g.id)"
+              >
+                <q-item-section
+                  side
+                  style="
+                    width: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <q-icon
+                    :name="g.icon || 'folder'"
+                    :style="{ color: g.color || 'inherit' }"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <div style="font-weight: 600">{{ resolveLocalGroupName(g) }}</div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </div>
+      </div>
+    </div>
     <q-card-section class="task-preview__section">
-      <!-- header: title on left, copy on right -->
-      <div class="row items-center justify-between q-mb-sm">
-        <div class="text-h5">{{ task.name }}</div>
-        <div style="display: flex; gap: 8px; align-items: center">
+      <div class="row items-start justify-between task-preview__header">
+        <div class="task-preview__title-stack">
+          <div class="task-preview__title-row">
+            <div class="text-h5 task-preview__title">{{ task.name }}</div>
+            <q-btn
+              dense
+              square
+              unelevated
+              size="sm"
+              class="task-preview__priority-btn"
+              :class="priorityChipClass(task.priority)"
+              :style="priorityChipStyle(task.priority)"
+              :icon="(priorityIcons as any)[task.priority] || 'label'"
+              :aria-label="String(task.priority || '')"
+              :title="String(task.priority || '')"
+            >
+              <q-menu
+                v-model="priorityMenu"
+                anchor="bottom right"
+                self="top right"
+                content-class="priority-menu"
+              >
+                <q-list style="min-width: 0; padding: 4px 0" dense>
+                  <q-item
+                    v-for="p in Object.keys(priorityDefinitions)"
+                    :key="p"
+                    clickable
+                    dense
+                    @click="selectPriority(p)"
+                    :class="['use-default', menuItemClass(p)]"
+                    :style="menuItemStyle(p)"
+                  >
+                    <q-item-section
+                      side
+                      style="
+                        width: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      "
+                    >
+                      <q-icon
+                        :name="(priorityIcons as any)[p] || 'label'"
+                        :color="priorityTextColor(p)"
+                      />
+                    </q-item-section>
+                    <q-item-section>
+                      <div :style="{ color: priorityTextColor(p), fontWeight: 600 }">
+                        {{ p }}
+                      </div>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+          </div>
+          <div
+            v-if="showPreviewDatetime"
+            class="preview-datetime task-preview__datetime"
+          >
+            <template v-if="isTodo">
+              <span v-if="todoCreatedCaption" class="preview-date preview-date--created">{{
+                todoCreatedCaption
+              }}</span>
+            </template>
+            <template v-else>
+              <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{
+                displayDate
+              }}</span>
+              <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
+              <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{
+                eventTimeHoursDisplay
+              }}</span>
+            </template>
+          </div>
+        </div>
+        <div class="task-preview__actions">
           <q-checkbox
             dense
             keep-color
@@ -105,125 +253,6 @@
         </div>
       </div>
       <div :class="{ 'task-preview__body': isPreviewBodyFill }">
-        <div class="row items-baseline justify-between q-mb-sm preview-datetime-row">
-          <div class="text-caption text-grey-7 preview-datetime">
-            <span :class="['preview-date', { insignificant: !isTimeEvent }]">{{
-              displayDate
-            }}</span>
-            <span v-if="task.eventTime" class="preview-time">{{ task.eventTime }}</span>
-            <span v-if="eventTimeHoursDisplay" class="text-caption text-grey-6 q-ml-sm">{{
-              eventTimeHoursDisplay
-            }}</span>
-          </div>
-          <div style="display: flex; gap: 8px; align-items: center">
-            <q-chip
-              size="sm"
-              clickable
-              :class="priorityChipClass(task.priority)"
-              :style="priorityChipStyle(task.priority)"
-            >
-              {{ task.priority }}
-              <q-menu
-                v-model="priorityMenu"
-                anchor="bottom right"
-                self="top right"
-                content-class="priority-menu"
-              >
-                <q-list style="min-width: 0; padding: 4px 0" dense>
-                  <q-item
-                    v-for="p in Object.keys(priorityDefinitions)"
-                    :key="p"
-                    clickable
-                    dense
-                    @click="selectPriority(p)"
-                    :class="['use-default', menuItemClass(p)]"
-                    :style="menuItemStyle(p)"
-                  >
-                    <q-item-section
-                      side
-                      style="
-                        width: 36px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                      "
-                    >
-                      <q-icon
-                        :name="(priorityIcons as any)[p] || 'label'"
-                        :color="priorityTextColor(p)"
-                      />
-                    </q-item-section>
-                    <q-item-section>
-                      <div :style="{ color: priorityTextColor(p), fontWeight: 600 }">
-                        {{ p }}
-                      </div>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-menu>
-            </q-chip>
-            <div class="q-ml-sm">
-              <q-chip
-                size="sm"
-                icon="folder"
-                class="q-pointer"
-                clickable
-                @click.stop="groupMenu = true"
-              >
-                {{ groupName || $text("group.none") }}
-              </q-chip>
-              <q-menu
-                v-model="groupMenu"
-                anchor="bottom right"
-                self="top right"
-                class="group-menu"
-              >
-                <q-list dense separator>
-                  <q-item clickable dense @click="selectGroup(null)">
-                    <q-item-section
-                      side
-                      style="
-                        width: 36px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                      "
-                    >
-                      <q-icon name="clear" />
-                    </q-item-section>
-                    <q-item-section>
-                      <div style="font-weight: 600">{{ $text("group.none") }}</div>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator />
-                  <q-item
-                    v-for="g in groups || []"
-                    :key="g.id"
-                    clickable
-                    dense
-                    @click="selectGroup(g.id)"
-                  >
-                    <q-item-section
-                      side
-                      style="
-                        width: 36px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                      "
-                    >
-                      <q-icon name="folder" />
-                    </q-item-section>
-                    <q-item-section>
-                      <div style="font-weight: 600">{{ g.name }}</div>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-menu>
-            </div>
-          </div>
-        </div>
-
         <MediaFolderBrowser
           v-if="showMediaFolderBrowser"
           :root-path="mediaRootFolder"
@@ -656,6 +685,7 @@ import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
 import {
   collectNoteGraphicItems,
   firstImageTaskAttachment,
+  formatNoteTaskCreatedAt,
   isImageDataUrl,
   resolveTaskAttachments,
   resolveTaskPhoto,
@@ -664,6 +694,8 @@ import {
   type NoteGraphicItem,
 } from "src/modules/task/utils/noteTaskMedia";
 import { openNoteAttachmentFile, revealNoteAttachmentFile } from "src/modules/task/utils/noteTaskAttachmentStorage";
+import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
+import { getContrastColor } from "src/utils/colorUtils";
 
 const $q = useQuasar();
 
@@ -691,6 +723,55 @@ const itemRefs = ref<Array<HTMLElement | null>>([] as Array<HTMLElement | null>)
 const priorityMenu = ref(false);
 const groupMenu = ref(false);
 const groups = CC.group.list.all;
+
+function getGroupIcon(gid: string | undefined) {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return "folder";
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    return (found && found.icon) || "folder";
+  } catch (e) {
+    return "folder";
+  }
+}
+
+function getGroupName(gid: string | undefined) {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return null;
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    return found ? resolveLocalGroupName(found) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getGroupChipStyle(gid: string | undefined): Record<string, string> {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return {};
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    if (!found || !found.color) return {};
+    const bg = found.color;
+    const text =
+      found.textColor || found.text_color || getContrastColor(bg);
+    return { backgroundColor: bg + " !important", color: text + " !important" };
+  } catch (e) {
+    return {};
+  }
+}
+
+function getGroupTextColor(gid: string | undefined): string {
+  try {
+    const list: any[] = (groups && groups.value) || groups || [];
+    if (!gid) return "inherit";
+    const found = list.find((x: any) => String(x.id) === String(gid));
+    if (!found || !found.color) return "inherit";
+    return found.textColor || found.text_color || getContrastColor(found.color);
+  } catch (e) {
+    return "inherit";
+  }
+}
 // track pending transition fallback timers per element
 const transitionFallbacks = new Map<HTMLElement, number>();
 
@@ -723,6 +804,11 @@ async function selectGroup(gid: string | null) {
     const updates: any = {};
     updates.groupId = gid == null ? undefined : gid;
     await updateTask(date, activeTask.value.id, updates);
+    const updated =
+      CC.task.list.items().find((t) => String(t.id) === String(activeTask.value?.id)) ?? null;
+    if (updated && activeTask.value) {
+      activeTask.value = updated;
+    }
   } catch (e) {
     logger.error("Failed to update task group", e);
   } finally {
@@ -890,9 +976,16 @@ function menuItemClass(p?: string) {
 }
 
 const groupName = computed(() => props.groupName || "");
+const activeGroupId = computed(() => activeTask.value?.groupId);
 
 const isTimeEvent = computed(() => (activeTask.value?.type_id || "") === "TimeEvent");
 const isTodo = computed(() => (activeTask.value?.type_id || "") === "Todo");
+const todoCreatedCaption = computed(() => formatNoteTaskCreatedAt(activeTask.value));
+const showPreviewDatetime = computed(() => {
+  if (isTodo.value) return true;
+  const task = activeTask.value || ({} as Task);
+  return !!(task.date || task.eventDate || task.eventTime);
+});
 const isMediaFilesTask = computed(
   () => (activeTask.value?.type_id || "") === MEDIA_TASK_TYPE.Files,
 );
@@ -1510,6 +1603,115 @@ function buildHtmlFromParsed(
 </script>
 
 <style scoped>
+.task-preview {
+  position: relative;
+  overflow: visible;
+}
+
+.task-preview__section {
+  position: relative;
+}
+
+.task-preview-group-bar.add-task-group-bar {
+  position: absolute;
+  top: -26px;
+  left: 16px;
+  right: 16px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  z-index: 6;
+  pointer-events: auto;
+}
+
+.task-preview-group-bar .group-bar-inner {
+  background: transparent;
+  backdrop-filter: none;
+  padding: 0;
+  border-radius: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: none;
+}
+
+.task-preview__header {
+  margin-bottom: 8px;
+}
+
+.task-preview__title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-right: 8px;
+}
+
+.task-preview__title-row {
+  line-height: 1.25;
+}
+
+.task-preview__title {
+  display: inline;
+}
+
+.task-preview__priority-btn {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.task-preview__priority-btn :deep(.q-icon) {
+  font-size: 18px;
+}
+
+.task-preview__datetime {
+  margin-top: 0;
+  line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  .task-preview__title-stack {
+    gap: 0;
+  }
+
+  .task-preview__title-row {
+    line-height: 1.1;
+  }
+
+  .task-preview__title-row .text-h5 {
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .task-preview__datetime {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+
+  .task-preview__header {
+    margin-bottom: 0;
+  }
+}
+
+.task-preview__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.group-select-chip {
+  font-size: 1rem;
+  padding: 6px 12px;
+  min-width: 120px;
+}
+
 .meeting-schedule-preview {
   padding: 10px 12px;
   border-radius: 8px;
@@ -1724,6 +1926,12 @@ function buildHtmlFromParsed(
 .preview-date.insignificant {
   color: #9e9e9e;
   font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.preview-date--created {
+  color: #757575;
+  font-size: 12px;
   font-weight: 400;
 }
 
