@@ -10,9 +10,10 @@
       @update:model-value="onDialogToggle"
     >
       <div class="media-gallery-preview" @click="close">
-        <div class="media-gallery-preview__stage" @click.stop="close">
+        <div ref="stageEl" class="media-gallery-preview__stage" @click.stop="close">
           <img
             v-if="imageUrl"
+            ref="imageEl"
             :src="imageUrl"
             class="media-gallery-preview__image"
             :class="{ 'media-gallery-preview__image--loading': loading }"
@@ -26,6 +27,18 @@
             color="white"
             size="32px"
             class="media-gallery-preview__loading"
+          />
+          <MediaFaceRecognitionOverlay
+            v-if="faceRecognitionEnabled && imageUrl"
+            :enabled="faceRecognitionEnabled"
+            :select-mode="faceRecognitionSelectMode"
+            :annotations="faceRecognitionAnnotations"
+            :known-names="faceRecognitionKnownNames"
+            :highlighted-label="faceRecognitionHighlightedLabel"
+            :stage-el="stageEl"
+            :image-el="imageEl"
+            @add="onFaceAnnotationAdded"
+            @cancel-select="onFaceSelectCancel"
           />
         </div>
 
@@ -53,9 +66,40 @@
         </button>
 
         <div class="media-gallery-preview__header">
-          <div class="media-gallery-preview__title ellipsis">
-            {{ displayName }}
+          <div class="media-gallery-preview__header-start">
+            <div class="media-gallery-preview__title ellipsis">{{ displayName }}</div>
             <span v-if="positionLabel" class="media-gallery-preview__position">{{ positionLabel }}</span>
+            <div
+              v-if="imageUrl"
+              class="media-gallery-preview__face-tools"
+              :class="{ 'media-gallery-preview__face-tools--active': faceRecognitionEnabled }"
+            >
+              <q-btn
+                flat
+                round
+                class="media-gallery-preview__face-toggle"
+                :class="{ 'media-gallery-preview__face-toggle--on': faceRecognitionEnabled }"
+                :aria-label="$text('files.face_recognition_toggle')"
+                :title="$text('files.face_recognition_toggle')"
+                @click.stop="toggleFaceRecognitionEnabled()"
+              >
+                <q-icon
+                  :name="faceRecognitionEnabled ? 'face' : 'face_retouching_off'"
+                  :color="faceRecognitionEnabled ? 'amber-4' : 'white'"
+                  size="34px"
+                />
+              </q-btn>
+              <MediaFaceRecognitionPanel
+                v-if="faceRecognitionEnabled"
+                :select-mode="faceRecognitionSelectMode"
+                :annotations="faceRecognitionAnnotations"
+                :known-names="faceRecognitionKnownNames"
+                :highlighted-label="faceRecognitionHighlightedLabel"
+                @toggle-select="toggleFaceRecognitionSelectMode()"
+                @highlight="highlightFaceLabel($event)"
+                @remove="removeFaceAnnotation($event)"
+              />
+            </div>
           </div>
           <q-btn
             flat
@@ -86,8 +130,16 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { getMediaFullImageUrl, type MediaFolderEntry } from '../mediaFolderService';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
+import MediaFaceRecognitionOverlay from './MediaFaceRecognitionOverlay.vue';
+import MediaFaceRecognitionPanel from './MediaFaceRecognitionPanel.vue';
 import type { MediaGalleryTagDefinition } from '../mediaGalleryTagModel';
 import type { DirectGalleryPreviewEntry } from '../mediaGalleryPreviewTypes';
+import { useMediaFaceRecognition } from '../composables/useMediaFaceRecognition';
+import {
+  directImageAnnotationKey,
+  fileImageAnnotationKey,
+} from '../mediaFaceAnnotationStorage';
+import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
 
 const props = withDefaults(
   defineProps<{
@@ -119,9 +171,36 @@ const emit = defineEmits<{
 
 const imageUrl = ref('');
 const loading = ref(false);
+const stageEl = ref<HTMLElement | null>(null);
+const imageEl = ref<HTMLImageElement | null>(null);
 let loadGen = 0;
 
 const useDirectUrls = computed(() => (props.directEntries?.length ?? 0) > 0);
+
+const imageAnnotationKey = computed(() => {
+  if (useDirectUrls.value) {
+    const entry = props.directEntry;
+    if (!entry) return '';
+    return directImageAnnotationKey(entry.name, entry.imageUrl);
+  }
+  const entry = props.entry;
+  const root = String(props.rootPath || '').trim();
+  if (!entry || !root) return '';
+  return fileImageAnnotationKey(root, entry.path);
+});
+
+const {
+  enabled: faceRecognitionEnabled,
+  selectMode: faceRecognitionSelectMode,
+  annotations: faceRecognitionAnnotations,
+  knownNames: faceRecognitionKnownNames,
+  highlightedLabel: faceRecognitionHighlightedLabel,
+  toggleEnabled: toggleFaceRecognitionEnabled,
+  toggleSelectMode: toggleFaceRecognitionSelectMode,
+  addAnnotation: addFaceAnnotation,
+  removeAnnotation: removeFaceAnnotation,
+  highlightLabel: highlightFaceLabel,
+} = useMediaFaceRecognition(imageAnnotationKey);
 
 const displayName = computed(() => {
   if (useDirectUrls.value) return props.directEntry?.name || '';
@@ -313,6 +392,15 @@ function onTagged(): void {
 function onTagError(message: string): void {
   emit('error', message);
 }
+
+function onFaceAnnotationAdded(rect: FaceAnnotationRect): void {
+  addFaceAnnotation(rect);
+  faceRecognitionSelectMode.value = false;
+}
+
+function onFaceSelectCancel(): void {
+  faceRecognitionSelectMode.value = false;
+}
 </script>
 
 <style scoped>
@@ -332,6 +420,7 @@ function onTagError(message: string): void {
   align-items: center;
   justify-content: center;
   cursor: zoom-out;
+  overflow: hidden;
 }
 
 .media-gallery-preview__image {
@@ -428,18 +517,61 @@ function onTagError(message: string): void {
   pointer-events: auto;
 }
 
+.media-gallery-preview__header-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  pointer-events: auto;
+}
+
+.media-gallery-preview__face-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.media-gallery-preview__face-tools--active {
+  padding: 6px 10px 6px 6px;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+.media-gallery-preview__face-toggle {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.38);
+}
+
+.media-gallery-preview__face-toggle--on {
+  background: rgba(255, 193, 7, 0.28);
+  border-color: rgba(255, 193, 7, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
 .media-gallery-preview__title {
   font-weight: 600;
   min-width: 0;
-  pointer-events: auto;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .media-gallery-preview__position {
-  margin-left: 8px;
+  flex-shrink: 0;
   font-weight: 500;
   font-size: 0.875rem;
   opacity: 0.78;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .media-gallery-preview__tags {
