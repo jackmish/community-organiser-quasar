@@ -466,3 +466,11 @@ contextBridge.exposeInMainWorld('electronLan', {
     return () => ipcRenderer.removeListener('lan:sync-contract-accepted', fn);
   },
 });
+
+contextBridge.exposeInMainWorld('electronAiServer', {
+  defaultConfig: (backendPath) => ipcRenderer.invoke('ai-server:default-config', backendPath),
+  status: () => ipcRenderer.invoke('ai-server:status'),
+  health: (baseUrl) => ipcRenderer.invoke('ai-server:health', baseUrl),
+  start: (payload) => ipcRenderer.invoke('ai-server:start', payload),
+  stop: () => ipcRenderer.invoke('ai-server:stop'),
+});

@@ -92,7 +92,12 @@
               <MediaFaceRecognitionPanel
                 v-if="faceRecognitionEnabled"
                 :select-mode="faceRecognitionSelectMode"
+                :ai-bridge-available="aiBridgeAvailable"
+                :ai-enabled="aiEnabled"
+                :ai-healthy="aiHealthy"
+                :ai-busy="aiBusy"
                 @toggle-select="toggleFaceRecognitionSelectMode()"
+                @start-backend-server="onStartBackendServer"
               />
             </div>
           </div>
@@ -135,6 +140,8 @@ import {
   fileImageAnnotationKey,
 } from '../mediaFaceAnnotationStorage';
 import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
+import { useCo21AiServer } from 'src/modules/ai/composables/useCo21AiServer';
+import { appNotify } from 'src/utils/appNotify';
 
 const props = withDefaults(
   defineProps<{
@@ -194,6 +201,16 @@ const {
   addAnnotation: addFaceAnnotation,
   removeAnnotation: removeFaceAnnotation,
 } = useMediaFaceRecognition(imageAnnotationKey);
+
+const {
+  bridgeAvailable: aiBridgeAvailable,
+  enabled: aiEnabled,
+  healthy: aiHealthy,
+  busy: aiBusy,
+  lastError: aiLastError,
+  refresh: refreshAiServer,
+  start: startAiServer,
+} = useCo21AiServer();
 
 const displayName = computed(() => {
   if (useDirectUrls.value) return props.directEntry?.name || '';
@@ -359,6 +376,7 @@ watch(
   (open) => {
     if (open) {
       window.addEventListener('keydown', onPreviewKeydown);
+      if (faceRecognitionEnabled.value) void refreshAiServer();
     } else {
       window.removeEventListener('keydown', onPreviewKeydown);
     }
@@ -398,6 +416,13 @@ function onFaceSelectCancel(): void {
 function onStageClick(): void {
   if (faceRecognitionSelectMode.value) return;
   close();
+}
+
+async function onStartBackendServer(): Promise<void> {
+  const ok = await startAiServer();
+  if (!ok) {
+    appNotify('negative', aiLastError.value || $text('accounts.backend_server_start_failed'));
+  }
 }
 </script>
 

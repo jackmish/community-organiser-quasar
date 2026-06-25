@@ -16,6 +16,13 @@ import {
 import { CO21_LAN_PAIRING_PORT } from 'src/modules/lan/lanPairingConstants';
 import { browseCo21Organisers, destroyBonjour } from './lanMdns';
 import { startGoogleAuthFlow, refreshAccessToken } from './googleAuth';
+import {
+  checkAiServerHealth,
+  getAiServerDefaultConfig,
+  getAiServerStatus,
+  startAiServer,
+  stopAiServer,
+} from './aiServerMain';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -792,6 +799,35 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle('ai-server:default-config', (_evt, backendPath?: string) => {
+  return getAiServerDefaultConfig(backendPath);
+});
+
+ipcMain.handle('ai-server:status', () => getAiServerStatus());
+
+ipcMain.handle('ai-server:health', async (_evt, baseUrl?: string) => {
+  const ok = await checkAiServerHealth(baseUrl || getAiServerStatus().baseUrl);
+  return { ok };
+});
+
+ipcMain.handle(
+  'ai-server:start',
+  async (_evt, payload?: { backendPath?: string; baseUrl?: string }) => {
+    try {
+      const status = await startAiServer(payload);
+      return { ok: true as const, status };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: msg, status: getAiServerStatus() };
+    }
+  },
+);
+
+ipcMain.handle('ai-server:stop', () => {
+  const status = stopAiServer();
+  return { ok: true as const, status };
+});
+
 app.whenReady().then(() => {
   applyColdBootSpaceSelection();
   registerMediaThumbProtocol();
@@ -801,6 +837,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   stopLanPairingServer();
+  stopAiServer();
   destroyBonjour();
   void flushMediaThumbMetaTouches();
 });

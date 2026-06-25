@@ -1,6 +1,30 @@
 <template>
   <div class="media-face-panel" @click.stop @pointerdown.stop>
     <q-btn
+      v-if="showAiStart"
+      square
+      unelevated
+      class="media-face-panel__ai-btn"
+      :loading="aiBusy"
+      :aria-label="$text('files.face_backend_server_start')"
+      :title="$text('files.face_backend_server_start')"
+      @click="emit('start-backend-server')"
+    >
+      <q-icon name="dns" size="24px" color="white" />
+    </q-btn>
+    <q-btn
+      v-else-if="aiHealthy"
+      square
+      unelevated
+      class="media-face-panel__ai-btn media-face-panel__ai-btn--ready"
+      :aria-label="$text('files.face_backend_server_ready')"
+      :title="$text('files.face_backend_server_ready')"
+      disable
+    >
+      <q-icon name="check_circle" size="22px" color="positive" />
+    </q-btn>
+
+    <q-btn
       square
       unelevated
       class="media-face-panel__select-btn"
@@ -15,29 +39,53 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
 
-defineProps<{
+const props = defineProps<{
   selectMode: boolean;
+  aiBridgeAvailable: boolean;
+  aiEnabled: boolean;
+  aiHealthy: boolean;
+  aiBusy: boolean;
 }>();
 
 const emit = defineEmits<{
   'toggle-select': [];
+  'start-backend-server': [];
 }>();
+
+const showAiStart = computed(
+  () => props.aiBridgeAvailable && props.aiEnabled && !props.aiHealthy,
+);
 </script>
 
 <style scoped>
 .media-face-panel {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-width: 0;
   pointer-events: auto;
 }
 
+.media-face-panel__ai-btn,
 .media-face-panel__select-btn {
   width: 44px;
   min-width: 44px;
   height: 44px;
+}
+
+.media-face-panel__ai-btn {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+}
+
+.media-face-panel__ai-btn--ready {
+  opacity: 0.95;
+}
+
+.media-face-panel__select-btn {
   background: rgba(255, 255, 255, 0.16) !important;
   border: 2px solid rgba(255, 255, 255, 0.55);
 }

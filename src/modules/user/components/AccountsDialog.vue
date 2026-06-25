@@ -253,6 +253,10 @@
 
           <q-separator spaced />
 
+          <BackendServerPanel />
+
+          <q-separator spaced />
+
           <!-- Public services (no registration) -->
           <q-item-label header class="text-weight-bold text-subtitle1">
             {{ $text('accounts.public_services_section') }}
@@ -353,6 +357,7 @@ import type { QInput } from 'quasar';
 import { $text, getCountryCode } from 'src/modules/lang';
 import { UserStoreController } from '../UserController';
 import GoogleAccountConfig from './GoogleAccountConfig.vue';
+import BackendServerPanel from 'src/components/settings/BackendServerPanel.vue';
 import type { GoogleFeature, GoogleAccountLink } from '../models/UserAccount';
 import { clearGoogleTokens } from '../googleAuthService';
 import {
