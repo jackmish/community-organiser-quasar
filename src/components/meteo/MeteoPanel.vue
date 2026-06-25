@@ -102,16 +102,15 @@
           </div>
         </div>
 
-        <div class="meteo-panel__location-actions">
+        <div v-if="visibleRecentLocations.length" class="meteo-panel__location-actions">
           <div class="meteo-panel__recent-scroll meteo-panel__nice-scroll">
             <div class="meteo-panel__recent-list">
               <q-btn
-                v-for="loc in recentLocations"
+                v-for="loc in visibleRecentLocations"
                 :key="locationKey(loc)"
                 no-caps
                 unelevated
                 class="co21-field-btn meteo-panel__recent-btn"
-                :class="{ 'co21-field-btn--active': isActiveLocation(loc) }"
                 :style="locationFieldStyle"
                 :label="locationCityName(loc.name)"
                 :disable="locationSaving || loading"
@@ -310,14 +309,10 @@ const locationFieldStyle = computed(() => {
 
 const locationFieldInputStyle = computed(() => {
   const fg = locationFieldStyle.value['--co21-field-fg'] ?? '#000000';
-  const hasValue = !!selectedLocation.value;
   return {
     color: fg,
     WebkitTextFillColor: fg,
     caretColor: fg,
-    fontSize: hasValue ? '2.2rem' : '1.1rem',
-    fontWeight: '700',
-    lineHeight: hasValue ? '1.05' : '1.25',
   };
 });
 
@@ -401,6 +396,10 @@ function isActiveLocation(loc: MeteoLocation): boolean {
   if (!selectedLocation.value) return false;
   return meteoLocationsMatch(loc, selectedLocation.value);
 }
+
+const visibleRecentLocations = computed(() =>
+  recentLocations.value.filter((loc) => !isActiveLocation(loc)),
+);
 
 function dayTempRange(day: MeteoDayForecast): { min: number; max: number } {
   let min: number | undefined;
@@ -1066,5 +1065,89 @@ onBeforeUnmount(() => {
 
 .meteo-panel__hour-icon {
   opacity: 0.95;
+}
+
+@media (max-width: 767px) {
+  .meteo-panel__location-select :deep(.q-field__control) {
+    min-height: 36px;
+  }
+
+  .meteo-panel__location-select :deep(.q-field__native),
+  .meteo-panel__location-select :deep(input),
+  .meteo-panel__location-select :deep(.q-field__input),
+  .meteo-panel__location-select :deep(.q-select__input) {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .meteo-panel__location-select :deep(.q-field__label) {
+    font-size: 0.88rem;
+  }
+
+  .meteo-panel__location-select :deep(.q-field__marginal .q-icon) {
+    font-size: 1.1rem;
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__native),
+  .meteo-panel__location-select--has-value :deep(input),
+  .meteo-panel__location-select--has-value :deep(.q-field__input),
+  .meteo-panel__location-select--has-value :deep(.q-select__input) {
+    font-size: 1.35rem;
+    line-height: 1.05;
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__control) {
+    min-height: calc(1.35rem * 1.05 + 8px);
+    padding: 4px 8px;
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__control-container) {
+    min-height: calc(1.35rem * 1.05);
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__input),
+  .meteo-panel__location-select--has-value :deep(.q-select__input) {
+    min-height: calc(1.35rem * 1.05) !important;
+    line-height: 1.05 !important;
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__marginal) {
+    min-height: calc(1.35rem * 1.05 + 8px);
+  }
+
+  .meteo-panel__location-select--has-value :deep(.q-field__marginal .q-icon) {
+    font-size: 1.35rem;
+  }
+
+  .meteo-panel__hour {
+    flex: 0 0 36px;
+    min-width: 36px;
+  }
+
+  .meteo-panel__hour--eod {
+    flex: 0 0 40px;
+    min-width: 40px;
+  }
+
+  .meteo-panel__hour-content {
+    gap: 1px;
+    padding: 3px 1px;
+  }
+
+  .meteo-panel__hour-time {
+    font-size: 0.56rem;
+  }
+
+  .meteo-panel__hour-temp {
+    font-size: 0.62rem;
+  }
+
+  .meteo-panel__hour-rain {
+    font-size: 0.56rem;
+  }
+
+  .meteo-panel__hour-icon {
+    font-size: 16px !important;
+  }
 }
 </style>

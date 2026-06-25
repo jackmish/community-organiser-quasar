@@ -238,6 +238,16 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 
+@media (max-width: 767px) {
+  .clock-panel__body {
+    padding: 12px 16px 16px;
+  }
+
+  .clock-panel__time {
+    font-size: 2.25rem;
+  }
+}
+
 .clock-panel__date-col {
   min-width: 0;
   flex: 1 1 auto;
