@@ -2,10 +2,10 @@ export type AppViewMode = 'calendar' | 'files' | 'notes';
 
 export const APP_VIEW_MODES: AppViewMode[] = ['calendar', 'files', 'notes'];
 
-/** Legacy persisted value `media` maps to `files`. */
+/** Legacy persisted value `media` maps to `files`; `contacts` maps to `notes`. */
 export function normalizeAppViewMode(value: unknown): AppViewMode {
   if (value === 'files' || value === 'media') return 'files';
-  if (value === 'notes') return 'notes';
+  if (value === 'notes' || value === 'contacts') return 'notes';
   return 'calendar';
 }
 

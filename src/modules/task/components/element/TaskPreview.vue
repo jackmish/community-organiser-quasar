@@ -212,6 +212,14 @@
             :title="$text('task.todo.review_meeting_schedule')"
             @click.stop="onReviewMeetingScheduleClick"
           />
+          <TaskContactRelationControls
+            v-if="showPreviewContactToolbar"
+            :is-contact-task="isContactNoteTaskPreview"
+            :gather-contacts-enabled="!!activeTask?.gatherContactsEnabled"
+            :embedded-contacts="embeddedContactsPreview"
+            :editable="false"
+            compact
+          />
           <q-btn
             dense
             unelevated
@@ -496,7 +504,13 @@
           </div>
         </div>
 
-        <div v-if="!isInlineMediaFolderPreview && !showNoteGraphicHero">
+        <div
+          v-if="isContactNoteTaskPreview && contactNotesPreview"
+          class="task-contact-preview q-mb-md text-body2 text-grey-8"
+          v-html="contactNotesPreview"
+        />
+
+        <div v-if="!isInlineMediaFolderPreview && !showNoteGraphicHero && !isContactNoteTaskPreview">
           <div v-for="(line, idx) in parsedLines" :key="line.uid">
             <div v-if="line.type === 'list'">
               <div
@@ -627,6 +641,8 @@
             <div v-else class="q-mb-xs q-mt-md" v-html="line.html"></div>
           </div>
         </div>
+
+        <TaskRelatedContactsList v-if="showPreviewContactsList" :task="activeTask" />
       </div>
     </q-card-section>
   </q-card>
@@ -676,6 +692,8 @@ import {
 import { normalizePlanningDayEntry, scheduleHasPlanningContent } from "src/modules/task/dayPlanning/dayPlanningUtils";
 import QuickAddSubtaskForm from "./QuickAddSubtaskForm.vue";
 import NoteTaskAttachmentThumb from "./NoteTaskAttachmentThumb.vue";
+import TaskContactRelationControls from "./TaskContactRelationControls.vue";
+import TaskRelatedContactsList from "./TaskRelatedContactsList.vue";
 import MediaFolderBrowser from "src/modules/media/components/MediaFolderBrowser.vue";
 import MediaGalleryPreviewDialog from "src/modules/media/components/MediaGalleryPreviewDialog.vue";
 import type { DirectGalleryPreviewEntry } from "src/modules/media/mediaGalleryPreviewTypes";
@@ -694,6 +712,12 @@ import {
   type NoteGraphicItem,
 } from "src/modules/task/utils/noteTaskMedia";
 import { openNoteAttachmentFile, revealNoteAttachmentFile } from "src/modules/task/utils/noteTaskAttachmentStorage";
+import {
+  isContactNoteTask,
+  resolveEmbeddedContacts,
+  shouldShowContactCountBadge,
+  shouldShowContactToolbarInPreview,
+} from "src/modules/task/utils/taskContacts";
 import { resolveLocalGroupName } from "src/modules/group/utils/groupLocalNames";
 import { getContrastColor } from "src/utils/colorUtils";
 
@@ -1010,6 +1034,21 @@ const showMediaFolderMissing = computed(
 );
 
 const isNoteTask = computed(() => isNoteTaskType(activeTask.value));
+const isContactNoteTaskPreview = computed(() => isContactNoteTask(activeTask.value));
+const embeddedContactsPreview = computed(() =>
+  resolveEmbeddedContacts(activeTask.value),
+);
+const showPreviewContactToolbar = computed(() =>
+  shouldShowContactToolbarInPreview(activeTask.value),
+);
+const showPreviewContactsList = computed(() =>
+  shouldShowContactCountBadge(activeTask.value),
+);
+const contactNotesPreview = computed(() => {
+  const raw = String(activeTask.value?.description || "").trim();
+  if (!raw) return "";
+  return stripTitleFromDescription(raw, activeTask.value?.name);
+});
 const notePhoto = computed(() => resolveTaskPhoto(activeTask.value));
 const noteAttachments = computed(() => resolveTaskAttachments(activeTask.value));
 const noteMediaGroupId = computed(() =>

@@ -321,6 +321,11 @@ const TASK_SYNC_PAYLOAD_KEYS = [
   'noteColor',
   'photo',
   'attachments',
+  'contactInfo',
+  'contacts',
+  'gatherContactsEnabled',
+  'relatedContactRefs',
+  'relatedContactIds',
   'dayPlanning',
   'meetingSchedule',
   'createdAt',
@@ -387,6 +392,26 @@ export function taskPayloadFromFlat(t: FlatTask): LanSyncTaskPayload {
     if (v === undefined) continue;
     if (key === 'tags' && Array.isArray(v)) {
       out.tags = v.map((x) => String(x));
+      continue;
+    }
+    if (key === 'relatedContactIds' && Array.isArray(v)) {
+      out.relatedContactIds = v.map((x) => String(x)).filter((x) => x.trim());
+      continue;
+    }
+    if (key === 'relatedContactRefs' && Array.isArray(v)) {
+      out.relatedContactRefs = v.map((x) => String(x)).filter((x) => x.trim());
+      continue;
+    }
+    if (key === 'contacts' && Array.isArray(v)) {
+      out.contacts = v;
+      continue;
+    }
+    if (key === 'contactInfo' && v && typeof v === 'object' && !Array.isArray(v)) {
+      out.contactInfo = v as Record<string, unknown>;
+      continue;
+    }
+    if (key === 'gatherContactsEnabled' && typeof v === 'boolean') {
+      out.gatherContactsEnabled = v;
       continue;
     }
     if (key === 'repeat' && (v === null || (typeof v === 'object' && !Array.isArray(v)))) {

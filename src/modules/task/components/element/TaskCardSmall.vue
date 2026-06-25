@@ -34,12 +34,23 @@
         />
       </div>
 
-    <q-item-section v-if="noteAttachmentCount(item) > 0" side>
-      <NoteTaskAttachmentThumb
-        :task="item"
-        :group-id="noteAttachmentGroupId(item)"
-        :task-id="String(item.id)"
-      />
+    <q-item-section v-if="noteAttachmentCount(item) > 0 || shouldShowContactCountBadge(item)" side>
+      <div class="task-card-side-badges column items-end" style="gap: 4px">
+        <NoteTaskAttachmentThumb
+          v-if="noteAttachmentCount(item) > 0"
+          :task="item"
+          :group-id="noteAttachmentGroupId(item)"
+          :task-id="String(item.id)"
+        />
+        <div
+          v-if="shouldShowContactCountBadge(item)"
+          class="task-card-contact-count"
+          :title="$text('task.contact.count_label').replace('{count}', String(countDisplayedContacts(item)))"
+        >
+          <q-icon name="contacts" size="16px" />
+          <span>{{ countDisplayedContacts(item) }}</span>
+        </div>
+      </div>
     </q-item-section>
 
     <q-item-section class="title-row">
@@ -102,7 +113,14 @@
               </q-item-label>
             </div>
             <q-item-label
-              v-if="noteTaskListCaption(item)"
+              v-if="contactTaskListCaption(item)"
+              caption
+              class="task-desc note-task-created-at"
+            >
+              {{ contactTaskListCaption(item) }}
+            </q-item-label>
+            <q-item-label
+              v-else-if="noteTaskListCaption(item)"
               caption
               class="task-desc note-task-created-at"
             >
@@ -169,6 +187,11 @@ import { formatAppWeekday } from "src/modules/lang/dateFormat";
 import { formatDisplayDate, parseYmdLocal } from "src/modules/task/utils/occursOnDay";
 import { countTaskAttachments, noteTaskListCaption } from "src/modules/task/utils/noteTaskMedia";
 import { isNoteTaskType } from "src/modules/task/utils/calendarTaskTypes";
+import {
+  countDisplayedContacts,
+  isContactNoteTask,
+  shouldShowContactCountBadge,
+} from "src/modules/task/utils/taskContacts";
 import { $text } from "src/modules/lang";
 
 const props = defineProps<{
@@ -204,6 +227,15 @@ const typeColors: Record<string, string> = {
 const item = toRef(props, "item") as any;
 
 const noteAttachmentCount = (task: any) => countTaskAttachments(task);
+
+function contactTaskListCaption(task: any): string {
+  if (!isContactNoteTask(task)) return "";
+  const count = countDisplayedContacts(task);
+  if (count > 0) {
+    return $text("task.contact.count_label").replace("{count}", String(count));
+  }
+  return "";
+}
 
 const noteAttachmentGroupId = (task: any) =>
   String(task?.groupId || task?._group?.id || "ungrouped");
@@ -794,5 +826,20 @@ const getBoundingRect = (): DOMRect | null => {
 .task-card:has(.subtask-chip-list) strong,
 .task-card:has(.todo-list-title-text) .todo-list-title-text {
   font-size: inherit;
+}
+
+.task-card-contact-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #26a69a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
 }
 </style>

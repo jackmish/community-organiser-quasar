@@ -10,6 +10,19 @@ export type TaskAttachment = {
   filePath?: string;
 };
 
+export type TaskContactInfo = {
+  phone?: string;
+  email?: string;
+};
+
+export type TaskEmbeddedContact = {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+};
+
 export class TaskModel extends BaseModel {
   name!: string;
   description!: string;
@@ -53,6 +66,16 @@ export class TaskModel extends BaseModel {
   photo?: string;
   /** Files attached to a task. */
   attachments?: TaskAttachment[];
+  /** @deprecated migrated to contacts[] */
+  contactInfo?: TaskContactInfo;
+  /** Contacts gathered on a contact note task (noteMode contact). */
+  contacts?: TaskEmbeddedContact[];
+  /** When true, this task can relate to contacts from contact tasks. */
+  gatherContactsEnabled?: boolean;
+  /** Links to embedded contacts as "taskId:contactId". */
+  relatedContactRefs?: string[];
+  /** @deprecated use relatedContactRefs */
+  relatedContactIds?: string[];
   /** Per-day meeting planning notes when scheduling with extended mode. */
   /** Per-day planning data from calendar day-choice mode (tags + notes). */
   dayPlanning?: {
