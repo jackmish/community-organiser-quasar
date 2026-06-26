@@ -3,6 +3,7 @@ import { protocol, shell } from 'electron';
 import type { Stats } from 'fs';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
+import { enrichMediaFolderListError } from './unixPartitionMountMain';
 
 export type MediaFolderEntryPayload = {
   name: string;
@@ -22,7 +23,14 @@ type ListOk = {
   entries: MediaFolderEntryPayload[];
 };
 
-type ListErr = { ok: false; error: string };
+type ListErr = {
+  ok: false;
+  error: string;
+  forbidden?: boolean;
+  canTryMount?: boolean;
+  mountPoint?: string;
+  mountLabel?: string;
+};
 
 export type ListMediaFolderPayload = ListOk | ListErr;
 
@@ -397,7 +405,8 @@ export function registerMediaFolderIpc(ipcMain: IpcMain): void {
         try {
           rootStat = await fsPromises.stat(resolvedRoot);
         } catch {
-          return { ok: false, error: 'Task folder not found' } satisfies ListErr;
+          const enriched = enrichMediaFolderListError(resolvedRoot, 'Task folder not found');
+          return { ok: false, ...enriched } satisfies ListErr;
         }
         if (!rootStat.isDirectory()) {
           return { ok: false, error: 'Task folder is not a directory' } satisfies ListErr;
@@ -412,7 +421,8 @@ export function registerMediaFolderIpc(ipcMain: IpcMain): void {
         try {
           currentStat = await fsPromises.stat(currentPath);
         } catch {
-          return { ok: false, error: 'Folder not found' } satisfies ListErr;
+          const enriched = enrichMediaFolderListError(currentPath, 'Folder not found');
+          return { ok: false, ...enriched } satisfies ListErr;
         }
         if (!currentStat.isDirectory()) {
           return { ok: false, error: 'Not a folder' } satisfies ListErr;

@@ -192,6 +192,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   moveMediaToTagFolder: (payload) => ipcRenderer.invoke('media:move-to-tag-folder', payload),
   applyMediaGalleryTag: (payload) => ipcRenderer.invoke('media:apply-gallery-tag', payload),
   getMediaFullImageUrl: (payload) => ipcRenderer.invoke('media:get-full-image-url', payload),
+  checkMediaFolderAccess: (payload) => ipcRenderer.invoke('media:folder-access', payload),
+  tryMountUnixPartition: (payload) => ipcRenderer.invoke('media:try-mount-partition', payload),
 
   // Join paths
   joinPath: (...paths) => path.join(...paths),

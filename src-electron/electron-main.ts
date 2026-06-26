@@ -67,6 +67,7 @@ import {
   saveGroupsToSqlite,
 } from './spaceSqliteMain';
 import { registerMediaFolderIpc, registerMediaFileProtocol, registerMediaFileProtocolSchemes } from './mediaFolderMain';
+import { registerUnixPartitionMountIpc } from './unixPartitionMountMain';
 import { registerMediaThumbIpc, registerMediaThumbProtocol, registerMediaThumbProtocolSchemes, flushMediaThumbMetaTouches } from './mediaThumbMain';
 import { configureElectronProfilePaths } from './electronProfilePaths';
 // Fix for ES modules - __dirname is not defined; derive from import.meta.url
@@ -636,6 +637,7 @@ ipcMain.handle('dialog:select-folder', async (event) => {
 });
 
 registerMediaFolderIpc(ipcMain);
+registerUnixPartitionMountIpc(ipcMain);
 registerMediaThumbIpc(ipcMain);
 
 // Create a .zip archive containing a single JSON file named 'connections.json'

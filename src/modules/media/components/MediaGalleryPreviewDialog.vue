@@ -11,6 +11,23 @@
     >
       <div class="media-gallery-preview" @click="close">
         <div ref="stageEl" class="media-gallery-preview__stage" @click.stop="onStageClick">
+          <div
+            v-if="mountHint"
+            class="media-gallery-preview__forbidden media-gallery-preview__forbidden--overlay"
+          >
+            <q-icon name="sd_storage" size="42px" color="white" />
+            <div class="media-gallery-preview__forbidden-text">{{ mountHintMessage }}</div>
+            <q-btn
+              v-if="mountHint.canTryMount"
+              unelevated
+              color="primary"
+              icon="sd_storage"
+              :label="$text('files.partition_try_mount')"
+              :loading="mountBusy"
+              class="q-mt-md"
+              @click.stop="emitTryMount"
+            />
+          </div>
           <img
             v-if="imageUrl"
             ref="imageEl"
@@ -139,6 +156,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { getMediaFullImageUrl, type MediaFolderEntry } from '../mediaFolderService';
+import type { MediaFolderMountHint } from '../unixPartitionMountModel';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
 import MediaFaceRecognitionOverlay from './MediaFaceRecognitionOverlay.vue';
 import MediaFaceRecognitionPanel from './MediaFaceRecognitionPanel.vue';
@@ -168,6 +186,8 @@ const props = withDefaults(
     directEntry?: DirectGalleryPreviewEntry | null;
     /** Task id scopes backend recognition session (one session per task). */
     taskId?: string;
+    mountHint?: MediaFolderMountHint | null;
+    mountBusy?: boolean;
   }>(),
   {
     rootPath: '',
@@ -176,6 +196,8 @@ const props = withDefaults(
     directEntries: () => [],
     directEntry: null,
     taskId: '',
+    mountHint: null,
+    mountBusy: false,
   },
 );
 
@@ -185,6 +207,8 @@ const emit = defineEmits<{
   'update:directEntry': [entry: DirectGalleryPreviewEntry];
   moved: [];
   error: [message: string];
+  'try-mount': [];
+  'probe-mount': [];
 }>();
 
 const imageUrl = ref('');
@@ -264,6 +288,25 @@ const displayName = computed(() => {
   return props.entry?.name || '';
 });
 
+const mountHintMessage = computed(() => {
+  const hint = props.mountHint;
+  if (!hint) return '';
+  if (hint.reason === 'not_mounted') {
+    return `${$text('files.partition_not_mounted')} ${hint.mountLabel} (${hint.mountPoint})`;
+  }
+  if (hint.reason === 'permission_denied') {
+    return `${$text('files.partition_permission_denied')} ${hint.mountLabel}`;
+  }
+  if (hint.reason === 'missing_binding') {
+    return `${$text('files.partition_forbidden')} ${$text('files.partition_try_mount_hint')}`;
+  }
+  return $text('files.partition_forbidden');
+});
+
+function emitTryMount(): void {
+  emit('try-mount');
+}
+
 function directEntryKey(item: DirectGalleryPreviewEntry): string {
   return `${item.name}\0${item.imageUrl}`;
 }
@@ -330,6 +373,7 @@ async function loadFullImage(): Promise<void> {
   if (!result.ok) {
     if (!imageUrl.value) {
       emit('error', result.error || $text('files.gallery_preview_failed'));
+      emit('probe-mount');
     }
     return;
   }
@@ -342,6 +386,7 @@ function onImageError(): void {
     return;
   }
   emit('error', $text('files.gallery_preview_failed'));
+  emit('probe-mount');
 }
 
 function goPrev(): void {
@@ -416,6 +461,15 @@ watch(
     void loadFullImage();
   },
   { immediate: true },
+);
+
+watch(
+  () => props.mountHint,
+  (hint, prev) => {
+    if (prev && !hint && props.open) {
+      void loadFullImage();
+    }
+  },
 );
 
 watch(
@@ -542,6 +596,31 @@ async function onRejectSuggested(rectId: string): Promise<void> {
   justify-content: center;
   cursor: zoom-out;
   overflow: hidden;
+}
+
+.media-gallery-preview__forbidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: min(90vw, 520px);
+  padding: 24px;
+  text-align: center;
+  cursor: default;
+}
+
+.media-gallery-preview__forbidden-text {
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.media-gallery-preview__forbidden--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.72);
 }
 
 .media-gallery-preview__image {

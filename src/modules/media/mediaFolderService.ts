@@ -1,4 +1,9 @@
 import type { MediaGalleryTagAction } from './mediaGalleryTagModel';
+import type {
+  MediaFolderAccessResult,
+  MediaFolderMountHint,
+  TryUnixPartitionMountResult,
+} from './unixPartitionMountModel';
 
 export type MediaFolderEntry = {
   name: string;
@@ -18,7 +23,15 @@ export type ListMediaFolderResult =
       canGoUp: boolean;
       entries: MediaFolderEntry[];
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      forbidden?: boolean;
+      canTryMount?: boolean;
+      mountPoint?: string;
+      mountLabel?: string;
+      folderPath?: string;
+    };
 
 export type GetMediaThumbnailResult =
   | { ok: true; url: string }
@@ -77,6 +90,11 @@ type MediaFolderElectronAPI = {
     rootPath: string;
     filePath: string;
   }) => Promise<GetMediaFullImageUrlResult>;
+  checkMediaFolderAccess?: (payload: { folderPath: string }) => Promise<MediaFolderAccessResult>;
+  tryMountUnixPartition?: (payload: {
+    mountPoint?: string;
+    folderPath?: string;
+  }) => Promise<TryUnixPartitionMountResult>;
 };
 
 function mediaFolderApi(): MediaFolderElectronAPI | null {
@@ -190,6 +208,51 @@ export async function getMediaFullImageUrl(
     return { ok: false, error: 'Full image preview is only available in the desktop app' };
   }
   return api.getMediaFullImageUrl({ rootPath, filePath });
+}
+
+export function listMediaFolderMountHint(
+  result: ListMediaFolderResult,
+): MediaFolderMountHint | null {
+  if (result.ok || !result.forbidden) return null;
+  const reason = result.canTryMount
+    ? result.mountPoint
+      ? 'not_mounted'
+      : 'missing_binding'
+    : 'permission_denied';
+  return {
+    forbidden: true,
+    canTryMount: !!result.canTryMount,
+    mountPoint: String(result.mountPoint || ''),
+    mountLabel: String(result.mountLabel || result.mountPoint || ''),
+    reason,
+    ...(result.folderPath ? { folderPath: String(result.folderPath) } : {}),
+  };
+}
+
+export async function checkMediaFolderAccess(
+  folderPath: string,
+): Promise<MediaFolderAccessResult> {
+  const api = mediaFolderApi();
+  if (!api?.checkMediaFolderAccess) {
+    return { ok: false, error: 'Folder access checks are only available in the desktop app' };
+  }
+  return api.checkMediaFolderAccess({ folderPath });
+}
+
+export async function tryMountUnixPartition(
+  mountPointOrFolder: string,
+  options?: { folderPath?: string },
+): Promise<TryUnixPartitionMountResult> {
+  const api = mediaFolderApi();
+  if (!api?.tryMountUnixPartition) {
+    return { ok: false, error: 'Partition mounting is only available in the desktop app' };
+  }
+  const folderPath = String(options?.folderPath || '').trim();
+  const mountPoint = String(mountPointOrFolder || '').trim();
+  if (folderPath) {
+    return api.tryMountUnixPartition({ folderPath });
+  }
+  return api.tryMountUnixPartition({ mountPoint });
 }
 
 export const IMAGE_FILE_EXTENSIONS = new Set([

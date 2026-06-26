@@ -66,7 +66,29 @@
       </template>
     </q-banner>
 
-    <q-banner v-if="error" dense class="bg-negative text-white q-mb-sm" rounded>
+    <q-banner
+      v-if="mountHint"
+      dense
+      class="bg-grey-9 text-white q-mb-sm"
+      rounded
+    >
+      <div>{{ mountHintMessage }}</div>
+      <div v-if="mountError" class="text-caption q-mt-xs">{{ mountError }}</div>
+      <template #action>
+        <q-btn
+          v-if="mountHint.canTryMount"
+          flat
+          dense
+          color="white"
+          icon="sd_storage"
+          :label="$text('files.partition_try_mount')"
+          :loading="mountBusy"
+          @click="onTryMount"
+        />
+      </template>
+    </q-banner>
+
+    <q-banner v-else-if="error" dense class="bg-negative text-white q-mb-sm" rounded>
       {{ error }}
     </q-banner>
 
@@ -204,10 +226,14 @@
       :fallback-thumb-url="previewFallbackThumbUrl || ''"
       :tags="galleryFileTags"
       :task-id="taskId || ''"
+      :mount-hint="mountHint"
+      :mount-busy="mountBusy"
       @update:open="onPreviewOpenChange"
       @update:entry="previewEntry = $event"
       @moved="onGalleryFileTagged"
       @error="onGalleryTagError"
+      @try-mount="onTryMount"
+      @probe-mount="void probeFolderAccess(rootPath)"
     />
   </div>
 </template>
@@ -234,6 +260,7 @@ import {
   type MediaGalleryTagSetConfig,
 } from '../mediaGalleryTagModel';
 import { useProgressiveMediaThumbs } from '../composables/useProgressiveMediaThumbs';
+import { useMediaFolderMount } from '../composables/useMediaFolderMount';
 import MediaGalleryPreviewDialog from './MediaGalleryPreviewDialog.vue';
 import MediaGalleryTagActions from './MediaGalleryTagActions.vue';
 import MediaGalleryTagFolderNav from './MediaGalleryTagFolderNav.vue';
@@ -271,6 +298,30 @@ const canGoUp = ref(false);
 const entries = ref<MediaFolderEntry[]>([]);
 const { thumbUrls, loadThumbs, reset: resetThumbs } = useProgressiveMediaThumbs();
 const { galleryThumbSize } = useMediaGalleryThumbSize();
+const {
+  mountHint,
+  mountBusy,
+  mountError,
+  setMountHintFromListResult,
+  probeFolderAccess,
+  tryMount,
+  clearMountState,
+} = useMediaFolderMount();
+
+const mountHintMessage = computed(() => {
+  const hint = mountHint.value;
+  if (!hint) return '';
+  if (hint.reason === 'not_mounted') {
+    return `${$text('files.partition_not_mounted')} ${hint.mountLabel} (${hint.mountPoint})`;
+  }
+  if (hint.reason === 'permission_denied') {
+    return `${$text('files.partition_permission_denied')} ${hint.mountLabel}`;
+  }
+  if (hint.reason === 'missing_binding') {
+    return `${$text('files.partition_forbidden')} ${$text('files.partition_try_mount_hint')}`;
+  }
+  return $text('files.partition_forbidden');
+});
 
 const galleryTags = computed(() => resolveGalleryTagsForSet(props.galleryTagSet));
 const galleryFileTags = computed(() => galleryFileActionTags(galleryTags.value));
@@ -422,6 +473,7 @@ async function refresh(): Promise<void> {
     error.value = $text('files.no_task_folder');
     entries.value = [];
     canGoUp.value = false;
+    clearMountState();
     return;
   }
   loading.value = true;
@@ -431,11 +483,16 @@ async function refresh(): Promise<void> {
     const result = await listMediaFolder(root, browsePath);
     if (!result.ok) {
       error.value = result.error;
+      setMountHintFromListResult(result);
       entries.value = [];
       canGoUp.value = false;
       parentPath.value = null;
+      if (!mountHint.value) {
+        await probeFolderAccess(root);
+      }
       return;
     }
+    clearMountState();
     currentPath.value = result.currentPath;
     parentPath.value = result.parentPath;
     canGoUp.value = result.canGoUp;
@@ -444,6 +501,13 @@ async function refresh(): Promise<void> {
     void loadThumbs(root, result.entries, thumbMaxEdge.value);
   } finally {
     loading.value = false;
+  }
+}
+
+async function onTryMount(): Promise<void> {
+  const mounted = await tryMount(props.rootPath);
+  if (mounted) {
+    await refresh();
   }
 }
 
