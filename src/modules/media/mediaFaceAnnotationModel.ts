@@ -7,6 +7,8 @@ export type FaceAnnotationRect = {
   width: number;
   height: number;
   label: string;
+  /** Recognition match score (0–1), shown on suggested detections only. */
+  confidence?: number;
 };
 
 export function createFaceAnnotationId(): string {

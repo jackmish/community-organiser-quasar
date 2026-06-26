@@ -7,6 +7,7 @@
       'media-face-overlay--select': selectMode,
       'media-face-overlay--idle': !selectMode,
       'media-face-overlay--naming': !!pendingRect,
+      'media-face-overlay--resizing': !!resizeState,
     }"
     @click.stop="onOverlayClick"
     @pointerdown="onPointerDown"
@@ -17,24 +18,17 @@
     <div
       v-for="rect in annotations"
       :key="rect.id"
-      class="media-face-overlay__box"
-      :class="{ 'media-face-overlay__box--hover': hoveredId === rect.id }"
-      :style="boxStyle(rect)"
-      @mouseenter="hoveredId = rect.id"
-      @mouseleave="hoveredId = ''"
+      class="media-face-overlay__cluster"
+      :style="clusterStyle(rect)"
       @click.stop
     >
-      <div
-        v-if="rect.label || hoveredId === rect.id"
-        class="media-face-overlay__label-row"
-      >
+      <div class="media-face-overlay__label-row media-face-overlay__label-row--cluster">
         <span class="media-face-overlay__label">
           {{ rect.label || $text('files.face_unnamed') }}
         </span>
         <button
-          v-if="hoveredId === rect.id"
           type="button"
-          class="media-face-overlay__remove"
+          class="media-face-overlay__remove media-face-overlay__cluster-action"
           :aria-label="$text('action.delete')"
           :title="$text('action.delete')"
           @click.stop="emit('remove', rect.id)"
@@ -42,30 +36,41 @@
           <q-icon name="close" size="16px" />
         </button>
       </div>
+      <div class="media-face-overlay__box media-face-overlay__box--cluster-body">
+        <button
+          v-for="handle in resizeHandles"
+          :key="handle"
+          type="button"
+          class="media-face-overlay__resize-handle"
+          :class="`media-face-overlay__resize-handle--${handle}`"
+          :aria-label="$text('files.face_resize_handle')"
+          @pointerdown.stop="onResizeHandleDown(rect, handle, $event)"
+        />
+      </div>
     </div>
 
     <div
       v-for="rect in suggestedAnnotations"
       v-show="showSuggested"
       :key="`suggested-${rect.id}`"
-      class="media-face-overlay__box media-face-overlay__box--suggested"
-      :class="{ 'media-face-overlay__box--hover': hoveredSuggestedId === rect.id }"
-      :style="boxStyle(rect)"
-      @mouseenter="hoveredSuggestedId = rect.id"
-      @mouseleave="hoveredSuggestedId = ''"
+      class="media-face-overlay__cluster media-face-overlay__cluster--suggested"
+      :style="clusterStyle(rect)"
       @click.stop
     >
-      <div
-        v-if="rect.label || hoveredSuggestedId === rect.id"
-        class="media-face-overlay__label-row"
-      >
+      <div class="media-face-overlay__label-row media-face-overlay__label-row--cluster">
         <span class="media-face-overlay__label">
           {{ rect.label || $text('files.face_unnamed') }}
+          <span
+            v-if="rect.confidence != null && rect.confidence > 0"
+            class="media-face-overlay__match-score"
+          >
+            {{ Math.round(rect.confidence * 100) }}%
+          </span>
         </span>
-        <div v-if="hoveredSuggestedId === rect.id" class="media-face-overlay__suggested-actions">
+        <div class="media-face-overlay__suggested-actions">
           <button
             type="button"
-            class="media-face-overlay__remove"
+            class="media-face-overlay__remove media-face-overlay__cluster-action"
             :aria-label="$text('action.cancel')"
             :title="$text('files.recognition_reject')"
             @click.stop="emit('reject-suggested', rect.id)"
@@ -74,7 +79,7 @@
           </button>
           <button
             type="button"
-            class="media-face-overlay__accept"
+            class="media-face-overlay__accept media-face-overlay__cluster-action"
             :aria-label="$text('action.confirm')"
             :title="$text('files.recognition_accept')"
             @click.stop="emit('accept-suggested', rect.id)"
@@ -83,6 +88,7 @@
           </button>
         </div>
       </div>
+      <div class="media-face-overlay__box media-face-overlay__box--suggested media-face-overlay__box--cluster-body" />
     </div>
 
     <div
@@ -166,10 +172,14 @@ import {
   computeNameCardPosition,
   isPointInImageDisplay,
   normalizedRectToScreen,
+  RESIZE_HANDLES,
+  resizeScreenRect,
+  clampScreenRectToImage,
   screenRectFromStageDrag,
   screenRectToNormalized,
   stagePointFromClient,
   type ImageDisplayMetrics,
+  type ResizeHandle,
   type ScreenRect,
 } from '../faceAnnotationGeometry';
 import { createFaceAnnotationId, type FaceAnnotationRect } from '../mediaFaceAnnotationModel';
@@ -190,6 +200,7 @@ const emit = defineEmits<{
   add: [rect: FaceAnnotationRect];
   cancelSelect: [];
   remove: [id: string];
+  update: [rect: FaceAnnotationRect];
   'accept-suggested': [id: string];
   'reject-suggested': [id: string];
 }>();
@@ -203,8 +214,15 @@ const nameFocused = ref(false);
 const nameInputRef = ref<{ focus: () => void } | null>(null);
 const dragStart = ref<{ x: number; y: number } | null>(null);
 const activePointerId = ref<number | null>(null);
-const hoveredId = ref('');
-const hoveredSuggestedId = ref('');
+const resizeState = ref<{
+  id: string;
+  handle: ResizeHandle;
+  startScreen: ScreenRect;
+  startPoint: { x: number; y: number };
+} | null>(null);
+const resizePreview = ref<ScreenRect | null>(null);
+const resizeHandles = RESIZE_HANDLES;
+const MIN_RECT_PX = 12;
 let suppressClickAfterDrag = false;
 
 let resizeObserver: ResizeObserver | null = null;
@@ -287,11 +305,22 @@ watch(
   },
 );
 
-function boxStyle(rect: FaceAnnotationRect): CSSProperties {
+function clusterStyle(rect: FaceAnnotationRect): CSSProperties {
   const m = metrics.value;
   if (!m) return {};
-  return screenStyle(normalizedRectToScreen(rect, m));
+  const screen =
+    resizePreview.value && resizeState.value?.id === rect.id
+      ? resizePreview.value
+      : normalizedRectToScreen(rect, m);
+  return {
+    left: `${screen.x}px`,
+    top: `${screen.y - TOOLBAR_HEIGHT_PX}px`,
+    width: `${screen.width}px`,
+    height: `${screen.height + TOOLBAR_HEIGHT_PX}px`,
+  };
 }
+
+const TOOLBAR_HEIGHT_PX = 30;
 
 function screenStyle(rect: ScreenRect): CSSProperties {
   return {
@@ -309,6 +338,8 @@ function stagePoint(event: PointerEvent): { x: number; y: number } | null {
 }
 
 function onPointerDown(event: PointerEvent): void {
+  if (resizeState.value) return;
+  if ((event.target as HTMLElement).closest('.media-face-overlay__cluster')) return;
   if (!props.selectMode || pendingRect.value) return;
   const m = metrics.value;
   const point = stagePoint(event);
@@ -322,6 +353,22 @@ function onPointerDown(event: PointerEvent): void {
 }
 
 function onPointerMove(event: PointerEvent): void {
+  if (resizeState.value && activePointerId.value === event.pointerId) {
+    const m = metrics.value;
+    const point = stagePoint(event);
+    const state = resizeState.value;
+    if (!m || !point || !state) return;
+    const delta = {
+      x: point.x - state.startPoint.x,
+      y: point.y - state.startPoint.y,
+    };
+    resizePreview.value = clampScreenRectToImage(
+      resizeScreenRect(state.startScreen, state.handle, delta, MIN_RECT_PX),
+      m,
+    );
+    return;
+  }
+
   if (activePointerId.value !== event.pointerId || !dragStart.value) return;
   const m = metrics.value;
   const point = stagePoint(event);
@@ -337,6 +384,30 @@ function onOverlayClick(event: MouseEvent): void {
 }
 
 function onPointerUp(event: PointerEvent): void {
+  if (resizeState.value && activePointerId.value === event.pointerId) {
+    event.preventDefault();
+    event.stopPropagation();
+    overlayEl.value?.releasePointerCapture(event.pointerId);
+    const m = metrics.value;
+    const preview = resizePreview.value;
+    const state = resizeState.value;
+    resizeState.value = null;
+    resizePreview.value = null;
+    activePointerId.value = null;
+
+    if (m && preview && preview.width >= MIN_RECT_PX && preview.height >= MIN_RECT_PX && state) {
+      const original = props.annotations.find((item) => item.id === state.id);
+      if (original) {
+        emit('update', {
+          ...original,
+          ...screenRectToNormalized(preview, m),
+        });
+      }
+    }
+    suppressClickAfterDrag = true;
+    return;
+  }
+
   if (activePointerId.value !== event.pointerId) return;
   event.preventDefault();
   event.stopPropagation();
@@ -356,6 +427,14 @@ function onPointerUp(event: PointerEvent): void {
 }
 
 function onPointerCancel(event: PointerEvent): void {
+  if (resizeState.value && activePointerId.value === event.pointerId) {
+    overlayEl.value?.releasePointerCapture(event.pointerId);
+    resizeState.value = null;
+    resizePreview.value = null;
+    activePointerId.value = null;
+    return;
+  }
+
   if (activePointerId.value !== event.pointerId) return;
   overlayEl.value?.releasePointerCapture(event.pointerId);
   activePointerId.value = null;
@@ -400,6 +479,28 @@ function cancelPending(): void {
   pendingName.value = '';
   nameFocused.value = false;
 }
+
+function onResizeHandleDown(
+  rect: FaceAnnotationRect,
+  handle: ResizeHandle,
+  event: PointerEvent,
+): void {
+  if (props.selectMode || pendingRect.value) return;
+  const m = metrics.value;
+  const point = stagePoint(event);
+  if (!m || !point) return;
+
+  event.preventDefault();
+  resizeState.value = {
+    id: rect.id,
+    handle,
+    startScreen: normalizedRectToScreen(rect, m),
+    startPoint: point,
+  };
+  resizePreview.value = resizeState.value.startScreen;
+  activePointerId.value = event.pointerId;
+  overlayEl.value?.setPointerCapture(event.pointerId);
+}
 </script>
 
 <style scoped>
@@ -420,9 +521,120 @@ function cancelPending(): void {
   cursor: default;
 }
 
-.media-face-overlay--idle .media-face-overlay__box {
+.media-face-overlay--idle .media-face-overlay__box,
+.media-face-overlay--idle .media-face-overlay__cluster {
   pointer-events: auto;
   cursor: default;
+}
+
+.media-face-overlay__cluster {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.media-face-overlay__cluster:hover .media-face-overlay__box--cluster-body {
+  border-color: rgba(255, 214, 102, 0.98);
+}
+
+.media-face-overlay__cluster--suggested .media-face-overlay__suggested-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.media-face-overlay__cluster--suggested:hover .media-face-overlay__suggested-actions,
+.media-face-overlay__cluster--suggested:focus-within .media-face-overlay__suggested-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.media-face-overlay__cluster:not(.media-face-overlay__cluster--suggested) .media-face-overlay__cluster-action {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.media-face-overlay__cluster:not(.media-face-overlay__cluster--suggested):hover .media-face-overlay__cluster-action,
+.media-face-overlay__cluster:not(.media-face-overlay__cluster--suggested):focus-within .media-face-overlay__cluster-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.media-face-overlay__cluster:not(.media-face-overlay__cluster--suggested):hover .media-face-overlay__resize-handle,
+.media-face-overlay__cluster:not(.media-face-overlay__cluster--suggested):focus-within .media-face-overlay__resize-handle,
+.media-face-overlay--resizing .media-face-overlay__resize-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.media-face-overlay__resize-handle {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.65);
+  border-radius: 1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.media-face-overlay__resize-handle--nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.media-face-overlay__resize-handle--n {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.media-face-overlay__resize-handle--ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.media-face-overlay__resize-handle--e {
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.media-face-overlay__resize-handle--se {
+  right: -4px;
+  bottom: -4px;
+  cursor: nwse-resize;
+}
+
+.media-face-overlay__resize-handle--s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.media-face-overlay__resize-handle--sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.media-face-overlay__resize-handle--w {
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
 }
 
 .media-face-overlay__box {
@@ -432,6 +644,16 @@ function cancelPending(): void {
   background: transparent;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
   transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.media-face-overlay__box.media-face-overlay__box--cluster-body {
+  position: relative;
+  flex: 1 1 auto;
+  left: auto;
+  top: auto;
+  width: 100%;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .media-face-overlay__box--hover {
@@ -478,15 +700,20 @@ function cancelPending(): void {
 }
 
 .media-face-overlay__label-row {
-  position: absolute;
-  left: 0;
-  bottom: 100%;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   max-width: 260px;
-  margin-bottom: 4px;
   pointer-events: auto;
+}
+
+.media-face-overlay__label-row--cluster {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  flex: 0 0 auto;
+  margin-bottom: 4px;
+  max-width: none;
 }
 
 .media-face-overlay__label {
@@ -500,6 +727,12 @@ function cancelPending(): void {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.media-face-overlay__match-score {
+  margin-left: 6px;
+  opacity: 0.85;
+  font-weight: 500;
 }
 
 .media-face-overlay__remove {
@@ -519,6 +752,10 @@ function cancelPending(): void {
 
 .media-face-overlay__remove:hover {
   background: rgba(229, 57, 53, 1);
+}
+
+.media-face-overlay__accept:hover {
+  background: rgba(102, 187, 106, 1);
 }
 
 .media-face-overlay__name-anchor {

@@ -76,6 +76,69 @@ export function screenRectToNormalized(
   };
 }
 
+export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+export const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+
+export function clampScreenRectToImage(rect: ScreenRect, metrics: ImageDisplayMetrics): ScreenRect {
+  const minX = metrics.offsetX;
+  const minY = metrics.offsetY;
+  const maxX = metrics.offsetX + metrics.displayWidth;
+  const maxY = metrics.offsetY + metrics.displayHeight;
+
+  let { x, y, width, height } = rect;
+  width = Math.max(1, width);
+  height = Math.max(1, height);
+
+  if (x < minX) {
+    width -= minX - x;
+    x = minX;
+  }
+  if (y < minY) {
+    height -= minY - y;
+    y = minY;
+  }
+  if (x + width > maxX) width = maxX - x;
+  if (y + height > maxY) height = maxY - y;
+
+  return {
+    x,
+    y,
+    width: Math.max(1, width),
+    height: Math.max(1, height),
+  };
+}
+
+export function resizeScreenRect(
+  start: ScreenRect,
+  handle: ResizeHandle,
+  delta: { x: number; y: number },
+  minSize = 12,
+): ScreenRect {
+  let { x, y, width, height } = start;
+  const right = x + width;
+  const bottom = y + height;
+
+  if (handle.includes('e')) {
+    width = Math.max(minSize, width + delta.x);
+  }
+  if (handle.includes('w')) {
+    const nextX = x + delta.x;
+    x = Math.min(nextX, right - minSize);
+    width = right - x;
+  }
+  if (handle.includes('s')) {
+    height = Math.max(minSize, height + delta.y);
+  }
+  if (handle.includes('n')) {
+    const nextY = y + delta.y;
+    y = Math.min(nextY, bottom - minSize);
+    height = bottom - y;
+  }
+
+  return { x, y, width, height };
+}
+
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(1, Math.max(0, value));

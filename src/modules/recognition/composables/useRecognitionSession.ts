@@ -9,6 +9,7 @@ import {
   buildFullTaskProbes,
   createRecognitionSession,
   detectionsToFaceAnnotations,
+  filterRecognitionDetections,
   getRecognitionSessionByTask,
   prepareRecognitionImagePayload,
   rejectRecognitionResults,
@@ -19,6 +20,13 @@ import {
   uploadRecognitionImage,
 } from '../recognitionService';
 import { requestCo21ApiToken } from 'src/modules/co21-server/co21ApiAuth';
+import { noteCo21ServerBootId } from 'src/modules/co21-server/co21ApiClient';
+import {
+  clearAllStoredPendingDetections,
+  loadStoredPendingDetections,
+  removeStoredPendingDetections,
+  saveStoredPendingDetections,
+} from '../recognitionPendingStorage';
 
 function normalizeSessionProbes(probes: RecognitionProbe[]): RecognitionProbe[] {
   return probes.map((probe) => {
@@ -60,21 +68,50 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
     probeSummary.value.reduce((sum, row) => sum + row.sampleCount, 0),
   );
 
-  function clearPending(): void {
+  function clearPending(localImageKey?: string): void {
     pendingDetections.value = [];
+    if (localImageKey) {
+      removeStoredPendingDetections(localImageKey);
+    }
   }
 
   async function loadPendingFromSession(
     nextSession: RecognitionSession | null,
     localImageKey: string,
+    annotations: FaceAnnotationRect[] = [],
   ): Promise<void> {
-    if (!nextSession || !localImageKey) {
+    if (!localImageKey) {
       clearPending();
+      showPending.value = false;
       return;
     }
+
     const apiImageKey = await toRecognitionApiImageKey(localImageKey);
-    const entry = nextSession.pending_results?.[apiImageKey];
-    pendingDetections.value = Array.isArray(entry?.detections) ? [...entry.detections] : [];
+    let detections = loadStoredPendingDetections(localImageKey);
+
+    if (!detections.length && nextSession && apiImageKey) {
+      const entry = nextSession.pending_results?.[apiImageKey];
+      const fromServer = Array.isArray(entry?.detections) ? [...entry.detections] : [];
+      if (fromServer.length) {
+        detections = fromServer;
+        saveStoredPendingDetections(localImageKey, detections);
+      }
+    }
+
+    detections = filterRecognitionDetections(detections, { existingAnnotations: annotations });
+    pendingDetections.value = detections;
+    showPending.value = detections.length > 0;
+  }
+
+  async function invalidateIfServerRestarted(): Promise<void> {
+    const restarted = await noteCo21ServerBootId();
+    if (!restarted) return;
+    session.value = null;
+    pendingDetections.value = [];
+    clearAllStoredPendingDetections();
+    showPending.value = false;
+    lastEngine.value = '';
+    lastError.value = '';
   }
 
   async function ensureSession(mode: 'face' | 'ocr' | 'general' = 'face'): Promise<RecognitionSession | null> {
@@ -83,6 +120,8 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
       lastError.value = 'Task id is required for recognition session';
       return null;
     }
+
+    await invalidateIfServerRestarted();
 
     if (session.value && session.value.task_id === id) {
       return session.value;
@@ -138,6 +177,12 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
         };
       } else {
         lastError.value = updated.error || 'Could not update recognition probes';
+        return;
+      }
+
+      const sampleUpload = await uploadProbeSampleImages(current.session_id, probes, { rootPath });
+      if (!sampleUpload.ok) {
+        lastError.value = sampleUpload.error || 'Could not upload recognition sample photos';
       }
     } finally {
       busy.value = false;
@@ -190,10 +235,9 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
       if (rootPath) {
         const sampleUpload = await uploadProbeSampleImages(current.session_id, probes, {
           rootPath,
-          skipApiImageKeys: new Set([apiImageKey]),
         });
         if (!sampleUpload.ok) {
-          lastError.value = sampleUpload.error || 'Could not upload recognition samples';
+          lastError.value = sampleUpload.error || 'Could not upload recognition sample photos';
           return [];
         }
       }
@@ -210,7 +254,18 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
         return [];
       }
 
-      const result = await runRecognition(current.session_id, [apiImageKey]);
+      const labeledRects = annotations
+        .filter((item) => item.label?.trim())
+        .map(({ x, y, width, height }) => ({ x, y, width, height }));
+
+      const excludeByImage =
+        labeledRects.length > 0 ? { [apiImageKey]: labeledRects } : undefined;
+
+      const result = await runRecognition(
+        current.session_id,
+        [apiImageKey],
+        excludeByImage ? { excludeByImage } : undefined,
+      );
       if (!result.ok || !result.data) {
         lastError.value = result.error || 'Recognition request failed';
         return [];
@@ -224,8 +279,11 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
         probes: session.value?.probes || probes,
         pending_results: result.data.pending,
       };
-      const detections = row?.detections || [];
+      const detections = filterRecognitionDetections(row?.detections || [], {
+        existingAnnotations: annotations,
+      });
       pendingDetections.value = [...detections];
+      saveStoredPendingDetections(localImageKey, detections);
       showPending.value = detections.length > 0;
       return detections;
     } catch (err) {
@@ -255,6 +313,7 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
     } else {
       pendingDetections.value = [];
     }
+    saveStoredPendingDetections(localImageKey, pendingDetections.value);
     if (!pendingDetections.value.length) showPending.value = false;
 
     return detectionsToFaceAnnotations(accepted).map((item) => ({
@@ -275,6 +334,7 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
     } else {
       pendingDetections.value = [];
     }
+    saveStoredPendingDetections(localImageKey, pendingDetections.value);
     if (!pendingDetections.value.length) showPending.value = false;
   }
 

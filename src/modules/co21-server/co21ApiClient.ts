@@ -100,3 +100,25 @@ export async function co21ApiHealth(baseUrl?: string): Promise<boolean> {
   });
   return res.ok;
 }
+
+const RECOGNITION_BOOT_STORAGE_KEY = 'co21.recognition.serverBootId';
+
+export async function fetchCo21ServerBootId(baseUrl?: string): Promise<string> {
+  const resolvedBase = baseUrl || (await loadCo21ServerBaseUrl());
+  const res = await co21ApiRequest<{ boot_id?: string }>({
+    path: '/api/v1/health',
+    baseUrl: resolvedBase,
+    timeoutMs: 5000,
+  });
+  const bootId = res.data?.boot_id;
+  return typeof bootId === 'string' && bootId.trim() ? bootId.trim() : '';
+}
+
+/** Returns true when the backend process has restarted since the last call. */
+export async function noteCo21ServerBootId(baseUrl?: string): Promise<boolean> {
+  const bootId = await fetchCo21ServerBootId(baseUrl);
+  if (!bootId) return false;
+  const previous = localStorage.getItem(RECOGNITION_BOOT_STORAGE_KEY) || '';
+  localStorage.setItem(RECOGNITION_BOOT_STORAGE_KEY, bootId);
+  return !!previous && previous !== bootId;
+}

@@ -56,6 +56,7 @@
             :stage-el="stageEl"
             :image-el="imageEl"
             @add="onFaceAnnotationAdded"
+            @update="onFaceAnnotationUpdated"
             @cancel-select="onFaceSelectCancel"
             @remove="removeFaceAnnotation($event)"
             @accept-suggested="onAcceptSuggested($event)"
@@ -174,7 +175,10 @@ import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
 import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
 import { ensureCo21ServerRunning } from 'src/modules/co21-server/co21ServerService';
 import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
-import { detectionsToFaceAnnotations } from 'src/modules/recognition/recognitionService';
+import {
+  detectionsToFaceAnnotations,
+  filterRecognitionDetections,
+} from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
 
 const props = withDefaults(
@@ -242,6 +246,7 @@ const {
   toggleEnabled: toggleFaceRecognitionEnabled,
   toggleSelectMode: toggleFaceRecognitionSelectMode,
   addAnnotation: addFaceAnnotation,
+  updateAnnotation: updateFaceAnnotation,
   removeAnnotation: removeFaceAnnotation,
 } = useMediaFaceRecognition(imageAnnotationKey);
 
@@ -277,10 +282,16 @@ const recognitionAvailable = computed(
   () => !!taskIdRef.value && aiHealthy.value && !!imageUrl.value,
 );
 
-const hasPendingDetections = computed(() => pendingDetections.value.length > 0);
+const filteredPendingDetections = computed(() =>
+  filterRecognitionDetections(pendingDetections.value, {
+    existingAnnotations: faceRecognitionAnnotations.value,
+  }),
+);
+
+const hasPendingDetections = computed(() => filteredPendingDetections.value.length > 0);
 
 const suggestedFaceAnnotations = computed(() =>
-  detectionsToFaceAnnotations(pendingDetections.value),
+  detectionsToFaceAnnotations(filteredPendingDetections.value),
 );
 
 function toggleRecognitionPending(): void {
@@ -494,11 +505,11 @@ watch(
 );
 
 watch(
-  [imageAnnotationKey, taskIdRef, () => aiHealthy.value],
+  [imageAnnotationKey, taskIdRef, () => aiHealthy.value, faceRecognitionAnnotations],
   async ([key, taskId, healthy]) => {
     if (!key || !taskId || !healthy) return;
     const current = await ensureSession('face');
-    if (current) void loadPendingFromSession(current, key);
+    if (current) void loadPendingFromSession(current, key, faceRecognitionAnnotations.value);
   },
 );
 
@@ -525,6 +536,13 @@ function onTagError(message: string): void {
 function onFaceAnnotationAdded(rect: FaceAnnotationRect): void {
   addFaceAnnotation(rect);
   faceRecognitionSelectMode.value = false;
+  if (rect.label && taskIdRef.value && aiHealthy.value && imageAnnotationKey.value) {
+    void syncProbes(imageAnnotationKey.value, faceRecognitionAnnotations.value);
+  }
+}
+
+function onFaceAnnotationUpdated(rect: FaceAnnotationRect): void {
+  updateFaceAnnotation(rect);
   if (rect.label && taskIdRef.value && aiHealthy.value && imageAnnotationKey.value) {
     void syncProbes(imageAnnotationKey.value, faceRecognitionAnnotations.value);
   }
@@ -566,7 +584,11 @@ async function onAutoRecognize(): Promise<void> {
     return;
   }
   if (!detections.length) {
-    appNotify('info', $text('files.recognition_no_results'));
+    if (recognitionLastEngine.value.includes('not on server')) {
+      appNotify('warning', $text('files.recognition_samples_missing'));
+    } else {
+      appNotify('info', $text('files.recognition_no_results'));
+    }
     return;
   }
   recognitionShowPending.value = true;

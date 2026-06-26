@@ -199,6 +199,8 @@ export async function startAiServer(options?: {
   await runPipInstall(config);
   logger.info('[backend-server] migrate', config.backendPath);
   await runManagePy(config, ['migrate', '--noinput']);
+  logger.info('[backend-server] clear recognition sessions');
+  await runManagePy(config, ['clear_recognition_sessions']);
 
   const port = new URL(activeBaseUrl).port || String(DEFAULT_PORT);
   logger.info('[backend-server] start', activeBaseUrl, config.backendPath);
