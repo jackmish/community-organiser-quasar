@@ -89,7 +89,7 @@ function raceAbort<T>(
  */
 async function capacitorLanRequest(opts: {
   url: string;
-  method: 'GET' | 'POST' | 'OPTIONS';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;
@@ -134,7 +134,7 @@ async function capacitorLanRequest(opts: {
  */
 async function electronIpcLanRequest(opts: {
   url: string;
-  method: 'GET' | 'POST' | 'OPTIONS';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;
@@ -170,7 +170,7 @@ async function electronIpcLanRequest(opts: {
  */
 export async function lanHttpRequest(opts: {
   url: string;
-  method: 'GET' | 'POST' | 'OPTIONS';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;
@@ -216,7 +216,7 @@ export async function lanHttpRequest(opts: {
 
 async function fetchLanRequest(opts: {
   url: string;
-  method: 'GET' | 'POST' | 'OPTIONS';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: string;
   timeoutMs: number;

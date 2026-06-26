@@ -40,21 +40,27 @@
           <q-item>
             <q-item-section>
               <div class="task-menu-device-strip">
-                <div
-                  v-for="d in props.deviceStatuses"
-                  :key="d.id"
-                  class="task-menu-device-pill"
-                  :class="deviceStatusMenuPillClass(d.status)"
-                >
-                  <q-icon :name="d.linkIcon" size="16px" class="task-menu-device-pill__link" />
-                  <div class="task-menu-device-pill__labels">
-                    <span class="task-menu-device-pill__line">{{ d.shortLine1 }}</span>
-                    <span v-if="d.shortLine2" class="task-menu-device-pill__line">{{
-                      d.shortLine2
-                    }}</span>
+                <template v-for="d in props.deviceStatuses" :key="d.id">
+                  <LocalBackendServerDevicePill
+                    v-if="d.id === LOCAL_BACKEND_SERVER_ID"
+                    :row="d"
+                    variant="menu"
+                  />
+                  <div
+                    v-else
+                    class="task-menu-device-pill"
+                    :class="deviceStatusMenuPillClass(d.status)"
+                  >
+                    <q-icon :name="d.linkIcon" size="16px" class="task-menu-device-pill__link" />
+                    <div class="task-menu-device-pill__labels">
+                      <span class="task-menu-device-pill__line">{{ d.shortLine1 }}</span>
+                      <span v-if="d.shortLine2" class="task-menu-device-pill__line">{{
+                        d.shortLine2
+                      }}</span>
+                    </div>
+                    <q-tooltip anchor="bottom middle" self="top middle">{{ d.name }}</q-tooltip>
                   </div>
-                  <q-tooltip anchor="bottom middle" self="top middle">{{ d.name }}</q-tooltip>
-                </div>
+                </template>
               </div>
             </q-item-section>
           </q-item>
@@ -116,8 +122,10 @@ import { computed } from 'vue';
 import { useQuasar } from 'quasar';
 import {
   deviceStatusMenuPillClass,
+  LOCAL_BACKEND_SERVER_ID,
   type DeviceStatusRow,
 } from 'src/utils/deviceStatusDisplay';
+import LocalBackendServerDevicePill from 'src/modules/ai/components/LocalBackendServerDevicePill.vue';
 import { useAppViewMode } from 'src/modules/media/composables/useAppViewMode';
 import logger from 'src/utils/logger';
 
@@ -270,12 +278,12 @@ function onMergeGroup() {
 
 .task-menu-device-pill--off {
   background: #fff;
-  border-color: #991b1b;
-  color: #7f1d1d;
+  border-color: #6b7280;
+  color: #374151;
 }
 
 .task-menu-device-pill--off :deep(.q-icon) {
-  color: #7f1d1d !important;
+  color: #374151 !important;
 }
 
 .task-menu-device-pill--checking {

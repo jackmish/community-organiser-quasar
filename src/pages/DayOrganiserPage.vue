@@ -19,25 +19,32 @@
               <div class="text-h6 task-list-header" :style="headerStyle">
                 <div class="row items-center task-header-row" >
                   <div v-if="!$q.screen.lt.md" class="task-header-device-strip">
-                    <div
-                      v-for="d in headerDeviceStatus"
-                      :key="d.id"
-                      class="task-header-device-pill"
-                      :class="deviceStatusPillClass(d.status)"
-                    >
-                      <q-icon
-                        :name="d.linkIcon"
-                        size="16px"
-                        class="task-header-device-pill__link"
+                    <template v-for="d in headerDeviceStatus" :key="d.id">
+                      <LocalBackendServerDevicePill
+                        v-if="d.id === LOCAL_BACKEND_SERVER_ID"
+                        :row="d"
+                        variant="header"
+                        @changed="void probeLocalBackendForStrip()"
                       />
-                      <div class="task-header-device-pill__labels">
-                        <span class="task-header-device-pill__line">{{ d.shortLine1 }}</span>
-                        <span v-if="d.shortLine2" class="task-header-device-pill__line">{{
-                          d.shortLine2
-                        }}</span>
+                      <div
+                        v-else
+                        class="task-header-device-pill"
+                        :class="deviceStatusPillClass(d.status)"
+                      >
+                        <q-icon
+                          :name="d.linkIcon"
+                          size="16px"
+                          class="task-header-device-pill__link"
+                        />
+                        <div class="task-header-device-pill__labels">
+                          <span class="task-header-device-pill__line">{{ d.shortLine1 }}</span>
+                          <span v-if="d.shortLine2" class="task-header-device-pill__line">{{
+                            d.shortLine2
+                          }}</span>
+                        </div>
+                        <q-tooltip anchor="bottom middle" self="top middle">{{ d.name }}</q-tooltip>
                       </div>
-                      <q-tooltip anchor="bottom middle" self="top middle">{{ d.name }}</q-tooltip>
-                    </div>
+                    </template>
                   </div>
                   <div v-if="!$q.screen.lt.md" class="row items-center no-wrap task-header-sync-tools">
                     <q-btn
@@ -682,9 +689,14 @@ import { scheduleBackgroundLanSyncAfterDisplay } from "src/modules/storage/sync/
 import {
   buildDeviceStatusRow,
   deviceStatusPillClass,
+  LOCAL_BACKEND_SERVER_ID,
   type DeviceConnectionStatus,
   type DeviceStatusRow,
 } from "src/utils/deviceStatusDisplay";
+import LocalBackendServerDevicePill from "src/modules/ai/components/LocalBackendServerDevicePill.vue";
+import { probeLocalBackendServerRow } from "src/modules/ai/localBackendServerStatus";
+import { AI_SERVER_CHANGED_EVENT } from "src/modules/ai/aiServerModel";
+import { loadAiServerEnabled } from "src/modules/ai/aiServerSettings";
 import { probeLanPeerInfo } from "src/modules/lan/lanPeerConnectivity";
 import type { ConnectedDevice } from "src/modules/storage/sync/deviceRoleAssignment";
 import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
@@ -1308,10 +1320,12 @@ let organiserSyncFullHandler: any = null;
 let organiserGroupMergeOpenHandler: any = null;
 let headerDevicesInterval: ReturnType<typeof setInterval> | null = null;
 let headerDeviceProbeInFlight = false;
+let onAiServerSettingsChanged: (() => void) | null = null;
 
 const DEVICE_PROBE_SLOW_MS = 1000;
 const deviceProbeChecking = ref<Record<string, boolean>>({});
 const headerDeviceProbeDone = ref(false);
+const localBackendProbeChecking = ref(false);
 
 function resolveConnectionStatus(
   deviceId: string,
@@ -1327,7 +1341,7 @@ async function refreshHeaderDeviceStatus(): Promise<void> {
     const [devices, peers] = await Promise.all([loadConnectionsDevices(), loadSyncPeerStates()]);
     const peerMap = new Map(peers.map((p) => [String(p.peerDeviceId), p]));
     const remotes = (devices || []).filter((d: any) => !d?.isLocal);
-    headerDeviceStatus.value = remotes.map((d: any) => {
+    const rows = remotes.map((d: any) => {
       const id = String(d.id);
       const status = resolveConnectionStatus(id, peerMap.get(id));
       return buildDeviceStatusRow(
@@ -1335,6 +1349,11 @@ async function refreshHeaderDeviceStatus(): Promise<void> {
         status,
       );
     });
+    const localRow = await probeLocalBackendServerRow({
+      checking: localBackendProbeChecking.value,
+    });
+    if (localRow) rows.unshift(localRow);
+    headerDeviceStatus.value = rows;
   } catch {
     void 0;
   }
@@ -1359,6 +1378,27 @@ async function probeOneDeviceForStrip(device: ConnectedDevice): Promise<void> {
   }
 }
 
+async function probeLocalBackendForStrip(): Promise<void> {
+  const enabled = await loadAiServerEnabled();
+  if (!enabled) {
+    localBackendProbeChecking.value = false;
+    await refreshHeaderDeviceStatus();
+    return;
+  }
+
+  const slowTimer = setTimeout(() => {
+    localBackendProbeChecking.value = true;
+    void refreshHeaderDeviceStatus();
+  }, DEVICE_PROBE_SLOW_MS);
+  try {
+    await probeLocalBackendServerRow();
+  } finally {
+    clearTimeout(slowTimer);
+    localBackendProbeChecking.value = false;
+    await refreshHeaderDeviceStatus();
+  }
+}
+
 async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void> {
   if (headerDeviceProbeInFlight && !opts?.launch) return;
   headerDeviceProbeInFlight = true;
@@ -1367,7 +1407,10 @@ async function probeHeaderDeviceStrip(opts?: { launch?: boolean }): Promise<void
     const devices = await loadConnectionsDevices();
     const remotes = devices.filter((d) => !d.isLocal);
     await refreshHeaderDeviceStatus();
-    await Promise.all(remotes.map((d) => probeOneDeviceForStrip(d)));
+    await Promise.all([
+      ...remotes.map((d) => probeOneDeviceForStrip(d)),
+      probeLocalBackendForStrip(),
+    ]);
   } catch {
     void 0;
   } finally {
@@ -1418,6 +1461,8 @@ onBeforeUnmount(() => {
         "group:merge-open",
         organiserGroupMergeOpenHandler as EventListener
       );
+    if (onAiServerSettingsChanged)
+      window.removeEventListener(AI_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
   } catch (e) {
     // ignore
   }
@@ -2753,6 +2798,11 @@ onMounted(async () => {
   };
   window.addEventListener("group:merge-open", organiserGroupMergeOpenHandler as EventListener);
 
+  onAiServerSettingsChanged = () => {
+    void probeLocalBackendForStrip();
+  };
+  window.addEventListener(AI_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
+
   void probeHeaderDeviceStrip({ launch: true });
   void (async () => {
     const intervalSec = await loadSyncIntervalSeconds();
@@ -2994,12 +3044,12 @@ onMounted(async () => {
 
 .task-header-device-pill--off {
   background: #fff;
-  border-color: #991b1b;
-  color: #7f1d1d;
+  border-color: #6b7280;
+  color: #374151;
 }
 
 .task-header-device-pill--off :deep(.q-icon) {
-  color: #7f1d1d !important;
+  color: #374151 !important;
 }
 
 .task-header-device-pill--checking {

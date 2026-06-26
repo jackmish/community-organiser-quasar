@@ -267,6 +267,7 @@
           :images-only="isMediaGalleryTask"
           :gallery-layout="isMediaGalleryTask"
           :gallery-tag-set="galleryTagSet"
+          :task-id="String(activeTask?.id || '')"
           fill-available
         />
         <q-banner
@@ -652,6 +653,7 @@
     :open="noteGraphicPreviewOpen"
     :direct-entries="noteGraphicPreviewEntries"
     :direct-entry="noteGraphicPreviewEntry"
+    :task-id="String(activeTask?.id || '')"
     @update:open="onNoteGraphicPreviewOpenChange"
     @update:direct-entry="noteGraphicPreviewEntry = $event"
     @error="onNoteGraphicPreviewError"

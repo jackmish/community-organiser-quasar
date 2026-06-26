@@ -33,12 +33,16 @@
             :enabled="faceRecognitionEnabled"
             :select-mode="faceRecognitionSelectMode"
             :annotations="faceRecognitionAnnotations"
+            :suggested-annotations="suggestedFaceAnnotations"
+            :show-suggested="recognitionShowPending"
             :known-names="faceRecognitionKnownNames"
             :stage-el="stageEl"
             :image-el="imageEl"
             @add="onFaceAnnotationAdded"
             @cancel-select="onFaceSelectCancel"
             @remove="removeFaceAnnotation($event)"
+            @accept-suggested="onAcceptSuggested($event)"
+            @reject-suggested="onRejectSuggested($event)"
           />
         </div>
 
@@ -96,8 +100,14 @@
                 :ai-enabled="aiEnabled"
                 :ai-healthy="aiHealthy"
                 :ai-busy="aiBusy"
+                :recognition-available="recognitionAvailable"
+                :recognition-busy="recognitionBusy"
+                :has-pending="hasPendingDetections"
+                :show-pending="recognitionShowPending"
                 @toggle-select="toggleFaceRecognitionSelectMode()"
                 @start-backend-server="onStartBackendServer"
+                @auto-recognize="onAutoRecognize"
+                @toggle-pending="toggleRecognitionPending()"
               />
             </div>
           </div>
@@ -141,6 +151,9 @@ import {
 } from '../mediaFaceAnnotationStorage';
 import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
 import { useCo21AiServer } from 'src/modules/ai/composables/useCo21AiServer';
+import { ensureAiServerRunning } from 'src/modules/ai/aiServerService';
+import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
+import { detectionsToFaceAnnotations } from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
 
 const props = withDefaults(
@@ -153,6 +166,8 @@ const props = withDefaults(
     fallbackThumbUrl?: string;
     directEntries?: DirectGalleryPreviewEntry[];
     directEntry?: DirectGalleryPreviewEntry | null;
+    /** Task id scopes backend recognition session (one session per task). */
+    taskId?: string;
   }>(),
   {
     rootPath: '',
@@ -160,6 +175,7 @@ const props = withDefaults(
     tags: () => [],
     directEntries: () => [],
     directEntry: null,
+    taskId: '',
   },
 );
 
@@ -211,6 +227,37 @@ const {
   refresh: refreshAiServer,
   start: startAiServer,
 } = useCo21AiServer();
+
+const taskIdRef = computed(() => String(props.taskId || '').trim());
+const {
+  busy: recognitionBusy,
+  lastError: recognitionLastError,
+  showPending: recognitionShowPending,
+  pendingDetections,
+  recognizeImage,
+  acceptPending,
+  rejectPending,
+  loadPendingFromSession,
+  ensureSession,
+} = useRecognitionSession(taskIdRef);
+
+const recognitionAvailable = computed(
+  () => !!taskIdRef.value && aiHealthy.value && !!imageUrl.value,
+);
+
+const hasPendingDetections = computed(() => pendingDetections.value.length > 0);
+
+const suggestedFaceAnnotations = computed(() =>
+  detectionsToFaceAnnotations(pendingDetections.value),
+);
+
+function toggleRecognitionPending(): void {
+  recognitionShowPending.value = !recognitionShowPending.value;
+}
+
+function detectionIdFromSuggestedRectId(rectId: string): string {
+  return rectId.startsWith('det-') ? rectId.slice(4) : rectId;
+}
 
 const displayName = computed(() => {
   if (useDirectUrls.value) return props.directEntry?.name || '';
@@ -384,6 +431,15 @@ watch(
   { immediate: true },
 );
 
+watch(
+  [imageAnnotationKey, taskIdRef, () => aiHealthy.value],
+  async ([key, taskId, healthy]) => {
+    if (!key || !taskId || !healthy) return;
+    const current = await ensureSession('face');
+    if (current) loadPendingFromSession(current, key);
+  },
+);
+
 onUnmounted(() => {
   window.removeEventListener('keydown', onPreviewKeydown);
 });
@@ -423,6 +479,48 @@ async function onStartBackendServer(): Promise<void> {
   if (!ok) {
     appNotify('negative', aiLastError.value || $text('accounts.backend_server_start_failed'));
   }
+}
+
+async function onAutoRecognize(): Promise<void> {
+  const key = imageAnnotationKey.value;
+  const url = imageUrl.value;
+  if (!key || !url || !taskIdRef.value) {
+    appNotify('warning', $text('files.recognition_task_required'));
+    return;
+  }
+
+  const server = await ensureAiServerRunning();
+  if (!server.ok) {
+    appNotify('negative', server.error || $text('accounts.backend_server_start_failed'));
+    return;
+  }
+
+  const detections = await recognizeImage(key, url, faceRecognitionAnnotations.value);
+  if (recognitionLastError.value) {
+    appNotify('negative', recognitionLastError.value);
+    return;
+  }
+  if (!detections.length) {
+    appNotify('info', $text('files.recognition_no_results'));
+    return;
+  }
+  recognitionShowPending.value = true;
+}
+
+async function onAcceptSuggested(rectId: string): Promise<void> {
+  const key = imageAnnotationKey.value;
+  if (!key) return;
+  const detectionId = detectionIdFromSuggestedRectId(rectId);
+  const accepted = await acceptPending(key, [detectionId]);
+  for (const rect of accepted) {
+    addFaceAnnotation(rect);
+  }
+}
+
+async function onRejectSuggested(rectId: string): Promise<void> {
+  const key = imageAnnotationKey.value;
+  if (!key) return;
+  await rejectPending(key, [detectionIdFromSuggestedRectId(rectId)]);
 }
 </script>
 

@@ -203,6 +203,7 @@
       :entries="previewImageEntries"
       :fallback-thumb-url="previewFallbackThumbUrl || ''"
       :tags="galleryFileTags"
+      :task-id="taskId || ''"
       @update:open="onPreviewOpenChange"
       @update:entry="previewEntry = $event"
       @moved="onGalleryFileTagged"
@@ -255,6 +256,8 @@ const props = defineProps<{
   galleryTagSet?: MediaGalleryTagSetConfig | null;
   /** Fill parent height; file list scrolls inside. */
   fillAvailable?: boolean;
+  /** Task id for recognition session scope. */
+  taskId?: string;
 }>();
 
 const loading = ref(false);

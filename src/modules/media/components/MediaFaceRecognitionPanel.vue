@@ -25,6 +25,32 @@
     </q-btn>
 
     <q-btn
+      v-if="recognitionAvailable"
+      square
+      unelevated
+      class="media-face-panel__recognize-btn"
+      :loading="recognitionBusy"
+      :aria-label="$text('files.recognition_auto_detect')"
+      :title="$text('files.recognition_auto_detect')"
+      @click="emit('auto-recognize')"
+    >
+      <q-icon name="auto_awesome" size="24px" color="white" />
+    </q-btn>
+
+    <q-btn
+      v-if="hasPending"
+      square
+      unelevated
+      class="media-face-panel__pending-btn"
+      :class="{ 'media-face-panel__pending-btn--active': showPending }"
+      :aria-label="$text('files.recognition_toggle_pending')"
+      :title="$text('files.recognition_toggle_pending')"
+      @click="emit('toggle-pending')"
+    >
+      <q-icon name="preview" size="22px" :color="showPending ? 'grey-10' : 'white'" />
+    </q-btn>
+
+    <q-btn
       square
       unelevated
       class="media-face-panel__select-btn"
@@ -48,11 +74,17 @@ const props = defineProps<{
   aiEnabled: boolean;
   aiHealthy: boolean;
   aiBusy: boolean;
+  recognitionAvailable: boolean;
+  recognitionBusy: boolean;
+  hasPending: boolean;
+  showPending: boolean;
 }>();
 
 const emit = defineEmits<{
   'toggle-select': [];
   'start-backend-server': [];
+  'auto-recognize': [];
+  'toggle-pending': [];
 }>();
 
 const showAiStart = computed(
@@ -70,6 +102,8 @@ const showAiStart = computed(
 }
 
 .media-face-panel__ai-btn,
+.media-face-panel__recognize-btn,
+.media-face-panel__pending-btn,
 .media-face-panel__select-btn {
   width: 44px;
   min-width: 44px;
@@ -83,6 +117,21 @@ const showAiStart = computed(
 
 .media-face-panel__ai-btn--ready {
   opacity: 0.95;
+}
+
+.media-face-panel__recognize-btn {
+  background: rgba(156, 39, 176, 0.55) !important;
+  border: 2px solid rgba(225, 190, 231, 0.85);
+}
+
+.media-face-panel__pending-btn {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 2px solid rgba(186, 104, 255, 0.85);
+}
+
+.media-face-panel__pending-btn--active {
+  background: rgba(186, 104, 255, 0.92) !important;
+  border-color: #ce93d8;
 }
 
 .media-face-panel__select-btn {

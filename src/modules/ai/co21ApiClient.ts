@@ -30,6 +30,8 @@ export async function co21ApiRequest<T = unknown>(
   const base = String(options.baseUrl || (await loadAiServerBaseUrl())).replace(/\/$/, '');
   const url = `${base}${normalizePath(options.path)}`;
   const method = (options.method || 'GET').toUpperCase();
+  const allowed = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
+  const httpMethod = allowed.has(method) ? method : 'GET';
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...options.headers,
@@ -44,13 +46,13 @@ export async function co21ApiRequest<T = unknown>(
     try {
       const lanOpts: {
         url: string;
-        method: 'GET' | 'POST' | 'OPTIONS';
+        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
         headers?: Record<string, string>;
         body?: string;
         timeoutMs: number;
       } = {
         url,
-        method: method === 'POST' ? 'POST' : method === 'OPTIONS' ? 'OPTIONS' : 'GET',
+        method: httpMethod as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS',
         headers,
         timeoutMs: options.timeoutMs ?? 20_000,
       };
@@ -71,7 +73,7 @@ export async function co21ApiRequest<T = unknown>(
   }
 
   try {
-    const init: RequestInit = { method, headers };
+    const init: RequestInit = { method: httpMethod, headers };
     if (body !== undefined) init.body = body;
     const res = await fetch(url, init);
     const rawBody = await res.text();

@@ -1,4 +1,7 @@
-/** Row shown in task header / options menu device strip. */
+/** Disconnected device strip — dark gray (not red). */
+export const DEVICE_DISCONNECTED_BORDER = '#6b7280';
+export const DEVICE_DISCONNECTED_FG = '#374151';
+
 export type DeviceConnectionStatus = 'connected' | 'disconnected' | 'checking';
 
 export type DeviceStatusRow = {
@@ -73,4 +76,27 @@ export function deviceStatusMenuPillClass(status: DeviceConnectionStatus): strin
   if (status === 'checking') return 'task-menu-device-pill--checking';
   if (status === 'connected') return 'task-menu-device-pill--on';
   return 'task-menu-device-pill--off';
+}
+
+export const LOCAL_BACKEND_SERVER_ID = 'co21-local-backend';
+
+/** Local CO21 Python backend shown in the task header device strip. */
+export function localBackendServerLinkIcon(status: DeviceConnectionStatus): string {
+  if (status === 'checking') return 'sync';
+  return 'terminal';
+}
+
+export function buildLocalBackendServerStatusRow(
+  status: DeviceConnectionStatus,
+  tooltipName: string,
+): DeviceStatusRow {
+  return {
+    id: LOCAL_BACKEND_SERVER_ID,
+    name: tooltipName,
+    shortLine1: 'SER',
+    shortLine2: 'LOC',
+    status,
+    connected: status === 'connected',
+    linkIcon: localBackendServerLinkIcon(status),
+  };
 }

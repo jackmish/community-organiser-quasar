@@ -45,6 +45,47 @@
     </div>
 
     <div
+      v-for="rect in suggestedAnnotations"
+      v-show="showSuggested"
+      :key="`suggested-${rect.id}`"
+      class="media-face-overlay__box media-face-overlay__box--suggested"
+      :class="{ 'media-face-overlay__box--hover': hoveredSuggestedId === rect.id }"
+      :style="boxStyle(rect)"
+      @mouseenter="hoveredSuggestedId = rect.id"
+      @mouseleave="hoveredSuggestedId = ''"
+      @click.stop
+    >
+      <div
+        v-if="rect.label || hoveredSuggestedId === rect.id"
+        class="media-face-overlay__label-row"
+      >
+        <span class="media-face-overlay__label">
+          {{ rect.label || $text('files.face_unnamed') }}
+        </span>
+        <div v-if="hoveredSuggestedId === rect.id" class="media-face-overlay__suggested-actions">
+          <button
+            type="button"
+            class="media-face-overlay__remove"
+            :aria-label="$text('action.cancel')"
+            :title="$text('files.recognition_reject')"
+            @click.stop="emit('reject-suggested', rect.id)"
+          >
+            <q-icon name="close" size="16px" />
+          </button>
+          <button
+            type="button"
+            class="media-face-overlay__accept"
+            :aria-label="$text('action.confirm')"
+            :title="$text('files.recognition_accept')"
+            @click.stop="emit('accept-suggested', rect.id)"
+          >
+            <q-icon name="check" size="16px" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
       v-if="draftRect"
       class="media-face-overlay__box media-face-overlay__box--draft"
       :style="screenStyle(draftRect)"
@@ -138,6 +179,8 @@ const props = defineProps<{
   enabled: boolean;
   selectMode: boolean;
   annotations: FaceAnnotationRect[];
+  suggestedAnnotations?: FaceAnnotationRect[];
+  showSuggested?: boolean;
   knownNames: string[];
   stageEl: HTMLElement | null;
   imageEl: HTMLImageElement | null;
@@ -147,6 +190,8 @@ const emit = defineEmits<{
   add: [rect: FaceAnnotationRect];
   cancelSelect: [];
   remove: [id: string];
+  'accept-suggested': [id: string];
+  'reject-suggested': [id: string];
 }>();
 
 const overlayEl = ref<HTMLElement | null>(null);
@@ -159,9 +204,13 @@ const nameInputRef = ref<{ focus: () => void } | null>(null);
 const dragStart = ref<{ x: number; y: number } | null>(null);
 const activePointerId = ref<number | null>(null);
 const hoveredId = ref('');
+const hoveredSuggestedId = ref('');
 let suppressClickAfterDrag = false;
 
 let resizeObserver: ResizeObserver | null = null;
+
+const suggestedAnnotations = computed(() => props.suggestedAnnotations || []);
+const showSuggested = computed(() => props.showSuggested === true);
 
 const nameHints = computed(() => filterPersonNameHints(pendingName.value, props.knownNames));
 
@@ -400,6 +449,32 @@ function cancelPending(): void {
   background: transparent;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+}
+
+.media-face-overlay__box--suggested {
+  border-color: rgba(186, 104, 255, 0.98);
+  border-style: dashed;
+  background: rgba(186, 104, 255, 0.08);
+}
+
+.media-face-overlay__suggested-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.media-face-overlay__accept {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(76, 175, 80, 0.9);
+  color: #fff;
+  cursor: pointer;
 }
 
 .media-face-overlay__label-row {
