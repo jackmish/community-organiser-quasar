@@ -1,5 +1,5 @@
-import { co21AuthHeaders } from 'src/modules/ai/co21ApiAuth';
-import { co21ApiRequest } from 'src/modules/ai/co21ApiClient';
+import { co21AuthHeaders } from 'src/modules/co21-server/co21ApiAuth';
+import { co21ApiRequest } from 'src/modules/co21-server/co21ApiClient';
 import type { FaceAnnotationRect } from 'src/modules/media/mediaFaceAnnotationModel';
 import type {
   RecognitionDetection,

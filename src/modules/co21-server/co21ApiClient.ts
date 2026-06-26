@@ -1,6 +1,6 @@
 import { lanHttpRequest } from 'src/modules/lan/lanHttp';
-import { isAiServerBridgeAvailable } from './aiServerService';
-import { loadAiServerBaseUrl } from './aiServerSettings';
+import { isCo21ServerBridgeAvailable } from './co21ServerService';
+import { loadCo21ServerBaseUrl } from './co21ServerSettings';
 
 export type Co21ApiRequestOptions = {
   path: string;
@@ -27,7 +27,7 @@ function normalizePath(path: string): string {
 export async function co21ApiRequest<T = unknown>(
   options: Co21ApiRequestOptions,
 ): Promise<Co21ApiResponse<T>> {
-  const base = String(options.baseUrl || (await loadAiServerBaseUrl())).replace(/\/$/, '');
+  const base = String(options.baseUrl || (await loadCo21ServerBaseUrl())).replace(/\/$/, '');
   const url = `${base}${normalizePath(options.path)}`;
   const method = (options.method || 'GET').toUpperCase();
   const allowed = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
@@ -42,7 +42,7 @@ export async function co21ApiRequest<T = unknown>(
     body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
   }
 
-  if (isAiServerBridgeAvailable()) {
+  if (isCo21ServerBridgeAvailable()) {
     try {
       const lanOpts: {
         url: string;
@@ -92,7 +92,7 @@ export async function co21ApiRequest<T = unknown>(
 }
 
 export async function co21ApiHealth(baseUrl?: string): Promise<boolean> {
-  const resolvedBase = baseUrl || (await loadAiServerBaseUrl());
+  const resolvedBase = baseUrl || (await loadCo21ServerBaseUrl());
   const res = await co21ApiRequest<{ status?: string }>({
     path: '/api/v1/health',
     baseUrl: resolvedBase,

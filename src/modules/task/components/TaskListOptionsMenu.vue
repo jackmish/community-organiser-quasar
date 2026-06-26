@@ -125,7 +125,7 @@ import {
   LOCAL_BACKEND_SERVER_ID,
   type DeviceStatusRow,
 } from 'src/utils/deviceStatusDisplay';
-import LocalBackendServerDevicePill from 'src/modules/ai/components/LocalBackendServerDevicePill.vue';
+import LocalBackendServerDevicePill from 'src/modules/co21-server/components/LocalBackendServerDevicePill.vue';
 import { useAppViewMode } from 'src/modules/media/composables/useAppViewMode';
 import logger from 'src/utils/logger';
 

@@ -52,7 +52,7 @@ import {
   DEVICE_DISCONNECTED_FG,
   type DeviceStatusRow,
 } from 'src/utils/deviceStatusDisplay';
-import { useCo21AiServer } from 'src/modules/ai/composables/useCo21AiServer';
+import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
 
 const props = withDefaults(
   defineProps<{
@@ -66,7 +66,7 @@ const emit = defineEmits<{
   changed: [];
 }>();
 
-const { running, busy, lastError, start, stop } = useCo21AiServer();
+const { running, busy, lastError, start, stop } = useCo21Server();
 
 const showStart = computed(() => props.row.status === 'disconnected');
 const showStop = computed(() => props.row.status === 'connected' && running.value);

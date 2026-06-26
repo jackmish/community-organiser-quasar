@@ -168,8 +168,8 @@ import {
   fileImageAnnotationKey,
 } from '../mediaFaceAnnotationStorage';
 import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
-import { useCo21AiServer } from 'src/modules/ai/composables/useCo21AiServer';
-import { ensureAiServerRunning } from 'src/modules/ai/aiServerService';
+import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
+import { ensureCo21ServerRunning } from 'src/modules/co21-server/co21ServerService';
 import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
 import { detectionsToFaceAnnotations } from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
@@ -248,9 +248,9 @@ const {
   healthy: aiHealthy,
   busy: aiBusy,
   lastError: aiLastError,
-  refresh: refreshAiServer,
-  start: startAiServer,
-} = useCo21AiServer();
+  refresh: refreshCo21Server,
+  start: startCo21Server,
+} = useCo21Server();
 
 const taskIdRef = computed(() => String(props.taskId || '').trim());
 const {
@@ -477,7 +477,7 @@ watch(
   (open) => {
     if (open) {
       window.addEventListener('keydown', onPreviewKeydown);
-      if (faceRecognitionEnabled.value) void refreshAiServer();
+      if (faceRecognitionEnabled.value) void refreshCo21Server();
     } else {
       window.removeEventListener('keydown', onPreviewKeydown);
     }
@@ -529,7 +529,7 @@ function onStageClick(): void {
 }
 
 async function onStartBackendServer(): Promise<void> {
-  const ok = await startAiServer();
+  const ok = await startCo21Server();
   if (!ok) {
     appNotify('negative', aiLastError.value || $text('accounts.backend_server_start_failed'));
   }
@@ -543,7 +543,7 @@ async function onAutoRecognize(): Promise<void> {
     return;
   }
 
-  const server = await ensureAiServerRunning();
+  const server = await ensureCo21ServerRunning();
   if (!server.ok) {
     appNotify('negative', server.error || $text('accounts.backend_server_start_failed'));
     return;

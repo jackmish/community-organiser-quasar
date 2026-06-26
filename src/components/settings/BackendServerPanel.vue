@@ -84,19 +84,19 @@
 import { ref, computed, watch } from 'vue';
 import { $text } from 'src/modules/lang';
 import { appNotify } from 'src/utils/appNotify';
-import type { AiServerDefaultConfig } from 'src/modules/ai/aiServerModel';
+import type { Co21ServerDefaultConfig } from 'src/modules/co21-server/co21ServerModel';
 import {
-  loadAiServerBackendPath,
-  loadAiServerBaseUrl,
-  saveAiServerBackendPath,
-  saveAiServerBaseUrl,
-  saveAiServerEnabled,
-} from 'src/modules/ai/aiServerSettings';
+  loadCo21ServerBackendPath,
+  loadCo21ServerBaseUrl,
+  saveCo21ServerBackendPath,
+  saveCo21ServerBaseUrl,
+  saveCo21ServerEnabled,
+} from 'src/modules/co21-server/co21ServerSettings';
 import {
-  getAiServerDefaultConfig,
-  isAiServerBridgeAvailable,
-} from 'src/modules/ai/aiServerService';
-import { useCo21AiServer } from 'src/modules/ai/composables/useCo21AiServer';
+  getCo21ServerDefaultConfig,
+  isCo21ServerBridgeAvailable,
+} from 'src/modules/co21-server/co21ServerService';
+import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
 
 const {
   bridgeAvailable,
@@ -109,12 +109,12 @@ const {
   refresh,
   start,
   stop,
-} = useCo21AiServer();
+} = useCo21Server();
 
 const settingsSaving = ref(false);
 const baseUrlDraft = ref('');
 const backendPathDraft = ref('');
-const defaultConfig = ref<AiServerDefaultConfig | null>(null);
+const defaultConfig = ref<Co21ServerDefaultConfig | null>(null);
 
 const statusLabel = computed(() => {
   if (healthy.value) return $text('accounts.backend_server_status_ready');
@@ -123,10 +123,10 @@ const statusLabel = computed(() => {
 });
 
 async function loadSettings(): Promise<void> {
-  baseUrlDraft.value = await loadAiServerBaseUrl();
-  backendPathDraft.value = await loadAiServerBackendPath();
-  if (isAiServerBridgeAvailable()) {
-    defaultConfig.value = await getAiServerDefaultConfig();
+  baseUrlDraft.value = await loadCo21ServerBaseUrl();
+  backendPathDraft.value = await loadCo21ServerBackendPath();
+  if (isCo21ServerBridgeAvailable()) {
+    defaultConfig.value = await getCo21ServerDefaultConfig();
     if (!backendPathDraft.value && defaultConfig.value?.backendPath) {
       backendPathDraft.value = defaultConfig.value.backendPath;
     }
@@ -145,7 +145,7 @@ watch(
 async function onEnabledToggle(value: boolean): Promise<void> {
   settingsSaving.value = true;
   try {
-    await saveAiServerEnabled(value);
+    await saveCo21ServerEnabled(value);
     if (!value && running.value) await stop();
     await refresh();
   } finally {
@@ -156,7 +156,7 @@ async function onEnabledToggle(value: boolean): Promise<void> {
 async function saveBaseUrl(): Promise<void> {
   settingsSaving.value = true;
   try {
-    await saveAiServerBaseUrl(baseUrlDraft.value);
+    await saveCo21ServerBaseUrl(baseUrlDraft.value);
     await refresh();
   } finally {
     settingsSaving.value = false;
@@ -166,8 +166,8 @@ async function saveBaseUrl(): Promise<void> {
 async function saveBackendPath(): Promise<void> {
   settingsSaving.value = true;
   try {
-    await saveAiServerBackendPath(backendPathDraft.value);
-    defaultConfig.value = await getAiServerDefaultConfig();
+    await saveCo21ServerBackendPath(backendPathDraft.value);
+    defaultConfig.value = await getCo21ServerDefaultConfig();
     await refresh();
   } finally {
     settingsSaving.value = false;

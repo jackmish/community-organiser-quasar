@@ -693,10 +693,10 @@ import {
   type DeviceConnectionStatus,
   type DeviceStatusRow,
 } from "src/utils/deviceStatusDisplay";
-import LocalBackendServerDevicePill from "src/modules/ai/components/LocalBackendServerDevicePill.vue";
-import { probeLocalBackendServerRow } from "src/modules/ai/localBackendServerStatus";
-import { AI_SERVER_CHANGED_EVENT } from "src/modules/ai/aiServerModel";
-import { loadAiServerEnabled } from "src/modules/ai/aiServerSettings";
+import LocalBackendServerDevicePill from "src/modules/co21-server/components/LocalBackendServerDevicePill.vue";
+import { probeLocalBackendServerRow } from "src/modules/co21-server/localBackendServerStatus";
+import { CO21_SERVER_CHANGED_EVENT } from "src/modules/co21-server/co21ServerModel";
+import { loadCo21ServerEnabled } from "src/modules/co21-server/co21ServerSettings";
 import { probeLanPeerInfo } from "src/modules/lan/lanPeerConnectivity";
 import type { ConnectedDevice } from "src/modules/storage/sync/deviceRoleAssignment";
 import type { SyncPeerRecord } from "src/modules/storage/sync/syncPeerState";
@@ -1379,7 +1379,7 @@ async function probeOneDeviceForStrip(device: ConnectedDevice): Promise<void> {
 }
 
 async function probeLocalBackendForStrip(): Promise<void> {
-  const enabled = await loadAiServerEnabled();
+  const enabled = await loadCo21ServerEnabled();
   if (!enabled) {
     localBackendProbeChecking.value = false;
     await refreshHeaderDeviceStatus();
@@ -1462,7 +1462,7 @@ onBeforeUnmount(() => {
         organiserGroupMergeOpenHandler as EventListener
       );
     if (onAiServerSettingsChanged)
-      window.removeEventListener(AI_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
+      window.removeEventListener(CO21_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
   } catch (e) {
     // ignore
   }
@@ -2801,7 +2801,7 @@ onMounted(async () => {
   onAiServerSettingsChanged = () => {
     void probeLocalBackendForStrip();
   };
-  window.addEventListener(AI_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
+  window.addEventListener(CO21_SERVER_CHANGED_EVENT, onAiServerSettingsChanged);
 
   void probeHeaderDeviceStrip({ launch: true });
   void (async () => {
