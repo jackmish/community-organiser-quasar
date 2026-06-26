@@ -121,6 +121,9 @@
                 :recognition-busy="recognitionBusy"
                 :has-pending="hasPendingDetections"
                 :show-pending="recognitionShowPending"
+                :probe-summary="probeSummary"
+                :total-sample-count="totalSampleCount"
+                :recognition-engine="recognitionLastEngine"
                 @toggle-select="toggleFaceRecognitionSelectMode()"
                 @start-backend-server="onStartBackendServer"
                 @auto-recognize="onAutoRecognize"
@@ -166,16 +169,12 @@ import { useMediaFaceRecognition } from '../composables/useMediaFaceRecognition'
 import {
   directImageAnnotationKey,
   fileImageAnnotationKey,
-  loadLabeledAnnotationsForTaskFolder,
 } from '../mediaFaceAnnotationStorage';
 import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
 import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
 import { ensureCo21ServerRunning } from 'src/modules/co21-server/co21ServerService';
 import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
-import {
-  annotationsToProbes,
-  detectionsToFaceAnnotations,
-} from 'src/modules/recognition/recognitionService';
+import { detectionsToFaceAnnotations } from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
 
 const props = withDefaults(
@@ -257,18 +256,22 @@ const {
 } = useCo21Server();
 
 const taskIdRef = computed(() => String(props.taskId || '').trim());
+const mediaRootRef = computed(() => String(props.rootPath || '').trim());
 const {
   busy: recognitionBusy,
   lastError: recognitionLastError,
+  lastEngine: recognitionLastEngine,
   showPending: recognitionShowPending,
   pendingDetections,
+  probeSummary,
+  totalSampleCount,
   recognizeImage,
   acceptPending,
   rejectPending,
   loadPendingFromSession,
   ensureSession,
   syncProbes,
-} = useRecognitionSession(taskIdRef);
+} = useRecognitionSession(taskIdRef, mediaRootRef);
 
 const recognitionAvailable = computed(
   () => !!taskIdRef.value && aiHealthy.value && !!imageUrl.value,
@@ -522,8 +525,8 @@ function onTagError(message: string): void {
 function onFaceAnnotationAdded(rect: FaceAnnotationRect): void {
   addFaceAnnotation(rect);
   faceRecognitionSelectMode.value = false;
-  if (rect.label && taskIdRef.value && aiHealthy.value) {
-    void syncProbes(faceRecognitionAnnotations.value);
+  if (rect.label && taskIdRef.value && aiHealthy.value && imageAnnotationKey.value) {
+    void syncProbes(imageAnnotationKey.value, faceRecognitionAnnotations.value);
   }
 }
 
@@ -557,16 +560,7 @@ async function onAutoRecognize(): Promise<void> {
     return;
   }
 
-  const taskProbes = useDirectUrls.value
-    ? annotationsToProbes(faceRecognitionAnnotations.value)
-    : annotationsToProbes(loadLabeledAnnotationsForTaskFolder(String(props.rootPath || '')));
-
-  const detections = await recognizeImage(
-    key,
-    url,
-    faceRecognitionAnnotations.value,
-    taskProbes,
-  );
+  const detections = await recognizeImage(key, url, faceRecognitionAnnotations.value);
   if (recognitionLastError.value) {
     appNotify('negative', recognitionLastError.value);
     return;

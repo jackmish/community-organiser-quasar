@@ -113,6 +113,32 @@ async function waitForHealth(baseUrl: string, timeoutMs = 45_000): Promise<void>
   throw new Error('CO21 backend server did not become ready in time');
 }
 
+function runPipInstall(config: AiServerDefaultConfig): Promise<void> {
+  const reqFile = path.join(config.backendPath, 'requirements.txt');
+  if (!fs.existsSync(reqFile)) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn(
+      config.pythonPath,
+      ['-m', 'pip', 'install', '-q', '-r', reqFile],
+      {
+        cwd: config.backendPath,
+        env: { ...process.env },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    let stderr = '';
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(stderr.trim() || `pip install failed (${code})`));
+    });
+  });
+}
+
 function runManagePy(
   config: AiServerDefaultConfig,
   args: string[],
@@ -169,6 +195,8 @@ export async function startAiServer(options?: {
   }
 
   lastError = '';
+  logger.info('[backend-server] install deps', config.backendPath);
+  await runPipInstall(config);
   logger.info('[backend-server] migrate', config.backendPath);
   await runManagePy(config, ['migrate', '--noinput']);
 

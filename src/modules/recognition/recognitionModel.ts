@@ -7,10 +7,16 @@ export type NormRect = {
   height: number;
 };
 
+export type RecognitionProbeSample = NormRect & {
+  image_key: string;
+};
+
 export type RecognitionProbe = {
   id: string;
   label: string;
-  rects: NormRect[];
+  samples: RecognitionProbeSample[];
+  /** Legacy mirror of sample rects (no image_key). */
+  rects?: NormRect[];
 };
 
 export type RecognitionDetection = {
@@ -23,6 +29,12 @@ export type RecognitionDetection = {
   height: number;
   confidence: number;
   text?: string | null;
+};
+
+export type RecognitionProbeSummary = {
+  label: string;
+  sampleCount: number;
+  photoCount: number;
 };
 
 export type RecognitionSession = {

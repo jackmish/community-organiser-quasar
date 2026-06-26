@@ -24,6 +24,13 @@
       <q-icon name="check_circle" size="22px" color="positive" />
     </q-btn>
 
+    <MediaRecognitionDetails
+      v-if="recognitionAvailable"
+      :rows="probeSummary"
+      :total-samples="totalSampleCount"
+      :engine="recognitionEngine || ''"
+    />
+
     <q-btn
       v-if="recognitionAvailable"
       square
@@ -67,6 +74,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
+import MediaRecognitionDetails from './MediaRecognitionDetails.vue';
+import type { RecognitionProbeSummary } from 'src/modules/recognition/recognitionModel';
 
 const props = defineProps<{
   selectMode: boolean;
@@ -78,6 +87,9 @@ const props = defineProps<{
   recognitionBusy: boolean;
   hasPending: boolean;
   showPending: boolean;
+  probeSummary: RecognitionProbeSummary[];
+  totalSampleCount: number;
+  recognitionEngine?: string;
 }>();
 
 const emit = defineEmits<{

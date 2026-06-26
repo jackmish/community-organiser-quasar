@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
 import type { FaceAnnotationRect } from 'src/modules/media/mediaFaceAnnotationModel';
 import { createFaceAnnotationId } from 'src/modules/media/mediaFaceAnnotationModel';
 import type { RecognitionDetection, RecognitionProbe, RecognitionSession } from '../recognitionModel';
@@ -6,24 +6,59 @@ import { toRecognitionApiImageKey } from '../recognitionImageKey';
 import {
   acceptRecognitionResults,
   annotationsToProbes,
+  buildFullTaskProbes,
   createRecognitionSession,
   detectionsToFaceAnnotations,
   getRecognitionSessionByTask,
-  mergeRecognitionProbes,
   prepareRecognitionImagePayload,
   rejectRecognitionResults,
   runRecognition,
+  summarizeRecognitionProbes,
   updateRecognitionProbes,
+  uploadProbeSampleImages,
   uploadRecognitionImage,
 } from '../recognitionService';
 import { requestCo21ApiToken } from 'src/modules/co21-server/co21ApiAuth';
 
-export function useRecognitionSession(taskId: Ref<string>) {
+function normalizeSessionProbes(probes: RecognitionProbe[]): RecognitionProbe[] {
+  return probes.map((probe) => {
+    const samples = probe.samples?.length
+      ? probe.samples
+      : (probe.rects || [])
+          .filter((rect) => typeof (rect as { image_key?: string }).image_key === 'string')
+          .map((rect) => ({
+            image_key: String((rect as { image_key?: string }).image_key || ''),
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          }))
+          .filter((sample) => sample.image_key);
+
+    return {
+      id: probe.id,
+      label: probe.label,
+      samples,
+      rects: probe.rects || samples.map(({ x, y, width, height }) => ({ x, y, width, height })),
+    };
+  });
+}
+
+export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<string>) {
   const session = ref<RecognitionSession | null>(null);
   const busy = ref(false);
   const lastError = ref('');
   const showPending = ref(false);
   const pendingDetections = ref<RecognitionDetection[]>([]);
+  const lastEngine = ref('');
+
+  const probeSummary = computed(() =>
+    summarizeRecognitionProbes(normalizeSessionProbes(session.value?.probes ?? [])),
+  );
+
+  const totalSampleCount = computed(() =>
+    probeSummary.value.reduce((sum, row) => sum + row.sampleCount, 0),
+  );
 
   function clearPending(): void {
     pendingDetections.value = [];
@@ -64,31 +99,46 @@ export function useRecognitionSession(taskId: Ref<string>) {
 
       const existing = await getRecognitionSessionByTask(id);
       if (existing) {
-        session.value = existing;
-        return existing;
+        session.value = {
+          ...existing,
+          probes: normalizeSessionProbes(existing.probes || []),
+        };
+        return session.value;
       }
       const created = await createRecognitionSession(id, mode);
-      session.value = created;
+      session.value = created
+        ? { ...created, probes: normalizeSessionProbes(created.probes || []) }
+        : null;
       if (!created) lastError.value = 'Could not create recognition session';
-      return created;
+      return session.value;
     } finally {
       busy.value = false;
     }
   }
 
-  async function syncProbes(annotations: FaceAnnotationRect[]): Promise<void> {
+  async function syncProbes(
+    localImageKey: string,
+    annotations: FaceAnnotationRect[],
+  ): Promise<void> {
     const current = session.value || (await ensureSession('face'));
-    if (!current) return;
+    const rootPath = String(mediaRoot?.value || '').trim();
+    if (!current || !rootPath || !localImageKey) return;
 
-    const probes = annotationsToProbes(annotations);
+    const probes = await buildFullTaskProbes(rootPath, localImageKey, annotations);
     if (!probes.length) return;
 
     busy.value = true;
     lastError.value = '';
     try {
       const updated = await updateRecognitionProbes(current.session_id, probes);
-      if (updated) session.value = updated;
-      else lastError.value = 'Could not update recognition probes';
+      if (updated.session) {
+        session.value = {
+          ...updated.session,
+          probes: normalizeSessionProbes(updated.session.probes || []),
+        };
+      } else {
+        lastError.value = updated.error || 'Could not update recognition probes';
+      }
     } finally {
       busy.value = false;
     }
@@ -98,9 +148,9 @@ export function useRecognitionSession(taskId: Ref<string>) {
     localImageKey: string,
     imageUrl: string,
     annotations: FaceAnnotationRect[],
-    extraProbes: RecognitionProbe[] = [],
   ): Promise<RecognitionDetection[]> {
     const current = await ensureSession('face');
+    const rootPath = String(mediaRoot?.value || '').trim();
     if (!current || !localImageKey || !imageUrl) return [];
 
     const apiImageKey = await toRecognitionApiImageKey(localImageKey);
@@ -111,14 +161,41 @@ export function useRecognitionSession(taskId: Ref<string>) {
 
     busy.value = true;
     lastError.value = '';
+    lastEngine.value = '';
     try {
-      const probes = mergeRecognitionProbes(
-        extraProbes,
-        annotationsToProbes(annotations),
-      );
-      if (probes.length) {
-        const updated = await updateRecognitionProbes(current.session_id, probes);
-        if (updated) session.value = updated;
+      const probes = rootPath
+        ? await buildFullTaskProbes(rootPath, localImageKey, annotations)
+        : annotationsToProbes(
+            annotations
+              .filter((item) => item.label?.trim())
+              .map((annotation) => ({ apiImageKey, annotation })),
+          );
+
+      if (!probes.length) {
+        lastError.value = 'Label at least one object on a photo in this task first';
+        return [];
+      }
+
+      const updated = await updateRecognitionProbes(current.session_id, probes);
+      if (updated.session) {
+        session.value = {
+          ...updated.session,
+          probes: normalizeSessionProbes(updated.session.probes || []),
+        };
+      } else {
+        lastError.value = updated.error || 'Could not update recognition probes';
+        return [];
+      }
+
+      if (rootPath) {
+        const sampleUpload = await uploadProbeSampleImages(current.session_id, probes, {
+          rootPath,
+          skipApiImageKeys: new Set([apiImageKey]),
+        });
+        if (!sampleUpload.ok) {
+          lastError.value = sampleUpload.error || 'Could not upload recognition samples';
+          return [];
+        }
       }
 
       const { base64, mimeType } = await prepareRecognitionImagePayload(imageUrl);
@@ -134,16 +211,19 @@ export function useRecognitionSession(taskId: Ref<string>) {
       }
 
       const result = await runRecognition(current.session_id, [apiImageKey]);
-      if (!result) {
-        lastError.value = 'Recognition request failed';
+      if (!result.ok || !result.data) {
+        lastError.value = result.error || 'Recognition request failed';
         return [];
       }
 
+      const row = result.data.results.find((item) => item.image_key === apiImageKey);
+      lastEngine.value = row?.engine || '';
+
       session.value = {
         ...current,
-        pending_results: result.pending,
+        probes: session.value?.probes || probes,
+        pending_results: result.data.pending,
       };
-      const row = result.results.find((item) => item.image_key === apiImageKey);
       const detections = row?.detections || [];
       pendingDetections.value = [...detections];
       showPending.value = detections.length > 0;
@@ -203,14 +283,18 @@ export function useRecognitionSession(taskId: Ref<string>) {
     clearPending();
     showPending.value = false;
     lastError.value = '';
+    lastEngine.value = '';
   });
 
   return {
     session,
     busy,
     lastError,
+    lastEngine,
     showPending,
     pendingDetections,
+    probeSummary,
+    totalSampleCount,
     ensureSession,
     syncProbes,
     recognizeImage,

@@ -5,8 +5,14 @@ import type {
   RecognitionDetection,
   RecognitionMode,
   RecognitionProbe,
+  RecognitionProbeSample,
+  RecognitionProbeSummary,
   RecognitionSession,
 } from './recognitionModel';
+import { toRecognitionApiImageKey } from './recognitionImageKey';
+import { listLabeledTaskAnnotationEntries } from 'src/modules/media/mediaFaceAnnotationStorage';
+import { getMediaFullImageUrl } from 'src/modules/media/mediaFolderService';
+import { parseFileImageKey } from './recognitionImageKey';
 
 type SessionSingleOut = { data: RecognitionSession };
 type RunOut = {
@@ -72,25 +78,177 @@ function apiFailureMessage(res: Co21ApiResponse<unknown>, fallback: string): str
   return fallback;
 }
 
-export function annotationsToProbes(annotations: FaceAnnotationRect[]): RecognitionProbe[] {
-  const byLabel = new Map<string, RecognitionProbe['rects']>();
-  for (const item of annotations) {
-    const label = String(item.label || '').trim();
-    if (!label) continue;
-    const rects = byLabel.get(label) || [];
-    rects.push({
-      x: item.x,
-      y: item.y,
-      width: item.width,
-      height: item.height,
-    });
-    byLabel.set(label, rects);
+export type ProbeAnnotationInput = {
+  apiImageKey: string;
+  annotation: FaceAnnotationRect;
+};
+
+function probeSlug(label: string): string {
+  return label.toLowerCase().replace(/\s+/g, '-');
+}
+
+function sampleKey(sample: RecognitionProbeSample): string {
+  return `${sample.image_key}:${sample.x}:${sample.y}:${sample.width}:${sample.height}`;
+}
+
+export function annotationsToProbes(items: ProbeAnnotationInput[]): RecognitionProbe[] {
+  const byLabel = new Map<string, RecognitionProbeSample[]>();
+  for (const item of items) {
+    const label = String(item.annotation.label || '').trim();
+    const apiImageKey = String(item.apiImageKey || '').trim();
+    if (!label || !apiImageKey) continue;
+    const samples = byLabel.get(label) || [];
+    const sample: RecognitionProbeSample = {
+      image_key: apiImageKey,
+      x: item.annotation.x,
+      y: item.annotation.y,
+      width: item.annotation.width,
+      height: item.annotation.height,
+    };
+    if (!samples.some((entry) => sampleKey(entry) === sampleKey(sample))) {
+      samples.push(sample);
+    }
+    byLabel.set(label, samples);
   }
-  return Array.from(byLabel.entries()).map(([label, rects]) => ({
-    id: `probe-${label.toLowerCase().replace(/\s+/g, '-')}`,
+
+  return Array.from(byLabel.entries()).map(([label, samples]) => ({
+    id: `probe-${probeSlug(label)}`,
     label,
-    rects,
+    samples,
+    rects: samples.map(({ x, y, width, height }) => ({ x, y, width, height })),
   }));
+}
+
+export function mergeRecognitionProbes(...groups: RecognitionProbe[][]): RecognitionProbe[] {
+  const byLabel = new Map<string, RecognitionProbe>();
+  for (const group of groups) {
+    for (const probe of group) {
+      const label = probe.label.trim();
+      if (!label) continue;
+      const existing = byLabel.get(label);
+      if (!existing) {
+        byLabel.set(label, {
+          id: probe.id || `probe-${probeSlug(label)}`,
+          label,
+          samples: [...(probe.samples || [])],
+          rects: [...(probe.rects || [])],
+        });
+        continue;
+      }
+      for (const sample of probe.samples || []) {
+        if (!existing.samples.some((entry) => sampleKey(entry) === sampleKey(sample))) {
+          existing.samples.push(sample);
+        }
+      }
+      existing.rects = existing.samples.map(({ x, y, width, height }) => ({
+        x,
+        y,
+        width,
+        height,
+      }));
+    }
+  }
+  return Array.from(byLabel.values());
+}
+
+export function summarizeRecognitionProbes(probes: RecognitionProbe[]): RecognitionProbeSummary[] {
+  return probes
+    .map((probe) => {
+      const samples = probe.samples || [];
+      const photoCount = new Set(samples.map((sample) => sample.image_key).filter(Boolean)).size;
+      return {
+        label: probe.label,
+        sampleCount: samples.length,
+        photoCount,
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+}
+
+export async function buildTaskProbesFromStorage(rootPath: string): Promise<RecognitionProbe[]> {
+  const entries = listLabeledTaskAnnotationEntries(rootPath);
+  const inputs: ProbeAnnotationInput[] = [];
+  for (const entry of entries) {
+    const apiImageKey = await toRecognitionApiImageKey(entry.localKey);
+    if (!apiImageKey) continue;
+    for (const annotation of entry.annotations) {
+      inputs.push({ apiImageKey, annotation });
+    }
+  }
+  return annotationsToProbes(inputs);
+}
+
+export async function resolveTaskSampleImageUrl(localKey: string): Promise<string> {
+  const parsed = parseFileImageKey(localKey);
+  if (!parsed) throw new Error('Sample image is not from a task folder');
+  const result = await getMediaFullImageUrl(parsed.root, parsed.path);
+  if (!result.ok) {
+    throw new Error(result.error || 'Failed to load sample image');
+  }
+  return result.url;
+}
+
+export async function uploadProbeSampleImages(
+  sessionId: string,
+  probes: RecognitionProbe[],
+  options: { rootPath: string; skipApiImageKeys?: Set<string> },
+): Promise<RecognitionUploadResult> {
+  const rootPath = options.rootPath.trim();
+  if (!rootPath) {
+    return { ok: false, error: 'Task folder is required to upload recognition samples' };
+  }
+
+  const skip = options.skipApiImageKeys || new Set<string>();
+  const needed = new Set<string>();
+  for (const probe of probes) {
+    for (const sample of probe.samples || []) {
+      if (sample.image_key && !skip.has(sample.image_key)) {
+        needed.add(sample.image_key);
+      }
+    }
+  }
+
+  const entries = listLabeledTaskAnnotationEntries(rootPath);
+  const localByApiKey = new Map<string, string>();
+  for (const entry of entries) {
+    const apiKey = await toRecognitionApiImageKey(entry.localKey);
+    localByApiKey.set(apiKey, entry.localKey);
+  }
+
+  for (const apiImageKey of needed) {
+    const localKey = localByApiKey.get(apiImageKey);
+    if (!localKey) {
+      return {
+        ok: false,
+        error: 'Missing local photo for a labeled recognition sample',
+      };
+    }
+    const url = await resolveTaskSampleImageUrl(localKey);
+    const payload = await prepareRecognitionImagePayload(url);
+    const uploaded = await uploadRecognitionImage(
+      sessionId,
+      apiImageKey,
+      payload.base64,
+      payload.mimeType,
+    );
+    if (!uploaded.ok) return uploaded;
+  }
+
+  return { ok: true, error: '' };
+}
+
+export async function buildFullTaskProbes(
+  rootPath: string,
+  localImageKey: string,
+  annotations: FaceAnnotationRect[],
+): Promise<RecognitionProbe[]> {
+  const taskProbes = await buildTaskProbesFromStorage(rootPath);
+  const apiImageKey = await toRecognitionApiImageKey(localImageKey);
+  const currentInputs: ProbeAnnotationInput[] = annotations
+    .filter((item) => item.label?.trim())
+    .map((annotation) => ({ apiImageKey, annotation }));
+  const currentProbes = annotationsToProbes(currentInputs);
+  return mergeRecognitionProbes(taskProbes, currentProbes);
 }
 
 export async function createRecognitionSession(
@@ -128,9 +286,11 @@ export async function getRecognitionSessionByTask(
 export async function updateRecognitionProbes(
   sessionId: string,
   probes: RecognitionProbe[],
-): Promise<RecognitionSession | null> {
+): Promise<{ session: RecognitionSession | null; error: string }> {
   const headers = await requireAuthHeaders();
-  if (!headers) return null;
+  if (!headers) {
+    return { session: null, error: 'Recognition API authentication failed' };
+  }
 
   const res = await co21ApiRequest<SessionSingleOut>({
     path: `/api/v1/recognition/sessions/${encodeURIComponent(sessionId)}/probes`,
@@ -139,7 +299,13 @@ export async function updateRecognitionProbes(
     body: { probes },
     timeoutMs: 20_000,
   });
-  return res.ok && res.data?.data ? res.data.data : null;
+  if (res.ok && res.data?.data) {
+    return { session: res.data.data, error: '' };
+  }
+  return {
+    session: null,
+    error: apiFailureMessage(res, 'Could not update recognition probes'),
+  };
 }
 
 export type RecognitionUploadResult = {
@@ -176,12 +342,20 @@ export async function uploadRecognitionImage(
   };
 }
 
+export type RecognitionRunResult = {
+  ok: boolean;
+  data: RunOut | null;
+  error: string;
+};
+
 export async function runRecognition(
   sessionId: string,
   imageKeys: string[],
-): Promise<RunOut | null> {
+): Promise<RecognitionRunResult> {
   const headers = await requireAuthHeaders();
-  if (!headers) return null;
+  if (!headers) {
+    return { ok: false, data: null, error: 'Recognition API authentication failed' };
+  }
 
   const res = await co21ApiRequest<RunOut>({
     path: `/api/v1/recognition/sessions/${encodeURIComponent(sessionId)}/recognize`,
@@ -190,7 +364,14 @@ export async function runRecognition(
     body: { image_keys: imageKeys },
     timeoutMs: 90_000,
   });
-  return res.ok && res.data ? res.data : null;
+  if (res.ok && res.data) {
+    return { ok: true, data: res.data, error: '' };
+  }
+  return {
+    ok: false,
+    data: null,
+    error: apiFailureMessage(res, 'Recognition request failed'),
+  };
 }
 
 export async function acceptRecognitionResults(
@@ -227,29 +408,6 @@ export async function rejectRecognitionResults(
     timeoutMs: 20_000,
   });
   return res.ok;
-}
-
-export function mergeRecognitionProbes(
-  ...groups: RecognitionProbe[][]
-): RecognitionProbe[] {
-  const byLabel = new Map<string, RecognitionProbe>();
-  for (const group of groups) {
-    for (const probe of group) {
-      const label = probe.label.trim();
-      if (!label) continue;
-      const existing = byLabel.get(label);
-      if (!existing) {
-        byLabel.set(label, {
-          id: probe.id,
-          label,
-          rects: [...probe.rects],
-        });
-        continue;
-      }
-      existing.rects.push(...probe.rects);
-    }
-  }
-  return Array.from(byLabel.values());
 }
 
 const RECOGNITION_MAX_EDGE = 2048;

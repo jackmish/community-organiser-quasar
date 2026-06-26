@@ -43,6 +43,34 @@ export function directImageAnnotationKey(name: string, imageUrl: string): string
   return `direct:${name}\0${imageUrl}`;
 }
 
+export function listLabeledTaskAnnotationEntries(rootPath: string): Array<{
+  localKey: string;
+  filePath: string;
+  annotations: FaceAnnotationRect[];
+}> {
+  const root = rootPath.trim();
+  if (!root) return [];
+
+  const prefix = `file:${root}\0`;
+  const store = readStore();
+  const out: Array<{
+    localKey: string;
+    filePath: string;
+    annotations: FaceAnnotationRect[];
+  }> = [];
+
+  for (const [key, rects] of Object.entries(store.images)) {
+    if (!key.startsWith(prefix) || !Array.isArray(rects)) continue;
+    const filePath = key.slice(prefix.length);
+    const annotations = rects
+      .map(normalizeRect)
+      .filter((rect): rect is FaceAnnotationRect => !!rect?.label);
+    if (!annotations.length) continue;
+    out.push({ localKey: key, filePath, annotations });
+  }
+  return out;
+}
+
 export function loadLabeledAnnotationsForTaskFolder(rootPath: string): FaceAnnotationRect[] {
   const root = rootPath.trim();
   if (!root) return [];
