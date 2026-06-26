@@ -166,12 +166,16 @@ import { useMediaFaceRecognition } from '../composables/useMediaFaceRecognition'
 import {
   directImageAnnotationKey,
   fileImageAnnotationKey,
+  loadLabeledAnnotationsForTaskFolder,
 } from '../mediaFaceAnnotationStorage';
 import type { FaceAnnotationRect } from '../mediaFaceAnnotationModel';
 import { useCo21Server } from 'src/modules/co21-server/composables/useCo21Server';
 import { ensureCo21ServerRunning } from 'src/modules/co21-server/co21ServerService';
 import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
-import { detectionsToFaceAnnotations } from 'src/modules/recognition/recognitionService';
+import {
+  annotationsToProbes,
+  detectionsToFaceAnnotations,
+} from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
 
 const props = withDefaults(
@@ -263,6 +267,7 @@ const {
   rejectPending,
   loadPendingFromSession,
   ensureSession,
+  syncProbes,
 } = useRecognitionSession(taskIdRef);
 
 const recognitionAvailable = computed(
@@ -490,7 +495,7 @@ watch(
   async ([key, taskId, healthy]) => {
     if (!key || !taskId || !healthy) return;
     const current = await ensureSession('face');
-    if (current) loadPendingFromSession(current, key);
+    if (current) void loadPendingFromSession(current, key);
   },
 );
 
@@ -517,6 +522,9 @@ function onTagError(message: string): void {
 function onFaceAnnotationAdded(rect: FaceAnnotationRect): void {
   addFaceAnnotation(rect);
   faceRecognitionSelectMode.value = false;
+  if (rect.label && taskIdRef.value && aiHealthy.value) {
+    void syncProbes(faceRecognitionAnnotations.value);
+  }
 }
 
 function onFaceSelectCancel(): void {
@@ -549,7 +557,16 @@ async function onAutoRecognize(): Promise<void> {
     return;
   }
 
-  const detections = await recognizeImage(key, url, faceRecognitionAnnotations.value);
+  const taskProbes = useDirectUrls.value
+    ? annotationsToProbes(faceRecognitionAnnotations.value)
+    : annotationsToProbes(loadLabeledAnnotationsForTaskFolder(String(props.rootPath || '')));
+
+  const detections = await recognizeImage(
+    key,
+    url,
+    faceRecognitionAnnotations.value,
+    taskProbes,
+  );
   if (recognitionLastError.value) {
     appNotify('negative', recognitionLastError.value);
     return;

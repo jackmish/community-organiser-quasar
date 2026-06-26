@@ -1,19 +1,22 @@
 import { ref, watch, type Ref } from 'vue';
 import type { FaceAnnotationRect } from 'src/modules/media/mediaFaceAnnotationModel';
 import { createFaceAnnotationId } from 'src/modules/media/mediaFaceAnnotationModel';
-import type { RecognitionDetection, RecognitionSession } from '../recognitionModel';
+import type { RecognitionDetection, RecognitionProbe, RecognitionSession } from '../recognitionModel';
+import { toRecognitionApiImageKey } from '../recognitionImageKey';
 import {
   acceptRecognitionResults,
   annotationsToProbes,
   createRecognitionSession,
   detectionsToFaceAnnotations,
-  fetchImageAsBase64,
   getRecognitionSessionByTask,
+  mergeRecognitionProbes,
+  prepareRecognitionImagePayload,
   rejectRecognitionResults,
   runRecognition,
   updateRecognitionProbes,
   uploadRecognitionImage,
 } from '../recognitionService';
+import { requestCo21ApiToken } from 'src/modules/co21-server/co21ApiAuth';
 
 export function useRecognitionSession(taskId: Ref<string>) {
   const session = ref<RecognitionSession | null>(null);
@@ -26,15 +29,16 @@ export function useRecognitionSession(taskId: Ref<string>) {
     pendingDetections.value = [];
   }
 
-  function loadPendingFromSession(
+  async function loadPendingFromSession(
     nextSession: RecognitionSession | null,
-    imageKey: string,
-  ): void {
-    if (!nextSession || !imageKey) {
+    localImageKey: string,
+  ): Promise<void> {
+    if (!nextSession || !localImageKey) {
       clearPending();
       return;
     }
-    const entry = nextSession.pending_results?.[imageKey];
+    const apiImageKey = await toRecognitionApiImageKey(localImageKey);
+    const entry = nextSession.pending_results?.[apiImageKey];
     pendingDetections.value = Array.isArray(entry?.detections) ? [...entry.detections] : [];
   }
 
@@ -52,6 +56,12 @@ export function useRecognitionSession(taskId: Ref<string>) {
     busy.value = true;
     lastError.value = '';
     try {
+      const auth = await requestCo21ApiToken();
+      if (!auth.token) {
+        lastError.value = auth.error || 'Could not authenticate with CO21 backend server';
+        return null;
+      }
+
       const existing = await getRecognitionSessionByTask(id);
       if (existing) {
         session.value = existing;
@@ -85,33 +95,45 @@ export function useRecognitionSession(taskId: Ref<string>) {
   }
 
   async function recognizeImage(
-    imageKey: string,
+    localImageKey: string,
     imageUrl: string,
     annotations: FaceAnnotationRect[],
+    extraProbes: RecognitionProbe[] = [],
   ): Promise<RecognitionDetection[]> {
     const current = await ensureSession('face');
-    if (!current || !imageKey || !imageUrl) return [];
+    if (!current || !localImageKey || !imageUrl) return [];
+
+    const apiImageKey = await toRecognitionApiImageKey(localImageKey);
+    if (!apiImageKey) {
+      lastError.value = 'Invalid image key for recognition';
+      return [];
+    }
 
     busy.value = true;
     lastError.value = '';
     try {
-      if (annotations.length) {
-        await updateRecognitionProbes(current.session_id, annotationsToProbes(annotations));
+      const probes = mergeRecognitionProbes(
+        extraProbes,
+        annotationsToProbes(annotations),
+      );
+      if (probes.length) {
+        const updated = await updateRecognitionProbes(current.session_id, probes);
+        if (updated) session.value = updated;
       }
 
-      const { base64, mimeType } = await fetchImageAsBase64(imageUrl);
+      const { base64, mimeType } = await prepareRecognitionImagePayload(imageUrl);
       const uploaded = await uploadRecognitionImage(
         current.session_id,
-        imageKey,
+        apiImageKey,
         base64,
         mimeType,
       );
-      if (!uploaded) {
-        lastError.value = 'Could not upload image to recognition session';
+      if (!uploaded.ok) {
+        lastError.value = uploaded.error || 'Could not upload image to recognition session';
         return [];
       }
 
-      const result = await runRecognition(current.session_id, [imageKey]);
+      const result = await runRecognition(current.session_id, [apiImageKey]);
       if (!result) {
         lastError.value = 'Recognition request failed';
         return [];
@@ -121,7 +143,7 @@ export function useRecognitionSession(taskId: Ref<string>) {
         ...current,
         pending_results: result.pending,
       };
-      const row = result.results.find((item) => item.image_key === imageKey);
+      const row = result.results.find((item) => item.image_key === apiImageKey);
       const detections = row?.detections || [];
       pendingDetections.value = [...detections];
       showPending.value = detections.length > 0;
@@ -135,15 +157,16 @@ export function useRecognitionSession(taskId: Ref<string>) {
   }
 
   async function acceptPending(
-    imageKey: string,
+    localImageKey: string,
     detectionIds?: string[],
   ): Promise<FaceAnnotationRect[]> {
     const current = session.value;
-    if (!current || !imageKey) return [];
+    if (!current || !localImageKey) return [];
 
+    const apiImageKey = await toRecognitionApiImageKey(localImageKey);
     const accepted = await acceptRecognitionResults(
       current.session_id,
-      imageKey,
+      apiImageKey,
       detectionIds,
     );
     if (detectionIds?.length) {
@@ -160,11 +183,12 @@ export function useRecognitionSession(taskId: Ref<string>) {
     }));
   }
 
-  async function rejectPending(imageKey: string, detectionIds?: string[]): Promise<void> {
+  async function rejectPending(localImageKey: string, detectionIds?: string[]): Promise<void> {
     const current = session.value;
-    if (!current || !imageKey) return;
+    if (!current || !localImageKey) return;
 
-    await rejectRecognitionResults(current.session_id, imageKey, detectionIds);
+    const apiImageKey = await toRecognitionApiImageKey(localImageKey);
+    await rejectRecognitionResults(current.session_id, apiImageKey, detectionIds);
     if (detectionIds?.length) {
       const remove = new Set(detectionIds);
       pendingDetections.value = pendingDetections.value.filter((d) => !remove.has(d.id));
