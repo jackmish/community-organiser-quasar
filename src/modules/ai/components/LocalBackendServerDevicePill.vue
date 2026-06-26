@@ -42,6 +42,12 @@ import { computed } from 'vue';
 import { $text } from 'src/modules/lang';
 import { appNotify } from 'src/utils/appNotify';
 import {
+  DEVICE_CHECKING_BG,
+  DEVICE_CHECKING_BORDER,
+  DEVICE_CHECKING_FG,
+  DEVICE_CONNECTED_BG,
+  DEVICE_CONNECTED_BORDER,
+  DEVICE_CONNECTED_FG,
   DEVICE_DISCONNECTED_BORDER,
   DEVICE_DISCONNECTED_FG,
   type DeviceStatusRow,
@@ -74,6 +80,12 @@ const pillClass = computed(() => {
 
 const disconnectedBorder = DEVICE_DISCONNECTED_BORDER;
 const disconnectedFg = DEVICE_DISCONNECTED_FG;
+const connectedBg = DEVICE_CONNECTED_BG;
+const connectedBorder = DEVICE_CONNECTED_BORDER;
+const connectedFg = DEVICE_CONNECTED_FG;
+const checkingBg = DEVICE_CHECKING_BG;
+const checkingBorder = DEVICE_CHECKING_BORDER;
+const checkingFg = DEVICE_CHECKING_FG;
 
 async function onStart(): Promise<void> {
   const ok = await start();
@@ -97,22 +109,22 @@ async function onStop(): Promise<void> {
   justify-content: flex-start;
   gap: 5px;
   flex-shrink: 0;
-  background: #fff !important;
+  background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 0;
 }
 
 .local-backend-pill--header {
-  padding: 3px 4px 3px 6px;
+  padding: 3px 6px;
   min-width: 52px;
   font-size: 9px;
   line-height: 1.05;
 }
 
 .local-backend-pill--menu {
-  padding: 4px 4px 4px 8px;
-  min-width: 56px;
-  font-size: 10px;
+  padding: 3px 6px;
+  min-width: 52px;
+  font-size: 9px;
   line-height: 1.05;
 }
 
@@ -175,18 +187,21 @@ async function onStop(): Promise<void> {
 }
 
 .local-backend-pill--on {
-  border-color: #16a34a;
-  color: #16a34a;
+  background: v-bind(connectedBg);
+  border-color: v-bind(connectedBorder);
+  color: v-bind(connectedFg);
 }
 
 .local-backend-pill--off {
+  background: #fff;
   border-color: v-bind(disconnectedBorder);
   color: v-bind(disconnectedFg);
 }
 
 .local-backend-pill--checking {
-  border-color: #2563eb;
-  color: #2563eb;
+  background: v-bind(checkingBg);
+  border-color: v-bind(checkingBorder);
+  color: v-bind(checkingFg);
 }
 
 .local-backend-pill--on .local-backend-pill__link,

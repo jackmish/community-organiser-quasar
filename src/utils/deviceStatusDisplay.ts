@@ -2,6 +2,16 @@
 export const DEVICE_DISCONNECTED_BORDER = '#6b7280';
 export const DEVICE_DISCONNECTED_FG = '#374151';
 
+/** Connected device strip — shared by LAN devices and local backend. */
+export const DEVICE_CONNECTED_BG = '#dcfce7';
+export const DEVICE_CONNECTED_BORDER = '#16a34a';
+export const DEVICE_CONNECTED_FG = '#14532d';
+
+/** Checking / probing device strip. */
+export const DEVICE_CHECKING_BG = '#dbeafe';
+export const DEVICE_CHECKING_BORDER = '#2563eb';
+export const DEVICE_CHECKING_FG = '#1d4ed8';
+
 export type DeviceConnectionStatus = 'connected' | 'disconnected' | 'checking';
 
 export type DeviceStatusRow = {
