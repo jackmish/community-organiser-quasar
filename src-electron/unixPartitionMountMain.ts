@@ -429,7 +429,7 @@ async function findDevicePathsForLabel(label: string): Promise<string[]> {
 
   try {
     const { stdout } = await execFileAsync('blkid', ['-L', wanted], { timeout: 10_000 });
-    const device = String(stdout || '').split(':')[0]?.trim();
+    const device = String(stdout || '').split(':')[0]?.trim() ?? '';
     if (device.startsWith('/dev/')) found.add(device);
   } catch {
     // blkid exits non-zero when label is missing
