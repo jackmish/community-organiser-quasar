@@ -355,95 +355,20 @@ export type RecognitionRunResult = {
   error: string;
 };
 
-type NormRect = { x: number; y: number; width: number; height: number };
-
-function detectionRect(det: RecognitionDetection): NormRect {
-  return { x: det.x, y: det.y, width: det.width, height: det.height };
-}
-
-function rectIou(a: NormRect, b: NormRect): number {
-  const ax2 = a.x + a.width;
-  const ay2 = a.y + a.height;
-  const bx2 = b.x + b.width;
-  const by2 = b.y + b.height;
-  const ix1 = Math.max(a.x, b.x);
-  const iy1 = Math.max(a.y, b.y);
-  const ix2 = Math.min(ax2, bx2);
-  const iy2 = Math.min(ay2, by2);
-  const iw = Math.max(0, ix2 - ix1);
-  const ih = Math.max(0, iy2 - iy1);
-  const inter = iw * ih;
-  if (inter <= 0) return 0;
-  const union = a.width * a.height + b.width * b.height - inter;
-  return union > 0 ? inter / union : 0;
-}
-
-function shouldSuppressCandidate(candidate: NormRect, kept: NormRect): boolean {
-  if (rectIou(candidate, kept) > 0.1) return true;
-  const avgSize = (candidate.width + candidate.height + kept.width + kept.height) / 4;
-  if (avgSize <= 0) return false;
-  const ccx = candidate.x + candidate.width / 2;
-  const ccy = candidate.y + candidate.height / 2;
-  const kcx = kept.x + kept.width / 2;
-  const kcy = kept.y + kept.height / 2;
-  return Math.hypot(ccx - kcx, ccy - kcy) < avgSize * 0.55;
-}
-
-function dedupeRecognitionDetections(detections: RecognitionDetection[]): RecognitionDetection[] {
-  const ordered = [...detections].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
-  const kept: RecognitionDetection[] = [];
-  for (const candidate of ordered) {
-    const crect = detectionRect(candidate);
-    if (kept.some((item) => shouldSuppressCandidate(crect, detectionRect(item)))) continue;
-    kept.push(candidate);
-  }
-  return kept;
-}
-
-/** Deduplicate overlaps; skip regions the user already labeled. */
-export function filterRecognitionDetections(
-  detections: RecognitionDetection[],
-  options?: {
-    existingAnnotations?: FaceAnnotationRect[];
-  },
-): RecognitionDetection[] {
-  const userRects = (options?.existingAnnotations || [])
-    .filter((item) => item.label?.trim())
-    .map(({ x, y, width, height }) => ({ x, y, width, height }));
-
-  const result = dedupeRecognitionDetections(detections);
-
-  if (!userRects.length) return result;
-
-  return result.filter((det) => {
-    const crect = detectionRect(det);
-    return !userRects.some((userRect) => rectIou(crect, userRect) > 0.35);
-  });
-}
-
 export async function runRecognition(
   sessionId: string,
   imageKeys: string[],
-  options?: { excludeByImage?: Record<string, NormRect[]> },
 ): Promise<RecognitionRunResult> {
   const headers = await requireAuthHeaders();
   if (!headers) {
     return { ok: false, data: null, error: 'Recognition API authentication failed' };
   }
 
-  const body: {
-    image_keys: string[];
-    exclude_by_image?: Record<string, NormRect[]>;
-  } = { image_keys: imageKeys };
-  if (options?.excludeByImage && Object.keys(options.excludeByImage).length) {
-    body.exclude_by_image = options.excludeByImage;
-  }
-
   const res = await co21ApiRequest<RunOut>({
     path: `/api/v1/recognition/sessions/${encodeURIComponent(sessionId)}/recognize`,
     method: 'POST',
     headers,
-    body,
+    body: { image_keys: imageKeys },
     timeoutMs: 90_000,
   });
   if (res.ok && res.data) {

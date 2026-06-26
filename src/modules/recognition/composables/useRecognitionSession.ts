@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, onUnmounted, ref, watch, type Ref } from 'vue';
 import type { FaceAnnotationRect } from 'src/modules/media/mediaFaceAnnotationModel';
 import { createFaceAnnotationId } from 'src/modules/media/mediaFaceAnnotationModel';
 import type { RecognitionDetection, RecognitionProbe, RecognitionSession } from '../recognitionModel';
@@ -9,7 +9,6 @@ import {
   buildFullTaskProbes,
   createRecognitionSession,
   detectionsToFaceAnnotations,
-  filterRecognitionDetections,
   getRecognitionSessionByTask,
   prepareRecognitionImagePayload,
   rejectRecognitionResults,
@@ -20,9 +19,11 @@ import {
   uploadRecognitionImage,
 } from '../recognitionService';
 import { requestCo21ApiToken } from 'src/modules/co21-server/co21ApiAuth';
-import { noteCo21ServerBootId } from 'src/modules/co21-server/co21ApiClient';
 import {
-  clearAllStoredPendingDetections,
+  notifyRecognitionServerBootIfChanged,
+  subscribeRecognitionServerRestart,
+} from '../recognitionServerBoot';
+import {
   loadStoredPendingDetections,
   removeStoredPendingDetections,
   saveStoredPendingDetections,
@@ -87,7 +88,7 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
     }
 
     const apiImageKey = await toRecognitionApiImageKey(localImageKey);
-    let detections = loadStoredPendingDetections(localImageKey);
+    let     detections = loadStoredPendingDetections(localImageKey);
 
     if (!detections.length && nextSession && apiImageKey) {
       const entry = nextSession.pending_results?.[apiImageKey];
@@ -98,21 +99,31 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
       }
     }
 
-    detections = filterRecognitionDetections(detections, { existingAnnotations: annotations });
     pendingDetections.value = detections;
     showPending.value = detections.length > 0;
   }
 
   async function invalidateIfServerRestarted(): Promise<void> {
-    const restarted = await noteCo21ServerBootId();
+    const restarted = await notifyRecognitionServerBootIfChanged();
     if (!restarted) return;
     session.value = null;
     pendingDetections.value = [];
-    clearAllStoredPendingDetections();
     showPending.value = false;
     lastEngine.value = '';
     lastError.value = '';
   }
+
+  const unsubscribeBoot = subscribeRecognitionServerRestart(() => {
+    session.value = null;
+    pendingDetections.value = [];
+    showPending.value = false;
+    lastEngine.value = '';
+    lastError.value = '';
+  });
+
+  onUnmounted(() => {
+    unsubscribeBoot();
+  });
 
   async function ensureSession(mode: 'face' | 'ocr' | 'general' = 'face'): Promise<RecognitionSession | null> {
     const id = String(taskId.value || '').trim();
@@ -254,18 +265,7 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
         return [];
       }
 
-      const labeledRects = annotations
-        .filter((item) => item.label?.trim())
-        .map(({ x, y, width, height }) => ({ x, y, width, height }));
-
-      const excludeByImage =
-        labeledRects.length > 0 ? { [apiImageKey]: labeledRects } : undefined;
-
-      const result = await runRecognition(
-        current.session_id,
-        [apiImageKey],
-        excludeByImage ? { excludeByImage } : undefined,
-      );
+      const result = await runRecognition(current.session_id, [apiImageKey]);
       if (!result.ok || !result.data) {
         lastError.value = result.error || 'Recognition request failed';
         return [];
@@ -279,9 +279,7 @@ export function useRecognitionSession(taskId: Ref<string>, mediaRoot?: Ref<strin
         probes: session.value?.probes || probes,
         pending_results: result.data.pending,
       };
-      const detections = filterRecognitionDetections(row?.detections || [], {
-        existingAnnotations: annotations,
-      });
+      const detections = row?.detections || [];
       pendingDetections.value = [...detections];
       saveStoredPendingDetections(localImageKey, detections);
       showPending.value = detections.length > 0;

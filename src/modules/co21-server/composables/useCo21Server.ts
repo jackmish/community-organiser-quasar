@@ -10,6 +10,7 @@ import {
 } from '../co21ServerService';
 import { co21ApiHealth } from '../co21ApiClient';
 import { loadCo21ServerBaseUrl, loadCo21ServerEnabled } from '../co21ServerSettings';
+import { notifyRecognitionServerBootIfChanged } from 'src/modules/recognition/recognitionServerBoot';
 
 export function useCo21Server() {
   const bridgeAvailable = ref(isCo21ServerBridgeAvailable());
@@ -32,6 +33,9 @@ export function useCo21Server() {
       running.value = healthy.value;
     }
     lastError.value = status.value?.lastError || '';
+    if (healthy.value) {
+      await notifyRecognitionServerBootIfChanged();
+    }
   }
 
   async function start(): Promise<boolean> {

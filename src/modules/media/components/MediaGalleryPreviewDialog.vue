@@ -177,7 +177,6 @@ import { ensureCo21ServerRunning } from 'src/modules/co21-server/co21ServerServi
 import { useRecognitionSession } from 'src/modules/recognition/composables/useRecognitionSession';
 import {
   detectionsToFaceAnnotations,
-  filterRecognitionDetections,
 } from 'src/modules/recognition/recognitionService';
 import { appNotify } from 'src/utils/appNotify';
 
@@ -282,16 +281,10 @@ const recognitionAvailable = computed(
   () => !!taskIdRef.value && aiHealthy.value && !!imageUrl.value,
 );
 
-const filteredPendingDetections = computed(() =>
-  filterRecognitionDetections(pendingDetections.value, {
-    existingAnnotations: faceRecognitionAnnotations.value,
-  }),
-);
-
-const hasPendingDetections = computed(() => filteredPendingDetections.value.length > 0);
+const hasPendingDetections = computed(() => pendingDetections.value.length > 0);
 
 const suggestedFaceAnnotations = computed(() =>
-  detectionsToFaceAnnotations(filteredPendingDetections.value),
+  detectionsToFaceAnnotations(pendingDetections.value),
 );
 
 function toggleRecognitionPending(): void {
