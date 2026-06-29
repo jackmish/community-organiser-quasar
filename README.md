@@ -13,7 +13,12 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 ### 🚀 Vibe Coding & Scalability
 
-Experiencing firsthand how "Vibe Coding" can increase output. This explores the intersection of code refactoring and the creation of custom design patterns. It raises a critical question: is it better to have a fast prototype with many compromises, or slow progress with high code quality at the risk of losing momentum or missing the original vision? Most in use chronologically: 1. VsCode+Copilot 10$ limit without limited models 2. VsCode+Copilot 10$ with Claude Sonnet 3. Cursor + auto-mode 4. LM Studio + VsCode + Continue various GGUF models from 14-35B Qwen models 5. Ollama + VsCode + Cline - with the same offline models
+Experiencing firsthand how "Vibe Coding" can increase output. This explores the intersection of code refactoring and the creation of custom design patterns. It raises a critical question: is it better to have a fast prototype with many compromises, or slow progress with high code quality at the risk of losing momentum or missing the original vision? Most in use chronologically: 
+1. VsCode+Copilot 10$ limit without limited models 
+2. VsCode+Copilot 10$ with Claude Sonnet 
+3. Cursor + auto-mode 
+4. LM Studio + VsCode + Continue various GGUF models from 14-35B Qwen models 
+5. Ollama + VsCode + Cline - with the same offline models
 
 ### 🔋 Offline-First Applications
 
