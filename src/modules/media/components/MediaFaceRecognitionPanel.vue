@@ -10,7 +10,7 @@
       :title="$text('files.face_backend_server_start')"
       @click="emit('start-backend-server')"
     >
-      <q-icon name="auto_fix_high" size="24px" color="white" />
+      <q-icon name="precision_manufacturing" size="24px" color="white" />
       <span class="q-ml-sm">Off</span>
     </q-btn>
     <q-btn
