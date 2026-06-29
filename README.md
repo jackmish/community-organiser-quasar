@@ -4,8 +4,8 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 **CO21** is a project destined for significant growth. It serves as a **personal command center** designed to expand in two main directions:
 
-- **A) Smart House & Family Organization:** Streamlining household management and family cooperation.
-- **B) Community Management:** Supporting various groups involving parents and children or club-like structures. Beyond simple meeting reminders, this includes scheduling, fundraising, and managing member data.
+- **A) Smart House & Family Organization:** Streamlining household management and family cooperation - with optional additional Python backend, with RAG AI option - totally private and offline + possible online minor extensions not necessarly tracking activity like weather plugin, holidays list, import data from Google Calendar 
+- **B) Community Management:** Supporting various groups involving parents and children or club-like structures. Beyond simple meeting reminders, this includes scheduling, fundraising, and managing member data. Lightweight JS app should make easier to share resources withing a bus, trips, houses, creating notes/plans/contact lists, small accounting features, log car repairs (with photo attachments, optional image text reading).
 
 ---
 
@@ -13,7 +13,7 @@ Copyright (c) 2026 Jacek Miszczuk. All rights reserved.
 
 ### 🚀 Vibe Coding & Scalability
 
-Experiencing firsthand how "Vibe Coding" can increase output. This explores the intersection of code refactoring and the creation of custom design patterns. It raises a critical question: is it better to have a fast prototype with many compromises, or slow progress with high code quality at the risk of losing momentum or missing the original vision?
+Experiencing firsthand how "Vibe Coding" can increase output. This explores the intersection of code refactoring and the creation of custom design patterns. It raises a critical question: is it better to have a fast prototype with many compromises, or slow progress with high code quality at the risk of losing momentum or missing the original vision? Most in use chronologically: 1. VsCode+Copilot 10$ limit without limited models 2. VsCode+Copilot 10$ with Claude Sonnet 3. Cursor + auto-mode 4. LM Studio + VsCode + Continue 5. Ollama + VsCode + Cline
 
 ### 🔋 Offline-First Applications
 
