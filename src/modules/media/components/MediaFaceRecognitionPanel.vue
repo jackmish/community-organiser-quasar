@@ -17,12 +17,12 @@
       v-else-if="aiHealthy"
       square
       unelevated
-      class="media-face-panel__ai-btn media-face-panel__ai-btn--ready"
+      class="media-face-panel__ai-btn media-face-panel__ai-btn--started"
       :aria-label="$text('files.face_backend_server_ready')"
       :title="$text('files.face_backend_server_ready')"
-      disable
     >
-      <q-icon name="check_circle" size="22px" color="positive" />
+      <q-icon name="precision_manufacturing" size="24px" color="positive" />
+      <span class="q-ml-sm">On</span>
     </q-btn>
 
     <MediaRecognitionDetails
@@ -137,6 +137,16 @@ const showAiStart = computed(
 .media-face-panel__ai-btn {
   background: rgba(255, 255, 255, 0.16) !important;
   border: 2px solid rgba(255, 255, 255, 0.55);
+}
+
+.media-face-panel__ai-btn--started {
+  background: rgba(46, 125, 50, 0.85) !important;
+  border: 2px solid #4caf50;
+  color: #c8e6c9;
+}
+
+.media-face-panel__ai-btn--started .q-icon {
+  color: #a5d6a7;
 }
 
 .media-face-panel__ai-btn--ready {
