@@ -17,8 +17,8 @@ Experiencing firsthand how "Vibe Coding" can increase output. This explores the 
 1. VsCode+Copilot 10$ limit without limited models 
 2. VsCode+Copilot 10$ with Claude Sonnet 
 3. Cursor + auto-mode 
-4. LM Studio + VsCode + Continue various GGUF models from 14-35B Qwen models 
-5. Ollama + VsCode + Cline - with the same offline models
+4. LM Studio + VsCode + Continue - various GGUF models from 14-35B mostly Qwen models 
+5. Ollama + VsCode + Cline - same models like for LM Studio
 
 ### 🔋 Offline-First Applications
 
