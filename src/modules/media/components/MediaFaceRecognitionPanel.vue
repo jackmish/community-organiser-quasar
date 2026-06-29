@@ -10,7 +10,8 @@
       :title="$text('files.face_backend_server_start')"
       @click="emit('start-backend-server')"
     >
-      <q-icon name="dns" size="24px" color="white" />
+      <q-icon name="auto_fix_high" size="24px" color="white" />
+      <span class="q-ml-sm">Off</span>
     </q-btn>
     <q-btn
       v-else-if="aiHealthy"
@@ -113,13 +114,24 @@ const showAiStart = computed(
   pointer-events: auto;
 }
 
-.media-face-panel__ai-btn,
+/* Remove fixed dimensions from AI button, keep them for icon-only buttons */
 .media-face-panel__recognize-btn,
 .media-face-panel__pending-btn,
 .media-face-panel__select-btn {
   width: 44px;
   min-width: 44px;
   height: 44px;
+}
+
+.media-face-panel__ai-btn {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  padding: 8px 14px;
+  min-height: 36px;
+}
+
+.media-face-panel__ai-btn .q-icon {
+  margin-right: 6px;
 }
 
 .media-face-panel__ai-btn {
